@@ -383,18 +383,92 @@ func (ws *WebServer) getDashboardHTML() string {
             font-size: 0.9rem;
         }
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
+        .lux-context {
+            position: relative;
+            display: inline-block;
+            margin-top: 5px;
+        }
 
-            .header h1 {
-                font-size: 2rem;
-            }
+        .lux-tooltip {
+            visibility: hidden;
+            width: 300px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
 
-            .grid {
-                grid-template-columns: 1fr;
-            }
+        .lux-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .lux-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .lux-tooltip-close {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #ccc;
+            user-select: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        .lux-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .lux-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .lux-table th, .lux-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        .lux-table th {
+            background-color: #333;
+            font-weight: bold;
+        }
+
+        .lux-table td:first-child {
+            text-align: right;
+            font-family: monospace;
+        }
+
+        .info-icon {
+            cursor: pointer;
+            user-select: none;
+            margin-left: 5px;
+        }
+
+        .lux-description {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -478,7 +552,41 @@ func (ws *WebServer) getDashboardHTML() string {
                     <span class="card-title">Light</span>
                 </div>
                 <div class="card-value" id="illuminance">--</div>
-                <div class="card-unit">lux</div>
+                <div class="card-unit">lux <span class="info-icon" id="lux-info-icon" title="Click for lux reference table">ℹ️</span></div>
+                <div class="lux-description" id="lux-description">--</div>
+                <div class="lux-context" id="lux-context">
+                    <div class="lux-tooltip" id="lux-tooltip">
+                        <div class="lux-tooltip-header">
+                            <strong>Lux Reference Table:</strong>
+                            <span class="lux-tooltip-close" id="lux-tooltip-close" title="Close">×</span>
+                        </div>
+                        <table class="lux-table">
+                            <thead>
+                                <tr>
+                                    <th>Lux</th>
+                                    <th>Condition</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>0.0001</td><td>Moonless, overcast night sky (starlight)</td></tr>
+                                <tr><td>0.002</td><td>Moonless clear night sky with airglow</td></tr>
+                                <tr><td>0.01</td><td>Quarter moon on a clear night</td></tr>
+                                <tr><td>0.05–0.3</td><td>Full moon on a clear night</td></tr>
+                                <tr><td>3.4</td><td>Dark limit of civil twilight under a clear sky</td></tr>
+                                <tr><td>20–50</td><td>Public areas with dark surroundings</td></tr>
+                                <tr><td>50</td><td>Family living room lights</td></tr>
+                                <tr><td>80</td><td>Office building hallway/toilet lighting</td></tr>
+                                <tr><td>100</td><td>Very dark overcast day</td></tr>
+                                <tr><td>150</td><td>Train station platforms</td></tr>
+                                <tr><td>320–500</td><td>Office lighting</td></tr>
+                                <tr><td>400</td><td>Sunrise or sunset on a clear day</td></tr>
+                                <tr><td>1000</td><td>Overcast day; typical TV studio lighting</td></tr>
+                                <tr><td>10,000–25,000</td><td>Full daylight (not direct sun)</td></tr>
+                                <tr><td>32,000–100,000</td><td>Direct sunlight</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 <div class="chart-container">
                     <canvas id="light-chart"></canvas>
                 </div>
@@ -888,7 +996,46 @@ func (ws *WebServer) getDashboardHTML() string {
             ];
         }
 
-        let weatherData = null;
+        function getLuxDescription(lux) {
+            if (lux <= 0.0001) return "Moonless, overcast night sky (starlight)";
+            if (lux <= 0.002) return "Moonless clear night sky with airglow";
+            if (lux <= 0.01) return "Quarter moon on a clear night";
+            if (lux <= 0.3) return "Full moon on a clear night";
+            if (lux <= 3.4) return "Dark limit of civil twilight";
+            if (lux <= 50) return "Public areas with dark surroundings";
+            if (lux <= 80) return "Family living room lights";
+            if (lux <= 100) return "Office building hallway/toilet lighting";
+            if (lux <= 150) return "Very dark overcast day";
+            if (lux <= 400) return "Train station platforms";
+            if (lux <= 500) return "Office lighting";
+            if (lux <= 1000) return "Sunrise or sunset on a clear day";
+            if (lux <= 25000) return "Overcast day / Full daylight (not direct sun)";
+            if (lux <= 100000) return "Direct sunlight";
+            return "Extremely bright conditions";
+        }
+
+        function toggleLuxTooltip() {
+            const tooltip = document.getElementById('lux-tooltip');
+            tooltip.classList.toggle('show');
+        }
+
+        function closeLuxTooltip() {
+            const tooltip = document.getElementById('lux-tooltip');
+            tooltip.classList.remove('show');
+        }
+
+        function handleLuxTooltipClickOutside(event) {
+            const tooltip = document.getElementById('lux-tooltip');
+            const context = document.getElementById('lux-context');
+            const infoIcon = document.getElementById('lux-info-icon');
+
+            // If tooltip is visible and click is outside the tooltip and info icon
+            if (tooltip.classList.contains('show') &&
+                !tooltip.contains(event.target) &&
+                !infoIcon.contains(event.target)) {
+                closeLuxTooltip();
+            }
+        }
 
         function updateDisplay() {
             if (!weatherData) return;
@@ -924,6 +1071,7 @@ func (ws *WebServer) getDashboardHTML() string {
             document.getElementById('pressure').textContent = pressure.toFixed(1);
 
             document.getElementById('illuminance').textContent = weatherData.illuminance.toFixed(0);
+            document.getElementById('lux-description').textContent = getLuxDescription(weatherData.illuminance);
 
             document.getElementById('last-update').textContent = new Date(weatherData.lastUpdate).toLocaleString();
         }
@@ -1207,6 +1355,15 @@ func (ws *WebServer) getDashboardHTML() string {
 
         // Add click event listener for accessories expansion
         document.getElementById('accessories-row').addEventListener('click', toggleAccessoriesExpansion);
+
+        // Add click event listener for lux info icon
+        document.getElementById('lux-info-icon').addEventListener('click', toggleLuxTooltip);
+
+        // Add click event listener for lux tooltip close button
+        document.getElementById('lux-tooltip-close').addEventListener('click', closeLuxTooltip);
+
+        // Add click event listener for closing tooltip when clicking outside
+        document.addEventListener('click', handleLuxTooltipClickOutside);
 
         // Fetch data immediately and then every 10 seconds
         fetchWeather();
