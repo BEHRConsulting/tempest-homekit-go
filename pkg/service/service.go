@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"tempest-homekit-go/pkg/config"
-	// "tempest-homekit-go/pkg/homekit"
+	"tempest-homekit-go/pkg/homekit"
 	"tempest-homekit-go/pkg/weather"
 	"tempest-homekit-go/pkg/web"
 )
@@ -37,20 +37,21 @@ func StartService(cfg *config.Config) error {
 	log.Printf("Found station: %s (ID: %d)", station.Name, station.StationID)
 
 	// Setup HomeKit
-	// wa := homekit.NewWeatherAccessories()
-	// t, err := homekit.SetupHomeKit(wa, cfg.Pin)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to setup HomeKit: %v", err)
-	// }
+	wa := homekit.NewWeatherAccessories()
+	t, err := homekit.SetupHomeKit(wa, cfg.Pin)
+	if err != nil {
+		return fmt.Errorf("failed to setup HomeKit: %v", err)
+	}
 
-	// // Start HomeKit transport
-	// go func() {
-	// 	log.Println("Starting HomeKit transport...")
-	// 	t.Start()
-	// }()
+	// Start HomeKit transport
+	go func() {
+		log.Println("Starting HomeKit transport...")
+		t.Start()
+	}()
 
 	// Setup web dashboard
 	webServer := web.NewWebServer(cfg.WebPort)
+	webServer.SetStationName(station.Name)
 	log.Printf("Service: About to start web server goroutine")
 	go func() {
 		defer func() {
@@ -68,23 +69,30 @@ func StartService(cfg *config.Config) error {
 	log.Printf("Service: Web server goroutine started")
 
 	// Update HomeKit status in web server
-	// homekitStatus := map[string]interface{}{
-	// 	"bridge":      true,
-	// 	"name":        "Tempest HomeKit Bridge",
-	// 	"accessories": 6,
-	// 	"accessoryNames": []string{
-	// 		"Temperature Sensor",
-	// 		"Humidity Sensor",
-	// 		"Wind Speed Sensor",
-	// 		"Wind Direction Sensor",
-	// 		"Rain Sensor",
-	// 		"Light Sensor",
-	// 	},
-	// 	"pin": cfg.Pin,
-	// }
-	// log.Printf("Sending HomeKit status to web server: %+v", homekitStatus)
-	// webServer.UpdateHomeKitStatus(homekitStatus)
-	// log.Printf("HomeKit status sent to web server successfully")
+	homekitStatus := map[string]interface{}{
+		"bridge": true,
+		"name":   "Tempest HomeKit Bridge",
+		"accessories": len([]string{
+			wa.TemperatureAccessory.Info.Name.GetValue(),
+			wa.HumidityAccessory.Info.Name.GetValue(),
+			wa.WindAccessory.Info.Name.GetValue(),
+			wa.WindDirectionAccessory.Info.Name.GetValue(),
+			wa.RainAccessory.Info.Name.GetValue(),
+			wa.LightAccessory.Info.Name.GetValue(),
+		}),
+		"accessoryNames": []string{
+			wa.TemperatureAccessory.Info.Name.GetValue(),
+			wa.HumidityAccessory.Info.Name.GetValue(),
+			wa.WindAccessory.Info.Name.GetValue(),
+			wa.WindDirectionAccessory.Info.Name.GetValue(),
+			wa.RainAccessory.Info.Name.GetValue(),
+			wa.LightAccessory.Info.Name.GetValue(),
+		},
+		"pin": cfg.Pin,
+	}
+	log.Printf("Sending HomeKit status to web server: %+v", homekitStatus)
+	webServer.UpdateHomeKitStatus(homekitStatus)
+	log.Printf("HomeKit status sent to web server successfully")
 
 	// Poll weather data
 	log.Println("Setting up weather polling...")
@@ -125,12 +133,12 @@ func StartService(cfg *config.Config) error {
 		}
 
 		log.Printf("Service: Updating HomeKit sensors")
-		// wa.UpdateTemperature(obs.AirTemperature)
-		// wa.UpdateHumidity(obs.RelativeHumidity)
-		// wa.UpdateWindSpeed(obs.WindAvg)
-		// wa.UpdateWindDirection(obs.WindDirection)
-		// wa.UpdateRainAccumulation(obs.RainAccumulated)
-		// wa.UpdateIlluminance(obs.Illuminance)
+		wa.UpdateTemperature(obs.AirTemperature)
+		wa.UpdateHumidity(obs.RelativeHumidity)
+		wa.UpdateWindSpeed(obs.WindAvg)
+		wa.UpdateWindDirection(obs.WindDirection)
+		wa.UpdateRainAccumulation(obs.RainAccumulated)
+		wa.UpdateIlluminance(obs.Illuminance)
 
 		// Update web dashboard
 		log.Printf("Service: About to call webServer.UpdateWeather")

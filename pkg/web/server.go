@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -17,6 +18,8 @@ type WebServer struct {
 	homekitStatus  map[string]interface{}
 	dataHistory    []weather.Observation
 	maxHistorySize int
+	stationName    string
+	startTime      time.Time
 	mu             sync.RWMutex
 }
 
@@ -38,6 +41,7 @@ type StatusResponse struct {
 	Connected   bool                   `json:"connected"`
 	LastUpdate  string                 `json:"lastUpdate"`
 	Uptime      string                 `json:"uptime"`
+	StationName string                 `json:"stationName,omitempty"`
 	HomeKit     map[string]interface{} `json:"homekit"`
 	DataHistory []WeatherResponse      `json:"dataHistory"`
 }
@@ -47,6 +51,7 @@ func NewWebServer(port string) *WebServer {
 		port:           port,
 		maxHistorySize: 1000,
 		dataHistory:    make([]weather.Observation, 0, 1000),
+		startTime:      time.Now(),
 		homekitStatus: map[string]interface{}{
 			"bridge":      false,
 			"accessories": 0,
@@ -92,6 +97,12 @@ func (ws *WebServer) UpdateHomeKitStatus(status map[string]interface{}) {
 	for k, v := range status {
 		ws.homekitStatus[k] = v
 	}
+}
+
+func (ws *WebServer) SetStationName(name string) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	ws.stationName = name
 }
 
 func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -142,6 +153,10 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 		lastUpdate = time.Unix(ws.weatherData.Timestamp, 0).Format(time.RFC3339)
 	}
 
+	// Calculate uptime
+	uptime := time.Since(ws.startTime)
+	uptimeStr := fmt.Sprintf("%dh%dm%ds", int(uptime.Hours()), int(uptime.Minutes())%60, int(uptime.Seconds())%60)
+
 	// Convert data history to response format
 	history := make([]WeatherResponse, len(ws.dataHistory))
 	for i, obs := range ws.dataHistory {
@@ -163,9 +178,14 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	response := StatusResponse{
 		Connected:   connected,
 		LastUpdate:  lastUpdate,
-		Uptime:      "N/A", // TODO: implement uptime tracking
+		Uptime:      uptimeStr,
 		HomeKit:     ws.homekitStatus,
 		DataHistory: history,
+	}
+
+	// Add station name if available
+	if ws.stationName != "" {
+		response.StationName = ws.stationName
 	}
 
 	json.NewEncoder(w).Encode(response)
@@ -290,6 +310,30 @@ func (ws *WebServer) getDashboardHTML() string {
             margin-top: 15px;
         }
 
+        .card-content {
+            padding-top: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 4px 0;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
         .footer {
             text-align: center;
             color: white;
@@ -395,6 +439,59 @@ func (ws *WebServer) getDashboardHTML() string {
                 <div class="card-unit">lux</div>
                 <div class="chart-container">
                     <canvas id="light-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Information Cards -->
+        <div class="grid">
+            <div class="card" id="tempest-card">
+                <div class="card-header">
+                    <span class="card-icon">🌤️</span>
+                    <span class="card-title">Tempest Station</span>
+                </div>
+                <div class="card-content">
+                    <div class="info-row">
+                        <span class="info-label">Status:</span>
+                        <span class="info-value" id="tempest-status">Disconnected</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Station:</span>
+                        <span class="info-value" id="tempest-station">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Last Update:</span>
+                        <span class="info-value" id="tempest-last-update">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Uptime:</span>
+                        <span class="info-value" id="tempest-uptime">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="homekit-card">
+                <div class="card-header">
+                    <span class="card-icon">🏠</span>
+                    <span class="card-title">HomeKit Bridge</span>
+                </div>
+                <div class="card-content">
+                    <div class="info-row">
+                        <span class="info-label">Status:</span>
+                        <span class="info-value" id="homekit-status">Inactive</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Accessories:</span>
+                        <span class="info-value" id="homekit-accessories">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Bridge:</span>
+                        <span class="info-value" id="homekit-bridge">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">PIN:</span>
+                        <span class="info-value" id="homekit-pin">--</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -966,11 +1063,38 @@ func (ws *WebServer) getDashboardHTML() string {
                 const response = await fetch('/api/status');
                 if (response.ok) {
                     const status = await response.json();
-                    // Update HomeKit status if needed
+                    updateStatusDisplay(status);
                 }
             } catch (error) {
                 console.error('Error fetching status:', error);
             }
+        }
+
+        function updateStatusDisplay(status) {
+            // Update Tempest status
+            const tempestStatus = document.getElementById('tempest-status');
+            const tempestStation = document.getElementById('tempest-station');
+            const tempestLastUpdate = document.getElementById('tempest-last-update');
+            const tempestUptime = document.getElementById('tempest-uptime');
+
+            tempestStatus.textContent = status.connected ? 'Connected' : 'Disconnected';
+            tempestStatus.style.color = status.connected ? '#28a745' : '#dc3545';
+            tempestStation.textContent = status.stationName || '--';
+            tempestLastUpdate.textContent = status.lastUpdate ? new Date(status.lastUpdate).toLocaleString() : '--';
+            tempestUptime.textContent = status.uptime || '--';
+
+            // Update HomeKit status
+            const homekitStatus = document.getElementById('homekit-status');
+            const homekitAccessories = document.getElementById('homekit-accessories');
+            const homekitBridge = document.getElementById('homekit-bridge');
+            const homekitPin = document.getElementById('homekit-pin');
+
+            const hk = status.homekit || {};
+            homekitStatus.textContent = hk.bridge ? 'Active' : 'Inactive';
+            homekitStatus.style.color = hk.bridge ? '#28a745' : '#dc3545';
+            homekitAccessories.textContent = hk.accessories || '--';
+            homekitBridge.textContent = hk.name || '--';
+            homekitPin.textContent = hk.pin || '--';
         }
 
         // Initialize
