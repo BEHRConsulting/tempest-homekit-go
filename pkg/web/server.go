@@ -322,6 +322,48 @@ func (ws *WebServer) getDashboardHTML() string {
             padding: 4px 0;
         }
 
+        .info-row.clickable {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .info-row.clickable:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .accessories-expanded {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: rgba(0, 123, 255, 0.05);
+            border-radius: 6px;
+            border-left: 3px solid #007bff;
+        }
+
+        .accessory-item {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 0.85rem;
+        }
+
+        .accessory-icon {
+            margin-right: 8px;
+            font-size: 1rem;
+        }
+
+        .accessory-name {
+            color: #555;
+            font-weight: 500;
+        }
+
+        .expand-icon {
+            margin-left: auto;
+            font-size: 0.8rem;
+            color: #666;
+            transition: transform 0.2s;
+        }
+
         .info-label {
             font-weight: 500;
             color: #666;
@@ -480,9 +522,15 @@ func (ws *WebServer) getDashboardHTML() string {
                         <span class="info-label">Status:</span>
                         <span class="info-value" id="homekit-status">Inactive</span>
                     </div>
-                    <div class="info-row">
+                    <div class="info-row clickable" id="accessories-row">
                         <span class="info-label">Accessories:</span>
                         <span class="info-value" id="homekit-accessories">--</span>
+                        <span class="expand-icon" id="accessories-expand-icon">▶</span>
+                    </div>
+                    <div class="accessories-expanded" id="accessories-expanded" style="display: none;">
+                        <div id="accessories-list">
+                            <!-- Accessories will be populated here -->
+                        </div>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Bridge:</span>
@@ -1095,11 +1143,70 @@ func (ws *WebServer) getDashboardHTML() string {
             homekitAccessories.textContent = hk.accessories || '--';
             homekitBridge.textContent = hk.name || '--';
             homekitPin.textContent = hk.pin || '--';
+
+            // Update accessories list
+            updateAccessoriesList(hk.accessoryNames || []);
+        }
+
+        function updateAccessoriesList(accessoryNames) {
+            const accessoriesList = document.getElementById('accessories-list');
+            accessoriesList.innerHTML = '';
+
+            if (!accessoryNames || accessoryNames.length === 0) {
+                accessoriesList.innerHTML = '<div class="accessory-item">No accessories available</div>';
+                return;
+            }
+
+            // Define icons for different accessory types
+            const accessoryIcons = {
+                'Temperature': '🌡️',
+                'Humidity': '💧',
+                'Wind Speed': '🌬️',
+                'Wind Direction': '🧭',
+                'Rain': '🌧️',
+                'Light': '☀️'
+            };
+
+            accessoryNames.forEach(name => {
+                const accessoryDiv = document.createElement('div');
+                accessoryDiv.className = 'accessory-item';
+
+                // Get appropriate icon or use default
+                let icon = '🔧'; // default icon
+                for (const [key, value] of Object.entries(accessoryIcons)) {
+                    if (name.includes(key)) {
+                        icon = value;
+                        break;
+                    }
+                }
+
+                accessoryDiv.innerHTML = '<span class="accessory-icon">' + icon + '</span><span class="accessory-name">' + name + '</span>';
+
+                accessoriesList.appendChild(accessoryDiv);
+            });
+        }
+
+        function toggleAccessoriesExpansion() {
+            const expandedDiv = document.getElementById('accessories-expanded');
+            const expandIcon = document.getElementById('accessories-expand-icon');
+
+            if (expandedDiv.style.display === 'none' || expandedDiv.style.display === '') {
+                expandedDiv.style.display = 'block';
+                expandIcon.textContent = '▼';
+                expandIcon.style.transform = 'rotate(0deg)';
+            } else {
+                expandedDiv.style.display = 'none';
+                expandIcon.textContent = '▶';
+                expandIcon.style.transform = 'rotate(0deg)';
+            }
         }
 
         // Initialize
         updateUnits();
         initCharts();
+
+        // Add click event listener for accessories expansion
+        document.getElementById('accessories-row').addEventListener('click', toggleAccessoriesExpansion);
 
         // Fetch data immediately and then every 10 seconds
         fetchWeather();
