@@ -2,6 +2,11 @@
 
 A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on temperature, humidity, wind speed, rain accumulation, and wind direction. Includes a modern web dashboard with interactive unit conversions and cross-platform deployment scripts.
 
+## Authors
+
+- **Kent** - Original project development and maintenance
+- **GitHub Copilot** - AI-assisted development, code improvements, and documentation
+
 ## Features
 
 - **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest API for current weather observations every 60 seconds
@@ -404,6 +409,63 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Apple** for the HomeKit platform
 - **hc library** for HomeKit Go implementation
 - **Community** for feedback and contributions
+
+## References
+
+This project was developed using various technologies, libraries, and tools. Below is a comprehensive list of key components and resources that contributed to the development:
+
+### Core Technologies
+- **Go Programming Language** (v1.24.2+) - Primary programming language
+- **HomeKit Accessory Protocol** - Apple's smart home communication protocol
+- **WeatherFlow Tempest API** - Weather data source and API integration
+
+### Go Libraries and Dependencies
+- **`github.com/brutella/hc`** - HomeKit Accessory Protocol implementation for Go
+- **Standard Library Packages**:
+  - `net/http` - Web server implementation
+  - `encoding/json` - JSON data handling
+  - `sync` - Concurrent programming primitives
+  - `time` - Time and date operations
+  - `log` - Logging functionality
+  - `os` - Operating system interface
+  - `flag` - Command-line flag parsing
+
+### Web Technologies (Embedded Dashboard)
+- **HTML5** - Dashboard structure and markup
+- **CSS3** - Responsive styling and animations
+- **JavaScript (ES6+)** - Interactive functionality and real-time updates
+- **Chart.js** (v4.4.0) - Interactive charts and data visualization
+- **date-fns** (v2.30.0) - Date and time manipulation in JavaScript
+- **Chart.js Date-Fns Adapter** (v2.0.1) - Time-based chart integration
+
+### Development Tools and AI Assistance
+- **GitHub Copilot** - AI-powered code suggestions and development assistance
+- **Visual Studio Code** - Primary development environment
+- **Go Modules** - Dependency management
+- **Git** - Version control system
+
+### Platform-Specific Tools
+- **systemd** (Linux) - Service management
+- **launchd** (macOS) - Service management
+- **NSSM** (Windows) - Non-Sucking Service Manager for Windows services
+
+### Build and Deployment
+- **Cross-compilation** - Go's built-in cross-platform compilation
+- **Shell scripting** - Bash scripts for automated builds and deployment
+- **Platform detection** - Runtime OS and architecture detection
+
+### External Resources and Documentation
+- **WeatherFlow API Documentation** - Weather data integration reference
+- **Apple HomeKit Developer Documentation** - HomeKit protocol implementation guide
+- **Go Documentation** - Standard library and language reference
+- **MDN Web Docs** - JavaScript, HTML, and CSS reference
+
+### Development Practices
+- **Test-Driven Development** - Unit testing approach
+- **Modular Architecture** - Clean code organization
+- **Error Handling** - Comprehensive error management
+- **Logging** - Multi-level logging system
+- **Configuration Management** - Flexible configuration via flags and environment variables
 
 ---
 
