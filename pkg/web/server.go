@@ -656,8 +656,8 @@ func (ws *WebServer) getDashboardHTML() string {
             <p>Last updated: <span id="last-update">--</span></p>
             <p>Tempest HomeKit Service</p>
         </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.1/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script>
         let units = {
@@ -666,6 +666,8 @@ func (ws *WebServer) getDashboardHTML() string {
             rain: localStorage.getItem('rain-unit') || 'inches',
             pressure: localStorage.getItem('pressure-unit') || 'mb'
         };
+
+        let weatherData = null;
 
         const charts = {};
         const maxDataPoints = 1000; // As specified in requirements
