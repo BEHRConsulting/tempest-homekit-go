@@ -13,17 +13,62 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+*.html
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
+# Go toolchain
 go.work
 go.work.sum
 
-# env file
+# Dependency directories
+vendor/
+
+# Go build cache
+.cache/
+
+# Binaries
+tempest-homekit-go
+tempest-homekit-go.exe
+tempest-homekit-go-darwin
+tempest-homekit-go-linux
+tempest-homekit-go-windows
+
+# Build artifacts
+/build/
+/dist/
+/bin/
+/tmp/
+
+# Database files
+/db/
+/*.db
+/*.sqlite
+/*.sqlite3
+
+# Environment files
 .env
-/db
-/build
-tempest-homekit-go
-tempest-homekit-go
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
