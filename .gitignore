@@ -72,3 +72,11 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Node.js files (if not needed)
+package.json
+package-lock.json
+node_modules/
+
+# Extracted static files (generated from embedded resources)
+pkg/web/static/
