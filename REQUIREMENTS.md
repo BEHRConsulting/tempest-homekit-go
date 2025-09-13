@@ -16,12 +16,13 @@
 
 #### HomeKit Integration
 - ✅ **Bridge Setup**: Create HomeKit bridge accessory for device management
-- ✅ **Sensor Accessories**: Implement 5 separate HomeKit accessories:
+- ✅ **Sensor Accessories**: Implement 6 separate HomeKit accessories:
   - Temperature Sensor (Air Temperature)
   - Humidity Sensor (Relative Humidity)
-  - Wind Sensor (Average Wind Speed)
+  - Wind Speed Sensor (Average Wind Speed)
+  - Wind Direction Sensor (Wind Direction with cardinal format)
   - Rain Sensor (Rain Accumulation)
-  - ✅ **Wind Direction Sensor**: Added wind direction with cardinal format display
+  - Light Sensor (Ambient Light Level)
 - ✅ **Real-time Updates**: Update all sensor values with each weather poll
 - ✅ **Pairing**: Support HomeKit pairing with configurable PIN
 
@@ -56,6 +57,8 @@
 - ✅ `--station`: Tempest station name (default: "Chino Hills")
 - ✅ `--pin`: HomeKit pairing PIN (default: "00102003")
 - ✅ `--loglevel`: Logging verbosity - debug, info, error (default: "error")
+- ✅ `--web-port`: Web dashboard port (default: "8080")
+- ✅ `--cleardb`: Clear HomeKit database and reset device pairing
 
 #### Environment Variables
 - ✅ `TEMPEST_TOKEN`: WeatherFlow API token
@@ -126,16 +129,18 @@
 - ✅ **Bridge**: `accessory.TypeBridge` for device management
 - ✅ **Temperature Sensor**: `accessory.TypeOther` with `service.TemperatureSensor`
 - ✅ **Humidity Sensor**: `accessory.TypeOther` with `service.HumiditySensor`
-- ✅ **Wind Sensor**: `accessory.TypeOther` with `service.Fan` (On/Off for wind presence)
+- ✅ **Wind Speed Sensor**: `accessory.TypeSensor` with custom service
+- ✅ **Wind Direction Sensor**: `accessory.TypeSensor` with custom service
 - ✅ **Rain Sensor**: `accessory.TypeOther` with `service.HumiditySensor` (scaled for rain accumulation)
-- ✅ **Wind Direction Sensor**: Added as additional sensor with cardinal direction display
+- ✅ **Light Sensor**: `accessory.TypeSensor` with `service.LightSensor`
 
 #### Service Characteristics
 - ✅ **Temperature**: `CurrentTemperature` (float, Celsius)
 - ✅ **Humidity**: `CurrentRelativeHumidity` (float, percentage)
-- ✅ **Wind**: `On` (boolean, wind presence)
+- ✅ **Wind Speed**: Custom temperature characteristic (float, mph)
+- ✅ **Wind Direction**: Custom temperature characteristic (float, degrees)
 - ✅ **Rain**: `CurrentRelativeHumidity` (float, scaled 0-100%)
-- ✅ **Wind Direction**: Displayed in cardinal format with degrees
+- ✅ **Light**: `CurrentAmbientLightLevel` (float, lux)
 
 ### Web Dashboard Implementation
 
@@ -277,7 +282,7 @@ tempest-homekit-go/
 - ✅ **No Hardcoded Secrets**: All credentials from configuration
 
 ### Compatibility
-- ✅ **Go Version**: Go 1.19 or later
+- ✅ **Go Version**: Go 1.24.2 or later
 - ✅ **Dependencies**:
   - `github.com/brutella/hc` (latest stable)
   - Standard library only for other dependencies
@@ -383,7 +388,7 @@ require (
 - ✅ Application starts without errors
 - ✅ Discovers specified Tempest station
 - ✅ Polls weather data every 60 seconds
-- ✅ Updates all 5 HomeKit sensors (including wind direction)
+- ✅ Updates all 6 HomeKit sensors (Temperature, Humidity, Wind Speed, Wind Direction, Rain, Light)
 - ✅ HomeKit pairing successful
 - ✅ Debug logging shows all weather values
 - ✅ Web dashboard displays wind direction
@@ -1086,3 +1091,16 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 ```
 
 This requirements document provides complete specifications for implementing the Tempest HomeKit Go service from scratch, including the modern web dashboard with interactive unit conversions and real-time monitoring capabilities.
+
+---
+
+**Status**: ✅ **COMPLETE** - All planned features implemented and tested
+- ✅ Weather monitoring with 6 metrics (Temperature, Humidity, Wind Speed, Wind Direction, Rain, Light)
+- ✅ Complete HomeKit integration with individual sensors
+- ✅ Modern web dashboard with real-time updates
+- ✅ Interactive unit conversions with persistence
+- ✅ Cross-platform build and deployment
+- ✅ Service management for all platforms
+- ✅ Comprehensive logging and error handling
+- ✅ Database management with --cleardb command
+- ✅ Production-ready with graceful error handling

@@ -1,0 +1,22 @@
+
+web console is missing the homeKit and tempest information blocks below the sensors
+
+When clicking on the accessories row, expand the row to show all accessories just below the accessories row.
+
+in the web dashboard, Use the lux table at https://en.wikipedia.org/wiki/Lux showing "Illuminance (lux)" and "Surfaces illuminated by" to give the lux value some context
+
+in the web dashboard, As with the light  box, use the table at xxx to give pressure value some context.
+
+in the web dashboard, As with the light sensor box, use the table at xxx to give humidity value some context. And add a "Feels like" temperature in the humidity box based on current temperature and humidity 
+
+in the web dashboard, As with the light  box, use the table at xxx to give rain value some context.
+
+in the web dashboard temperature box, add a line for average temp on this day over the last 5 years.
+
+Add a trend line for the pressure graph.
+
+Adjust pressure to sea level and show that it is adjusted. Click to toggle.
+
+update readme.md, requirements.md, core_review.md
+
+Update readme.md to show you and I are the authors. Add a reference section to show what you may have used in this program

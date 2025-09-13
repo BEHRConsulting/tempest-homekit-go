@@ -2,7 +2,9 @@ package config
 
 import (
 	"flag"
+	"log"
 	"os"
+	"path/filepath"
 )
 
 type Config struct {
@@ -11,6 +13,7 @@ type Config struct {
 	Pin         string
 	LogLevel    string
 	WebPort     string
+	ClearDB     bool
 }
 
 func LoadConfig() *Config {
@@ -27,9 +30,38 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.Pin, "pin", cfg.Pin, "HomeKit PIN")
 	flag.StringVar(&cfg.LogLevel, "loglevel", cfg.LogLevel, "Log level (debug, info, error)")
 	flag.StringVar(&cfg.WebPort, "web-port", cfg.WebPort, "Web dashboard port")
+	flag.BoolVar(&cfg.ClearDB, "cleardb", false, "Clear HomeKit database and reset device pairing")
 	flag.Parse()
 
 	return cfg
+}
+
+// ClearDatabase removes all files in the HomeKit database directory
+func ClearDatabase(dbPath string) error {
+	log.Printf("Clearing HomeKit database at: %s", dbPath)
+
+	// Check if directory exists
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		log.Printf("Database directory does not exist: %s", dbPath)
+		return nil
+	}
+
+	// Remove all files in the directory
+	files, err := filepath.Glob(filepath.Join(dbPath, "*"))
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		if err := os.Remove(file); err != nil {
+			log.Printf("Warning: Failed to remove %s: %v", file, err)
+		} else {
+			log.Printf("Removed: %s", filepath.Base(file))
+		}
+	}
+
+	log.Printf("HomeKit database cleared successfully")
+	return nil
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

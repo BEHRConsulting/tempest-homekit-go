@@ -9,33 +9,66 @@ import (
 
 // Custom service types for weather sensors
 type WindSensor struct {
-	*service.TemperatureSensor
+	*service.Service
+	WindSpeed *characteristic.CurrentTemperature
 }
 
 type WindDirectionSensor struct {
-	*service.TemperatureSensor
+	*service.Service
+	WindDirection *characteristic.CurrentTemperature
 }
 
 type RainSensor struct {
-	*service.TemperatureSensor
+	*service.Service
+	RainAccumulation *characteristic.CurrentTemperature
 }
 
 // Constructor functions for custom service types
 func NewWindSensor() *WindSensor {
+	svc := service.New(service.TypeThermostat) // Use thermostat service type as base for wind speed
+	windSpeed := characteristic.NewCurrentTemperature()
+	windSpeed.SetValue(0.0)
+	windSpeed.SetMinValue(0.0)
+	windSpeed.SetMaxValue(500.0)
+	windSpeed.SetStepValue(0.1)
+
+	svc.AddCharacteristic(windSpeed.Characteristic)
+
 	return &WindSensor{
-		TemperatureSensor: service.NewTemperatureSensor(),
+		Service:   svc,
+		WindSpeed: windSpeed,
 	}
 }
 
 func NewWindDirectionSensor() *WindDirectionSensor {
+	svc := service.New(service.TypeThermostat) // Use thermostat service type as base for wind direction
+	windDirection := characteristic.NewCurrentTemperature()
+	windDirection.SetValue(0.0)
+	windDirection.SetMinValue(0.0)
+	windDirection.SetMaxValue(360.0)
+	windDirection.SetStepValue(1.0)
+
+	svc.AddCharacteristic(windDirection.Characteristic)
+
 	return &WindDirectionSensor{
-		TemperatureSensor: service.NewTemperatureSensor(),
+		Service:       svc,
+		WindDirection: windDirection,
 	}
 }
 
 func NewRainSensor() *RainSensor {
+	svc := service.New(service.TypeIrrigationSystem) // Use irrigation system service type for rain
+	rainAccumulation := characteristic.NewCurrentTemperature()
+	rainAccumulation.SetValue(0.0)
+	rainAccumulation.SetMinValue(0.0)
+	rainAccumulation.SetMaxValue(100.0)
+	rainAccumulation.SetStepValue(0.1)
+
+	svc.AddCharacteristic(rainAccumulation.Characteristic)
+
 	return &RainSensor{
-		TemperatureSensor: service.NewTemperatureSensor(),
+		Service:          svc,
+		RainAccumulation: rainAccumulation,
 	}
 }
 
@@ -61,7 +94,8 @@ func NewWeatherAccessories() *WeatherAccessories {
 		Manufacturer: "WeatherFlow",
 		Model:        "Tempest",
 	}
-	tempAcc := accessory.New(tempInfo, accessory.TypeSensor)
+	// Use Thermometer accessory type for temperature
+	tempAcc := accessory.New(tempInfo, accessory.TypeThermostat)
 	tempSensor := service.NewTemperatureSensor()
 	nameChar := characteristic.NewName()
 	nameChar.SetValue("Temperature Sensor")
@@ -87,8 +121,9 @@ func NewWeatherAccessories() *WeatherAccessories {
 		Manufacturer: "WeatherFlow",
 		Model:        "Tempest",
 	}
-	windAcc := accessory.New(windInfo, accessory.TypeSensor) // Using sensor accessory type for wind speed
-	windSensor := NewWindSensor()                            // Use custom wind sensor
+	// Use Sensor accessory type for wind speed
+	windAcc := accessory.New(windInfo, accessory.TypeSensor)
+	windSensor := NewWindSensor()
 	windNameChar := characteristic.NewName()
 	windNameChar.SetValue("Wind Speed Sensor")
 	windSensor.Service.AddCharacteristic(windNameChar.Characteristic)
@@ -100,8 +135,9 @@ func NewWeatherAccessories() *WeatherAccessories {
 		Manufacturer: "WeatherFlow",
 		Model:        "Tempest",
 	}
-	windDirAcc := accessory.New(windDirInfo, accessory.TypeSensor) // Using sensor accessory type for wind direction
-	windDirSensor := NewWindDirectionSensor()                      // Use custom wind direction sensor
+	// Use Sensor accessory type for wind direction
+	windDirAcc := accessory.New(windDirInfo, accessory.TypeSensor)
+	windDirSensor := NewWindDirectionSensor()
 	windDirNameChar := characteristic.NewName()
 	windDirNameChar.SetValue("Wind Direction Sensor")
 	windDirSensor.Service.AddCharacteristic(windDirNameChar.Characteristic)
@@ -113,8 +149,9 @@ func NewWeatherAccessories() *WeatherAccessories {
 		Manufacturer: "WeatherFlow",
 		Model:        "Tempest",
 	}
-	rainAcc := accessory.New(rainInfo, accessory.TypeSensor) // Using sensor accessory type for rain
-	rainSensor := NewRainSensor()                            // Using custom rain sensor
+	// Use Sprinklers accessory type for rain
+	rainAcc := accessory.New(rainInfo, accessory.TypeSprinklers)
+	rainSensor := NewRainSensor()
 	rainNameChar := characteristic.NewName()
 	rainNameChar.SetValue("Rain Sensor")
 	rainSensor.Service.AddCharacteristic(rainNameChar.Characteristic)
@@ -158,24 +195,34 @@ func (wa *WeatherAccessories) UpdateHumidity(hum float64) {
 }
 
 func (wa *WeatherAccessories) UpdateWindSpeed(speed float64) {
-	// Use temperature sensor to display wind speed as a numeric value
-	// Wind speed ranges from 0.00 to 500.00 mph
-	wa.WindSensor.CurrentTemperature.SetValue(speed)
+	// Use custom wind speed sensor with temperature characteristic for display
+	wa.WindSensor.WindSpeed.SetValue(speed)
 }
 
 func (wa *WeatherAccessories) UpdateWindDirection(direction float64) {
-	// Use temperature sensor to display wind direction as degrees (0-360)
-	wa.WindDirectionSensor.CurrentTemperature.SetValue(direction)
+	// Use custom wind direction sensor with temperature characteristic for display
+	wa.WindDirectionSensor.WindDirection.SetValue(direction)
 }
 
 func (wa *WeatherAccessories) UpdateRainAccumulation(rain float64) {
-	// Use temperature sensor to display rain accumulation as inches (0.00 to 1000.00)
-	wa.RainSensor.CurrentTemperature.SetValue(rain)
+	// Use custom rain sensor - scale rain accumulation to temperature range
+	// Map 0-1000 inches to 0-100 temperature units
+	tempValue := (rain / 1000.0) * 100.0
+	if tempValue > 100.0 {
+		tempValue = 100.0
+	}
+	wa.RainSensor.RainAccumulation.SetValue(tempValue)
 }
 
 func (wa *WeatherAccessories) UpdateIlluminance(illuminance float64) {
 	// Update light sensor with illuminance data
 	wa.LightSensor.CurrentAmbientLightLevel.SetValue(illuminance)
+}
+
+func degreesToCompass(degrees float64) string {
+	directions := []string{"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"}
+	index := int((degrees+11.25)/22.5) % 16
+	return directions[index]
 }
 
 func SetupHomeKit(wa *WeatherAccessories, pin string) (hc.Transport, error) {

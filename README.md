@@ -10,7 +10,7 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 ## Features
 
 - **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest API for current weather observations every 60 seconds
-- **Complete HomeKit Integration**: Updates 5 HomeKit sensors (Temperature, Humidity, Wind Speed, Rain Accumulation, Wind Direction)
+- **Complete HomeKit Integration**: Updates 6 HomeKit sensors (Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, Light Level)
 - **Wind Direction Support**: Displays wind direction in cardinal format (N, NE, E, etc.) with degrees
 - **Modern Web Dashboard**: Interactive web interface with real-time updates every 10 seconds and unit conversions
 - **Cross-Platform Deployment**: Automated build and installation scripts for Linux, macOS, and Windows
@@ -18,6 +18,7 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 - **Modular Architecture**: Clean, maintainable code structure with separate packages
 - **Enhanced Logging**: Multi-level logging (debug, info, error) with comprehensive sensor data
 - **Command-line Interface**: Flexible configuration via flags and environment variables
+- **Database Management**: Built-in `--cleardb` command to reset HomeKit pairing and rediscover device
 - **Error Resilience**: Comprehensive error handling and graceful failure recovery
 
 ## Quick Start
@@ -98,6 +99,7 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 - `--pin`: HomeKit pairing PIN (default: "00102003")
 - `--loglevel`: Logging level - debug, info, error (default: "error")
 - `--web-port`: Web dashboard port (default: "8080")
+- `--cleardb`: Clear HomeKit database and reset device pairing
 
 #### Environment Variables
 - `TEMPEST_TOKEN`: WeatherFlow API token
@@ -128,9 +130,10 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 The following sensors will appear as separate HomeKit accessories:
 - **Temperature Sensor**: Air temperature in Celsius
 - **Humidity Sensor**: Relative humidity as percentage
-- **Wind Sensor**: Wind speed presence (On/Off based on wind speed > 0)
-- **Rain Sensor**: Rain accumulation scaled to 0-100%
-- **Wind Direction Sensor**: Wind direction in cardinal format
+- **Wind Speed Sensor**: Wind speed in miles per hour
+- **Wind Direction Sensor**: Wind direction in cardinal format with degrees
+- **Rain Sensor**: Rain accumulation in inches
+- **Light Sensor**: Ambient light level in lux
 
 ## Web Dashboard
 
@@ -277,14 +280,24 @@ The application automatically finds your station by name. Ensure your station na
 
 When you make changes to HomeKit accessories (such as modifying sensor types, names, or configurations), you may need to reset the HomeKit database and re-pair the bridge with your Home app. This ensures the changes take effect properly.
 
-#### Why Reset the Database?
-- Accessory types or service types have changed
-- Accessory names have been modified
-- New accessories have been added or removed
-- HomeKit is showing incorrect sensor groupings
-- Pairing issues or connection problems
+#### Using the Built-in --cleardb Command (Recommended)
 
-#### How to Reset and Re-pair:
+The easiest way to reset HomeKit pairing is using the built-in `--cleardb` command:
+
+```bash
+# Stop the current service if running
+pkill -f tempest-homekit-go
+
+# Clear the database and reset pairing
+./tempest-homekit-go --cleardb
+
+# Restart the service normally
+./tempest-homekit-go --token "your-api-token"
+```
+
+#### Manual Database Reset
+
+If you prefer to do it manually:
 
 1. **Stop the Application**
    ```bash
@@ -470,10 +483,12 @@ This project was developed using various technologies, libraries, and tools. Bel
 ---
 
 **Status**: ✅ **COMPLETE** - All planned features implemented and tested
-- ✅ Weather monitoring with 5 metrics
-- ✅ Complete HomeKit integration
+- ✅ Weather monitoring with 6 metrics (Temperature, Humidity, Wind Speed, Wind Direction, Rain, Light)
+- ✅ Complete HomeKit integration with individual sensors
 - ✅ Modern web dashboard with real-time updates
-- ✅ Interactive unit conversions
+- ✅ Interactive unit conversions with persistence
 - ✅ Cross-platform build and deployment
 - ✅ Service management for all platforms
 - ✅ Comprehensive logging and error handling
+- ✅ Database management with --cleardb command
+- ✅ Production-ready with graceful error handling
