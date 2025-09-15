@@ -24,17 +24,19 @@ type WebServer struct {
 }
 
 type WeatherResponse struct {
-	Temperature   float64 `json:"temperature"`
-	Humidity      float64 `json:"humidity"`
-	WindSpeed     float64 `json:"windSpeed"`
-	WindGust      float64 `json:"windGust"`
-	WindDirection float64 `json:"windDirection"`
-	RainAccum     float64 `json:"rainAccum"`
-	Pressure      float64 `json:"pressure"`
-	Illuminance   float64 `json:"illuminance"`
-	UV            float64 `json:"uv"`
-	Battery       float64 `json:"battery"`
-	LastUpdate    string  `json:"lastUpdate"`
+	Temperature          float64 `json:"temperature"`
+	Humidity             float64 `json:"humidity"`
+	WindSpeed            float64 `json:"windSpeed"`
+	WindGust             float64 `json:"windGust"`
+	WindDirection        float64 `json:"windDirection"`
+	RainAccum            float64 `json:"rainAccum"`
+	Pressure             float64 `json:"pressure"`
+	Illuminance          float64 `json:"illuminance"`
+	UV                   float64 `json:"uv"`
+	Battery              float64 `json:"battery"`
+	LightningStrikeAvg   float64 `json:"lightningStrikeAvg"`
+	LightningStrikeCount int     `json:"lightningStrikeCount"`
+	LastUpdate           string  `json:"lastUpdate"`
 }
 
 type StatusResponse struct {
@@ -124,17 +126,19 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := WeatherResponse{
-		Temperature:   ws.weatherData.AirTemperature,
-		Humidity:      ws.weatherData.RelativeHumidity,
-		WindSpeed:     ws.weatherData.WindAvg,
-		WindGust:      ws.weatherData.WindGust,
-		WindDirection: ws.weatherData.WindDirection,
-		RainAccum:     ws.weatherData.RainAccumulated,
-		Pressure:      ws.weatherData.StationPressure,
-		Illuminance:   ws.weatherData.Illuminance,
-		UV:            ws.weatherData.UV,
-		Battery:       ws.weatherData.Battery,
-		LastUpdate:    time.Unix(ws.weatherData.Timestamp, 0).Format(time.RFC3339),
+		Temperature:          ws.weatherData.AirTemperature,
+		Humidity:             ws.weatherData.RelativeHumidity,
+		WindSpeed:            ws.weatherData.WindAvg,
+		WindGust:             ws.weatherData.WindGust,
+		WindDirection:        ws.weatherData.WindDirection,
+		RainAccum:            ws.weatherData.RainAccumulated,
+		Pressure:             ws.weatherData.StationPressure,
+		Illuminance:          ws.weatherData.Illuminance,
+		UV:                   ws.weatherData.UV,
+		Battery:              ws.weatherData.Battery,
+		LightningStrikeAvg:   ws.weatherData.LightningStrikeAvg,
+		LightningStrikeCount: ws.weatherData.LightningStrikeCount,
+		LastUpdate:           time.Unix(ws.weatherData.Timestamp, 0).Format(time.RFC3339),
 	}
 
 	json.NewEncoder(w).Encode(response)
@@ -161,17 +165,19 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	history := make([]WeatherResponse, len(ws.dataHistory))
 	for i, obs := range ws.dataHistory {
 		history[i] = WeatherResponse{
-			Temperature:   obs.AirTemperature,
-			Humidity:      obs.RelativeHumidity,
-			WindSpeed:     obs.WindAvg,
-			WindGust:      obs.WindGust,
-			WindDirection: obs.WindDirection,
-			RainAccum:     obs.RainAccumulated,
-			Pressure:      obs.StationPressure,
-			Illuminance:   obs.Illuminance,
-			UV:            obs.UV,
-			Battery:       obs.Battery,
-			LastUpdate:    time.Unix(obs.Timestamp, 0).Format(time.RFC3339),
+			Temperature:          obs.AirTemperature,
+			Humidity:             obs.RelativeHumidity,
+			WindSpeed:            obs.WindAvg,
+			WindGust:             obs.WindGust,
+			WindDirection:        obs.WindDirection,
+			RainAccum:            obs.RainAccumulated,
+			Pressure:             obs.StationPressure,
+			Illuminance:          obs.Illuminance,
+			UV:                   obs.UV,
+			Battery:              obs.Battery,
+			LightningStrikeAvg:   obs.LightningStrikeAvg,
+			LightningStrikeCount: obs.LightningStrikeCount,
+			LastUpdate:           time.Unix(obs.Timestamp, 0).Format(time.RFC3339),
 		}
 	}
 
@@ -292,6 +298,31 @@ func (ws *WebServer) getDashboardHTML() string {
 
         .card-unit:hover {
             color: #007bff;
+        }
+
+        .lightning-info {
+            margin: 10px 0;
+            padding: 8px;
+            background-color: rgba(255, 193, 7, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #ffc107;
+        }
+
+        .lightning-strikes, .lightning-distance {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .lightning-strikes:last-child, .lightning-distance:last-child {
+            margin-bottom: 0;
+        }
+
+        .lightning-strikes span, .lightning-distance span {
+            margin-left: 5px;
+            font-weight: 600;
         }
 
         .wind-direction {
@@ -741,10 +772,14 @@ func (ws *WebServer) getDashboardHTML() string {
             <div class="card" id="rain-card">
                 <div class="card-header">
                     <span class="card-icon">🌧️</span>
-                    <span class="card-title">Rain</span>
+                    <span class="card-title">Rain & Lightning</span>
                 </div>
                 <div class="card-value" id="rain">--</div>
                 <div class="card-unit" id="rain-unit" onclick="toggleUnit('rain')">in</div>
+                <div class="lightning-info">
+                    <div class="lightning-strikes">⚡ <span id="lightning-count">--</span> strikes</div>
+                    <div class="lightning-distance">📏 <span id="lightning-distance">--</span> <span id="lightning-distance-unit">km</span></div>
+                </div>
                 <div class="chart-container">
                     <canvas id="rain-chart"></canvas>
                 </div>
@@ -1194,19 +1229,22 @@ func (ws *WebServer) getDashboardHTML() string {
             if (sensor === 'temperature') {
                 units.temperature = units.temperature === 'celsius' ? 'fahrenheit' : 'celsius';
                 localStorage.setItem('temperature-unit', units.temperature);
+                recalculateTemperature();
             } else if (sensor === 'wind') {
                 units.wind = units.wind === 'mph' ? 'kph' : 'mph';
                 localStorage.setItem('wind-unit', units.wind);
+                recalculateWind();
             } else if (sensor === 'rain') {
                 units.rain = units.rain === 'inches' ? 'mm' : 'inches';
                 localStorage.setItem('rain-unit', units.rain);
+                recalculateRain();
             } else if (sensor === 'pressure') {
                 units.pressure = units.pressure === 'mb' ? 'inHg' : 'mb';
                 localStorage.setItem('pressure-unit', units.pressure);
+                recalculatePressure();
             }
             updateUnits();
             updateDisplay();
-            recalculateAverages();
         }
 
         function degreesToDirection(degrees) {
@@ -1255,6 +1293,14 @@ func (ws *WebServer) getDashboardHTML() string {
 
         function inHgToMb(inHg) {
             return inHg / 0.02953;
+        }
+
+        function kmToMiles(km) {
+            return km / 1.60934;
+        }
+
+        function milesToKm(miles) {
+            return miles * 1.60934;
         }
 
         function calculateHeatIndex(tempC, humidity) {
@@ -1441,6 +1487,19 @@ func (ws *WebServer) getDashboardHTML() string {
             }
             document.getElementById('rain').textContent = rain.toFixed(3);
 
+            // Update lightning data
+            document.getElementById('lightning-count').textContent = weatherData.lightningStrikeCount || 0;
+            let lightningDistance = weatherData.lightningStrikeAvg || 0;
+            if (units.rain === 'inches') {
+                // SAE/Imperial system: convert km to miles
+                lightningDistance = kmToMiles(lightningDistance);
+                document.getElementById('lightning-distance-unit').textContent = 'mi';
+            } else {
+                // Metric system: keep km
+                document.getElementById('lightning-distance-unit').textContent = 'km';
+            }
+            document.getElementById('lightning-distance').textContent = lightningDistance.toFixed(1);
+
             let pressure = weatherData.pressure;
             if (units.pressure === 'inHg') {
                 pressure = mbToInHg(pressure);
@@ -1570,8 +1629,7 @@ func (ws *WebServer) getDashboardHTML() string {
             charts.uv.update();
         }
 
-        function recalculateAverages() {
-            // Recalculate temperature data and average
+        function recalculateTemperature() {
             if (charts.temperature.data.datasets[0].data.length > 0) {
                 charts.temperature.data.datasets[0].data.forEach(point => {
                     if (units.temperature === 'fahrenheit') {
@@ -1584,8 +1642,9 @@ func (ws *WebServer) getDashboardHTML() string {
                 updateAverageLine(charts.temperature, charts.temperature.data.datasets[0].data, tempAvg);
                 charts.temperature.update();
             }
+        }
 
-            // Recalculate wind data and average
+        function recalculateWind() {
             if (charts.wind.data.datasets[0].data.length > 0) {
                 charts.wind.data.datasets[0].data.forEach(point => {
                     if (units.wind === 'kph') {
@@ -1598,8 +1657,9 @@ func (ws *WebServer) getDashboardHTML() string {
                 updateAverageLine(charts.wind, charts.wind.data.datasets[0].data, windAvg);
                 charts.wind.update();
             }
+        }
 
-            // Recalculate rain data and average
+        function recalculateRain() {
             if (charts.rain.data.datasets[0].data.length > 0) {
                 charts.rain.data.datasets[0].data.forEach(point => {
                     if (units.rain === 'mm') {
@@ -1612,8 +1672,9 @@ func (ws *WebServer) getDashboardHTML() string {
                 updateAverageLine(charts.rain, charts.rain.data.datasets[0].data, rainAvg);
                 charts.rain.update();
             }
+        }
 
-            // Recalculate pressure data and average
+        function recalculatePressure() {
             if (charts.pressure.data.datasets[0].data.length > 0) {
                 charts.pressure.data.datasets[0].data.forEach(point => {
                     if (units.pressure === 'inHg') {
@@ -1626,6 +1687,13 @@ func (ws *WebServer) getDashboardHTML() string {
                 updateAverageLine(charts.pressure, charts.pressure.data.datasets[0].data, pressureAvg);
                 charts.pressure.update();
             }
+        }
+
+        function recalculateAverages() {
+            recalculateTemperature();
+            recalculateWind();
+            recalculateRain();
+            recalculatePressure();
         }
 
         async function fetchWeather() {
