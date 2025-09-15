@@ -119,6 +119,37 @@ func StartService(cfg *config.Config) error {
 	}
 	webServer.UpdateHomeKitStatus(homekitStatus)
 
+	// Preload historical data if requested
+	if cfg.ReadHistory {
+		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
+			log.Printf("INFO: --read-history flag detected, preloading last 24 hours of weather data...")
+		}
+
+		historicalObs, err := weather.GetHistoricalObservations(station.StationID, cfg.Token)
+		if err != nil {
+			log.Printf("WARNING: Failed to fetch historical data: %v", err)
+		} else {
+			if cfg.LogLevel == "debug" {
+				log.Printf("DEBUG: Successfully fetched %d historical observations", len(historicalObs))
+			}
+
+			// Send historical data to web server for charts
+			for _, obs := range historicalObs {
+				webServer.UpdateWeather(obs)
+				if cfg.LogLevel == "debug" {
+					log.Printf("DEBUG: Added historical observation from %v", time.Unix(obs.Timestamp, 0))
+				}
+			}
+
+			// Update historical data status in web server
+			webServer.SetHistoricalDataStatus(len(historicalObs))
+
+			if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
+				log.Printf("INFO: Historical data preload completed - loaded %d observations", len(historicalObs))
+			}
+		}
+	}
+
 	// Poll weather data
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
 		log.Printf("INFO: Setting up weather polling every 60 seconds")

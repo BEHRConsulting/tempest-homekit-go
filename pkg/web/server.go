@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -13,15 +14,17 @@ import (
 )
 
 type WebServer struct {
-	port           string
-	server         *http.Server
-	weatherData    *weather.Observation
-	homekitStatus  map[string]interface{}
-	dataHistory    []weather.Observation
-	maxHistorySize int
-	stationName    string
-	startTime      time.Time
-	mu             sync.RWMutex
+	port                 string
+	server               *http.Server
+	weatherData          *weather.Observation
+	homekitStatus        map[string]interface{}
+	dataHistory          []weather.Observation
+	maxHistorySize       int
+	stationName          string
+	startTime            time.Time
+	historicalDataLoaded bool
+	historicalDataCount  int
+	mu                   sync.RWMutex
 }
 
 type WeatherResponse struct {
@@ -31,6 +34,7 @@ type WeatherResponse struct {
 	WindGust             float64 `json:"windGust"`
 	WindDirection        float64 `json:"windDirection"`
 	RainAccum            float64 `json:"rainAccum"`
+	RainDailyTotal       float64 `json:"rainDailyTotal"`
 	PrecipitationType    int     `json:"precipitationType"`
 	Pressure             float64 `json:"pressure"`
 	PressureCondition    string  `json:"pressure_condition"`
@@ -45,12 +49,15 @@ type WeatherResponse struct {
 }
 
 type StatusResponse struct {
-	Connected   bool                   `json:"connected"`
-	LastUpdate  string                 `json:"lastUpdate"`
-	Uptime      string                 `json:"uptime"`
-	StationName string                 `json:"stationName,omitempty"`
-	HomeKit     map[string]interface{} `json:"homekit"`
-	DataHistory []WeatherResponse      `json:"dataHistory"`
+	Connected            bool                   `json:"connected"`
+	LastUpdate           string                 `json:"lastUpdate"`
+	Uptime               string                 `json:"uptime"`
+	StationName          string                 `json:"stationName,omitempty"`
+	HomeKit              map[string]interface{} `json:"homekit"`
+	DataHistory          []WeatherResponse      `json:"dataHistory"`
+	ObservationCount     int                    `json:"observationCount"`
+	HistoricalDataLoaded bool                   `json:"historicalDataLoaded"`
+	HistoricalDataCount  int                    `json:"historicalDataCount"`
 }
 
 // Precipitation type helper function
@@ -67,6 +74,79 @@ func getPrecipitationTypeDescription(precipType int) string {
 	default:
 		return "Unknown"
 	}
+}
+
+// Calculate daily rain accumulation from historical data
+func (ws *WebServer) calculateDailyRainAccumulation() float64 {
+	ws.mu.RLock()
+	defer ws.mu.RUnlock()
+
+	if len(ws.dataHistory) == 0 {
+		log.Printf("DEBUG: No data history available for daily rain calculation")
+		return 0.0
+	}
+
+	// Get the start of the current local day
+	now := time.Now()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	// Find observations from today
+	var dailyObservations []weather.Observation
+	for _, obs := range ws.dataHistory {
+		obsTime := time.Unix(obs.Timestamp, 0)
+		if obsTime.After(startOfDay) || obsTime.Equal(startOfDay) {
+			dailyObservations = append(dailyObservations, obs)
+		}
+	}
+
+	log.Printf("DEBUG: Daily rain calculation - Total history: %d, Today's observations: %d, Start of day: %s",
+		len(ws.dataHistory), len(dailyObservations), startOfDay.Format("2006-01-02 15:04:05"))
+
+	if len(dailyObservations) == 0 {
+		log.Printf("DEBUG: No observations found for today")
+		return 0.0
+	}
+
+	// Sort by timestamp to ensure we process chronologically
+	sort.Slice(dailyObservations, func(i, j int) bool {
+		return dailyObservations[i].Timestamp < dailyObservations[j].Timestamp
+	})
+
+	// Calculate total rain for the day
+	// The rain_accumulated field from Tempest represents cumulative rain since station started
+	// To get daily total, we find the difference between current and earliest reading today
+	if len(dailyObservations) == 1 {
+		// Only one observation today, so we can't calculate a difference
+		// Return the accumulated value if it seems reasonable for a daily total
+		singleValue := dailyObservations[0].RainAccumulated
+		log.Printf("DEBUG: Only one observation today, rain value: %.3f", singleValue)
+		if singleValue <= 10.0 { // Reasonable daily limit in inches
+			return singleValue
+		}
+		return 0.0
+	}
+
+	// Find the earliest and latest readings for today
+	earliestToday := dailyObservations[0].RainAccumulated
+	latestToday := dailyObservations[len(dailyObservations)-1].RainAccumulated
+
+	log.Printf("DEBUG: Daily rain calculation - Earliest: %.3f, Latest: %.3f, Observations count: %d",
+		earliestToday, latestToday, len(dailyObservations))
+
+	// If latest is greater than earliest, we have rain accumulation for the day
+	if latestToday >= earliestToday {
+		dailyTotal := latestToday - earliestToday
+		log.Printf("DEBUG: Daily rain total calculated: %.3f inches", dailyTotal)
+		// Sanity check: daily total shouldn't exceed reasonable limits
+		if dailyTotal <= 20.0 { // 20 inches would be extreme but possible
+			return dailyTotal
+		}
+		log.Printf("DEBUG: Daily rain total exceeds sanity limit (%.3f > 20.0), returning 0", dailyTotal)
+	}
+
+	// If we can't calculate a reliable daily total, return 0
+	log.Printf("DEBUG: Cannot calculate reliable daily total, returning 0")
+	return 0.0
 }
 
 // Pressure analysis functions
@@ -190,6 +270,13 @@ func (ws *WebServer) SetStationName(name string) {
 	ws.stationName = name
 }
 
+func (ws *WebServer) SetHistoricalDataStatus(count int) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	ws.historicalDataLoaded = true
+	ws.historicalDataCount = count
+}
+
 func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
 
@@ -267,8 +354,13 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	pressureTrend := getPressureTrend(ws.dataHistory)
 	weatherForecast := getPressureWeatherForecast(ws.weatherData.StationPressure, pressureTrend)
 
+	// Calculate daily rain accumulation
+	dailyRainTotal := ws.calculateDailyRainAccumulation()
+
 	log.Printf("DEBUG: Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s, Pressure: %.2f mb",
 		pressureCondition, pressureTrend, weatherForecast, ws.weatherData.StationPressure)
+	log.Printf("DEBUG: Rain data calculated - Current: %.3f in, Daily Total: %.3f in",
+		ws.weatherData.RainAccumulated, dailyRainTotal)
 
 	response := WeatherResponse{
 		Temperature:          ws.weatherData.AirTemperature,
@@ -277,6 +369,7 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		WindGust:             ws.weatherData.WindGust,
 		WindDirection:        ws.weatherData.WindDirection,
 		RainAccum:            ws.weatherData.RainAccumulated,
+		RainDailyTotal:       dailyRainTotal,
 		PrecipitationType:    ws.weatherData.PrecipitationType,
 		Pressure:             ws.weatherData.StationPressure,
 		PressureCondition:    pressureCondition,
@@ -326,6 +419,7 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 			WindGust:             obs.WindGust,
 			WindDirection:        obs.WindDirection,
 			RainAccum:            obs.RainAccumulated,
+			RainDailyTotal:       0, // Historical data doesn't calculate individual daily totals
 			PrecipitationType:    obs.PrecipitationType,
 			Pressure:             obs.StationPressure,
 			Illuminance:          obs.Illuminance,
@@ -338,11 +432,14 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := StatusResponse{
-		Connected:   connected,
-		LastUpdate:  lastUpdate,
-		Uptime:      uptimeStr,
-		HomeKit:     ws.homekitStatus,
-		DataHistory: history,
+		Connected:            connected,
+		LastUpdate:           lastUpdate,
+		Uptime:               uptimeStr,
+		HomeKit:              ws.homekitStatus,
+		DataHistory:          history,
+		ObservationCount:     len(ws.dataHistory),
+		HistoricalDataLoaded: ws.historicalDataLoaded,
+		HistoricalDataCount:  ws.historicalDataCount,
 	}
 
 	// Add station name if available
@@ -1126,6 +1223,12 @@ func (ws *WebServer) getDashboardHTML() string {
                 </div>
                 <div class="card-value" id="rain">--</div>
                 <div class="card-unit" id="rain-unit" onclick="toggleUnit('rain')">in</div>
+                <div class="daily-rain-info" style="margin-top: 8px; padding: 6px 8px; background-color: rgba(54, 162, 235, 0.1); border-radius: 6px; border-left: 3px solid #36a2eb;">
+                    <div class="daily-rain-content" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
+                        <span style="color: #666; font-weight: 500;">Today Total:</span>
+                        <span id="daily-rain-total" style="color: #333; font-weight: 600;">--</span>
+                    </div>
+                </div>
                 <div class="precipitation-type">
                     <div class="precipitation-info">💧 Type: <span id="precipitation-type">--</span></div>
                 </div>
@@ -1316,6 +1419,14 @@ func (ws *WebServer) getDashboardHTML() string {
                         <span class="info-label">Uptime:</span>
                         <span class="info-value" id="tempest-uptime">--</span>
                     </div>
+                    <div class="info-row">
+                        <span class="info-label">Data Points:</span>
+                        <span class="info-value" id="tempest-data-count">--</span>
+                    </div>
+                    <div class="info-row" id="tempest-historical-row" style="display: none;">
+                        <span class="info-label">Historical:</span>
+                        <span class="info-value" id="tempest-historical-count">--</span>
+                    </div>
                 </div>
             </div>
 
@@ -1360,7 +1471,7 @@ func (ws *WebServer) getDashboardHTML() string {
     <script src="https://unpkg.com/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
     <!-- Main Application Script -->
-    <script src="pkg/web/static/script.js?v=` + fmt.Sprintf("%d", time.Now().Unix()) + `"></script>
+    <script src="pkg/web/static/script.js?v=` + fmt.Sprintf("%d", time.Now().UnixNano()) + `"></script>
 </body>
 </html>`
 }

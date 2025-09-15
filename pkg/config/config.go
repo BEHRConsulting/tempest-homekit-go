@@ -16,6 +16,8 @@ type Config struct {
 	WebPort     string
 	ClearDB     bool
 	Sensors     string
+	ReadHistory bool
+	TestAPI     bool
 }
 
 func LoadConfig() *Config {
@@ -35,6 +37,8 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.WebPort, "web-port", cfg.WebPort, "Web dashboard port")
 	flag.StringVar(&cfg.Sensors, "sensors", cfg.Sensors, "Sensors to enable: 'all', 'min', 'temp-only', or comma-delimited list (temp,humidity,lux,wind,rain,pressure)")
 	flag.BoolVar(&cfg.ClearDB, "cleardb", false, "Clear HomeKit database and reset device pairing")
+	flag.BoolVar(&cfg.ReadHistory, "read-history", false, "Preload last 24 hours of weather data from Tempest API")
+	flag.BoolVar(&cfg.TestAPI, "test-api", false, "Test WeatherFlow API endpoints and data points")
 	flag.Parse()
 
 	return cfg

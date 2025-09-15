@@ -42,6 +42,9 @@ const maxDataPoints = 1000; // As specified in requirements
 function initCharts() {
     debugLog(logLevels.DEBUG, 'Initializing all charts with configuration');
     
+    // Set Chart.js default locale to ensure 24-hour format
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    
     const ctxTemp = document.getElementById('temperature-chart').getContext('2d');
     const ctxHumidity = document.getElementById('humidity-chart').getContext('2d');
     const ctxWind = document.getElementById('wind-chart').getContext('2d');
@@ -57,7 +60,23 @@ function initCharts() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            // Force 24-hour format for tooltip titles
+                            const date = new Date(context[0].parsed.x);
+                            return date.toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: '2-digit' 
+                            }) + ', ' + date.toLocaleTimeString('en-GB', { 
+                                hour: '2-digit', 
+                                minute: '2-digit',
+                                hour12: false 
+                            });
+                        }
+                    }
+                }
             },
             scales: {
                 x: {
@@ -69,7 +88,7 @@ function initCharts() {
                             hour: 'HH:mm',
                             day: 'MMM dd'
                         },
-                        tooltipFormat: 'MMM dd, HH:mm:ss'
+                        tooltipFormat: 'MMM dd, HH:mm'
                     },
                     grid: {
                         display: true,
@@ -80,6 +99,14 @@ function initCharts() {
                         color: '#666',
                         font: {
                             size: 10
+                        },
+                        callback: function(value, index, values) {
+                            // Force 24-hour format for tick labels
+                            return new Date(value).toLocaleTimeString('en-GB', { 
+                                hour: '2-digit', 
+                                minute: '2-digit',
+                                hour12: false 
+                            });
                         }
                     },
                     title: {
@@ -137,11 +164,12 @@ function initCharts() {
                 backgroundColor: 'rgba(255, 99, 132, 0.1)',
                 fill: false,
                 tension: 0.4,
+                spanGaps: false,
                 label: 'Temperature'
             }, {
                 data: [],
-                borderColor: '#ff6384',
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: '#00cc66',
+                backgroundColor: 'rgba(0, 204, 102, 0.2)',
                 borderDash: [5, 5],
                 borderWidth: 2,
                 fill: false,
@@ -150,6 +178,15 @@ function initCharts() {
                 label: 'Average'
             }]
         }
+    });
+    
+    // Force the colors after creation
+    charts.temperature.data.datasets[1].borderColor = '#00cc66';
+    charts.temperature.data.datasets[1].backgroundColor = 'rgba(0, 204, 102, 0.2)';
+    
+    debugLog(logLevels.INFO, 'Temperature chart created with colors:', {
+        dataColor: charts.temperature.data.datasets[0].borderColor,
+        avgColor: charts.temperature.data.datasets[1].borderColor
     });
 
     charts.humidity = new Chart(ctxHumidity, {
@@ -157,15 +194,16 @@ function initCharts() {
         data: {
             datasets: [{
                 data: [],
-                borderColor: '#36a2eb',
+                borderColor: 'rgba(54, 162, 235, 0.8)',
                 backgroundColor: 'rgba(54, 162, 235, 0.1)',
                 fill: false,
                 tension: 0.4,
+                spanGaps: false,
                 label: 'Humidity'
             }, {
                 data: [],
-                borderColor: '#36a2eb',
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: '#ff8533',
+                backgroundColor: 'rgba(255, 133, 51, 0.2)',
                 borderDash: [5, 5],
                 borderWidth: 2,
                 fill: false,
@@ -175,21 +213,31 @@ function initCharts() {
             }]
         }
     });
+    
+    // Force the colors after creation
+    charts.humidity.data.datasets[1].borderColor = '#ff8533';
+    charts.humidity.data.datasets[1].backgroundColor = 'rgba(255, 133, 51, 0.2)';
+    
+    debugLog(logLevels.INFO, 'Humidity chart created with colors:', {
+        dataColor: charts.humidity.data.datasets[0].borderColor,
+        avgColor: charts.humidity.data.datasets[1].borderColor
+    });
 
     charts.wind = new Chart(ctxWind, {
         ...chartConfig,
         data: {
             datasets: [{
                 data: [],
-                borderColor: '#4bc0c0',
+                borderColor: 'rgba(75, 192, 192, 0.8)',
                 backgroundColor: 'rgba(75, 192, 192, 0.1)',
                 fill: false,
                 tension: 0.4,
+                spanGaps: false,
                 label: 'Wind'
             }, {
                 data: [],
-                borderColor: '#4bc0c0',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: '#ff4d4d',
+                backgroundColor: 'rgba(255, 77, 77, 0.2)',
                 borderDash: [5, 5],
                 borderWidth: 2,
                 fill: false,
@@ -209,11 +257,12 @@ function initCharts() {
                 backgroundColor: 'rgba(153, 102, 255, 0.1)',
                 fill: false,
                 tension: 0.4,
+                spanGaps: false,
                 label: 'Rain'
             }, {
                 data: [],
-                borderColor: '#9966ff',
-                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                borderColor: '#66ff66',
+                backgroundColor: 'rgba(102, 255, 102, 0.2)',
                 borderDash: [5, 5],
                 borderWidth: 2,
                 fill: false,
@@ -229,15 +278,16 @@ function initCharts() {
         data: {
             datasets: [{
                 data: [],
-                borderColor: '#ff9f40',
+                borderColor: 'rgba(255, 159, 64, 0.8)',
                 backgroundColor: 'rgba(255, 159, 64, 0.1)',
                 fill: false,
                 tension: 0.4,
+                spanGaps: false,
                 label: 'Pressure'
             }, {
                 data: [],
-                borderColor: '#ff9f40',
-                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                borderColor: '#4080ff',
+                backgroundColor: 'rgba(64, 128, 255, 0.2)',
                 borderDash: [5, 5],
                 borderWidth: 2,
                 fill: false,
@@ -263,15 +313,16 @@ function initCharts() {
         data: {
             datasets: [{
                 data: [],
-                borderColor: '#ffcd56',
+                borderColor: 'rgba(255, 205, 86, 0.8)',
                 backgroundColor: 'rgba(255, 205, 86, 0.1)',
                 fill: false,
                 tension: 0.4,
+                spanGaps: false,
                 label: 'Light'
             }, {
                 data: [],
-                borderColor: '#ffcd56',
-                backgroundColor: 'rgba(255, 205, 86, 0.2)',
+                borderColor: '#8a56ff',
+                backgroundColor: 'rgba(138, 86, 255, 0.2)',
                 borderDash: [5, 5],
                 borderWidth: 2,
                 fill: false,
@@ -289,15 +340,16 @@ function initCharts() {
             data: {
                 datasets: [{
                     data: [],
-                    borderColor: '#9966ff',
+                    borderColor: 'rgba(153, 102, 255, 0.8)',
                     backgroundColor: 'rgba(153, 102, 255, 0.1)',
                     fill: false,
                     tension: 0.4,
+                    spanGaps: false,
                     label: 'UV Index'
                 }, {
                     data: [],
-                    borderColor: '#9966ff',
-                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderColor: '#66ff66',
+                    backgroundColor: 'rgba(102, 255, 102, 0.2)',
                     borderDash: [5, 5],
                     borderWidth: 2,
                     fill: false,
@@ -311,6 +363,71 @@ function initCharts() {
     } else {
         debugLog(logLevels.DEBUG, 'UV chart element not found, skipping UV chart creation');
     }
+    
+    // Force all chart colors after creation
+    forceChartColors();
+}
+
+function forceChartColors() {
+    debugLog(logLevels.INFO, '🎨 Forcing chart colors to complementary pairs');
+    
+    // Temperature: Red data → Green average
+    if (charts.temperature) {
+        charts.temperature.data.datasets[1].borderColor = '#00cc66';
+        charts.temperature.data.datasets[1].backgroundColor = 'rgba(0, 204, 102, 0.2)';
+        charts.temperature.update('none');
+    }
+    
+    // Humidity: Blue data → Orange average  
+    if (charts.humidity) {
+        charts.humidity.data.datasets[1].borderColor = '#ff8533';
+        charts.humidity.data.datasets[1].backgroundColor = 'rgba(255, 133, 51, 0.2)';
+        charts.humidity.update('none');
+    }
+    
+    // Wind: Teal data → Bright Red average (more visible)
+    if (charts.wind) {
+        charts.wind.data.datasets[1].borderColor = '#FF0000';
+        charts.wind.data.datasets[1].backgroundColor = 'rgba(255, 0, 0, 0.3)';
+        charts.wind.data.datasets[1].borderWidth = 3;
+        charts.wind.update('none');
+        
+        debugLog(logLevels.INFO, '🌬️ Wind chart colors applied:', {
+            dataColor: charts.wind.data.datasets[0].borderColor,
+            avgColor: charts.wind.data.datasets[1].borderColor,
+            avgDataPoints: charts.wind.data.datasets[1].data.length
+        });
+    }
+    
+    // Rain: Purple data → Yellow-green average
+    if (charts.rain) {
+        charts.rain.data.datasets[1].borderColor = '#66ff66';
+        charts.rain.data.datasets[1].backgroundColor = 'rgba(102, 255, 102, 0.2)';
+        charts.rain.update('none');
+    }
+    
+    // Pressure: Orange data → Blue average
+    if (charts.pressure) {
+        charts.pressure.data.datasets[1].borderColor = '#4080ff';
+        charts.pressure.data.datasets[1].backgroundColor = 'rgba(64, 128, 255, 0.2)';
+        charts.pressure.update('none');
+    }
+    
+    // Light: Yellow data → Purple average
+    if (charts.light) {
+        charts.light.data.datasets[1].borderColor = '#8a56ff';
+        charts.light.data.datasets[1].backgroundColor = 'rgba(138, 86, 255, 0.2)';
+        charts.light.update('none');
+    }
+    
+    // UV: Purple data → Yellow-green average
+    if (charts.uv) {
+        charts.uv.data.datasets[1].borderColor = '#66ff66';
+        charts.uv.data.datasets[1].backgroundColor = 'rgba(102, 255, 102, 0.2)';
+        charts.uv.update('none');
+    }
+    
+    debugLog(logLevels.INFO, '✅ Chart colors forced - complementary pairs applied');
 }
 
 function updateUnits() {
@@ -551,20 +668,85 @@ function calculateTrendLine(data) {
     return trendLine;
 }
 
-function updateAverageLine(chart, data, averageValue) {
+function updateAverageLine(chart, data) {
     if (data.length === 0) {
         chart.data.datasets[1].data = [];
         return;
     }
 
-    // Create average line points spanning the entire time range
-    const firstPoint = data[0];
-    const lastPoint = data[data.length - 1];
+    // Calculate a moving average with a window of 10% of total data points (minimum 5, maximum 50)
+    const windowSize = Math.max(5, Math.min(50, Math.floor(data.length * 0.1)));
+    const movingAverageData = [];
 
-    chart.data.datasets[1].data = [
-        { x: firstPoint.x, y: averageValue },
-        { x: lastPoint.x, y: averageValue }
-    ];
+    for (let i = 0; i < data.length; i++) {
+        // Calculate the range for the moving window
+        const start = Math.max(0, i - Math.floor(windowSize / 2));
+        const end = Math.min(data.length - 1, i + Math.floor(windowSize / 2));
+        
+        // Calculate average for the window
+        let sum = 0;
+        let count = 0;
+        for (let j = start; j <= end; j++) {
+            if (data[j] && typeof data[j].y === 'number') {
+                sum += data[j].y;
+                count++;
+            }
+        }
+        
+        if (count > 0) {
+            movingAverageData.push({
+                x: data[i].x,
+                y: sum / count
+            });
+        }
+    }
+
+    chart.data.datasets[1].data = movingAverageData;
+    
+    debugLog(logLevels.DEBUG, 'Moving average updated', {
+        chartLabel: chart.data.datasets[0].label || 'Unknown',
+        dataPoints: data.length,
+        windowSize: windowSize,
+        averagePoints: movingAverageData.length
+    });
+}
+
+function validateAndSortChartData(chart) {
+    // Validate and sort data for the main dataset
+    if (chart.data.datasets[0] && chart.data.datasets[0].data) {
+        let data = chart.data.datasets[0].data;
+        
+        // Filter out invalid data points
+        data = data.filter(point => 
+            point && 
+            typeof point.x !== 'undefined' && 
+            typeof point.y === 'number' && 
+            !isNaN(point.y) &&
+            point.x instanceof Date || typeof point.x === 'number'
+        );
+        
+        // Sort by timestamp
+        data.sort((a, b) => new Date(a.x) - new Date(b.x));
+        
+        // Remove duplicate timestamps, keeping the most recent value
+        const uniqueData = [];
+        for (let i = 0; i < data.length; i++) {
+            const current = data[i];
+            const next = data[i + 1];
+            
+            if (!next || new Date(current.x).getTime() !== new Date(next.x).getTime()) {
+                uniqueData.push(current);
+            }
+        }
+        
+        chart.data.datasets[0].data = uniqueData;
+        
+        debugLog(logLevels.DEBUG, 'Chart data validated and sorted', {
+            originalPoints: data.length,
+            filteredPoints: uniqueData.length,
+            removed: data.length - uniqueData.length
+        });
+    }
 }
 
 function updateTrendLine(chart, data) {
@@ -840,10 +1022,19 @@ function updateDisplay() {
 
     // Rain data
     let rain = weatherData.rainAccum;
+    let dailyRain = weatherData.rainDailyTotal || 0;
     if (units.rain === 'mm') {
         rain = inchesToMm(rain);
+        dailyRain = inchesToMm(dailyRain);
     }
     document.getElementById('rain').textContent = rain.toFixed(3);
+    
+    // Display daily rain total
+    const dailyRainElement = document.getElementById('daily-rain-total');
+    if (dailyRainElement) {
+        const rainUnit = units.rain === 'inches' ? 'in' : 'mm';
+        dailyRainElement.textContent = dailyRain.toFixed(3) + ' ' + rainUnit;
+    }
     
     // Precipitation type data
     const precipitationTypeElement = document.getElementById('precipitation-type');
@@ -880,6 +1071,8 @@ function updateDisplay() {
     debugLog(logLevels.DEBUG, 'Rain and lightning data updated', {
         originalRain: weatherData.rainAccum,
         convertedRain: rain,
+        originalDailyRain: weatherData.rainDailyTotal,
+        convertedDailyRain: dailyRain,
         rainUnit: units.rain,
         lightningCount: weatherData.lightningStrikeCount,
         lightningDistance: weatherData.lightningStrikeAvg
@@ -937,7 +1130,14 @@ function updateDisplay() {
     });
 
     // Last update timestamp
-    const lastUpdateText = new Date(weatherData.lastUpdate).toLocaleString();
+    const lastUpdateText = new Date(weatherData.lastUpdate).toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
     document.getElementById('last-update').textContent = lastUpdateText;
     
     debugLog(logLevels.INFO, 'Display update completed', {
@@ -965,7 +1165,8 @@ function updateCharts() {
         charts.temperature.data.datasets[0].data.shift();
     }
     const tempAvg = calculateAverage(charts.temperature.data.datasets[0].data);
-    updateAverageLine(charts.temperature, charts.temperature.data.datasets[0].data, tempAvg);
+    validateAndSortChartData(charts.temperature);
+    updateAverageLine(charts.temperature, charts.temperature.data.datasets[0].data);
     charts.temperature.options.scales.y.title = {
         display: true,
         text: units.temperature === 'celsius' ? '°C' : '°F'
@@ -984,7 +1185,7 @@ function updateCharts() {
         charts.humidity.data.datasets[0].data.shift();
     }
     const humidityAvg = calculateAverage(charts.humidity.data.datasets[0].data);
-    updateAverageLine(charts.humidity, charts.humidity.data.datasets[0].data, humidityAvg);
+    updateAverageLine(charts.humidity, charts.humidity.data.datasets[0].data);
     charts.humidity.options.scales.y.title = {
         display: true,
         text: '%'
@@ -1001,7 +1202,7 @@ function updateCharts() {
         charts.wind.data.datasets[0].data.shift();
     }
     const windAvg = calculateAverage(charts.wind.data.datasets[0].data);
-    updateAverageLine(charts.wind, charts.wind.data.datasets[0].data, windAvg);
+    updateAverageLine(charts.wind, charts.wind.data.datasets[0].data);
     charts.wind.options.scales.y.title = {
         display: true,
         text: units.wind === 'mph' ? 'mph' : 'kph'
@@ -1018,7 +1219,7 @@ function updateCharts() {
         charts.rain.data.datasets[0].data.shift();
     }
     const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
-    updateAverageLine(charts.rain, charts.rain.data.datasets[0].data, rainAvg);
+    updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
     charts.rain.options.scales.y.title = {
         display: true,
         text: units.rain === 'inches' ? 'in' : 'mm'
@@ -1035,7 +1236,7 @@ function updateCharts() {
         charts.pressure.data.datasets[0].data.shift();
     }
     const pressureAvg = calculateAverage(charts.pressure.data.datasets[0].data);
-    updateAverageLine(charts.pressure, charts.pressure.data.datasets[0].data, pressureAvg);
+    updateAverageLine(charts.pressure, charts.pressure.data.datasets[0].data);
     updateTrendLine(charts.pressure, charts.pressure.data.datasets[0].data);
     charts.pressure.options.scales.y.title = {
         display: true,
@@ -1049,7 +1250,7 @@ function updateCharts() {
         charts.light.data.datasets[0].data.shift();
     }
     const lightAvg = calculateAverage(charts.light.data.datasets[0].data);
-    updateAverageLine(charts.light, charts.light.data.datasets[0].data, lightAvg);
+    updateAverageLine(charts.light, charts.light.data.datasets[0].data);
     charts.light.options.scales.y.title = {
         display: true,
         text: 'lux'
@@ -1069,7 +1270,7 @@ function updateCharts() {
             charts.uv.data.datasets[0].data.shift();
         }
         const uvAvg = calculateAverage(charts.uv.data.datasets[0].data);
-        updateAverageLine(charts.uv, charts.uv.data.datasets[0].data, uvAvg);
+        updateAverageLine(charts.uv, charts.uv.data.datasets[0].data);
         charts.uv.options.scales.y.title = {
             display: true,
             text: 'UVI'
@@ -1099,7 +1300,7 @@ function recalculateAverages() {
             }
         });
         const tempAvg = calculateAverage(charts.temperature.data.datasets[0].data);
-        updateAverageLine(charts.temperature, charts.temperature.data.datasets[0].data, tempAvg);
+        updateAverageLine(charts.temperature, charts.temperature.data.datasets[0].data);
         charts.temperature.update();
     }
 
@@ -1113,7 +1314,7 @@ function recalculateAverages() {
             }
         });
         const windAvg = calculateAverage(charts.wind.data.datasets[0].data);
-        updateAverageLine(charts.wind, charts.wind.data.datasets[0].data, windAvg);
+        updateAverageLine(charts.wind, charts.wind.data.datasets[0].data);
         charts.wind.update();
     }
 
@@ -1127,7 +1328,7 @@ function recalculateAverages() {
             }
         });
         const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
-        updateAverageLine(charts.rain, charts.rain.data.datasets[0].data, rainAvg);
+        updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
         charts.rain.update();
     }
 
@@ -1141,7 +1342,7 @@ function recalculateAverages() {
             }
         });
         const pressureAvg = calculateAverage(charts.pressure.data.datasets[0].data);
-        updateAverageLine(charts.pressure, charts.pressure.data.datasets[0].data, pressureAvg);
+        updateAverageLine(charts.pressure, charts.pressure.data.datasets[0].data);
         updateTrendLine(charts.pressure, charts.pressure.data.datasets[0].data);
         charts.pressure.update();
     }
@@ -1156,6 +1357,17 @@ function recalculateAverages() {
         if (conditionEl) conditionEl.textContent = weatherData.pressure_condition || '--';
         if (trendEl) trendEl.textContent = weatherData.pressure_trend || '--';
         if (forecastEl) forecastEl.textContent = weatherData.weather_forecast || '--';
+
+        // Update daily rain total when units change
+        const dailyRainElement = document.getElementById('daily-rain-total');
+        if (dailyRainElement && weatherData.rainDailyTotal !== undefined) {
+            let dailyRain = weatherData.rainDailyTotal;
+            if (units.rain === 'mm') {
+                dailyRain = inchesToMm(dailyRain);
+            }
+            const rainUnit = units.rain === 'inches' ? 'in' : 'mm';
+            dailyRainElement.textContent = dailyRain.toFixed(3) + ' ' + rainUnit;
+        }
     }
 }
 
@@ -1255,15 +1467,210 @@ function updateStatusDisplay(status) {
     const tempestStation = document.getElementById('tempest-station');
     const tempestLastUpdate = document.getElementById('tempest-last-update');
     const tempestUptime = document.getElementById('tempest-uptime');
+    const tempestDataCount = document.getElementById('tempest-data-count');
+    const tempestHistoricalRow = document.getElementById('tempest-historical-row');
+    const tempestHistoricalCount = document.getElementById('tempest-historical-count');
 
     if (tempestStatus) {
         tempestStatus.textContent = status.connected ? 'Connected' : 'Disconnected';
         tempestStatus.style.color = status.connected ? '#28a745' : '#dc3545';
     }
     if (tempestStation) tempestStation.textContent = status.stationName || '--';
-    if (tempestLastUpdate) tempestLastUpdate.textContent = status.lastUpdate ? new Date(status.lastUpdate).toLocaleString() : '--';
+    if (tempestLastUpdate) tempestLastUpdate.textContent = status.lastUpdate ? new Date(status.lastUpdate).toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }) : '--';
     if (tempestUptime) tempestUptime.textContent = status.uptime || '--';
+    if (tempestDataCount) tempestDataCount.textContent = status.observationCount || '0';
+    
+    // Show/hide historical data row and update count
+    if (tempestHistoricalRow && tempestHistoricalCount) {
+        if (status.historicalDataLoaded && status.observationCount > 0) {
+            tempestHistoricalRow.style.display = '';
+            tempestHistoricalCount.textContent = `${status.observationCount} data points`;
+        } else {
+            tempestHistoricalRow.style.display = 'none';
+        }
+    }
 
+    // Populate charts with historical data if available
+    if (status.dataHistory && status.dataHistory.length > 0) {
+        populateChartsWithHistoricalData(status.dataHistory);
+    }
+
+    // Update HomeKit status
+    const homekitStatus = document.getElementById('homekit-status');
+    const homekitAccessories = document.getElementById('homekit-accessories');
+    const homekitBridge = document.getElementById('homekit-bridge');
+    const homekitPin = document.getElementById('homekit-pin');
+
+    const hk = status.homekit || {};
+    if (homekitStatus) {
+        homekitStatus.textContent = hk.bridge ? 'Active' : 'Inactive';
+        homekitStatus.style.color = hk.bridge ? '#28a745' : '#dc3545';
+    }
+    if (homekitAccessories) homekitAccessories.textContent = hk.accessories || '--';
+    if (homekitBridge) homekitBridge.textContent = hk.name || '--';
+    if (homekitPin) homekitPin.textContent = hk.pin || '--';
+
+    // Update accessories list
+    updateAccessoriesList(hk.accessoryNames || []);
+    
+    debugLog(logLevels.DEBUG, 'Status display update completed', {
+        tempestConnected: status.connected,
+        homekitActive: hk.bridge,
+        accessoryCount: hk.accessories
+    });
+}
+
+function populateChartsWithHistoricalData(dataHistory) {
+    debugLog(logLevels.DEBUG, 'Populating charts with historical data', {
+        dataPoints: dataHistory.length
+    });
+
+    // Clear existing chart data
+    charts.temperature.data.datasets[0].data = [];
+    charts.humidity.data.datasets[0].data = [];
+    charts.wind.data.datasets[0].data = [];
+    charts.rain.data.datasets[0].data = [];
+    charts.pressure.data.datasets[0].data = [];
+    charts.light.data.datasets[0].data = [];
+    if (charts.uv && charts.uv.data) {
+        charts.uv.data.datasets[0].data = [];
+    }
+
+    // Process each historical data point
+    for (let i = 0; i < dataHistory.length; i++) {
+        const obs = dataHistory[i];
+        const timestamp = new Date(obs.lastUpdate);
+
+        // Temperature
+        let tempValue = obs.temperature;
+        if (units.temperature === 'fahrenheit') {
+            tempValue = celsiusToFahrenheit(tempValue);
+        }
+        charts.temperature.data.datasets[0].data.push({ x: timestamp, y: tempValue });
+
+        // Humidity
+        charts.humidity.data.datasets[0].data.push({ x: timestamp, y: obs.humidity });
+
+        // Wind
+        let windValue = obs.windSpeed;
+        if (units.wind === 'kph') {
+            windValue = mphToKph(windValue);
+        }
+        charts.wind.data.datasets[0].data.push({ x: timestamp, y: windValue });
+
+        // Rain
+        let rainValue = obs.rainAccum;
+        if (units.rain === 'mm') {
+            rainValue = inchesToMm(rainValue);
+        }
+        charts.rain.data.datasets[0].data.push({ x: timestamp, y: rainValue });
+
+        // Pressure
+        let pressureValue = obs.pressure;
+        if (units.pressure === 'inHg') {
+            pressureValue = mbToInHg(pressureValue);
+        }
+        charts.pressure.data.datasets[0].data.push({ x: timestamp, y: pressureValue });
+
+        // Light
+        charts.light.data.datasets[0].data.push({ x: timestamp, y: obs.illuminance });
+
+        // UV (if chart exists)
+        if (charts.uv && charts.uv.data) {
+            charts.uv.data.datasets[0].data.push({ x: timestamp, y: obs.uv });
+        }
+    }
+
+    // Update averages and trend lines for all charts
+    updateAverageAndTrendLines();
+
+    // Update all charts
+    charts.temperature.update();
+    charts.humidity.update();
+    charts.wind.update();
+    charts.rain.update();
+    charts.pressure.update();
+    charts.light.update();
+    if (charts.uv && charts.uv.data) {
+        charts.uv.update();
+    }
+
+    debugLog(logLevels.INFO, 'Charts populated with historical data', {
+        temperaturePoints: charts.temperature.data.datasets[0].data.length,
+        humidityPoints: charts.humidity.data.datasets[0].data.length,
+        windPoints: charts.wind.data.datasets[0].data.length,
+        rainPoints: charts.rain.data.datasets[0].data.length,
+        pressurePoints: charts.pressure.data.datasets[0].data.length,
+        lightPoints: charts.light.data.datasets[0].data.length,
+        uvPoints: charts.uv && charts.uv.data ? charts.uv.data.datasets[0].data.length : 0
+    });
+}
+
+function updateAverageAndTrendLines() {
+    // Update temperature average
+    if (charts.temperature.data.datasets[0].data.length > 0) {
+        validateAndSortChartData(charts.temperature);
+        const tempAvg = calculateAverage(charts.temperature.data.datasets[0].data);
+        updateAverageLine(charts.temperature, charts.temperature.data.datasets[0].data);
+    }
+
+    // Update humidity average
+    if (charts.humidity.data.datasets[0].data.length > 0) {
+        validateAndSortChartData(charts.humidity);
+        const humidityAvg = calculateAverage(charts.humidity.data.datasets[0].data);
+        updateAverageLine(charts.humidity, charts.humidity.data.datasets[0].data);
+    }
+
+    // Update wind average
+    if (charts.wind.data.datasets[0].data.length > 0) {
+        debugLog(logLevels.INFO, '🌬️ BEFORE wind validation - data points:', charts.wind.data.datasets[0].data.length);
+        validateAndSortChartData(charts.wind);
+        debugLog(logLevels.INFO, '🌬️ AFTER wind validation - data points:', charts.wind.data.datasets[0].data.length);
+        const windAvg = calculateAverage(charts.wind.data.datasets[0].data);
+        debugLog(logLevels.INFO, '🌬️ BEFORE wind updateAverageLine - avg:', windAvg);
+        updateAverageLine(charts.wind, charts.wind.data.datasets[0].data);
+        debugLog(logLevels.INFO, '🌬️ AFTER wind updateAverageLine - avg points:', charts.wind.data.datasets[1].data.length);
+    }
+
+    // Update rain average
+    if (charts.rain.data.datasets[0].data.length > 0) {
+        validateAndSortChartData(charts.rain);
+        const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
+        updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
+    }
+
+    // Update pressure average and trend
+    if (charts.pressure.data.datasets[0].data.length > 0) {
+        validateAndSortChartData(charts.pressure);
+        const pressureAvg = calculateAverage(charts.pressure.data.datasets[0].data);
+        updateAverageLine(charts.pressure, charts.pressure.data.datasets[0].data);
+        updateTrendLine(charts.pressure, charts.pressure.data.datasets[0].data);
+    }
+
+    // Update light average
+    if (charts.light.data.datasets[0].data.length > 0) {
+        validateAndSortChartData(charts.light);
+        const lightAvg = calculateAverage(charts.light.data.datasets[0].data);
+        updateAverageLine(charts.light, charts.light.data.datasets[0].data);
+    }
+
+    // Update UV average
+    if (charts.uv && charts.uv.data && charts.uv.data.datasets[0].data.length > 0) {
+        validateAndSortChartData(charts.uv);
+        const uvAvg = calculateAverage(charts.uv.data.datasets[0].data);
+        updateAverageLine(charts.uv, charts.uv.data.datasets[0].data);
+    }
+}
+
+// Continue with HomeKit status update
+function updateHomekitStatus(status) {
     // Update HomeKit status
     const homekitStatus = document.getElementById('homekit-status');
     const homekitAccessories = document.getElementById('homekit-accessories');
