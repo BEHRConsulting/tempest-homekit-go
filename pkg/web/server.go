@@ -470,6 +470,75 @@ func (ws *WebServer) getDashboardHTML() string {
             margin-top: 5px;
             font-style: italic;
         }
+
+        .heat-index-context {
+            position: relative;
+            display: inline-block;
+        }
+
+        .heat-index-tooltip {
+            visibility: hidden;
+            width: 350px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 12px;
+            position: absolute;
+            z-index: 1;
+            top: 25px;
+            right: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .heat-index-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .heat-index-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .heat-index-tooltip-close {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #ccc;
+            user-select: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        .heat-index-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .heat-index-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+        }
+
+        .heat-index-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+            font-size: 0.8rem;
+        }
+
+        .heat-index-table td:first-child {
+            font-family: monospace;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -501,6 +570,40 @@ func (ws *WebServer) getDashboardHTML() string {
                 </div>
                 <div class="card-value" id="humidity">--</div>
                 <div class="card-unit">%</div>
+                <div class="feels-like-info" style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>Heat Index (feels like):</span>
+                        <span id="heat-index" style="font-weight: 600; color: #333;">--</span>
+                        <span class="info-icon" id="heat-index-info-icon" title="Click for heat index information">ℹ️</span>
+                    </div>
+                    <div class="heat-index-context" id="heat-index-context">
+                        <div class="heat-index-tooltip" id="heat-index-tooltip">
+                            <div class="heat-index-tooltip-header">
+                                <strong>Heat Index Calculation:</strong>
+                                <span class="heat-index-tooltip-close" id="heat-index-tooltip-close" title="Close">×</span>
+                            </div>
+                            <div style="margin-top: 8px; font-size: 0.85rem; line-height: 1.4;">
+                                <p><strong>What is Heat Index?</strong><br>
+                                The heat index combines air temperature and relative humidity to determine the human-perceived equivalent temperature.</p>
+                                
+                                <p><strong>Calculation:</strong><br>
+                                Uses the official NOAA formula with temperature ≥80°F (26.7°C) and humidity ≥40%.</p>
+                                
+                                <p><strong>Heat Index Categories:</strong></p>
+                                <table class="heat-index-table">
+                                    <tr><td>80-90°F (27-32°C)</td><td>Caution - Fatigue possible</td></tr>
+                                    <tr><td>90-105°F (32-41°C)</td><td>Extreme caution - Heat cramps possible</td></tr>
+                                    <tr><td>105-130°F (41-54°C)</td><td>Danger - Heat exhaustion likely</td></tr>
+                                    <tr><td>130°F+ (54°C+)</td><td>Extreme danger - Heat stroke imminent</td></tr>
+                                </table>
+                                
+                                <p style="margin-top: 8px; font-style: italic; font-size: 0.8rem;">
+                                Note: If conditions don't meet the threshold, actual temperature is displayed.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="chart-container">
                     <canvas id="humidity-chart"></canvas>
                 </div>
@@ -976,6 +1079,37 @@ func (ws *WebServer) getDashboardHTML() string {
             return inHg / 0.02953;
         }
 
+        function calculateHeatIndex(tempC, humidity) {
+            // Convert temperature to Fahrenheit for calculation
+            const tempF = (tempC * 9/5) + 32;
+            
+            // If conditions don't warrant heat index calculation, return the temperature
+            if (tempF < 80 || humidity < 40) {
+                return tempC; // Return original temperature in Celsius
+            }
+            
+            // Heat Index calculation using the NOAA formula
+            // Constants for the formula
+            const c1 = -42.379;
+            const c2 = 2.04901523;
+            const c3 = 10.14333127;
+            const c4 = -0.22475541;
+            const c5 = -0.00683783;
+            const c6 = -0.05481717;
+            const c7 = 0.00122874;
+            const c8 = 0.00085282;
+            const c9 = -0.00000199;
+            
+            // Calculate heat index in Fahrenheit
+            const heatIndexF = c1 + (c2 * tempF) + (c3 * humidity) + (c4 * tempF * humidity) +
+                             (c5 * tempF * tempF) + (c6 * humidity * humidity) +
+                             (c7 * tempF * tempF * humidity) + (c8 * tempF * humidity * humidity) +
+                             (c9 * tempF * tempF * humidity * humidity);
+            
+            // Convert back to Celsius
+            return (heatIndexF - 32) * 5/9;
+        }
+
         function calculateAverage(data) {
             if (data.length === 0) return 0;
             const sum = data.reduce((acc, point) => acc + point.y, 0);
@@ -1039,6 +1173,29 @@ func (ws *WebServer) getDashboardHTML() string {
             }
         }
 
+        function toggleHeatIndexTooltip() {
+            const tooltip = document.getElementById('heat-index-tooltip');
+            tooltip.classList.toggle('show');
+        }
+
+        function closeHeatIndexTooltip() {
+            const tooltip = document.getElementById('heat-index-tooltip');
+            tooltip.classList.remove('show');
+        }
+
+        function handleHeatIndexTooltipClickOutside(event) {
+            const tooltip = document.getElementById('heat-index-tooltip');
+            const context = document.getElementById('heat-index-context');
+            const infoIcon = document.getElementById('heat-index-info-icon');
+
+            // If tooltip is visible and click is outside the tooltip and info icon
+            if (tooltip.classList.contains('show') &&
+                !tooltip.contains(event.target) &&
+                !infoIcon.contains(event.target)) {
+                closeHeatIndexTooltip();
+            }
+        }
+
         function updateDisplay() {
             if (!weatherData) return;
 
@@ -1049,6 +1206,15 @@ func (ws *WebServer) getDashboardHTML() string {
             document.getElementById('temperature').textContent = temp.toFixed(1);
 
             document.getElementById('humidity').textContent = weatherData.humidity.toFixed(1);
+            
+            // Calculate and display heat index
+            const heatIndexC = calculateHeatIndex(weatherData.temperature, weatherData.humidity);
+            let heatIndexDisplay = heatIndexC;
+            if (units.temperature === 'fahrenheit') {
+                heatIndexDisplay = celsiusToFahrenheit(heatIndexC);
+            }
+            const tempUnit = units.temperature === 'celsius' ? '°C' : '°F';
+            document.getElementById('heat-index').textContent = heatIndexDisplay.toFixed(1) + tempUnit;
 
             let windSpeed = weatherData.windSpeed;
             if (units.wind === 'kph') {
@@ -1366,6 +1532,15 @@ func (ws *WebServer) getDashboardHTML() string {
 
         // Add click event listener for closing tooltip when clicking outside
         document.addEventListener('click', handleLuxTooltipClickOutside);
+
+        // Add click event listener for heat index info icon
+        document.getElementById('heat-index-info-icon').addEventListener('click', toggleHeatIndexTooltip);
+
+        // Add click event listener for heat index tooltip close button
+        document.getElementById('heat-index-tooltip-close').addEventListener('click', closeHeatIndexTooltip);
+
+        // Add click event listener for closing heat index tooltip when clicking outside
+        document.addEventListener('click', handleHeatIndexTooltipClickOutside);
 
         // Fetch data immediately and then every 10 seconds
         fetchWeather();
