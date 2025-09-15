@@ -79,6 +79,6 @@ package-lock.json
 node_modules/
 
 # Extracted static files (generated from embedded resources)
-pkg/web/static/
+# pkg/web/static/ - Commented out to track manual changes
 /db
 more-promptstxt.txt
