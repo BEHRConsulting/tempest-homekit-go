@@ -56,7 +56,7 @@ type WeatherResponse struct {
 	PressureTrend        string  `json:"pressure_trend"`
 	WeatherForecast      string  `json:"weather_forecast"`
 	Illuminance          float64 `json:"illuminance"`
-	UV                   float64 `json:"uv"`
+	UV                   int     `json:"uv"`
 	Battery              float64 `json:"battery"`
 	LightningStrikeAvg   float64 `json:"lightningStrikeAvg"`
 	LightningStrikeCount int     `json:"lightningStrikeCount"`
@@ -471,7 +471,7 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %.1f, Illuminance: %.0f lux",
+		log.Printf("DEBUG: Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %d, Illuminance: %.0f lux",
 			response.Temperature, response.Humidity, response.UV, response.Illuminance)
 	}
 

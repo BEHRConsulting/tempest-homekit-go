@@ -47,7 +47,7 @@ type Observation struct {
 	AirTemperature       float64 `json:"air_temperature"`
 	RelativeHumidity     float64 `json:"relative_humidity"`
 	Illuminance          float64 `json:"illuminance"`
-	UV                   float64 `json:"uv"`
+	UV                   int     `json:"uv"`
 	SolarRadiation       float64 `json:"solar_radiation"`
 	RainAccumulated      float64 `json:"rain_accumulated"`
 	PrecipitationType    int     `json:"precipitation_type"`
@@ -76,6 +76,8 @@ type ForecastPeriod struct {
 	Icon              string  `json:"icon"`
 	Conditions        string  `json:"conditions"`
 	AirTemperature    float64 `json:"air_temperature"`
+	AirTempHigh       float64 `json:"air_temp_high"`
+	AirTempLow        float64 `json:"air_temp_low"`
 	FeelsLike         float64 `json:"feels_like"`
 	SeaLevelPressure  float64 `json:"sea_level_pressure"`
 	RelativeHumidity  int     `json:"relative_humidity"`
@@ -167,7 +169,7 @@ func GetObservation(stationID int, token string) (*Observation, error) {
 		AirTemperature:       getFloat64(latest["air_temperature"]),
 		RelativeHumidity:     getFloat64(latest["relative_humidity"]),
 		Illuminance:          getFloat64(latest["brightness"]), // API uses "brightness" instead of "illuminance"
-		UV:                   getFloat64(latest["uv"]),
+		UV:                   getInt(latest["uv"]),
 		SolarRadiation:       getFloat64(latest["solar_radiation"]),
 		RainAccumulated:      getFloat64(latest["precip"]), // API uses "precip" instead of "rain_accumulated"
 		PrecipitationType:    getInt(latest["precipitation_type"]),
@@ -437,7 +439,7 @@ func parseObservations(obsData []map[string]interface{}) []*Observation {
 			AirTemperature:       getFloat64(obsMap["air_temperature"]),
 			RelativeHumidity:     getFloat64(obsMap["relative_humidity"]),
 			Illuminance:          getFloat64(obsMap["brightness"]), // API uses "brightness" instead of "illuminance"
-			UV:                   getFloat64(obsMap["uv"]),
+			UV:                   getInt(obsMap["uv"]),
 			SolarRadiation:       getFloat64(obsMap["solar_radiation"]),
 			RainAccumulated:      getFloat64(obsMap["precip"]),                     // API uses "precip" instead of "rain_accumulated"
 			PrecipitationType:    getInt(obsMap["precip_analysis_type_yesterday"]), // Note: might need adjustment
@@ -477,7 +479,7 @@ func parseDeviceObservations(obsData [][]interface{}) []*Observation {
 			AirTemperature:       getFloat64(obsArray[7]),        // air_temperature
 			RelativeHumidity:     getFloat64(obsArray[8]),        // relative_humidity
 			Illuminance:          getFloat64(obsArray[9]),        // illuminance
-			UV:                   getFloat64(obsArray[10]),       // uv
+			UV:                   getInt(obsArray[10]),           // uv
 			SolarRadiation:       getFloat64(obsArray[11]),       // solar_radiation
 			RainAccumulated:      getFloat64(obsArray[12]),       // rain_accumulated
 			PrecipitationType:    getInt(obsArray[13]),           // precipitation_type

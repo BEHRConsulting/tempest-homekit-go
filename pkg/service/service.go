@@ -233,7 +233,7 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit
 
 	// Debug logging - show all weather metrics and pretty printed JSON
 	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: Full weather data - Temp: %.1f°C, Humidity: %.1f%%, Wind: %.1f mph (%.0f°), Rain: %.3f in, Pressure: %.1f mb, UV: %.1f, Solar: %.0f W/m², Battery: %.1fV",
+		log.Printf("DEBUG: Full weather data - Temp: %.1f°C, Humidity: %.1f%%, Wind: %.1f mph (%.0f°), Rain: %.3f in, Pressure: %.1f mb, UV: %d, Solar: %.0f W/m², Battery: %.1fV",
 			obs.AirTemperature, obs.RelativeHumidity, obs.WindAvg, obs.WindDirection, obs.RainAccumulated,
 			obs.StationPressure, obs.UV, obs.SolarRadiation, obs.Battery)
 
@@ -258,7 +258,7 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit
 		log.Printf("DEBUG: HomeKit - Lightning Distance: %.0f", obs.LightningStrikeAvg)
 		log.Printf("DEBUG: HomeKit - Lightning Count: %d", obs.LightningStrikeCount)
 		log.Printf("DEBUG: HomeKit - Lux: %.0f lux", obs.Illuminance)
-		log.Printf("DEBUG: HomeKit - UV Index: %.0f", obs.UV)
+		log.Printf("DEBUG: HomeKit - UV Index: %d", obs.UV)
 	}
 
 	// Update all sensors in the Tempest Weather Station using the new UpdateSensor method:
@@ -268,7 +268,7 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit
 	ws.UpdateSensor("Air Temperature", obs.AirTemperature)
 	ws.UpdateSensor("Relative Humidity", obs.RelativeHumidity)
 	ws.UpdateSensor("Ambient Light", obs.Illuminance)
-	ws.UpdateSensor("UV Index", obs.UV)
+	ws.UpdateSensor("UV Index", float64(obs.UV))
 	ws.UpdateSensor("Rain Accumulation", obs.RainAccumulated)
 	ws.UpdateSensor("Precipitation Type", float64(obs.PrecipitationType))
 	ws.UpdateSensor("Lightning Count", float64(obs.LightningStrikeCount))

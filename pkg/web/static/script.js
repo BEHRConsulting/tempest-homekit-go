@@ -1161,7 +1161,7 @@ function updateDisplay() {
     
     const uvElement = document.getElementById('uv-index');
     const uvDescElement = document.getElementById('uv-description');
-    if (uvElement) uvElement.textContent = weatherData.uv.toFixed(1);
+    if (uvElement) uvElement.textContent = Math.round(weatherData.uv);
     if (uvDescElement) uvDescElement.textContent = getUVDescription(weatherData.uv);
     
     debugLog(logLevels.DEBUG, 'Light and UV data updated', {
@@ -1652,6 +1652,8 @@ function refreshForecastDisplay() {
 }
 
 function updateCurrentConditions(current) {
+    debugLog(logLevels.DEBUG, 'Updating current conditions with data:', current);
+    
     const elements = {
         icon: document.getElementById('forecast-current-icon'),
         temp: document.getElementById('forecast-current-temp'),
@@ -1667,6 +1669,12 @@ function updateCurrentConditions(current) {
     let currentTemp = current.air_temperature;
     let feelsLikeTemp = current.feels_like;
     let tempUnit = '°C';
+    
+    debugLog(logLevels.DEBUG, 'Raw temperature values from API:', {
+        air_temperature: current.air_temperature,
+        feels_like: current.feels_like,
+        relative_humidity: current.relative_humidity
+    });
     
     if (units.temperature === 'fahrenheit') {
         currentTemp = celsiusToFahrenheit(currentTemp);
@@ -1705,6 +1713,16 @@ function updateDailyForecast(dailyForecast) {
     
     for (let i = 0; i < daysToShow; i++) {
         const day = dailyForecast[i];
+        
+        debugLog(logLevels.DEBUG, `Daily forecast day ${i} raw data:`, {
+            air_temperature: day.air_temperature,
+            air_temp_high: day.air_temp_high,
+            air_temp_low: day.air_temp_low,
+            relative_humidity: day.relative_humidity,
+            time: day.time,
+            conditions: day.conditions
+        });
+        
         const forecastDay = document.createElement('div');
         forecastDay.className = 'forecast-day';
         
@@ -1729,8 +1747,26 @@ function updateDailyForecast(dailyForecast) {
         const dayName = i === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' });
         
         // Convert temperature based on current unit setting
-        let highTemp = day.air_temperature;
-        let lowTemp = day.air_temperature - 5; // Assuming low is about 5 degrees less
+        // Use high/low temperatures if available, otherwise use air_temperature as high and calculate reasonable low
+        let highTemp, lowTemp;
+        
+        if (day.air_temp_high && day.air_temp_low) {
+            // Use actual high/low values from API
+            highTemp = day.air_temp_high;
+            lowTemp = day.air_temp_low;
+        } else {
+            // Fallback: use air_temperature as average and estimate high/low
+            // This is a reasonable estimate based on typical daily temperature ranges
+            const avgTemp = day.air_temperature;
+            highTemp = avgTemp + 3; // Add 3°C for high
+            lowTemp = avgTemp - 3;  // Subtract 3°C for low
+        }
+        
+        debugLog(logLevels.DEBUG, `Day ${i} temperature conversion:`, {
+            before_conversion: { high: highTemp, low: lowTemp, unit: 'C' },
+            units_setting: units.temperature
+        });
+        
         let tempUnit = '°C';
         
         if (units.temperature === 'fahrenheit') {
@@ -1738,6 +1774,10 @@ function updateDailyForecast(dailyForecast) {
             lowTemp = celsiusToFahrenheit(lowTemp);
             tempUnit = '°F';
         }
+        
+        debugLog(logLevels.DEBUG, `Day ${i} after conversion:`, {
+            after_conversion: { high: Math.round(highTemp), low: Math.round(lowTemp), unit: tempUnit }
+        });
         
         forecastDay.innerHTML = `
             <div class="forecast-day-name">${dayName}</div>
