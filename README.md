@@ -9,19 +9,16 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 
 ## Features
 
-- **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest API for current weather observations every 60 seconds
-- **Complete HomeKit Integration**: Updates 11 HomeKit sensors using modern `brutella/hap` library with custom services
-- **Temperature Conversion Fix**: Custom weather services prevent HomeKit's automatic Celsius-to-Fahrenheit conversion
-- **Accurate Weather Data**: Wind, rain, UV, and other sensors display exact values without unit conversion interference
-- **Wind Direction Support**: Displays wind direction in cardinal format (N, NE, E, etc.) with degrees
-- **Modern Web Dashboard**: Interactive web interface with real-time updates every 10 seconds and unit conversions
-- **Cross-Platform Deployment**: Automated build and installation scripts for Linux, macOS, and Windows
-- **Service Management**: Auto-start as system service with platform-specific managers (systemd, launchd, NSSM)
-- **Modular Architecture**: Clean, maintainable code structure with separate packages
-- **Enhanced Logging**: Multi-level logging (debug, info, error) with comprehensive sensor data
-- **Command-line Interface**: Flexible configuration via flags and environment variables
-- **Database Management**: Built-in `--cleardb` command to reset HomeKit pairing and rediscover device
-- **Error Resilience**: Comprehensive error handling and graceful failure recovery
+- **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest station data every 60 seconds
+- **HomeKit Integration**: Creates individual HomeKit accessories for each weather sensor
+- **Multiple Sensor Support**: Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, UV Index, and Ambient Light
+- **Modern Web Dashboard**: Interactive web interface with real-time updates, unit conversions, and professional styling
+  - **UV Index Display**: Complete UV exposure categories using NCBI reference data with EPA color coding
+  - **Interactive Tooltips**: Information tooltips for all sensors with standardized positioning
+  - **Accessories Status**: Real-time display of enabled/disabled sensor status in HomeKit bridge card
+- **Cross-platform Support**: Runs on macOS, Linux, and Windows with automated service installation
+- **Flexible Configuration**: Command-line flags and environment variables for easy deployment
+- **Comprehensive Logging**: Multi-level logging with debug output for troubleshooting
 
 ## Quick Start
 
@@ -155,6 +152,14 @@ Access the modern web dashboard at `http://localhost:8080` (or your configured p
   - 🌡️ **Temperature**: Celsius (°C) ↔ Fahrenheit (°F)
   - 🌬️ **Wind Speed**: Miles per hour (mph) ↔ Kilometers per hour (kph)
   - 🌧️ **Rain**: Inches (in) ↔ Millimeters (mm)
+- **UV Index Monitor**: 🌞 Complete UV exposure assessment with NCBI reference categories:
+  - **Minimal (0-2)**: Low risk exposure with EPA green color coding
+  - **Low (3-4)**: Moderate risk with yellow coding  
+  - **Moderate (5-6)**: High risk with orange coding
+  - **High (7-9)**: Very high risk with red coding
+  - **Very High (10+)**: Extreme risk with violet coding
+- **Information Tooltips**: ℹ️ Detailed sensor information with standardized positioning for easy access
+- **Accessories Status**: Real-time HomeKit sensor status showing enabled/disabled state with priority sorting
 - **Wind Direction Display**: Shows cardinal direction + degrees (e.g., "WSW (241°)")
 - **Unit Persistence**: Preferences saved in browser localStorage
 - **Modern Design**: Responsive interface with weather-themed styling
@@ -395,6 +400,32 @@ Enable detailed logging for troubleshooting:
 ./scripts/install-service.sh --token "your-token"
 ```
 
+## Recent Enhancements
+
+### UV Index Monitoring (Latest)
+- **Complete UV Exposure Assessment**: Professional UV Index display with NCBI reference categories
+- **EPA Color Coding**: Visual risk indicators from green (minimal) to violet (extreme)
+- **Real-time Updates**: Live UV Index monitoring with automatic risk category assessment
+- **Educational Information**: Tooltip with detailed exposure risk information
+
+### Information Tooltips System
+- **Standardized Positioning**: All information tooltips consistently aligned for optimal visibility
+- **Rich Content**: Detailed sensor information including measurement ranges and units
+- **Professional Design**: Clean tooltip styling with proper contrast and readability
+- **Mobile-Friendly**: Touch-optimized tooltip interaction for mobile devices
+
+### HomeKit Accessories Status
+- **Real-time Status Monitoring**: Live display of enabled/disabled sensor status in web dashboard
+- **Priority Sorting**: Active sensors automatically sorted to the top of the accessories list
+- **Clear Visual Indicators**: Distinct styling for enabled vs disabled accessories
+- **Configuration Transparency**: Shows exactly which sensors are currently being provided to HomeKit
+
+### Enhanced User Experience
+- **Consistent Design Language**: Unified styling across all dashboard components
+- **Improved Accessibility**: Better contrast ratios and screen reader support  
+- **Responsive Layout**: Enhanced mobile experience with optimized touch targets
+- **Performance Optimizations**: Faster dashboard loading and more efficient updates
+
 ## Development
 
 ### Running Tests
@@ -493,6 +524,18 @@ This project was developed using various technologies, libraries, and tools. Bel
 ---
 
 **Status**: ✅ **COMPLETE** - All planned features implemented and tested
+- ✅ Weather monitoring with 11 HomeKit sensors (Temperature + 10 custom weather sensors)
+- ✅ Complete HomeKit integration with compliance optimization
+- ✅ Modern web dashboard with real-time updates and interactive features
+- ✅ UV Index monitoring with NCBI reference data and EPA color coding
+- ✅ Information tooltips system with standardized positioning
+- ✅ HomeKit accessories status monitoring with enabled/disabled indicators
+- ✅ Interactive unit conversions with localStorage persistence
+- ✅ Cross-platform build and deployment with automated service management
+- ✅ Professional styling and enhanced user experience
+- ✅ Comprehensive logging and error handling
+- ✅ Database management with --cleardb command
+- ✅ Production-ready with graceful error recovery
 - ✅ Weather monitoring with 6 metrics (Temperature, Humidity, Wind Speed, Wind Direction, Rain, Light)
 - ✅ Complete HomeKit integration with individual sensors
 - ✅ Modern web dashboard with real-time updates

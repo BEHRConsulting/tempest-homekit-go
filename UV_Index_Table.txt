@@ -1,0 +1,5 @@
+https://en.wikipedia.org/wiki/Ultraviolet_index
+https://www.ncbi.nlm.nih.gov/books/NBK247164/table/skincancer.t4/
+
+
+create a UV Index box using the UV sensor. Create like the Light box but use table 4 on https://www.ncbi.nlm.nih.gov/books/NBK247164/table/skincancer.t4/ for the info context informaiton 

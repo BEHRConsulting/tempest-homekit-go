@@ -347,6 +347,10 @@ func (ws *WebServer) getDashboardHTML() string {
             font-size: 0.85rem;
         }
 
+        .accessory-item.disabled {
+            opacity: 0.5;
+        }
+
         .accessory-icon {
             margin-right: 8px;
             font-size: 1rem;
@@ -355,6 +359,28 @@ func (ws *WebServer) getDashboardHTML() string {
         .accessory-name {
             color: #555;
             font-weight: 500;
+        }
+
+        .accessory-name.disabled {
+            color: #999;
+        }
+
+        .accessory-status {
+            margin-left: auto;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
+        .accessory-status.enabled {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+
+        .accessory-status.disabled {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
         }
 
         .expand-icon {
@@ -399,9 +425,10 @@ func (ws *WebServer) getDashboardHTML() string {
             padding: 10px;
             position: absolute;
             z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            margin-left: -150px;
+            top: 100%;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
             opacity: 0;
             transition: opacity 0.3s;
             font-size: 0.8rem;
@@ -486,8 +513,10 @@ func (ws *WebServer) getDashboardHTML() string {
             padding: 12px;
             position: absolute;
             z-index: 1;
-            top: 25px;
-            right: -150px;
+            top: 100%;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
             opacity: 0;
             transition: opacity 0.3s;
             font-size: 0.8rem;
@@ -538,6 +567,90 @@ func (ws *WebServer) getDashboardHTML() string {
         .heat-index-table td:first-child {
             font-family: monospace;
             font-weight: bold;
+        }
+
+        .uv-context {
+            position: relative;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .uv-tooltip {
+            visibility: hidden;
+            width: 400px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            top: 100%;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .uv-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .uv-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .uv-tooltip-close {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #ccc;
+            user-select: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        .uv-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .uv-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .uv-table th, .uv-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        .uv-table th {
+            background-color: #333;
+            font-weight: bold;
+        }
+
+        .uv-table td:first-child {
+            text-align: center;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .uv-description {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -694,6 +807,46 @@ func (ws *WebServer) getDashboardHTML() string {
                     <canvas id="light-chart"></canvas>
                 </div>
             </div>
+
+            <div class="card" id="uv-card">
+                <div class="card-header">
+                    <span class="card-icon">🌞</span>
+                    <span class="card-title">UV Index</span>
+                </div>
+                <div class="card-value" id="uv-index">--</div>
+                <div class="card-unit">UVI <span class="info-icon" id="uv-info-icon" title="Click for UV Index exposure categories">ℹ️</span></div>
+                <div class="uv-description" id="uv-description">--</div>
+                <div class="uv-context" id="uv-context">
+                    <div class="uv-tooltip" id="uv-tooltip">
+                        <div class="uv-tooltip-header">
+                            <strong>UV Index Exposure Categories:</strong>
+                            <span class="uv-tooltip-close" id="uv-tooltip-close" title="Close">×</span>
+                        </div>
+                        <table class="uv-table">
+                            <thead>
+                                <tr>
+                                    <th>UV Index</th>
+                                    <th>Category</th>
+                                    <th>Protection Advice</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="background-color: rgba(0, 255, 0, 0.1);"><td>0–2</td><td><strong>Low</strong></td><td>Low danger from the sun's UV rays for the average person.</td></tr>
+                                <tr style="background-color: rgba(255, 255, 0, 0.1);"><td>3–5</td><td><strong>Moderate</strong></td><td>Moderate risk of harm from unprotected sun exposure.</td></tr>
+                                <tr style="background-color: rgba(255, 165, 0, 0.1);"><td>6–7</td><td><strong>High</strong></td><td>High risk of harm from unprotected sun exposure. Protection against skin and eye damage is needed.</td></tr>
+                                <tr style="background-color: rgba(255, 0, 0, 0.1);"><td>8–10</td><td><strong>Very High</strong></td><td>Very high risk of harm from unprotected sun exposure. Take extra precautions because unprotected skin and eyes will be damaged and can burn quickly.</td></tr>
+                                <tr style="background-color: rgba(128, 0, 128, 0.1);"><td>11+</td><td><strong>Extreme</strong></td><td>Extreme risk of harm from unprotected sun exposure. Take all precautions because unprotected skin and eyes can burn in minutes.</td></tr>
+                            </tbody>
+                        </table>
+                        <p style="margin-top: 8px; font-style: italic; font-size: 0.8rem;">
+                        Source: U.S. Environmental Protection Agency UV Index scale
+                        </p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="uv-chart"></canvas>
+                </div>
+            </div>
         </div>
 
         <!-- Information Cards -->
@@ -782,6 +935,7 @@ func (ws *WebServer) getDashboardHTML() string {
             const ctxRain = document.getElementById('rain-chart').getContext('2d');
             const ctxPressure = document.getElementById('pressure-chart').getContext('2d');
             const ctxLight = document.getElementById('light-chart').getContext('2d');
+            const ctxUV = document.getElementById('uv-chart').getContext('2d');
 
             const chartConfig = {
                 type: 'line',
@@ -1003,6 +1157,30 @@ func (ws *WebServer) getDashboardHTML() string {
                     }]
                 }
             });
+
+            charts.uv = new Chart(ctxUV, {
+                ...chartConfig,
+                data: {
+                    datasets: [{
+                        data: [],
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        fill: false,
+                        tension: 0.4,
+                        label: 'UV Index'
+                    }, {
+                        data: [],
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0,
+                        label: 'Average'
+                    }]
+                }
+            });
         }
 
         function updateUnits() {
@@ -1150,6 +1328,14 @@ func (ws *WebServer) getDashboardHTML() string {
             return "Extremely bright conditions";
         }
 
+        function getUVDescription(uvIndex) {
+            if (uvIndex <= 2) return "Low - Low danger from the sun's UV rays";
+            if (uvIndex <= 5) return "Moderate - Moderate risk of harm from unprotected sun exposure";
+            if (uvIndex <= 7) return "High - High risk of harm, protection needed";
+            if (uvIndex <= 10) return "Very High - Very high risk, take extra precautions";
+            return "Extreme - Extreme risk, take all precautions";
+        }
+
         function toggleLuxTooltip() {
             const tooltip = document.getElementById('lux-tooltip');
             tooltip.classList.toggle('show');
@@ -1193,6 +1379,29 @@ func (ws *WebServer) getDashboardHTML() string {
                 !tooltip.contains(event.target) &&
                 !infoIcon.contains(event.target)) {
                 closeHeatIndexTooltip();
+            }
+        }
+
+        function toggleUVTooltip() {
+            const tooltip = document.getElementById('uv-tooltip');
+            tooltip.classList.toggle('show');
+        }
+
+        function closeUVTooltip() {
+            const tooltip = document.getElementById('uv-tooltip');
+            tooltip.classList.remove('show');
+        }
+
+        function handleUVTooltipClickOutside(event) {
+            const tooltip = document.getElementById('uv-tooltip');
+            const context = document.getElementById('uv-context');
+            const infoIcon = document.getElementById('uv-info-icon');
+
+            // If tooltip is visible and click is outside the tooltip and info icon
+            if (tooltip.classList.contains('show') &&
+                !tooltip.contains(event.target) &&
+                !infoIcon.contains(event.target)) {
+                closeUVTooltip();
             }
         }
 
@@ -1240,6 +1449,9 @@ func (ws *WebServer) getDashboardHTML() string {
 
             document.getElementById('illuminance').textContent = weatherData.illuminance.toFixed(0);
             document.getElementById('lux-description').textContent = getLuxDescription(weatherData.illuminance);
+
+            document.getElementById('uv-index').textContent = weatherData.uv.toFixed(1);
+            document.getElementById('uv-description').textContent = getUVDescription(weatherData.uv);
 
             document.getElementById('last-update').textContent = new Date(weatherData.lastUpdate).toLocaleString();
         }
@@ -1343,6 +1555,19 @@ func (ws *WebServer) getDashboardHTML() string {
                 text: 'lux'
             };
             charts.light.update();
+
+            // UV chart
+            charts.uv.data.datasets[0].data.push({ x: now, y: weatherData.uv });
+            if (charts.uv.data.datasets[0].data.length > maxDataPoints) {
+                charts.uv.data.datasets[0].data.shift();
+            }
+            const uvAvg = calculateAverage(charts.uv.data.datasets[0].data);
+            updateAverageLine(charts.uv, charts.uv.data.datasets[0].data, uvAvg);
+            charts.uv.options.scales.y.title = {
+                display: true,
+                text: 'UVI'
+            };
+            charts.uv.update();
         }
 
         function recalculateAverages() {
@@ -1468,35 +1693,52 @@ func (ws *WebServer) getDashboardHTML() string {
             const accessoriesList = document.getElementById('accessories-list');
             accessoriesList.innerHTML = '';
 
-            if (!accessoryNames || accessoryNames.length === 0) {
-                accessoriesList.innerHTML = '<div class="accessory-item">No accessories available</div>';
+            // Define all possible sensors with their icons
+            const allSensors = [
+                { name: 'Temperature', icon: '🌡️', key: 'Temperature' },
+                { name: 'Humidity', icon: '💧', key: 'Humidity' },
+                { name: 'Light', icon: '☀️', key: 'Light' },
+                { name: 'UV Index', icon: '🌞', key: 'UV' },
+                { name: 'Wind Speed', icon: '🌬️', key: 'Wind Speed' },
+                { name: 'Wind Direction', icon: '🧭', key: 'Wind Direction' },
+                { name: 'Rain', icon: '🌧️', key: 'Rain' },
+                { name: 'Pressure', icon: '📊', key: 'Pressure' },
+                { name: 'Lightning', icon: '⚡', key: 'Lightning' }
+            ];
+
+            // Determine which sensors are enabled based on accessoryNames
+            const enabledSensors = [];
+            const disabledSensors = [];
+
+            allSensors.forEach(sensor => {
+                const isEnabled = accessoryNames && accessoryNames.some(name => name.includes(sensor.key));
+                if (isEnabled) {
+                    enabledSensors.push({ ...sensor, enabled: true });
+                } else {
+                    disabledSensors.push({ ...sensor, enabled: false });
+                }
+            });
+
+            // Sort enabled sensors to the top, then disabled
+            const sortedSensors = [...enabledSensors, ...disabledSensors];
+
+            if (sortedSensors.length === 0) {
+                accessoriesList.innerHTML = '<div class="accessory-item">No sensors configured</div>';
                 return;
             }
 
-            // Define icons for different accessory types
-            const accessoryIcons = {
-                'Temperature': '🌡️',
-                'Humidity': '💧',
-                'Wind Speed': '🌬️',
-                'Wind Direction': '🧭',
-                'Rain': '🌧️',
-                'Light': '☀️'
-            };
-
-            accessoryNames.forEach(name => {
+            sortedSensors.forEach(sensor => {
                 const accessoryDiv = document.createElement('div');
-                accessoryDiv.className = 'accessory-item';
+                accessoryDiv.className = 'accessory-item' + (sensor.enabled ? '' : ' disabled');
 
-                // Get appropriate icon or use default
-                let icon = '🔧'; // default icon
-                for (const [key, value] of Object.entries(accessoryIcons)) {
-                    if (name.includes(key)) {
-                        icon = value;
-                        break;
-                    }
-                }
+                const statusClass = sensor.enabled ? 'enabled' : 'disabled';
+                const statusText = sensor.enabled ? 'Active' : 'Disabled';
+                const nameClass = sensor.enabled ? '' : ' disabled';
 
-                accessoryDiv.innerHTML = '<span class="accessory-icon">' + icon + '</span><span class="accessory-name">' + name + '</span>';
+                accessoryDiv.innerHTML = 
+                    '<span class="accessory-icon">' + sensor.icon + '</span>' +
+                    '<span class="accessory-name' + nameClass + '">' + sensor.name + '</span>' +
+                    '<span class="accessory-status ' + statusClass + '">' + statusText + '</span>';
 
                 accessoriesList.appendChild(accessoryDiv);
             });
@@ -1541,6 +1783,15 @@ func (ws *WebServer) getDashboardHTML() string {
 
         // Add click event listener for closing heat index tooltip when clicking outside
         document.addEventListener('click', handleHeatIndexTooltipClickOutside);
+
+        // Add click event listener for UV info icon
+        document.getElementById('uv-info-icon').addEventListener('click', toggleUVTooltip);
+
+        // Add click event listener for UV tooltip close button
+        document.getElementById('uv-tooltip-close').addEventListener('click', closeUVTooltip);
+
+        // Add click event listener for closing UV tooltip when clicking outside
+        document.addEventListener('click', handleUVTooltipClickOutside);
 
         // Fetch data immediately and then every 10 seconds
         fetchWeather();

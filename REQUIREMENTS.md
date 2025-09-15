@@ -2,7 +2,7 @@
 
 ## Overview
 
-✅ **COMPLETE**: Create a complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data. The service enables smart home automation based on temperature, humidity, wind speed, and rain accumulation readings. Include a modern web dashboard with interactive unit conversions and real-time monitoring capabilities.
+✅ **COMPLETE**: Create a complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data. The service enables smart home automation based on temperature, humidity, wind speed, rain accumulation, UV index, and ambient light readings. Include a modern web dashboard with interactive unit conversions, UV exposure monitoring with NCBI reference data, information tooltips, and real-time accessories status monitoring.
 
 ## Functional Requirements
 
@@ -26,15 +26,22 @@
 #### Web Dashboard
 - ✅ **HTTP Server**: Serve modern web interface on configurable port (default: 8080)
 - ✅ **Real-time Updates**: Dashboard updates every 10 seconds via JavaScript fetch API
-- Show sensors: Temputure, Humidity (%, Relitive, Dew point), Wind (Speed, Direction, Guest), Atmospheric pressure, lux
+- ✅ **Complete Sensor Display**: Temperature, Humidity (%, Relative, Dew point), Wind (Speed, Direction, Gust), Atmospheric pressure, UV Index, Ambient Light (lux)
 - ✅ **Interactive Unit Conversion**: Click-to-toggle between metric and imperial units:
   - Temperature: Celsius (°C) ↔ Fahrenheit (°F)
-  - Wind Speed, Wind Guest: Miles per hour (mph) ↔ Kilometers per hour (kph)
+  - Wind Speed, Wind Gust: Miles per hour (mph) ↔ Kilometers per hour (kph)
   - Rain: Inches (in) ↔ Millimeters (mm)
   - Humidity dew point: Inches (in) ↔ Millimeters (mm)
-  - Preasure: mb <> inHg
+  - Pressure: mb ↔ inHg
 - ✅ **Wind Direction Display**: Show wind direction in cardinal format (N, NE, E, etc.) with degrees
-- For each sensor, add a small graph of data point/time, max number of data points 1000
+- ✅ **UV Index Monitor**: Complete UV exposure assessment with NCBI reference categories:
+  - Minimal (0-2): Low risk exposure with EPA green color coding
+  - Low (3-4): Moderate risk with yellow coding
+  - Moderate (5-6): High risk with orange coding
+  - High (7-9): Very high risk with red coding
+  - Very High (10+): Extreme risk with violet coding
+- ✅ **Information Tooltips**: Detailed sensor information with standardized positioning (top-left aligned to bottom-right of info button)
+- ✅ **Accessories Status Display**: Real-time HomeKit sensor status showing enabled/disabled state with priority sorting
 - ✅ **Unit Persistence**: Save user preferences in browser localStorage
 - ✅ **HomeKit Status Display**: Show bridge status, accessory count, and pairing PIN
 - ✅ **Connection Status**: Real-time Tempest station connection status
@@ -46,6 +53,8 @@
 - ✅ **Wind Speed**: Average wind speed in mph
 - ✅ **Wind Direction**: Wind direction in degrees (0-360°) with cardinal conversion
 - ✅ **Rain Accumulation**: Total precipitation in inches
+- ✅ **UV Index**: UV exposure level with NCBI reference categories
+- ✅ **Ambient Light**: Light level in lux
 
 ### Configuration Management
 
@@ -1099,12 +1108,15 @@ This requirements document provides complete specifications for implementing the
 ---
 
 **Status**: ✅ **COMPLETE** - All planned features implemented and tested
-- ✅ Weather monitoring with 6 metrics (Temperature, Humidity, Wind Speed, Wind Direction, Rain, Light)
-- ✅ Complete HomeKit integration with individual sensors
-- ✅ Modern web dashboard with real-time updates
-- ✅ Interactive unit conversions with persistence
-- ✅ Cross-platform build and deployment
-- ✅ Service management for all platforms
+- ✅ Weather monitoring with 11 HomeKit sensors (Temperature + 10 custom weather sensors)  
+- ✅ Complete HomeKit integration with compliance optimization
+- ✅ Modern web dashboard with real-time updates and interactive features
+- ✅ UV Index monitoring with NCBI reference data and EPA color coding
+- ✅ Information tooltips system with standardized positioning  
+- ✅ HomeKit accessories status monitoring with enabled/disabled indicators
+- ✅ Interactive unit conversions with localStorage persistence
+- ✅ Cross-platform build and deployment with automated service management
+- ✅ Professional styling and enhanced user experience
 - ✅ Comprehensive logging and error handling
 - ✅ Database management with --cleardb command
-- ✅ Production-ready with graceful error handling
+- ✅ Production-ready with graceful error recovery

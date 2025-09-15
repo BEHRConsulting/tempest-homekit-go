@@ -4,11 +4,12 @@ import (
 	"context"
 	"log"
 
+	"tempest-homekit-go/pkg/config"
+
 	"github.com/brutella/hap"
 	"github.com/brutella/hap/accessory"
 	"github.com/brutella/hap/characteristic"
 	"github.com/brutella/hap/service"
-	"tempest-homekit-go/pkg/config"
 )
 
 // Custom service for weather sensors that don't interfere with temperature conversion
@@ -54,7 +55,7 @@ type WeatherSystemModern struct {
 func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*WeatherSystemModern, error) {
 	log.Printf("DEBUG: Creating new weather system with hap library")
 	log.Printf("DEBUG: Sensor configuration: Temp=%v, Humidity=%v, Light=%v, Wind=%v, Rain=%v, Pressure=%v, UV=%v, Lightning=%v",
-		sensorConfig.Temperature, sensorConfig.Humidity, sensorConfig.Light, sensorConfig.Wind, 
+		sensorConfig.Temperature, sensorConfig.Humidity, sensorConfig.Light, sensorConfig.Wind,
 		sensorConfig.Rain, sensorConfig.Pressure, sensorConfig.UV, sensorConfig.Lightning)
 
 	// Create file storage for HomeKit data
@@ -76,12 +77,12 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 
 	// Create standard HomeKit accessories based on sensor configuration
 	var accessoryCount int
-	
+
 	// 1. Temperature Sensor (if enabled)
 	if sensorConfig.Temperature {
 		tempInfo := accessory.Info{
 			Name:         "Air Temperature",
-			SerialNumber: "AT-001", 
+			SerialNumber: "AT-001",
 			Manufacturer: "WeatherFlow",
 			Model:        "Tempest",
 			Firmware:     "1.0.0",
@@ -106,7 +107,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 			Firmware:     "1.0.0",
 		}
 		humidityAccessory := accessory.New(humidityInfo, accessory.TypeSensor)
-		
+
 		// Add custom humidity service
 		humidityService := service.New("F180-0001-1000-8000-0026BB765291")
 		humidityChar := characteristic.NewFloat("F181-0001-1000-8000-0026BB765291")
@@ -119,7 +120,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 		humidityChar.SetValue(0.0)
 		humidityService.AddC(humidityChar.C)
 		humidityAccessory.AddS(humidityService)
-		
+
 		accessories["Relative Humidity"] = &WeatherAccessoryModern{
 			AccessoryPtr: humidityAccessory,
 			WeatherValue: humidityChar,
@@ -139,7 +140,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 			Firmware:     "1.0.0",
 		}
 		lightAccessory := accessory.New(lightInfo, accessory.TypeSensor)
-		
+
 		// Add custom light service
 		lightService := service.New("F190-0001-1000-8000-0026BB765291")
 		lightChar := characteristic.NewFloat("F191-0001-1000-8000-0026BB765291")
@@ -152,7 +153,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 		lightChar.SetValue(0.0)
 		lightService.AddC(lightChar.C)
 		lightAccessory.AddS(lightService)
-		
+
 		accessories["Ambient Light"] = &WeatherAccessoryModern{
 			AccessoryPtr: lightAccessory,
 			WeatherValue: lightChar,
@@ -177,7 +178,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 	if !sensorConfig.Light {
 		allSensorNames = append(allSensorNames, "Ambient Light")
 	}
-	
+
 	for _, name := range allSensorNames {
 		if _, exists := accessories[name]; !exists {
 			accessories[name] = &WeatherAccessoryModern{

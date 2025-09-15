@@ -86,7 +86,7 @@ func StartService(cfg *config.Config) error {
 		enabledSensors = append(enabledSensors, "Light")
 	}
 	if sensorConfig.Wind {
-		enabledSensors = append(enabledSensors, "Wind")
+		enabledSensors = append(enabledSensors, "Wind Speed", "Wind Direction")
 	}
 	if sensorConfig.Rain {
 		enabledSensors = append(enabledSensors, "Rain")
@@ -100,14 +100,14 @@ func StartService(cfg *config.Config) error {
 	if sensorConfig.Lightning {
 		enabledSensors = append(enabledSensors, "Lightning")
 	}
-	
+
 	homekitStatus := map[string]interface{}{
-		"bridge":      true,
-		"name":        "Tempest HomeKit Bridge",
-		"accessories": len(enabledSensors),
+		"bridge":         true,
+		"name":           "Tempest HomeKit Bridge",
+		"accessories":    len(enabledSensors),
 		"accessoryNames": enabledSensors,
-		"sensorConfig": cfg.Sensors,
-		"pin": cfg.Pin,
+		"sensorConfig":   cfg.Sensors,
+		"pin":            cfg.Pin,
 	}
 	webServer.UpdateHomeKitStatus(homekitStatus)
 
