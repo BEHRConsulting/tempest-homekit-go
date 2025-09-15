@@ -175,12 +175,26 @@ func StartService(cfg *config.Config) error {
 	}
 	updateWeatherData(station, cfg, ws, webServer)
 
+	// Fetch initial forecast data
+	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
+		log.Printf("INFO: Fetching initial forecast data")
+	}
+	updateForecastData(station, cfg, webServer)
+
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
 		log.Printf("INFO: Starting weather data polling loop")
 	}
 
+	forecastUpdateCounter := 0
 	for range ticker.C {
 		updateWeatherData(station, cfg, ws, webServer)
+		
+		// Update forecast every 30 minutes (30 ticks)
+		forecastUpdateCounter++
+		if forecastUpdateCounter >= 30 {
+			updateForecastData(station, cfg, webServer)
+			forecastUpdateCounter = 0
+		}
 	}
 	return nil
 }
@@ -265,6 +279,29 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit
 
 	if cfg.LogLevel == "debug" {
 		log.Printf("DEBUG: Web dashboard updated with latest weather data")
+	}
+}
+
+func updateForecastData(station *weather.Station, cfg *config.Config, webServer *web.WebServer) {
+	if cfg.LogLevel == "debug" {
+		log.Printf("DEBUG: Fetching forecast data for station %d", station.StationID)
+	}
+
+	forecast, err := weather.GetForecast(station.StationID, cfg.Token)
+	if err != nil {
+		log.Printf("WARNING: Failed to fetch forecast data: %v", err)
+		return
+	}
+
+	if cfg.LogLevel == "debug" {
+		log.Printf("DEBUG: Successfully fetched forecast data with %d daily periods", len(forecast.Forecast.Daily))
+	}
+
+	// Update web server with forecast data
+	webServer.UpdateForecast(forecast)
+
+	if cfg.LogLevel == "debug" {
+		log.Printf("DEBUG: Web dashboard updated with latest forecast data")
 	}
 }
 

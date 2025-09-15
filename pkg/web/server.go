@@ -17,6 +17,7 @@ type WebServer struct {
 	port                 string
 	server               *http.Server
 	weatherData          *weather.Observation
+	forecastData         *weather.ForecastResponse
 	homekitStatus        map[string]interface{}
 	dataHistory          []weather.Observation
 	maxHistorySize       int
@@ -70,6 +71,7 @@ type StatusResponse struct {
 		TotalSteps   int    `json:"totalSteps"`
 		Description  string `json:"description"`
 	} `json:"historyLoadingProgress"`
+	Forecast             *weather.ForecastResponse `json:"forecast,omitempty"`
 }
 
 // Precipitation type helper function
@@ -307,6 +309,12 @@ func (ws *WebServer) SetHistoryLoadingComplete() {
 	ws.historyLoadingProgress.description = ""
 }
 
+func (ws *WebServer) UpdateForecast(forecast *weather.ForecastResponse) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	ws.forecastData = forecast
+}
+
 func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
 
@@ -477,6 +485,9 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	response.HistoryLoadingProgress.CurrentStep = ws.historyLoadingProgress.currentStep
 	response.HistoryLoadingProgress.TotalSteps = ws.historyLoadingProgress.totalSteps
 	response.HistoryLoadingProgress.Description = ws.historyLoadingProgress.description
+
+	// Add forecast data if available
+	response.Forecast = ws.forecastData
 
 	// Add station name if available
 	if ws.stationName != "" {
@@ -1166,6 +1177,223 @@ func (ws *WebServer) getDashboardHTML() string {
             margin-top: 5px;
             font-style: italic;
         }
+
+        /* Forecast Card Styles */
+        .forecast-current {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .forecast-current-main {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .forecast-icon {
+            font-size: 2.5rem;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .forecast-temp-container {
+            flex: 1;
+        }
+
+        .forecast-temp {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .forecast-feels-like {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .forecast-conditions {
+            font-size: 1.1rem;
+            color: #555;
+            font-weight: 500;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .forecast-current-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .forecast-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .forecast-label {
+            color: #666;
+        }
+
+        .forecast-value {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .forecast-daily {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .forecast-day {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .forecast-day-name {
+            font-weight: 500;
+            min-width: 60px;
+            color: #333;
+        }
+
+        .forecast-day-icon {
+            font-size: 1.2rem;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .forecast-day-conditions {
+            flex: 1;
+            text-align: center;
+            color: #555;
+            font-size: 0.8rem;
+            padding: 0 10px;
+        }
+
+        .forecast-day-temps {
+            display: flex;
+            gap: 5px;
+            min-width: 70px;
+            justify-content: flex-end;
+        }
+
+        .forecast-day-high {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .forecast-day-low {
+            color: #666;
+        }
+
+        .forecast-day-precip {
+            font-size: 0.8rem;
+            color: #4a90e2;
+            min-width: 30px;
+            text-align: right;
+        }
+
+        /* Mobile and narrow screen responsive styles for forecast card */
+        @media (max-width: 768px) {
+            .forecast-current-main {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .forecast-icon {
+                font-size: 2rem;
+                min-width: auto;
+            }
+            
+            .forecast-temp {
+                font-size: 1.8rem;
+            }
+            
+            .forecast-conditions {
+                min-width: auto;
+                margin-top: 5px;
+            }
+            
+            .forecast-current-details {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            
+            .forecast-day {
+                flex-wrap: wrap;
+                gap: 5px;
+                padding: 6px;
+            }
+            
+            .forecast-day-name {
+                min-width: 50px;
+            }
+            
+            .forecast-day-conditions {
+                font-size: 0.75rem;
+                padding: 0 5px;
+            }
+            
+            .forecast-day-temps {
+                min-width: 60px;
+            }
+            
+            .forecast-day-precip {
+                min-width: 25px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .forecast-current-main {
+                gap: 8px;
+            }
+            
+            .forecast-icon {
+                font-size: 1.8rem;
+            }
+            
+            .forecast-temp {
+                font-size: 1.6rem;
+            }
+            
+            .forecast-feels-like {
+                font-size: 0.8rem;
+            }
+            
+            .forecast-day {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            
+            .forecast-day-name,
+            .forecast-day-icon,
+            .forecast-day-conditions,
+            .forecast-day-temps,
+            .forecast-day-precip {
+                width: 100%;
+                min-width: auto;
+                text-align: left;
+            }
+            
+            .forecast-day-temps {
+                justify-content: flex-start;
+            }
+            
+            .forecast-day-precip {
+                text-align: left;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1433,6 +1661,47 @@ func (ws *WebServer) getDashboardHTML() string {
 
         <!-- Information Cards -->
         <div class="grid">
+            <!-- Tempest Forecast Card -->
+            <div class="card" id="forecast-card">
+                <div class="card-header">
+                    <span class="card-icon">📅</span>
+                    <span class="card-title">Tempest Forecast</span>
+                </div>
+                <div class="card-content">
+                    <div class="forecast-current">
+                        <div class="forecast-current-main">
+                            <div class="forecast-icon" id="forecast-current-icon">--</div>
+                            <div class="forecast-temp-container">
+                                <div class="forecast-temp" id="forecast-current-temp">--°</div>
+                                <div class="forecast-feels-like">Feels like <span id="forecast-current-feels-like">--°</span></div>
+                            </div>
+                            <div class="forecast-conditions" id="forecast-current-conditions">--</div>
+                        </div>
+                        <div class="forecast-current-details">
+                            <div class="forecast-detail">
+                                <span class="forecast-label">Humidity:</span>
+                                <span class="forecast-value" id="forecast-current-humidity">--%</span>
+                            </div>
+                            <div class="forecast-detail">
+                                <span class="forecast-label">Wind:</span>
+                                <span class="forecast-value" id="forecast-current-wind">-- mph</span>
+                            </div>
+                            <div class="forecast-detail">
+                                <span class="forecast-label">Pressure:</span>
+                                <span class="forecast-value" id="forecast-current-pressure">-- mb</span>
+                            </div>
+                            <div class="forecast-detail">
+                                <span class="forecast-label">Precip:</span>
+                                <span class="forecast-value" id="forecast-current-precip">--%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="forecast-daily" id="forecast-daily-container">
+                        <!-- Daily forecast items will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
             <div class="card" id="tempest-card">
                 <div class="card-header">
                     <span class="card-icon">🌤️</span>

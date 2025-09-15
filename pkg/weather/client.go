@@ -67,6 +67,36 @@ type HistoricalResponse struct {
 	Obs          [][]interface{}        `json:"obs"` // Device API returns array of arrays, not array of maps
 }
 
+// ForecastPeriod represents a single forecast period from the better_forecast API
+type ForecastPeriod struct {
+	Time             int64   `json:"time"`
+	Icon             string  `json:"icon"`
+	Conditions       string  `json:"conditions"`
+	AirTemperature   float64 `json:"air_temperature"`
+	FeelsLike        float64 `json:"feels_like"`
+	SeaLevelPressure float64 `json:"sea_level_pressure"`
+	RelativeHumidity int     `json:"relative_humidity"`
+	PrecipProbability int    `json:"precip_probability"`
+	PrecipIcon       string  `json:"precip_icon"`
+	PrecipType       string  `json:"precip_type"`
+	WindAvg          float64 `json:"wind_avg"`
+	WindDirection    int     `json:"wind_direction"`
+	WindGust         float64 `json:"wind_gust"`
+	UV               int     `json:"uv"`
+}
+
+// ForecastResponse represents the structure for forecast data from WeatherFlow API
+type ForecastResponse struct {
+	Status       map[string]interface{} `json:"status"`
+	StationID    int                    `json:"station_id"`
+	StationName  string                 `json:"station_name"`
+	Timezone     string                 `json:"timezone"`
+	Forecast     struct {
+		Daily []ForecastPeriod `json:"daily"`
+	} `json:"forecast"`
+	CurrentConditions ForecastPeriod `json:"current_conditions"`
+}
+
 func GetStations(token string) ([]Station, error) {
 	url := fmt.Sprintf("%s/stations?token=%s", BaseURL, token)
 	resp, err := http.Get(url)
@@ -490,4 +520,31 @@ func filterToOneMinuteIncrements(observations []*Observation, maxCount int) []*O
 	}
 
 	return filtered
+}
+
+// GetForecast fetches forecast data from the WeatherFlow better_forecast endpoint
+func GetForecast(stationID int, token string) (*ForecastResponse, error) {
+	url := fmt.Sprintf("%s/better_forecast?station_id=%d&token=%s", BaseURL, stationID, token)
+	
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch forecast data: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("forecast API request failed with status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read forecast response: %v", err)
+	}
+
+	var forecastResp ForecastResponse
+	if err := json.Unmarshal(body, &forecastResp); err != nil {
+		return nil, fmt.Errorf("failed to parse forecast JSON: %v", err)
+	}
+
+	return &forecastResp, nil
 }

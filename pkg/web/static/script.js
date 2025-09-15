@@ -36,6 +36,7 @@ let units = {
 };
 
 let weatherData = null;
+let forecastData = null; // Store current forecast data for unit conversions
 const charts = {};
 const maxDataPoints = 1000; // As specified in requirements
 
@@ -507,6 +508,9 @@ function toggleUnit(sensor) {
     
     updateDisplay();
     console.log('🔄 toggleUnit() - updateDisplay() completed');
+    
+    refreshForecastDisplay(); // Update forecast display with new units
+    console.log('🔄 toggleUnit() - refreshForecastDisplay() completed');
     
     recalculateAverages();
     console.log('🔄 toggleUnit() - recalculateAverages() completed');
@@ -1448,6 +1452,7 @@ async function fetchStatus() {
             });
             
             updateStatusDisplay(status);
+            updateForecastDisplay(status);
         } else {
             throw new Error(`Status API error: ${response.status}`);
         }
@@ -1545,6 +1550,146 @@ function updateStatusDisplay(status) {
         homekitActive: hk.bridge,
         accessoryCount: hk.accessories
     });
+}
+
+function updateForecastDisplay(status) {
+    debugLog(logLevels.DEBUG, 'Updating forecast display', status.forecast);
+    
+    if (!status.forecast) {
+        debugLog(logLevels.DEBUG, 'No forecast data available');
+        return;
+    }
+
+    const forecast = status.forecast;
+    
+    // Store forecast data globally for unit conversions
+    forecastData = forecast;
+    
+    // Update current conditions
+    updateCurrentConditions(forecast.current_conditions);
+    
+    // Update daily forecast
+    updateDailyForecast(forecast.forecast.daily);
+}
+
+function refreshForecastDisplay() {
+    // Refresh forecast display with current units (called when units are toggled)
+    if (!forecastData) {
+        debugLog(logLevels.DEBUG, 'No cached forecast data available for refresh');
+        return;
+    }
+    
+    debugLog(logLevels.DEBUG, 'Refreshing forecast display with current units');
+    
+    // Update current conditions with current units
+    updateCurrentConditions(forecastData.current_conditions);
+    
+    // Update daily forecast with current units  
+    updateDailyForecast(forecastData.forecast.daily);
+}
+
+function updateCurrentConditions(current) {
+    const elements = {
+        icon: document.getElementById('forecast-current-icon'),
+        temp: document.getElementById('forecast-current-temp'),
+        feelsLike: document.getElementById('forecast-current-feels-like'),
+        conditions: document.getElementById('forecast-current-conditions'),
+        humidity: document.getElementById('forecast-current-humidity'),
+        wind: document.getElementById('forecast-current-wind'),
+        pressure: document.getElementById('forecast-current-pressure'),
+        precip: document.getElementById('forecast-current-precip')
+    };
+
+    // Convert temperatures based on current unit setting
+    let currentTemp = current.air_temperature;
+    let feelsLikeTemp = current.feels_like;
+    let tempUnit = '°C';
+    
+    if (units.temperature === 'fahrenheit') {
+        currentTemp = celsiusToFahrenheit(currentTemp);
+        feelsLikeTemp = celsiusToFahrenheit(feelsLikeTemp);
+        tempUnit = '°F';
+    }
+    
+    // Convert pressure based on current unit setting
+    let pressure = current.sea_level_pressure;
+    let pressureUnit = 'mb';
+    
+    if (units.pressure === 'inHg') {
+        pressure = mbToInHg(pressure);
+        pressureUnit = 'inHg';
+    }
+
+    if (elements.icon) elements.icon.textContent = getWeatherIcon(current.icon);
+    if (elements.temp) elements.temp.textContent = `${Math.round(currentTemp)}${tempUnit}`;
+    if (elements.feelsLike) elements.feelsLike.textContent = `${Math.round(feelsLikeTemp)}${tempUnit}`;
+    if (elements.conditions) elements.conditions.textContent = current.conditions;
+    if (elements.humidity) elements.humidity.textContent = `${current.relative_humidity}%`;
+    if (elements.wind) elements.wind.textContent = `${Math.round(current.wind_avg)} mph`;
+    if (elements.pressure) elements.pressure.textContent = `${Math.round(pressure)} ${pressureUnit}`;
+    if (elements.precip) elements.precip.textContent = `${current.precip_probability}%`;
+}
+
+function updateDailyForecast(dailyForecast) {
+    const container = document.getElementById('forecast-daily-container');
+    if (!container || !dailyForecast) return;
+
+    // Clear existing forecast items
+    container.innerHTML = '';
+
+    // Show first 5 days
+    const daysToShow = Math.min(5, dailyForecast.length);
+    
+    for (let i = 0; i < daysToShow; i++) {
+        const day = dailyForecast[i];
+        const forecastDay = document.createElement('div');
+        forecastDay.className = 'forecast-day';
+        
+        const date = new Date(day.time * 1000);
+        const dayName = i === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' });
+        
+        // Convert temperature based on current unit setting
+        let highTemp = day.air_temperature;
+        let lowTemp = day.air_temperature - 5; // Assuming low is about 5 degrees less
+        let tempUnit = '°C';
+        
+        if (units.temperature === 'fahrenheit') {
+            highTemp = celsiusToFahrenheit(highTemp);
+            lowTemp = celsiusToFahrenheit(lowTemp);
+            tempUnit = '°F';
+        }
+        
+        forecastDay.innerHTML = `
+            <div class="forecast-day-name">${dayName}</div>
+            <div class="forecast-day-icon">${getWeatherIcon(day.icon)}</div>
+            <div class="forecast-day-conditions">${day.conditions}</div>
+            <div class="forecast-day-temps">
+                <span class="forecast-day-high">${Math.round(highTemp)}${tempUnit}</span>
+                <span class="forecast-day-low">/${Math.round(lowTemp)}${tempUnit}</span>
+            </div>
+            <div class="forecast-day-precip">${day.precip_probability}%</div>
+        `;
+        
+        container.appendChild(forecastDay);
+    }
+}
+
+function getWeatherIcon(iconCode) {
+    const iconMap = {
+        'clear-day': '☀️',
+        'clear-night': '🌙',
+        'partly-cloudy-day': '⛅',
+        'partly-cloudy-night': '☁️',
+        'cloudy': '☁️',
+        'rain': '🌧️',
+        'snow': '❄️',
+        'sleet': '🌨️',
+        'wind': '💨',
+        'fog': '🌫️',
+        'thunderstorm': '⛈️'
+    };
+    
+    return iconMap[iconCode] || '🌤️';
 }
 
 function populateChartsWithHistoricalData(dataHistory) {
