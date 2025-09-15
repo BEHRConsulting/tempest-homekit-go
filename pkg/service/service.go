@@ -125,13 +125,22 @@ func StartService(cfg *config.Config) error {
 			log.Printf("INFO: --read-history flag detected, preloading last 24 hours of weather data...")
 		}
 
-		historicalObs, err := weather.GetHistoricalObservations(station.StationID, cfg.Token)
+		// Create a progress callback function
+		progressCallback := func(currentStep, totalSteps int, description string) {
+			webServer.SetHistoryLoadingProgress(currentStep, totalSteps, description)
+		}
+
+		historicalObs, err := weather.GetHistoricalObservationsWithProgress(station.StationID, cfg.Token, progressCallback)
 		if err != nil {
 			log.Printf("WARNING: Failed to fetch historical data: %v", err)
+			webServer.SetHistoryLoadingComplete()
 		} else {
 			if cfg.LogLevel == "debug" {
 				log.Printf("DEBUG: Successfully fetched %d historical observations", len(historicalObs))
 			}
+
+			// Set progress for data processing
+			webServer.SetHistoryLoadingProgress(2, 3, "Processing historical data...")
 
 			// Send historical data to web server for charts
 			for _, obs := range historicalObs {
@@ -140,6 +149,9 @@ func StartService(cfg *config.Config) error {
 					log.Printf("DEBUG: Added historical observation from %v", time.Unix(obs.Timestamp, 0))
 				}
 			}
+
+			// Complete the loading process
+			webServer.SetHistoryLoadingComplete()
 
 			// Update historical data status in web server
 			webServer.SetHistoricalDataStatus(len(historicalObs))

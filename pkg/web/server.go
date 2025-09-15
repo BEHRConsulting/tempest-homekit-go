@@ -24,6 +24,12 @@ type WebServer struct {
 	startTime            time.Time
 	historicalDataLoaded bool
 	historicalDataCount  int
+	historyLoadingProgress struct {
+		isLoading    bool
+		currentStep  int
+		totalSteps   int
+		description  string
+	}
 	mu                   sync.RWMutex
 }
 
@@ -58,6 +64,12 @@ type StatusResponse struct {
 	ObservationCount     int                    `json:"observationCount"`
 	HistoricalDataLoaded bool                   `json:"historicalDataLoaded"`
 	HistoricalDataCount  int                    `json:"historicalDataCount"`
+	HistoryLoadingProgress struct {
+		IsLoading    bool   `json:"isLoading"`
+		CurrentStep  int    `json:"currentStep"`
+		TotalSteps   int    `json:"totalSteps"`
+		Description  string `json:"description"`
+	} `json:"historyLoadingProgress"`
 }
 
 // Precipitation type helper function
@@ -277,6 +289,24 @@ func (ws *WebServer) SetHistoricalDataStatus(count int) {
 	ws.historicalDataCount = count
 }
 
+func (ws *WebServer) SetHistoryLoadingProgress(currentStep, totalSteps int, description string) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	ws.historyLoadingProgress.isLoading = true
+	ws.historyLoadingProgress.currentStep = currentStep
+	ws.historyLoadingProgress.totalSteps = totalSteps
+	ws.historyLoadingProgress.description = description
+}
+
+func (ws *WebServer) SetHistoryLoadingComplete() {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	ws.historyLoadingProgress.isLoading = false
+	ws.historyLoadingProgress.currentStep = 0
+	ws.historyLoadingProgress.totalSteps = 0
+	ws.historyLoadingProgress.description = ""
+}
+
 func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
 
@@ -441,6 +471,12 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 		HistoricalDataLoaded: ws.historicalDataLoaded,
 		HistoricalDataCount:  ws.historicalDataCount,
 	}
+	
+	// Add progress information
+	response.HistoryLoadingProgress.IsLoading = ws.historyLoadingProgress.isLoading
+	response.HistoryLoadingProgress.CurrentStep = ws.historyLoadingProgress.currentStep
+	response.HistoryLoadingProgress.TotalSteps = ws.historyLoadingProgress.totalSteps
+	response.HistoryLoadingProgress.Description = ws.historyLoadingProgress.description
 
 	// Add station name if available
 	if ws.stationName != "" {

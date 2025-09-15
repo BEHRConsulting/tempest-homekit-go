@@ -214,8 +214,16 @@ func GetTempestDeviceID(station *Station) (int, error) {
 	return 0, fmt.Errorf("no Tempest device found in station")
 }
 
+// ProgressCallback is a function type for reporting progress during historical data loading
+type ProgressCallback func(currentStep, totalSteps int, description string)
+
 // GetHistoricalObservations fetches historical weather data using the device-based endpoint with day_offset
 func GetHistoricalObservations(stationID int, token string) ([]*Observation, error) {
+	return GetHistoricalObservationsWithProgress(stationID, token, nil)
+}
+
+// GetHistoricalObservationsWithProgress fetches historical weather data with progress reporting
+func GetHistoricalObservationsWithProgress(stationID int, token string, progressCallback ProgressCallback) ([]*Observation, error) {
 	// First get station details to find the Tempest device ID
 	stationDetails, err := GetStationDetails(stationID, token)
 	if err != nil {
@@ -234,12 +242,24 @@ func GetHistoricalObservations(stationID int, token string) ([]*Observation, err
 
 	successCount := 0
 	errorCount := 0
+	totalSteps := 2 // Today and yesterday
+
+	// Report initial progress
+	if progressCallback != nil {
+		progressCallback(0, totalSteps, "Starting historical data collection...")
+	}
 
 	// Get observations for today (day_offset=0) and yesterday (day_offset=1)
 	for dayOffset := 0; dayOffset <= 1; dayOffset++ {
+		currentStep := dayOffset + 1
 		dayName := "today"
 		if dayOffset == 1 {
 			dayName = "yesterday"
+		}
+
+		// Report progress before fetching
+		if progressCallback != nil {
+			progressCallback(currentStep-1, totalSteps, fmt.Sprintf("Fetching %s's observations...", dayName))
 		}
 
 		url := fmt.Sprintf("%s/observations/device/%d?day_offset=%d&token=%s",
@@ -285,6 +305,11 @@ func GetHistoricalObservations(stationID int, token string) ([]*Observation, err
 			allObservations = append(allObservations, observations...)
 			successCount++
 			fmt.Printf("INFO: Successfully retrieved %d observations for %s\n", len(observations), dayName)
+			
+			// Report progress after successful fetch
+			if progressCallback != nil {
+				progressCallback(currentStep, totalSteps, fmt.Sprintf("Processed %d observations for %s", len(observations), dayName))
+			}
 		} else {
 			fmt.Printf("WARN: No observations found for %s\n", dayName)
 		}

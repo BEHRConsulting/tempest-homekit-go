@@ -1471,9 +1471,19 @@ function updateStatusDisplay(status) {
     const tempestHistoricalRow = document.getElementById('tempest-historical-row');
     const tempestHistoricalCount = document.getElementById('tempest-historical-count');
 
-    if (tempestStatus) {
-        tempestStatus.textContent = status.connected ? 'Connected' : 'Disconnected';
-        tempestStatus.style.color = status.connected ? '#28a745' : '#dc3545';
+    // Handle historical data loading progress first
+    if (status.historyLoadingProgress && status.historyLoadingProgress.isLoading) {
+        // Update status to show we're reading historical data
+        if (tempestStatus) {
+            tempestStatus.textContent = 'Reading Historical Observations';
+            tempestStatus.style.color = '#ffc107'; // Yellow color for loading
+        }
+    } else {
+        // Not loading - show normal connection status
+        if (tempestStatus) {
+            tempestStatus.textContent = status.connected ? 'Connected' : 'Disconnected';
+            tempestStatus.style.color = status.connected ? '#28a745' : '#dc3545';
+        }
     }
     if (tempestStation) tempestStation.textContent = status.stationName || '--';
     if (tempestLastUpdate) tempestLastUpdate.textContent = status.lastUpdate ? new Date(status.lastUpdate).toLocaleString('en-US', {
@@ -1487,13 +1497,23 @@ function updateStatusDisplay(status) {
     if (tempestUptime) tempestUptime.textContent = status.uptime || '--';
     if (tempestDataCount) tempestDataCount.textContent = status.observationCount || '0';
     
-    // Show/hide historical data row and update count
-    if (tempestHistoricalRow && tempestHistoricalCount) {
-        if (status.historicalDataLoaded && status.observationCount > 0) {
+    // Handle historical data loading progress
+    if (status.historyLoadingProgress && status.historyLoadingProgress.isLoading) {
+        // Show and update historical row with progress
+        if (tempestHistoricalRow && tempestHistoricalCount) {
             tempestHistoricalRow.style.display = '';
-            tempestHistoricalCount.textContent = `${status.observationCount} data points`;
-        } else {
-            tempestHistoricalRow.style.display = 'none';
+            const progressText = `${status.historyLoadingProgress.currentStep}/${status.historyLoadingProgress.totalSteps}`;
+            tempestHistoricalCount.textContent = progressText;
+        }
+    } else {
+        // Show/hide historical data row and update count (normal state)
+        if (tempestHistoricalRow && tempestHistoricalCount) {
+            if (status.historicalDataLoaded && status.observationCount > 0) {
+                tempestHistoricalRow.style.display = '';
+                tempestHistoricalCount.textContent = `${status.observationCount} data points`;
+            } else {
+                tempestHistoricalRow.style.display = 'none';
+            }
         }
     }
 
