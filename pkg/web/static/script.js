@@ -1708,7 +1708,24 @@ function updateDailyForecast(dailyForecast) {
         const forecastDay = document.createElement('div');
         forecastDay.className = 'forecast-day';
         
-        const date = new Date(day.time * 1000);
+        // Calculate the date for this forecast day
+        // If the API provides correct timestamps for each day, use them
+        // Otherwise, fall back to calculating from today's date
+        let date;
+        if (i === 0) {
+            // Today - use current date
+            date = new Date();
+        } else {
+            // Try using the API timestamp first
+            date = new Date(day.time * 1000);
+            // Check if this timestamp seems wrong (same as first day or invalid)
+            if (i > 0 && dailyForecast[0] && Math.abs(day.time - dailyForecast[0].time) < 3600) {
+                // Timestamps are too similar (less than 1 hour difference), calculate manually
+                date = new Date();
+                date.setDate(date.getDate() + i);
+            }
+        }
+        
         const dayName = i === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' });
         
         // Convert temperature based on current unit setting
