@@ -1,3 +1,5 @@
+// Package homekit provides HomeKit accessory setup and management for weather sensors.
+// It creates HomeKit-compatible accessories for various weather measurements using the HAP protocol.
 package homekit
 
 import (
@@ -52,7 +54,8 @@ type WeatherSystemModern struct {
 	cancel      context.CancelFunc
 }
 
-// NewWeatherSystemModern creates a new weather system using the modern hap library
+// NewWeatherSystemModern creates a new weather system using the modern hap library.
+// It initializes HomeKit accessories based on the sensor configuration and starts the HAP server.
 func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLevel string) (*WeatherSystemModern, error) {
 	if logLevel == "debug" {
 		log.Printf("DEBUG: Creating new weather system with hap library")

@@ -1,3 +1,6 @@
+// Package main implements a HomeKit bridge for WeatherFlow Tempest weather stations.
+// It provides a HomeKit-compatible interface to access weather data from Tempest stations,
+// along with a web dashboard for monitoring and configuration.
 package main
 
 import (
@@ -48,6 +51,8 @@ func main() {
 	log.Printf("Received signal %v, shutting down...", sig)
 }
 
+// runAPITests performs comprehensive testing of all WeatherFlow API endpoints
+// to verify connectivity and data availability before starting the main service.
 func runAPITests(cfg *config.Config) {
 	fmt.Println("=== WeatherFlow API Endpoint Tests ===")
 

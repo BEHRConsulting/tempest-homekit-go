@@ -1,3 +1,5 @@
+// Package config provides configuration management for the Tempest HomeKit service.
+// It handles command-line flags, environment variables, and HomeKit database operations.
 package config
 
 import (
@@ -14,6 +16,7 @@ import (
 	"time"
 )
 
+// Config holds all configuration parameters for the Tempest HomeKit service.
 type Config struct {
 	Token       string
 	StationName string
@@ -27,6 +30,8 @@ type Config struct {
 	Elevation   float64 // elevation in meters
 }
 
+// LoadConfig initializes and returns a new Config struct with values from
+// environment variables, command-line flags, and sensible defaults.
 func LoadConfig() *Config {
 	cfg := &Config{
 		Token:       getEnvOrDefault("TEMPEST_TOKEN", "b88edc78-6261-414e-8042-86a4d4f9ba15"),
@@ -123,7 +128,9 @@ type SensorConfig struct {
 	Lightning   bool
 }
 
-// ParseSensorConfig parses the sensor configuration string
+// ParseSensorConfig parses the sensor configuration string and returns a SensorConfig
+// with appropriate sensor types enabled based on the input string.
+// Supported values: "all", "min", "temp-only", or comma-separated sensor names.
 func ParseSensorConfig(sensorsFlag string) SensorConfig {
 	switch strings.ToLower(sensorsFlag) {
 	case "all":

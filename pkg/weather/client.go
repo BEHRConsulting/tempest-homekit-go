@@ -1,3 +1,6 @@
+// Package weather provides a client for the WeatherFlow Tempest API.
+// It handles authentication, data retrieval, and parsing of weather observations
+// and forecast data from WeatherFlow stations.
 package weather
 
 import (
@@ -97,6 +100,7 @@ type ForecastResponse struct {
 	CurrentConditions ForecastPeriod `json:"current_conditions"`
 }
 
+// GetStations retrieves all weather stations associated with the provided API token.
 func GetStations(token string) ([]Station, error) {
 	url := fmt.Sprintf("%s/stations?token=%s", BaseURL, token)
 	resp, err := http.Get(url)
@@ -123,6 +127,7 @@ func GetStations(token string) ([]Station, error) {
 	return stationsResp.Stations, nil
 }
 
+// GetObservation retrieves the latest weather observation for the specified station.
 func GetObservation(stationID int, token string) (*Observation, error) {
 	url := fmt.Sprintf("%s/observations/station/%d?token=%s", BaseURL, stationID, token)
 	resp, err := http.Get(url)
@@ -225,6 +230,8 @@ func GetStationDetails(stationID int, token string) (*Station, error) {
 	return &stationResp.Stations[0], nil
 }
 
+// FindStationByName searches for a station with the given name in the provided stations slice.
+// Returns nil if no matching station is found.
 func FindStationByName(stations []Station, name string) *Station {
 	for _, s := range stations {
 		if s.Name == name || s.StationName == name {

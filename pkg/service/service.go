@@ -1,3 +1,5 @@
+// Package service provides the main service orchestration for the Tempest HomeKit bridge.
+// It coordinates between the WeatherFlow API client, HomeKit accessories, and web dashboard.
 package service
 
 import (
@@ -13,6 +15,8 @@ import (
 	"tempest-homekit-go/pkg/web"
 )
 
+// StartService initializes and starts the Tempest HomeKit service with the provided configuration.
+// It sets up HomeKit accessories, starts the web server, and begins weather data polling.
 func StartService(cfg *config.Config) error {
 	// Set log level
 	setLogLevel(cfg.LogLevel)

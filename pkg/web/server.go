@@ -1,3 +1,5 @@
+// Package web provides an HTTP server and web dashboard for monitoring Tempest weather data.
+// It serves both API endpoints for weather data and a complete web interface with charts and controls.
 package web
 
 import (
@@ -14,6 +16,8 @@ import (
 	"tempest-homekit-go/pkg/weather"
 )
 
+// WebServer provides HTTP endpoints and a web dashboard for weather monitoring.
+// It manages weather data, serves API endpoints, and provides real-time updates.
 type WebServer struct {
 	port                   string
 	server                 *http.Server
