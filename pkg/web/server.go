@@ -213,12 +213,18 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		// Serve the file from the physical directory
 		filePath := "./pkg/web/static/" + filename
 
-		// Set appropriate content type
+		// Set appropriate content type and cache-busting headers
 		switch filename {
 		case "styles.css":
 			w.Header().Set("Content-Type", "text/css")
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
 		case "script.js":
 			w.Header().Set("Content-Type", "application/javascript")
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
 		case "date-fns.min.js":
 			w.Header().Set("Content-Type", "application/javascript")
 		}
@@ -374,6 +380,44 @@ func (ws *WebServer) getDashboardHTML() string {
             padding: 20px;
         }
 
+        /* Container responsive adjustments for larger screens */
+        @media (min-width: 1200px) {
+            .container {
+                max-width: 1300px;
+            }
+        }
+
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1500px;
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .container {
+                max-width: 1700px;
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .container {
+                max-width: 1900px;
+            }
+        }
+
+        @media (min-width: 2000px) {
+            .container {
+                max-width: 2100px;
+            }
+        }
+
+        @media (min-width: 2200px) {
+            .container {
+                max-width: none;
+                padding: 20px 40px;
+            }
+        }
+
         .header {
             text-align: center;
             margin-bottom: 30px;
@@ -400,6 +444,62 @@ func (ws *WebServer) getDashboardHTML() string {
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
+        }
+
+        /* Responsive grid layouts for larger screens */
+        @media (min-width: 1024px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                max-width: none;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            }
+        }
+
+        @media (min-width: 1400px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            }
+        }
+
+        @media (min-width: 2000px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            }
+        }
+
+        @media (min-width: 2200px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+        }
+
+        /* Force more cards for ultra-wide screens like 2290px */
+        @media (min-width: 2250px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 15px;
+            }
+            .container {
+                max-width: none;
+                padding: 20px 30px;
+            }
         }
 
         .card {
