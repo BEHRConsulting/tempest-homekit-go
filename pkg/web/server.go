@@ -31,6 +31,7 @@ type WeatherResponse struct {
 	WindGust             float64 `json:"windGust"`
 	WindDirection        float64 `json:"windDirection"`
 	RainAccum            float64 `json:"rainAccum"`
+	PrecipitationType    int     `json:"precipitationType"`
 	Pressure             float64 `json:"pressure"`
 	PressureCondition    string  `json:"pressure_condition"`
 	PressureTrend        string  `json:"pressure_trend"`
@@ -50,6 +51,22 @@ type StatusResponse struct {
 	StationName string                 `json:"stationName,omitempty"`
 	HomeKit     map[string]interface{} `json:"homekit"`
 	DataHistory []WeatherResponse      `json:"dataHistory"`
+}
+
+// Precipitation type helper function
+func getPrecipitationTypeDescription(precipType int) string {
+	switch precipType {
+	case 0:
+		return "None"
+	case 1:
+		return "Rain"
+	case 2:
+		return "Hail"
+	case 3:
+		return "Rain + Hail"
+	default:
+		return "Unknown"
+	}
 }
 
 // Pressure analysis functions
@@ -254,6 +271,7 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		WindGust:             ws.weatherData.WindGust,
 		WindDirection:        ws.weatherData.WindDirection,
 		RainAccum:            ws.weatherData.RainAccumulated,
+		PrecipitationType:    ws.weatherData.PrecipitationType,
 		Pressure:             ws.weatherData.StationPressure,
 		PressureCondition:    pressureCondition,
 		PressureTrend:        pressureTrend,
@@ -302,6 +320,7 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 			WindGust:             obs.WindGust,
 			WindDirection:        obs.WindDirection,
 			RainAccum:            obs.RainAccumulated,
+			PrecipitationType:    obs.PrecipitationType,
 			Pressure:             obs.StationPressure,
 			Illuminance:          obs.Illuminance,
 			UV:                   obs.UV,
@@ -437,6 +456,22 @@ func (ws *WebServer) getDashboardHTML() string {
             background-color: rgba(255, 193, 7, 0.1);
             border-radius: 6px;
             border-left: 3px solid #ffc107;
+        }
+        
+        .precipitation-type {
+            margin: 5px 0;
+            padding: 6px 8px;
+            background-color: rgba(54, 162, 235, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #36a2eb;
+            font-size: 0.85rem;
+        }
+        
+        .precipitation-info {
+            display: flex;
+            align-items: center;
+            color: #666;
+            font-weight: 500;
         }
 
         .lightning-strikes, .lightning-distance {
@@ -991,6 +1026,9 @@ func (ws *WebServer) getDashboardHTML() string {
                 </div>
                 <div class="card-value" id="rain">--</div>
                 <div class="card-unit" id="rain-unit" onclick="toggleUnit('rain')">in</div>
+                <div class="precipitation-type">
+                    <div class="precipitation-info">💧 Type: <span id="precipitation-type">--</span></div>
+                </div>
                 <div class="lightning-info">
                     <div class="lightning-strikes">⚡ <span id="lightning-count">--</span> strikes</div>
                     <div class="lightning-distance">📏 <span id="lightning-distance">--</span> <span id="lightning-distance-unit">km</span></div>
