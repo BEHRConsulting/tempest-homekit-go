@@ -32,3 +32,4 @@ on the web console, add fair, clearing, storm, etc to the pressure card based on
 
 web console, include precipitation_type on rain card
 
+can we move all javascript to script.js and keep the html clean? with loglevel dubug shouls also include calculated values, api calls and responces

@@ -182,12 +182,16 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Handle static files
-	if strings.HasPrefix(r.URL.Path, "/pkg/web/static/") {
-		// Extract the actual filename from the path
-		filename := strings.TrimPrefix(r.URL.Path, "/pkg/web/static/")
+	// Handle static files - support both /static/ and /pkg/web/static/ paths
+	if strings.HasPrefix(r.URL.Path, "/pkg/web/static/") || strings.HasPrefix(r.URL.Path, "/static/") {
+		var filename string
+		if strings.HasPrefix(r.URL.Path, "/pkg/web/static/") {
+			filename = strings.TrimPrefix(r.URL.Path, "/pkg/web/static/")
+		} else {
+			filename = strings.TrimPrefix(r.URL.Path, "/static/")
+		}
 		
-		log.Printf("Static file request: %s", filename)
+		log.Printf("Static file request: %s (path: %s)", filename, r.URL.Path)
 		
 		// Serve the file from the physical directory
 		filePath := "./pkg/web/static/" + filename
@@ -201,6 +205,8 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		case "date-fns.min.js":
 			w.Header().Set("Content-Type", "application/javascript")
 		}
+		
+		log.Printf("Serving static file: %s", filePath)
 		
 		// Try to serve the file
 		http.ServeFile(w, r, filePath)
@@ -1216,7 +1222,7 @@ func (ws *WebServer) getDashboardHTML() string {
     <script src="https://unpkg.com/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
     <!-- Main Application Script -->
-    <script src="pkg/web/static/script.js"></script>
+    <script src="pkg/web/static/script.js?v=` + fmt.Sprintf("%d", time.Now().Unix()) + `"></script>
 </body>
 </html>`
 }

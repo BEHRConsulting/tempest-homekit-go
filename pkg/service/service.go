@@ -44,13 +44,21 @@ func StartService(cfg *config.Config) error {
 		log.Printf("DEBUG: Initializing HomeKit accessories with sensor config: %s", cfg.Sensors)
 	}
 	sensorConfig := config.ParseSensorConfig(cfg.Sensors)
-	wa := homekit.NewWeatherAccessories()
-	_, setupErr := homekit.SetupHomeKit(wa, cfg.Pin, &sensorConfig)
+	ws, setupErr := homekit.NewWeatherSystemModern(cfg.Pin, &sensorConfig)
 	if setupErr != nil {
 		return fmt.Errorf("failed to setup HomeKit: %v", setupErr)
 	}
 
-	// HomeKit server is already started by the Setup method
+	// Start the HomeKit server
+	if cfg.LogLevel == "debug" {
+		log.Printf("DEBUG: Starting weather system server")
+	}
+	go func() {
+		if err := ws.Start(); err != nil {
+			log.Printf("HomeKit server error: %v", err)
+		}
+	}()
+
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
 		log.Printf("INFO: HomeKit server started successfully with PIN: %s", cfg.Pin)
 		log.Printf("DEBUG: HomeKit - Bridge ready to accept connections")
@@ -122,19 +130,19 @@ func StartService(cfg *config.Config) error {
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
 		log.Printf("INFO: Fetching initial weather data to populate HomeKit")
 	}
-	updateWeatherData(station, cfg, wa, webServer)
+	updateWeatherData(station, cfg, ws, webServer)
 
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
 		log.Printf("INFO: Starting weather data polling loop")
 	}
 
 	for range ticker.C {
-		updateWeatherData(station, cfg, wa, webServer)
+		updateWeatherData(station, cfg, ws, webServer)
 	}
 	return nil
 }
 
-func updateWeatherData(station *weather.Station, cfg *config.Config, wa *homekit.WeatherAccessories, webServer *web.WebServer) {
+func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit.WeatherSystemModern, webServer *web.WebServer) {
 	if cfg.LogLevel == "debug" {
 		log.Printf("DEBUG: Polling iteration started - fetching observation from station %d", station.StationID)
 	}
@@ -190,29 +198,18 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, wa *homekit
 		log.Printf("DEBUG: HomeKit - UV Index: %.0f", obs.UV)
 	}
 
-	// Update all sensors in the Tempest Weather Station:
-	// (1) Wind Average: floating point
-	wa.UpdateWindAverage(obs.WindAvg)
-	// (2) Wind Gust: floating point
-	wa.UpdateWindGust(obs.WindGust)
-	// (3) Wind Direction: integer 0-360
-	wa.UpdateWindDirection(obs.WindDirection)
-	// (4) Air Temperature: floating point
-	wa.UpdateAirTemperature(obs.AirTemperature)
-	// (5) Relative Humidity: integer, percentage
-	wa.UpdateRelativeHumidity(obs.RelativeHumidity)
-	// (6) Lux: floating, range: 0.0001 - 100000
-	wa.UpdateLux(obs.Illuminance)
-	// (7) UV: integer
-	wa.UpdateUV(obs.UV)
-	// (8) Rain: floating
-	wa.UpdateRain(obs.RainAccumulated)
-	// (9) Precipitation Type: integer
-	wa.UpdatePrecipitationType(obs.PrecipitationType)
-	// (10) Lightning Strike Count: integer
-	wa.UpdateLightningCount(obs.LightningStrikeCount)
-	// (11) Lightning Strike Distance: integer
-	wa.UpdateLightningDistance(obs.LightningStrikeAvg)
+	// Update all sensors in the Tempest Weather Station using the new UpdateSensor method:
+	ws.UpdateSensor("Wind Speed", obs.WindAvg)
+	ws.UpdateSensor("Wind Gust", obs.WindGust)
+	ws.UpdateSensor("Wind Direction", obs.WindDirection)
+	ws.UpdateSensor("Air Temperature", obs.AirTemperature)
+	ws.UpdateSensor("Relative Humidity", obs.RelativeHumidity)
+	ws.UpdateSensor("Ambient Light", obs.Illuminance)
+	ws.UpdateSensor("UV Index", obs.UV)
+	ws.UpdateSensor("Rain Accumulation", obs.RainAccumulated)
+	ws.UpdateSensor("Precipitation Type", float64(obs.PrecipitationType))
+	ws.UpdateSensor("Lightning Count", float64(obs.LightningStrikeCount))
+	ws.UpdateSensor("Lightning Distance", obs.LightningStrikeAvg)
 
 	if cfg.LogLevel == "debug" {
 		log.Printf("DEBUG: HomeKit accessory updates completed - ULTRA-MINIMAL: Only temperature sensor active")
