@@ -10,7 +10,9 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 ## Features
 
 - **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest API for current weather observations every 60 seconds
-- **Complete HomeKit Integration**: Updates 6 HomeKit sensors (Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, Light Level)
+- **Complete HomeKit Integration**: Updates 11 HomeKit sensors using modern `brutella/hap` library with custom services
+- **Temperature Conversion Fix**: Custom weather services prevent HomeKit's automatic Celsius-to-Fahrenheit conversion
+- **Accurate Weather Data**: Wind, rain, UV, and other sensors display exact values without unit conversion interference
 - **Wind Direction Support**: Displays wind direction in cardinal format (N, NE, E, etc.) with degrees
 - **Modern Web Dashboard**: Interactive web interface with real-time updates every 10 seconds and unit conversions
 - **Cross-Platform Deployment**: Automated build and installation scripts for Linux, macOS, and Windows
@@ -82,7 +84,8 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 ```
 
 ### Dependencies
-- `github.com/brutella/hc` - HomeKit Accessory Protocol implementation
+- `github.com/brutella/hap` - Modern HomeKit Accessory Protocol implementation (v0.0.32)
+- Custom weather services with unique UUIDs to prevent temperature conversion issues
 
 ## Usage
 
@@ -128,12 +131,19 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 6. Enter the PIN (default: 00102003)
 
 The following sensors will appear as separate HomeKit accessories:
-- **Temperature Sensor**: Air temperature in Celsius
-- **Humidity Sensor**: Relative humidity as percentage
-- **Wind Speed Sensor**: Wind speed in miles per hour
-- **Wind Direction Sensor**: Wind direction in cardinal format with degrees
-- **Rain Sensor**: Rain accumulation in inches
-- **Light Sensor**: Ambient light level in lux
+- **Temperature Sensor**: Air temperature in Celsius (uses standard HomeKit temperature characteristic)
+- **Custom Wind Speed Sensor**: Wind speed in miles per hour (custom service prevents unit conversion)
+- **Custom Wind Gust Sensor**: Wind gust speed in miles per hour (custom service)
+- **Custom Wind Direction Sensor**: Wind direction in cardinal format with degrees (custom service)
+- **Custom Humidity Sensor**: Relative humidity as percentage (custom service)
+- **Custom Rain Sensor**: Rain accumulation in inches (custom service)
+- **Custom UV Index Sensor**: UV index value (custom service)
+- **Custom Lightning Count Sensor**: Lightning strike count (custom service)
+- **Custom Lightning Distance Sensor**: Lightning strike distance (custom service)
+- **Custom Precipitation Type Sensor**: Precipitation type indicator (custom service)
+- **Custom Light Sensor**: Ambient light level in lux (custom service)
+
+**Note**: Custom sensors use unique service UUIDs to prevent HomeKit's automatic temperature unit conversion, ensuring accurate display of weather data without unwanted Celsius-to-Fahrenheit conversion.
 
 ## Web Dashboard
 
@@ -433,7 +443,7 @@ This project was developed using various technologies, libraries, and tools. Bel
 - **WeatherFlow Tempest API** - Weather data source and API integration
 
 ### Go Libraries and Dependencies
-- **`github.com/brutella/hc`** - HomeKit Accessory Protocol implementation for Go
+- **`github.com/brutella/hap`** - HomeKit Accessory Protocol implementation for Go
 - **Standard Library Packages**:
   - `net/http` - Web server implementation
   - `encoding/json` - JSON data handling

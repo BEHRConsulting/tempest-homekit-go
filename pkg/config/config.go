@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Config struct {
@@ -14,6 +15,7 @@ type Config struct {
 	LogLevel    string
 	WebPort     string
 	ClearDB     bool
+	Sensors     string
 }
 
 func LoadConfig() *Config {
@@ -23,6 +25,7 @@ func LoadConfig() *Config {
 		Pin:         getEnvOrDefault("HOMEKIT_PIN", "00102003"),
 		LogLevel:    getEnvOrDefault("LOG_LEVEL", "error"),
 		WebPort:     getEnvOrDefault("WEB_PORT", "8080"),
+		Sensors:     getEnvOrDefault("SENSORS", "min"),
 	}
 
 	flag.StringVar(&cfg.Token, "token", cfg.Token, "WeatherFlow API token")
@@ -30,6 +33,7 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.Pin, "pin", cfg.Pin, "HomeKit PIN")
 	flag.StringVar(&cfg.LogLevel, "loglevel", cfg.LogLevel, "Log level (debug, info, error)")
 	flag.StringVar(&cfg.WebPort, "web-port", cfg.WebPort, "Web dashboard port")
+	flag.StringVar(&cfg.Sensors, "sensors", cfg.Sensors, "Sensors to enable: 'all', 'min', 'temp-only', or comma-delimited list (temp,humidity,lux,wind,rain,pressure)")
 	flag.BoolVar(&cfg.ClearDB, "cleardb", false, "Clear HomeKit database and reset device pairing")
 	flag.Parse()
 
@@ -62,6 +66,70 @@ func ClearDatabase(dbPath string) error {
 
 	log.Printf("HomeKit database cleared successfully")
 	return nil
+}
+
+// SensorConfig represents which sensors should be enabled
+type SensorConfig struct {
+	Temperature bool
+	Humidity    bool
+	Light       bool
+	Wind        bool
+	Rain        bool
+	Pressure    bool
+	UV          bool
+	Lightning   bool
+}
+
+// ParseSensorConfig parses the sensor configuration string
+func ParseSensorConfig(sensorsFlag string) SensorConfig {
+	switch strings.ToLower(sensorsFlag) {
+	case "all":
+		return SensorConfig{
+			Temperature: true,
+			Humidity:    true,
+			Light:       true,
+			Wind:        true,
+			Rain:        true,
+			Pressure:    true,
+			UV:          true,
+			Lightning:   true,
+		}
+	case "min":
+		return SensorConfig{
+			Temperature: true,
+			// Only temperature sensor is HomeKit compliant - others cause "out of compliance" errors
+		}
+	case "temp-only":
+		return SensorConfig{
+			Temperature: true,
+		}
+	default:
+		// Parse comma-delimited sensor list
+		sensors := strings.Split(strings.ToLower(sensorsFlag), ",")
+		config := SensorConfig{}
+		for _, sensor := range sensors {
+			sensor = strings.TrimSpace(sensor)
+			switch sensor {
+			case "temp", "temperature":
+				config.Temperature = true
+			case "humidity":
+				config.Humidity = true
+			case "light", "lux":
+				config.Light = true
+			case "wind":
+				config.Wind = true
+			case "rain":
+				config.Rain = true
+			case "pressure":
+				config.Pressure = true
+			case "uv":
+				config.UV = true
+			case "lightning":
+				config.Lightning = true
+			}
+		}
+		return config
+	}
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

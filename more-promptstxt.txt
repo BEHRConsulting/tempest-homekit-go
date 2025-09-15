@@ -11,6 +11,10 @@ in the web dashboard, As with the light sensor box, use the table at xxx to give
 
 in the web dashboard, As with the light  box, use the table at xxx to give rain value some context.
 
+in the web dashboard, add a box for UV Index sensor.
+
+in the web dashboard, As with the light box, use the table at https://en.wikipedia.org/wiki/Ultraviolet_index Table column "UV Index" update with "media graphic color" and the text from column "Risk of harm from unprotected sun exposure, for the average adult" to give UV Index value some context.
+
 in the web dashboard temperature box, add a line for average temp on this day over the last 5 years.
 
 Add a trend line for the pressure graph.
@@ -20,3 +24,5 @@ Adjust pressure to sea level and show that it is adjusted. Click to toggle.
 update readme.md, requirements.md, core_review.md
 
 Update readme.md to show you and I are the authors. Add a reference section to show what you may have used in this program
+
+lets re-implment the homekit sensors. Place all sensors in the Tempest Weather group. All sensors report a number. Sensors: (1) Wind Average: floating point, (2) Wind Guest: floating point, (3) wind direction: integer 0-360, (4) Air temperature: floating point, (5) relitive humidity: integer, percentage, (6) lux: floating, range: 0.0001 - 100000, (7) uv: integer, (8) rain: floating, (9) percipition type: integer, (10)lightning strike count: integer, (11) lightning strike distance: integer, (12) lightning strike count: integer

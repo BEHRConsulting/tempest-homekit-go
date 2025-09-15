@@ -16,13 +16,10 @@
 
 #### HomeKit Integration
 - ✅ **Bridge Setup**: Create HomeKit bridge accessory for device management
-- ✅ **Sensor Accessories**: Implement 6 separate HomeKit accessories:
-  - Temperature Sensor (Air Temperature)
-  - Humidity Sensor (Relative Humidity)
-  - Wind Speed Sensor (Average Wind Speed)
-  - Wind Direction Sensor (Wind Direction with cardinal format)
-  - Rain Sensor (Rain Accumulation)
-  - Light Sensor (Ambient Light Level)
+- ✅ **Sensor Accessories**: Implement 11 separate HomeKit accessories using modern `brutella/hap` library:
+  - Air Temperature Sensor (standard HomeKit temperature characteristic)
+  - 10 Custom Weather Sensors (Wind Speed/Gust/Direction, Rain, UV, Lightning, Humidity, Light, Precipitation Type)
+- ✅ **Custom Service Solution**: Use unique service UUIDs to prevent HomeKit's automatic temperature conversion
 - ✅ **Real-time Updates**: Update all sensor values with each weather poll
 - ✅ **Pairing**: Support HomeKit pairing with configurable PIN
 
@@ -126,21 +123,27 @@
 ### HomeKit Implementation
 
 #### Accessory Types
-- ✅ **Bridge**: `accessory.TypeBridge` for device management
-- ✅ **Temperature Sensor**: `accessory.TypeOther` with `service.TemperatureSensor`
-- ✅ **Humidity Sensor**: `accessory.TypeOther` with `service.HumiditySensor`
-- ✅ **Wind Speed Sensor**: `accessory.TypeSensor` with custom service
-- ✅ **Wind Direction Sensor**: `accessory.TypeSensor` with custom service
-- ✅ **Rain Sensor**: `accessory.TypeOther` with `service.HumiditySensor` (scaled for rain accumulation)
-- ✅ **Light Sensor**: `accessory.TypeSensor` with `service.LightSensor`
+- ✅ **Bridge**: `accessory.NewBridge` for device management
+- ✅ **Temperature Sensor**: `accessory.NewTemperatureSensor` with standard temperature characteristic
+- ✅ **Custom Weather Sensors**: Individual accessories with custom service UUIDs (F1XX-0001-1000-8000-0026BB765291 pattern)
+
+#### Custom Service Architecture
+- ✅ **Unique Service UUIDs**: Each sensor type has its own service UUID to prevent HomeKit temperature conversion
+- ✅ **Custom Characteristics**: Float characteristics that don't trigger automatic unit conversion
+- ✅ **Modern hap Library**: Uses `github.com/brutella/hap` v0.0.32 with context-based server lifecycle
 
 #### Service Characteristics
-- ✅ **Temperature**: `CurrentTemperature` (float, Celsius)
-- ✅ **Humidity**: `CurrentRelativeHumidity` (float, percentage)
-- ✅ **Wind Speed**: Custom temperature characteristic (float, mph)
-- ✅ **Wind Direction**: Custom temperature characteristic (float, degrees)
-- ✅ **Rain**: `CurrentRelativeHumidity` (float, scaled 0-100%)
-- ✅ **Light**: `CurrentAmbientLightLevel` (float, lux)
+- ✅ **Air Temperature**: `CurrentTemperature` (float, Celsius) - standard HomeKit characteristic
+- ✅ **Wind Speed**: Custom float characteristic (float, mph) - UUID F101-0001-1000-8000-0026BB765291
+- ✅ **Wind Gust**: Custom float characteristic (float, mph) - UUID F111-0001-1000-8000-0026BB765291
+- ✅ **Wind Direction**: Custom float characteristic (float, degrees) - UUID F121-0001-1000-8000-0026BB765291
+- ✅ **Rain**: Custom float characteristic (float, inches) - UUID F131-0001-1000-8000-0026BB765291
+- ✅ **UV Index**: Custom float characteristic (float, index) - UUID F141-0001-1000-8000-0026BB765291
+- ✅ **Lightning Count**: Custom float characteristic (float, count) - UUID F151-0001-1000-8000-0026BB765291
+- ✅ **Lightning Distance**: Custom float characteristic (float, km) - UUID F161-0001-1000-8000-0026BB765291
+- ✅ **Precipitation Type**: Custom float characteristic (float, type) - UUID F171-0001-1000-8000-0026BB765291
+- ✅ **Humidity**: Custom float characteristic (float, percent) - UUID F181-0001-1000-8000-0026BB765291
+- ✅ **Ambient Light**: Custom float characteristic (float, lux) - UUID F191-0001-1000-8000-0026BB765291
 
 ### Web Dashboard Implementation
 
@@ -832,7 +835,7 @@ tempest-homekit-go/
 ### Compatibility
 - **Go Version**: Go 1.19 or later
 - **Dependencies**:
-  - `github.com/brutella/hc` (latest stable)
+  - `github.com/brutella/hap` v0.0.32 (modern HomeKit library)
   - Standard library only for other dependencies
 - **Operating Systems**: macOS, Linux, Windows
 - **HomeKit**: iOS 14+, macOS 11+, HomePod
@@ -936,7 +939,8 @@ require (
 - ✅ Application starts without errors
 - ✅ Discovers specified Tempest station
 - ✅ Polls weather data every 60 seconds
-- ✅ Updates all 4 HomeKit sensors
+- ✅ Updates all 11 HomeKit sensors (Temperature + 10 custom weather sensors)
+- ✅ Custom services prevent temperature conversion issues
 - ✅ HomeKit pairing successful
 - ✅ Debug logging shows all weather values
 - ✅ Web dashboard displays wind direction

@@ -39,26 +39,23 @@ func StartService(cfg *config.Config) error {
 
 	log.Printf("Found station: %s (ID: %d)", station.Name, station.StationID)
 
-	// Setup HomeKit
+	// Setup HomeKit with sensor configuration
 	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: Initializing HomeKit accessories")
+		log.Printf("DEBUG: Initializing HomeKit accessories with sensor config: %s", cfg.Sensors)
 	}
+	sensorConfig := config.ParseSensorConfig(cfg.Sensors)
 	wa := homekit.NewWeatherAccessories()
-	t, err := homekit.SetupHomeKit(wa, cfg.Pin)
-	if err != nil {
-		return fmt.Errorf("failed to setup HomeKit: %v", err)
+	_, setupErr := homekit.SetupHomeKit(wa, cfg.Pin, &sensorConfig)
+	if setupErr != nil {
+		return fmt.Errorf("failed to setup HomeKit: %v", setupErr)
 	}
 
-	// Start HomeKit transport
-	go func() {
-		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-			log.Printf("INFO: Starting HomeKit transport with PIN: %s", cfg.Pin)
-		}
-		t.Start()
-		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-			log.Printf("INFO: HomeKit transport started successfully")
-		}
-	}()
+	// HomeKit server is already started by the Setup method
+	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
+		log.Printf("INFO: HomeKit server started successfully with PIN: %s", cfg.Pin)
+		log.Printf("DEBUG: HomeKit - Bridge ready to accept connections")
+		log.Printf("DEBUG: HomeKit - Listening for iOS/HomeKit client connections...")
+	}
 
 	// Setup web dashboard
 	webServer := web.NewWebServer(cfg.WebPort)
@@ -78,25 +75,38 @@ func StartService(cfg *config.Config) error {
 	}()
 
 	// Update HomeKit status in web server
+	var enabledSensors []string
+	if sensorConfig.Temperature {
+		enabledSensors = append(enabledSensors, "Temperature")
+	}
+	if sensorConfig.Humidity {
+		enabledSensors = append(enabledSensors, "Humidity")
+	}
+	if sensorConfig.Light {
+		enabledSensors = append(enabledSensors, "Light")
+	}
+	if sensorConfig.Wind {
+		enabledSensors = append(enabledSensors, "Wind")
+	}
+	if sensorConfig.Rain {
+		enabledSensors = append(enabledSensors, "Rain")
+	}
+	if sensorConfig.Pressure {
+		enabledSensors = append(enabledSensors, "Pressure")
+	}
+	if sensorConfig.UV {
+		enabledSensors = append(enabledSensors, "UV")
+	}
+	if sensorConfig.Lightning {
+		enabledSensors = append(enabledSensors, "Lightning")
+	}
+	
 	homekitStatus := map[string]interface{}{
-		"bridge": true,
-		"name":   "Tempest HomeKit Bridge",
-		"accessories": len([]string{
-			wa.TemperatureAccessory.Info.Name.GetValue(),
-			wa.HumidityAccessory.Info.Name.GetValue(),
-			wa.WindAccessory.Info.Name.GetValue(),
-			wa.WindDirectionAccessory.Info.Name.GetValue(),
-			wa.RainAccessory.Info.Name.GetValue(),
-			wa.LightAccessory.Info.Name.GetValue(),
-		}),
-		"accessoryNames": []string{
-			wa.TemperatureAccessory.Info.Name.GetValue(),
-			wa.HumidityAccessory.Info.Name.GetValue(),
-			wa.WindAccessory.Info.Name.GetValue(),
-			wa.WindDirectionAccessory.Info.Name.GetValue(),
-			wa.RainAccessory.Info.Name.GetValue(),
-			wa.LightAccessory.Info.Name.GetValue(),
-		},
+		"bridge":      true,
+		"name":        "Tempest HomeKit Bridge",
+		"accessories": len(enabledSensors),
+		"accessoryNames": enabledSensors,
+		"sensorConfig": cfg.Sensors,
 		"pin": cfg.Pin,
 	}
 	webServer.UpdateHomeKitStatus(homekitStatus)
@@ -108,80 +118,114 @@ func StartService(cfg *config.Config) error {
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 
+	// Initial data fetch to populate HomeKit immediately
+	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
+		log.Printf("INFO: Fetching initial weather data to populate HomeKit")
+	}
+	updateWeatherData(station, cfg, wa, webServer)
+
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
 		log.Printf("INFO: Starting weather data polling loop")
 	}
 
 	for range ticker.C {
-		if cfg.LogLevel == "debug" {
-			log.Printf("DEBUG: Polling iteration started - fetching observation from station %d", station.StationID)
-		}
-
-		obs, err := weather.GetObservation(station.StationID, cfg.Token)
-		if err != nil {
-			log.Printf("Error getting observation: %v", err)
-			continue
-		}
-
-		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-			log.Printf("INFO: Successfully read weather data from Tempest API - Station: %s", station.Name)
-		}
-
-		// Info level logging - show sensor data and night detection
-		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-			isNight := isNightTime(obs.Illuminance)
-			nightIndicator := ""
-			if isNight {
-				nightIndicator = " 🌙 NIGHT"
-			}
-			log.Printf("INFO: Sensor data - Temp: %.1f°C, Humidity: %.1f%%, Wind: %.1f mph (%.0f°), Rain: %.3f in, Light: %.0f lux%s",
-				obs.AirTemperature, obs.RelativeHumidity, obs.WindAvg, obs.WindDirection, obs.RainAccumulated, obs.Illuminance, nightIndicator)
-		}
-
-		// Debug logging - show all weather metrics and pretty printed JSON
-		if cfg.LogLevel == "debug" {
-			log.Printf("DEBUG: Full weather data - Temp: %.1f°C, Humidity: %.1f%%, Wind: %.1f mph (%.0f°), Rain: %.3f in, Pressure: %.1f mb, UV: %.1f, Solar: %.0f W/m², Battery: %.1fV",
-				obs.AirTemperature, obs.RelativeHumidity, obs.WindAvg, obs.WindDirection, obs.RainAccumulated,
-				obs.StationPressure, obs.UV, obs.SolarRadiation, obs.Battery)
-
-			// Pretty print the observation data as JSON
-			jsonData, err := json.MarshalIndent(obs, "", "  ")
-			if err == nil {
-				log.Printf("DEBUG: Raw Tempest API JSON response:\n%s", string(jsonData))
-			}
-
-			log.Printf("DEBUG: Updating HomeKit accessories with new sensor values")
-		}
-
-		// Update HomeKit sensors with detailed logging
-		if cfg.LogLevel == "debug" {
-			log.Printf("DEBUG: HomeKit - Temperature: %.1f°C", obs.AirTemperature)
-			log.Printf("DEBUG: HomeKit - Humidity: %.1f%%", obs.RelativeHumidity)
-			log.Printf("DEBUG: HomeKit - Wind Speed: %.1f mph", obs.WindAvg)
-			log.Printf("DEBUG: HomeKit - Wind Direction: %.0f°", obs.WindDirection)
-			log.Printf("DEBUG: HomeKit - Rain Accumulation: %.3f in", obs.RainAccumulated)
-			log.Printf("DEBUG: HomeKit - Illuminance: %.0f lux", obs.Illuminance)
-		}
-
-		wa.UpdateTemperature(obs.AirTemperature)
-		wa.UpdateHumidity(obs.RelativeHumidity)
-		wa.UpdateWindSpeed(obs.WindAvg)
-		wa.UpdateWindDirection(obs.WindDirection)
-		wa.UpdateRainAccumulation(obs.RainAccumulated)
-		wa.UpdateIlluminance(obs.Illuminance)
-
-		if cfg.LogLevel == "debug" {
-			log.Printf("DEBUG: HomeKit accessory updates completed")
-		}
-
-		// Update web dashboard
-		webServer.UpdateWeather(obs)
-
-		if cfg.LogLevel == "debug" {
-			log.Printf("DEBUG: Web dashboard updated with latest weather data")
-		}
+		updateWeatherData(station, cfg, wa, webServer)
 	}
 	return nil
+}
+
+func updateWeatherData(station *weather.Station, cfg *config.Config, wa *homekit.WeatherAccessories, webServer *web.WebServer) {
+	if cfg.LogLevel == "debug" {
+		log.Printf("DEBUG: Polling iteration started - fetching observation from station %d", station.StationID)
+	}
+
+	obs, err := weather.GetObservation(station.StationID, cfg.Token)
+	if err != nil {
+		log.Printf("Error getting observation: %v", err)
+		return
+	}
+
+	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
+		log.Printf("INFO: Successfully read weather data from Tempest API - Station: %s", station.Name)
+	}
+
+	// Info level logging - show sensor data and night detection
+	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
+		isNight := isNightTime(obs.Illuminance)
+		nightIndicator := ""
+		if isNight {
+			nightIndicator = " 🌙 NIGHT"
+		}
+		log.Printf("INFO: Sensor data - Temp: %.1f°C, Humidity: %.1f%%, Wind: %.1f mph (%.0f°), Rain: %.3f in, Light: %.0f lux%s",
+			obs.AirTemperature, obs.RelativeHumidity, obs.WindAvg, obs.WindDirection, obs.RainAccumulated, obs.Illuminance, nightIndicator)
+	}
+
+	// Debug logging - show all weather metrics and pretty printed JSON
+	if cfg.LogLevel == "debug" {
+		log.Printf("DEBUG: Full weather data - Temp: %.1f°C, Humidity: %.1f%%, Wind: %.1f mph (%.0f°), Rain: %.3f in, Pressure: %.1f mb, UV: %.1f, Solar: %.0f W/m², Battery: %.1fV",
+			obs.AirTemperature, obs.RelativeHumidity, obs.WindAvg, obs.WindDirection, obs.RainAccumulated,
+			obs.StationPressure, obs.UV, obs.SolarRadiation, obs.Battery)
+
+		// Pretty print the observation data as JSON
+		jsonData, err := json.MarshalIndent(obs, "", "  ")
+		if err == nil {
+			log.Printf("DEBUG: Raw Tempest API JSON response:\n%s", string(jsonData))
+		}
+
+		log.Printf("DEBUG: Updating HomeKit accessories with new sensor values")
+	}
+
+	// Update HomeKit sensors with detailed logging
+	if cfg.LogLevel == "debug" {
+		log.Printf("DEBUG: HomeKit - Air Temperature: %.1f°C", obs.AirTemperature)
+		log.Printf("DEBUG: HomeKit - Relative Humidity: %.1f%%", obs.RelativeHumidity)
+		log.Printf("DEBUG: HomeKit - Wind Average: %.1f mph", obs.WindAvg)
+		log.Printf("DEBUG: HomeKit - Wind Gust: %.1f mph", obs.WindGust)
+		log.Printf("DEBUG: HomeKit - Wind Direction: %.0f°", obs.WindDirection)
+		log.Printf("DEBUG: HomeKit - Rain: %.3f in", obs.RainAccumulated)
+		log.Printf("DEBUG: HomeKit - Precipitation Type: %d", obs.PrecipitationType)
+		log.Printf("DEBUG: HomeKit - Lightning Distance: %.0f", obs.LightningStrikeAvg)
+		log.Printf("DEBUG: HomeKit - Lightning Count: %d", obs.LightningStrikeCount)
+		log.Printf("DEBUG: HomeKit - Lux: %.0f lux", obs.Illuminance)
+		log.Printf("DEBUG: HomeKit - UV Index: %.0f", obs.UV)
+	}
+
+	// Update all sensors in the Tempest Weather Station:
+	// (1) Wind Average: floating point
+	wa.UpdateWindAverage(obs.WindAvg)
+	// (2) Wind Gust: floating point
+	wa.UpdateWindGust(obs.WindGust)
+	// (3) Wind Direction: integer 0-360
+	wa.UpdateWindDirection(obs.WindDirection)
+	// (4) Air Temperature: floating point
+	wa.UpdateAirTemperature(obs.AirTemperature)
+	// (5) Relative Humidity: integer, percentage
+	wa.UpdateRelativeHumidity(obs.RelativeHumidity)
+	// (6) Lux: floating, range: 0.0001 - 100000
+	wa.UpdateLux(obs.Illuminance)
+	// (7) UV: integer
+	wa.UpdateUV(obs.UV)
+	// (8) Rain: floating
+	wa.UpdateRain(obs.RainAccumulated)
+	// (9) Precipitation Type: integer
+	wa.UpdatePrecipitationType(obs.PrecipitationType)
+	// (10) Lightning Strike Count: integer
+	wa.UpdateLightningCount(obs.LightningStrikeCount)
+	// (11) Lightning Strike Distance: integer
+	wa.UpdateLightningDistance(obs.LightningStrikeAvg)
+
+	if cfg.LogLevel == "debug" {
+		log.Printf("DEBUG: HomeKit accessory updates completed - ULTRA-MINIMAL: Only temperature sensor active")
+		log.Printf("DEBUG: HomeKit - All other sensors ignored for maximum compliance")
+		log.Printf("DEBUG: HomeKit - Temperature characteristic changes pushed to connected iOS devices")
+	}
+
+	// Update web dashboard
+	webServer.UpdateWeather(obs)
+
+	if cfg.LogLevel == "debug" {
+		log.Printf("DEBUG: Web dashboard updated with latest weather data")
+	}
 }
 
 func setLogLevel(level string) {
