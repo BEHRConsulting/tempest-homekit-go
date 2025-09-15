@@ -37,6 +37,7 @@ let units = {
 
 let weatherData = null;
 let forecastData = null; // Store current forecast data for unit conversions
+let statusData = null; // Store current status data for unit conversions
 const charts = {};
 const maxDataPoints = 1000; // As specified in requirements
 
@@ -431,6 +432,24 @@ function forceChartColors() {
     debugLog(logLevels.INFO, '✅ Chart colors forced - complementary pairs applied');
 }
 
+function updateElevationDisplay() {
+    const tempestElevation = document.getElementById('tempest-elevation');
+    
+    if (!statusData || !statusData.elevation || !tempestElevation) {
+        if (tempestElevation) tempestElevation.textContent = '--';
+        return;
+    }
+    
+    if (units.temperature === 'fahrenheit') {
+        // If using imperial units, show elevation in feet
+        const elevationFt = statusData.elevation * 3.28084;
+        tempestElevation.textContent = `${Math.round(elevationFt)} ft`;
+    } else {
+        // If using metric units, show elevation in meters
+        tempestElevation.textContent = `${Math.round(statusData.elevation)} m`;
+    }
+}
+
 function updateUnits() {
     document.getElementById('temperature-unit').textContent = units.temperature === 'celsius' ? '°C' : '°F';
     document.getElementById('wind-unit').textContent = units.wind === 'mph' ? 'mph' : 'kph';
@@ -468,6 +487,9 @@ function updateUnits() {
         pressureUnitElement.textContent = newUnitText.trim();
         console.log('🔧 updateUnits() - Info icon not found, used textContent fallback');
     }
+    
+    // Update elevation display with new units
+    updateElevationDisplay();
 }
 
 function toggleUnit(sensor) {
@@ -512,7 +534,7 @@ function toggleUnit(sensor) {
     refreshForecastDisplay(); // Update forecast display with new units
     console.log('🔄 toggleUnit() - refreshForecastDisplay() completed');
     
-    recalculateAverages();
+    recalculateAverages(sensor);
     console.log('🔄 toggleUnit() - recalculateAverages() completed');
     console.log('🔄 toggleUnit() - All functions completed');
 }
@@ -1106,10 +1128,26 @@ function updateDisplay() {
     const conditionElement = document.getElementById('pressure-condition');
     const trendElement = document.getElementById('pressure-trend');
     const forecastElement = document.getElementById('pressure-forecast');
+    const seaLevelElement = document.getElementById('pressure-sea-level');
     
     if (conditionElement) conditionElement.textContent = apiCondition || '--';
     if (trendElement) trendElement.textContent = apiTrend || '--';  
     if (forecastElement) forecastElement.textContent = apiForecast || '--';
+    
+    // Display sea level pressure with unit conversion
+    if (seaLevelElement && weatherData.seaLevelPressure) {
+        let seaLevelPressure = weatherData.seaLevelPressure;
+        let pressureUnit = 'mb';
+        
+        if (units.pressure === 'inHg') {
+            seaLevelPressure = mbToInHg(seaLevelPressure);
+            pressureUnit = 'inHg';
+        }
+        
+        seaLevelElement.textContent = `${Math.round(seaLevelPressure)} ${pressureUnit}`;
+    } else if (seaLevelElement) {
+        seaLevelElement.textContent = '--';
+    }
     
     console.log('✅ AFTER SETTING:', {
         'pressure-condition element text': conditionElement ? conditionElement.textContent : 'NOT FOUND',
@@ -1293,9 +1331,12 @@ function updateCharts() {
     debugLog(logLevels.INFO, 'All charts updated successfully');
 }
 
-function recalculateAverages() {
+function recalculateAverages(changedSensor) {
+    // Only recalculate data for the sensor that actually changed units
+    // This prevents double-conversion issues
+    
     // Recalculate temperature data and average
-    if (charts.temperature.data.datasets[0].data.length > 0) {
+    if (changedSensor === 'temperature' && charts.temperature.data.datasets[0].data.length > 0) {
         charts.temperature.data.datasets[0].data.forEach(point => {
             if (units.temperature === 'fahrenheit') {
                 point.y = celsiusToFahrenheit(point.y);
@@ -1309,7 +1350,7 @@ function recalculateAverages() {
     }
 
     // Recalculate wind data and average
-    if (charts.wind.data.datasets[0].data.length > 0) {
+    if (changedSensor === 'wind' && charts.wind.data.datasets[0].data.length > 0) {
         charts.wind.data.datasets[0].data.forEach(point => {
             if (units.wind === 'kph') {
                 point.y = mphToKph(point.y);
@@ -1319,11 +1360,15 @@ function recalculateAverages() {
         });
         const windAvg = calculateAverage(charts.wind.data.datasets[0].data);
         updateAverageLine(charts.wind, charts.wind.data.datasets[0].data);
+        charts.wind.options.scales.y.title = {
+            display: true,
+            text: units.wind === 'mph' ? 'mph' : 'kph'
+        };
         charts.wind.update();
     }
 
     // Recalculate rain data and average
-    if (charts.rain.data.datasets[0].data.length > 0) {
+    if (changedSensor === 'rain' && charts.rain.data.datasets[0].data.length > 0) {
         charts.rain.data.datasets[0].data.forEach(point => {
             if (units.rain === 'mm') {
                 point.y = inchesToMm(point.y);
@@ -1337,7 +1382,7 @@ function recalculateAverages() {
     }
 
     // Recalculate pressure data and average
-    if (charts.pressure.data.datasets[0].data.length > 0) {
+    if (changedSensor === 'pressure' && charts.pressure.data.datasets[0].data.length > 0) {
         charts.pressure.data.datasets[0].data.forEach(point => {
             if (units.pressure === 'inHg') {
                 point.y = mbToInHg(point.y);
@@ -1372,6 +1417,16 @@ function recalculateAverages() {
             const rainUnit = units.rain === 'inches' ? 'in' : 'mm';
             dailyRainElement.textContent = dailyRain.toFixed(3) + ' ' + rainUnit;
         }
+    }
+    
+    // Always update chart axis titles to ensure they reflect current units
+    // This doesn't affect data conversion, just display labels
+    if (charts.wind && charts.wind.options && charts.wind.options.scales) {
+        charts.wind.options.scales.y.title = {
+            display: true,
+            text: units.wind === 'mph' ? 'mph' : 'kph'
+        };
+        charts.wind.update();
     }
 }
 
@@ -1467,9 +1522,13 @@ async function fetchStatus() {
 function updateStatusDisplay(status) {
     debugLog(logLevels.DEBUG, 'Updating status display', status);
     
+    // Store status data globally for unit conversions
+    statusData = status;
+    
     // Update Tempest status
     const tempestStatus = document.getElementById('tempest-status');
     const tempestStation = document.getElementById('tempest-station');
+    const tempestElevation = document.getElementById('tempest-elevation');
     const tempestLastUpdate = document.getElementById('tempest-last-update');
     const tempestUptime = document.getElementById('tempest-uptime');
     const tempestDataCount = document.getElementById('tempest-data-count');
@@ -1491,6 +1550,10 @@ function updateStatusDisplay(status) {
         }
     }
     if (tempestStation) tempestStation.textContent = status.stationName || '--';
+    
+    // Update elevation display with unit conversion
+    updateElevationDisplay();
+    
     if (tempestLastUpdate) tempestLastUpdate.textContent = status.lastUpdate ? new Date(status.lastUpdate).toLocaleString('en-US', {
         year: 'numeric',
         month: '2-digit', 

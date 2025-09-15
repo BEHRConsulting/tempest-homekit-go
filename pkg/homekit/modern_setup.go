@@ -48,15 +48,18 @@ type WeatherSystemModern struct {
 	Bridge      *accessory.A
 	Server      *hap.Server
 	Accessories map[string]*WeatherAccessoryModern
+	LogLevel    string
 	cancel      context.CancelFunc
 }
 
 // NewWeatherSystemModern creates a new weather system using the modern hap library
-func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*WeatherSystemModern, error) {
-	log.Printf("DEBUG: Creating new weather system with hap library")
-	log.Printf("DEBUG: Sensor configuration: Temp=%v, Humidity=%v, Light=%v, Wind=%v, Rain=%v, Pressure=%v, UV=%v, Lightning=%v",
-		sensorConfig.Temperature, sensorConfig.Humidity, sensorConfig.Light, sensorConfig.Wind,
-		sensorConfig.Rain, sensorConfig.Pressure, sensorConfig.UV, sensorConfig.Lightning)
+func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLevel string) (*WeatherSystemModern, error) {
+	if logLevel == "debug" {
+		log.Printf("DEBUG: Creating new weather system with hap library")
+		log.Printf("DEBUG: Sensor configuration: Temp=%v, Humidity=%v, Light=%v, Wind=%v, Rain=%v, Pressure=%v, UV=%v, Lightning=%v",
+			sensorConfig.Temperature, sensorConfig.Humidity, sensorConfig.Light, sensorConfig.Wind,
+			sensorConfig.Rain, sensorConfig.Pressure, sensorConfig.UV, sensorConfig.Lightning)
+	}
 
 	// Create file storage for HomeKit data
 	fs := hap.NewFsStore("./db")
@@ -70,7 +73,9 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 		Firmware:     "1.0.0",
 	}
 	bridge := accessory.NewBridge(bridgeInfo)
-	log.Printf("DEBUG: Created bridge: %s", bridgeInfo.Name)
+	if logLevel == "debug" {
+		log.Printf("DEBUG: Created bridge: %s", bridgeInfo.Name)
+	}
 
 	accessories := make(map[string]*WeatherAccessoryModern)
 	var hapAccessories []*accessory.A
@@ -94,7 +99,9 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 		}
 		hapAccessories = append(hapAccessories, tempAccessory.A)
 		accessoryCount++
-		log.Printf("DEBUG: Created standard temperature sensor")
+		if logLevel == "debug" {
+			log.Printf("DEBUG: Created standard temperature sensor")
+		}
 	}
 
 	// 2. Humidity Sensor (if enabled) - using custom service since hap doesn't have HumiditySensor
@@ -127,7 +134,9 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 		}
 		hapAccessories = append(hapAccessories, humidityAccessory)
 		accessoryCount++
-		log.Printf("DEBUG: Created humidity sensor")
+		if logLevel == "debug" {
+			log.Printf("DEBUG: Created humidity sensor")
+		}
 	}
 
 	// 3. Light Sensor (if enabled) - using custom service since hap doesn't have LightSensor
@@ -160,7 +169,9 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 		}
 		hapAccessories = append(hapAccessories, lightAccessory)
 		accessoryCount++
-		log.Printf("DEBUG: Created light sensor")
+		if logLevel == "debug" {
+			log.Printf("DEBUG: Created light sensor")
+		}
 	}
 
 	// Store all other sensors as null references to maintain API compatibility
@@ -189,7 +200,9 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 	}
 
 	// Create the HAP server with configured accessories
-	log.Printf("DEBUG: Creating server with %d accessories based on sensor configuration", len(hapAccessories))
+	if logLevel == "debug" {
+		log.Printf("DEBUG: Creating server with %d accessories based on sensor configuration", len(hapAccessories))
+	}
 	server, err := hap.NewServer(fs, bridge.A, hapAccessories...)
 	if err != nil {
 		return nil, err
@@ -198,20 +211,25 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig) (*Wea
 	// Set the PIN for pairing
 	server.Pin = pin
 
-	log.Printf("DEBUG: Weather system created successfully with PIN: %s", pin)
-	log.Printf("DEBUG: HomeKit compliance: %d accessories created based on sensor configuration", accessoryCount)
-	log.Printf("DEBUG: Sensors enabled: Temp=%v, Humidity=%v, Light=%v", sensorConfig.Temperature, sensorConfig.Humidity, sensorConfig.Light)
+	if logLevel == "debug" {
+		log.Printf("DEBUG: Weather system created successfully with PIN: %s", pin)
+		log.Printf("DEBUG: HomeKit compliance: %d accessories created based on sensor configuration", accessoryCount)
+		log.Printf("DEBUG: Sensors enabled: Temp=%v, Humidity=%v, Light=%v", sensorConfig.Temperature, sensorConfig.Humidity, sensorConfig.Light)
+	}
 
 	return &WeatherSystemModern{
 		Bridge:      bridge.A,
 		Server:      server,
 		Accessories: accessories,
+		LogLevel:    logLevel,
 	}, nil
 }
 
 // Start the weather system with graceful shutdown
 func (ws *WeatherSystemModern) Start() error {
-	log.Printf("DEBUG: Starting weather system server")
+	if ws.LogLevel == "debug" {
+		log.Printf("DEBUG: Starting weather system server")
+	}
 
 	// Create context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -219,7 +237,9 @@ func (ws *WeatherSystemModern) Start() error {
 
 	// Start the server in background
 	go func() {
-		log.Printf("DEBUG: HomeKit server starting with PIN: %s", ws.Server.Pin)
+		if ws.LogLevel == "debug" {
+			log.Printf("DEBUG: HomeKit server starting with PIN: %s", ws.Server.Pin)
+		}
 		if err := ws.Server.ListenAndServe(ctx); err != nil {
 			log.Printf("HomeKit server error: %v", err)
 		}
@@ -230,7 +250,9 @@ func (ws *WeatherSystemModern) Start() error {
 
 // Stop the weather system gracefully
 func (ws *WeatherSystemModern) Stop() {
-	log.Printf("DEBUG: Stopping weather system server")
+	if ws.LogLevel == "debug" {
+		log.Printf("DEBUG: Stopping weather system server")
+	}
 	if ws.cancel != nil {
 		ws.cancel()
 	}
@@ -241,10 +263,14 @@ func (ws *WeatherSystemModern) UpdateSensor(sensorName string, value float64) {
 	if accessory, exists := ws.Accessories[sensorName]; exists {
 		// Check if this sensor has a valid characteristic (some are intentionally nil for compatibility)
 		if accessory.WeatherValue != nil {
-			log.Printf("DEBUG: Updating %s: %.3f", sensorName, value)
+			if ws.LogLevel == "debug" {
+				log.Printf("DEBUG: Updating %s: %.3f", sensorName, value)
+			}
 			accessory.WeatherValue.SetValue(value)
 		} else {
-			log.Printf("DEBUG: Skipping %s (not included in minimal setup)", sensorName)
+			if ws.LogLevel == "debug" {
+				log.Printf("DEBUG: Skipping %s (not included in minimal setup)", sensorName)
+			}
 		}
 	} else {
 		log.Printf("WARNING: Sensor %s not found", sensorName)

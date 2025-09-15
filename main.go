@@ -50,7 +50,7 @@ func main() {
 
 func runAPITests(cfg *config.Config) {
 	fmt.Println("=== WeatherFlow API Endpoint Tests ===")
-	
+
 	// Test 1: Get Stations
 	fmt.Println("\n1. Testing Stations API...")
 	stations, err := weather.GetStations(cfg.Token)
@@ -59,7 +59,7 @@ func runAPITests(cfg *config.Config) {
 	}
 	fmt.Printf("✅ Found %d stations\n", len(stations))
 	for _, station := range stations {
-		fmt.Printf("   - ID: %d, Name: '%s', StationName: '%s'\n", 
+		fmt.Printf("   - ID: %d, Name: '%s', StationName: '%s'\n",
 			station.StationID, station.Name, station.StationName)
 	}
 
@@ -77,7 +77,7 @@ func runAPITests(cfg *config.Config) {
 	}
 	fmt.Printf("✅ Station has %d devices\n", len(stationDetails.Devices))
 	for i, device := range stationDetails.Devices {
-		fmt.Printf("   Device %d: ID=%d, Type=%s, Serial=%s\n", 
+		fmt.Printf("   Device %d: ID=%d, Type=%s, Serial=%s\n",
 			i+1, device.DeviceID, device.DeviceType, device.SerialNumber)
 	}
 
@@ -113,48 +113,48 @@ func runAPITests(cfg *config.Config) {
 
 	fmt.Printf("✅ Historical data retrieved in %.2f seconds\n", elapsed.Seconds())
 	fmt.Printf("   - Total observations: %d\n", len(observations))
-	
+
 	if len(observations) > 0 {
 		oldestObs := time.Unix(observations[len(observations)-1].Timestamp, 0)
 		newestObs := time.Unix(observations[0].Timestamp, 0)
 		timeSpan := newestObs.Sub(oldestObs)
-		
+
 		fmt.Printf("   - Time span: %.1f hours\n", timeSpan.Hours())
 		fmt.Printf("   - Oldest: %s\n", oldestObs.Format("2006-01-02 15:04:05"))
 		fmt.Printf("   - Newest: %s\n", newestObs.Format("2006-01-02 15:04:05"))
-		
+
 		// Count observations by day
 		todayCount := 0
 		yesterdayCount := 0
 		now := time.Now()
 		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		yesterday := today.Add(-24 * time.Hour)
-		
+
 		for _, obs := range observations {
 			obsTime := time.Unix(obs.Timestamp, 0).In(now.Location())
 			obsDay := time.Date(obsTime.Year(), obsTime.Month(), obsTime.Day(), 0, 0, 0, 0, now.Location())
-			
+
 			if obsDay.Equal(today) {
 				todayCount++
 			} else if obsDay.Equal(yesterday) {
 				yesterdayCount++
 			}
 		}
-		
+
 		fmt.Printf("   - Today: %d observations\n", todayCount)
 		fmt.Printf("   - Yesterday: %d observations\n", yesterdayCount)
-		
+
 		// Show sample observations
 		fmt.Printf("   - Sample observations:\n")
 		sampleCount := 3
 		if len(observations) < sampleCount {
 			sampleCount = len(observations)
 		}
-		
+
 		for i := 0; i < sampleCount; i++ {
 			obs := observations[i]
 			obsTime := time.Unix(obs.Timestamp, 0)
-			fmt.Printf("     %d. %s: Temp=%.1f°C, Rain=%.3fin\n", 
+			fmt.Printf("     %d. %s: Temp=%.1f°C, Rain=%.3fin\n",
 				i+1, obsTime.Format("15:04:05"), obs.AirTemperature, obs.RainAccumulated)
 		}
 	}

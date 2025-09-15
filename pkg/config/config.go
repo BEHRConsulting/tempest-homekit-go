@@ -1,11 +1,17 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -18,6 +24,7 @@ type Config struct {
 	Sensors     string
 	ReadHistory bool
 	TestAPI     bool
+	Elevation   float64 // elevation in meters
 }
 
 func LoadConfig() *Config {
@@ -28,18 +35,50 @@ func LoadConfig() *Config {
 		LogLevel:    getEnvOrDefault("LOG_LEVEL", "error"),
 		WebPort:     getEnvOrDefault("WEB_PORT", "8080"),
 		Sensors:     getEnvOrDefault("SENSORS", "min"),
+		Elevation:   275.2, // 903ft default elevation in meters
 	}
 
+	var elevationStr string
+	var elevationProvided bool
 	flag.StringVar(&cfg.Token, "token", cfg.Token, "WeatherFlow API token")
 	flag.StringVar(&cfg.StationName, "station", cfg.StationName, "Tempest station name")
 	flag.StringVar(&cfg.Pin, "pin", cfg.Pin, "HomeKit PIN")
 	flag.StringVar(&cfg.LogLevel, "loglevel", cfg.LogLevel, "Log level (debug, info, error)")
 	flag.StringVar(&cfg.WebPort, "web-port", cfg.WebPort, "Web dashboard port")
 	flag.StringVar(&cfg.Sensors, "sensors", cfg.Sensors, "Sensors to enable: 'all', 'min', 'temp-only', or comma-delimited list (temp,humidity,lux,wind,rain,pressure)")
+	flag.StringVar(&elevationStr, "elevation", "", "Station elevation (e.g., 903ft, 275m). If not provided, elevation will be auto-detected from coordinates")
 	flag.BoolVar(&cfg.ClearDB, "cleardb", false, "Clear HomeKit database and reset device pairing")
 	flag.BoolVar(&cfg.ReadHistory, "read-history", false, "Preload last 24 hours of weather data from Tempest API")
 	flag.BoolVar(&cfg.TestAPI, "test-api", false, "Test WeatherFlow API endpoints and data points")
+
+	// Parse flags but check if elevation was actually provided
 	flag.Parse()
+
+	// Check if elevation was provided by user
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "elevation" {
+			elevationProvided = true
+		}
+	})
+
+	// Handle elevation configuration - auto lookup by default
+	if !elevationProvided || strings.ToLower(elevationStr) == "auto" {
+		if elevation, err := lookupStationElevation(cfg.Token, cfg.StationName); err != nil {
+			log.Printf("Warning: Failed to lookup elevation automatically: %v", err)
+			log.Printf("Using fallback elevation 903ft (275.2m)")
+		} else {
+			cfg.Elevation = elevation
+			log.Printf("Auto-detected elevation: %.1f meters (%.0f feet)", elevation, elevation*3.28084)
+		}
+	} else {
+		// Parse manually provided elevation with units
+		if elevation, err := parseElevation(elevationStr); err != nil {
+			log.Printf("Warning: Invalid elevation format '%s', using fallback 903ft (275.2m): %v", elevationStr, err)
+		} else {
+			cfg.Elevation = elevation
+			log.Printf("Using specified elevation: %.1f meters (%.0f feet)", elevation, elevation*3.28084)
+		}
+	}
 
 	return cfg
 }
@@ -133,6 +172,163 @@ func ParseSensorConfig(sensorsFlag string) SensorConfig {
 			}
 		}
 		return config
+	}
+}
+
+// StationLocation represents station coordinates from WeatherFlow API
+type StationLocation struct {
+	StationID int     `json:"station_id"`
+	Name      string  `json:"name"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Timezone  string  `json:"timezone"`
+	Elevation float64 `json:"elevation,omitempty"` // May be provided directly
+}
+
+// ElevationResponse represents response from elevation API
+type ElevationResponse struct {
+	Results []struct {
+		Elevation float64 `json:"elevation"`
+	} `json:"results"`
+}
+
+// lookupStationElevation attempts to get elevation from station coordinates
+func lookupStationElevation(token, stationName string) (float64, error) {
+	// First try to get station coordinates from WeatherFlow API
+	lat, lon, err := getStationCoordinates(token, stationName)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get station coordinates: %v", err)
+	}
+
+	// Then lookup elevation from coordinates
+	elevation, err := getElevationFromCoordinates(lat, lon)
+	if err != nil {
+		return 0, fmt.Errorf("failed to lookup elevation for coordinates (%.4f, %.4f): %v", lat, lon, err)
+	}
+
+	return elevation, nil
+}
+
+// getStationCoordinates fetches station coordinates from WeatherFlow API
+func getStationCoordinates(token, stationName string) (lat, lon float64, err error) {
+	// First try to get actual station coordinates from WeatherFlow API
+	if coords, err := fetchWeatherFlowStationCoords(token, stationName); err == nil {
+		return coords[0], coords[1], nil
+	}
+
+	// Fallback to known coordinates for common locations
+	knownLocations := map[string][2]float64{
+		"Chino Hills": {33.9898, -117.7326},
+		"Los Angeles": {34.0522, -118.2437},
+		"San Diego":   {32.7157, -117.1611},
+		"Phoenix":     {33.4484, -112.0740},
+		"Denver":      {39.7392, -104.9903},
+		"Seattle":     {47.6062, -122.3321},
+		"Portland":    {45.5152, -122.6784},
+		"Austin":      {30.2672, -97.7431},
+		"Dallas":      {32.7767, -96.7970},
+		"Miami":       {25.7617, -80.1918},
+	}
+
+	if coords, found := knownLocations[stationName]; found {
+		return coords[0], coords[1], nil
+	}
+
+	return 0, 0, fmt.Errorf("coordinates not available for station '%s' (consider adding coordinates to known locations)", stationName)
+}
+
+// fetchWeatherFlowStationCoords attempts to get coordinates from WeatherFlow API
+func fetchWeatherFlowStationCoords(token, stationName string) (coords [2]float64, err error) {
+	// This would query the WeatherFlow API stations endpoint for detailed station info
+	// The API might have an endpoint like: /stations/:station_id/details that includes lat/lon
+	// For now, we return an error to fall back to known locations
+
+	// TODO: Implement actual WeatherFlow API call when station details endpoint is available
+	// Example implementation would be:
+	/*
+		url := fmt.Sprintf("https://swd.weatherflow.com/swd/rest/stations/%s/details?token=%s", stationID, token)
+		resp, err := http.Get(url)
+		if err != nil {
+			return coords, err
+		}
+		defer resp.Body.Close()
+
+		var stationDetails StationDetailsResponse
+		if err := json.NewDecoder(resp.Body).Decode(&stationDetails); err != nil {
+			return coords, err
+		}
+
+		if len(stationDetails.Stations) > 0 {
+			station := stationDetails.Stations[0]
+			coords[0] = station.Latitude
+			coords[1] = station.Longitude
+			return coords, nil
+		}
+	*/
+
+	return coords, fmt.Errorf("WeatherFlow station coordinates API not implemented")
+}
+
+// getElevationFromCoordinates uses Open Elevation API to get elevation
+func getElevationFromCoordinates(lat, lon float64) (float64, error) {
+	// Use Open Elevation API (free, no API key required)
+	url := fmt.Sprintf("https://api.open-elevation.com/api/v1/lookup?locations=%.4f,%.4f", lat, lon)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return 0, fmt.Errorf("elevation API request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("elevation API returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read elevation API response: %v", err)
+	}
+
+	var elevResp ElevationResponse
+	if err := json.Unmarshal(body, &elevResp); err != nil {
+		return 0, fmt.Errorf("failed to parse elevation API response: %v", err)
+	}
+
+	if len(elevResp.Results) == 0 {
+		return 0, fmt.Errorf("no elevation data returned")
+	}
+
+	return elevResp.Results[0].Elevation, nil
+}
+
+// parseElevation parses elevation string with units (e.g., "903ft", "275m") and returns meters
+func parseElevation(elevationStr string) (float64, error) {
+	elevationStr = strings.TrimSpace(strings.ToLower(elevationStr))
+
+	if strings.HasSuffix(elevationStr, "ft") {
+		// Parse feet and convert to meters
+		valueStr := strings.TrimSuffix(elevationStr, "ft")
+		feet, err := strconv.ParseFloat(valueStr, 64)
+		if err != nil {
+			return 0, err
+		}
+		return feet * 0.3048, nil // 1 foot = 0.3048 meters
+	} else if strings.HasSuffix(elevationStr, "m") {
+		// Parse meters directly
+		valueStr := strings.TrimSuffix(elevationStr, "m")
+		meters, err := strconv.ParseFloat(valueStr, 64)
+		if err != nil {
+			return 0, err
+		}
+		return meters, nil
+	} else {
+		// Try to parse as number without unit, assume meters
+		meters, err := strconv.ParseFloat(elevationStr, 64)
+		if err != nil {
+			return 0, err
+		}
+		return meters, nil
 	}
 }
 

@@ -14,8 +14,8 @@ const (
 )
 
 type Device struct {
-	DeviceID   int    `json:"device_id"`
-	DeviceType string `json:"device_type"`
+	DeviceID     int    `json:"device_id"`
+	DeviceType   string `json:"device_type"`
 	SerialNumber string `json:"serial_number"`
 }
 
@@ -69,29 +69,29 @@ type HistoricalResponse struct {
 
 // ForecastPeriod represents a single forecast period from the better_forecast API
 type ForecastPeriod struct {
-	Time             int64   `json:"time"`
-	Icon             string  `json:"icon"`
-	Conditions       string  `json:"conditions"`
-	AirTemperature   float64 `json:"air_temperature"`
-	FeelsLike        float64 `json:"feels_like"`
-	SeaLevelPressure float64 `json:"sea_level_pressure"`
-	RelativeHumidity int     `json:"relative_humidity"`
-	PrecipProbability int    `json:"precip_probability"`
-	PrecipIcon       string  `json:"precip_icon"`
-	PrecipType       string  `json:"precip_type"`
-	WindAvg          float64 `json:"wind_avg"`
-	WindDirection    int     `json:"wind_direction"`
-	WindGust         float64 `json:"wind_gust"`
-	UV               int     `json:"uv"`
+	Time              int64   `json:"time"`
+	Icon              string  `json:"icon"`
+	Conditions        string  `json:"conditions"`
+	AirTemperature    float64 `json:"air_temperature"`
+	FeelsLike         float64 `json:"feels_like"`
+	SeaLevelPressure  float64 `json:"sea_level_pressure"`
+	RelativeHumidity  int     `json:"relative_humidity"`
+	PrecipProbability int     `json:"precip_probability"`
+	PrecipIcon        string  `json:"precip_icon"`
+	PrecipType        string  `json:"precip_type"`
+	WindAvg           float64 `json:"wind_avg"`
+	WindDirection     int     `json:"wind_direction"`
+	WindGust          float64 `json:"wind_gust"`
+	UV                int     `json:"uv"`
 }
 
 // ForecastResponse represents the structure for forecast data from WeatherFlow API
 type ForecastResponse struct {
-	Status       map[string]interface{} `json:"status"`
-	StationID    int                    `json:"station_id"`
-	StationName  string                 `json:"station_name"`
-	Timezone     string                 `json:"timezone"`
-	Forecast     struct {
+	Status      map[string]interface{} `json:"status"`
+	StationID   int                    `json:"station_id"`
+	StationName string                 `json:"station_name"`
+	Timezone    string                 `json:"timezone"`
+	Forecast    struct {
 		Daily []ForecastPeriod `json:"daily"`
 	} `json:"forecast"`
 	CurrentConditions ForecastPeriod `json:"current_conditions"`
@@ -335,7 +335,7 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, progress
 			allObservations = append(allObservations, observations...)
 			successCount++
 			fmt.Printf("INFO: Successfully retrieved %d observations for %s\n", len(observations), dayName)
-			
+
 			// Report progress after successful fetch
 			if progressCallback != nil {
 				progressCallback(currentStep, totalSteps, fmt.Sprintf("Processed %d observations for %s", len(observations), dayName))
@@ -390,25 +390,25 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, progress
 		fmt.Printf("INFO: Data range: %s to %s\n",
 			oldestObs.Format("2006-01-02 15:04:05"),
 			newestObs.Format("2006-01-02 15:04:05"))
-		
+
 		// Count observations by day for verification
 		todayCount := 0
 		yesterdayCount := 0
 		now := time.Now()
 		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		yesterday := today.Add(-24 * time.Hour)
-		
+
 		for _, obs := range uniqueObs {
 			obsTime := time.Unix(obs.Timestamp, 0).In(now.Location())
 			obsDay := time.Date(obsTime.Year(), obsTime.Month(), obsTime.Day(), 0, 0, 0, 0, now.Location())
-			
+
 			if obsDay.Equal(today) {
 				todayCount++
 			} else if obsDay.Equal(yesterday) {
 				yesterdayCount++
 			}
 		}
-		
+
 		fmt.Printf("INFO: Today: %d observations, Yesterday: %d observations\n", todayCount, yesterdayCount)
 	}
 
@@ -447,9 +447,9 @@ func parseObservations(obsData []map[string]interface{}) []*Observation {
 
 // parseDeviceObservations converts device API observations (arrays) to Observation structs
 // Device API returns observations as arrays. Based on API testing, the structure is:
-// [0]: timestamp, [1]: wind_lull, [2]: wind_avg, [3]: wind_gust, [4]: wind_direction, [5]: ?, 
-// [6]: station_pressure, [7]: air_temperature, [8]: relative_humidity, [9]: illuminance, 
-// [10]: uv, [11]: solar_radiation, [12]: rain_accumulated, [13]: precipitation_type, 
+// [0]: timestamp, [1]: wind_lull, [2]: wind_avg, [3]: wind_gust, [4]: wind_direction, [5]: ?,
+// [6]: station_pressure, [7]: air_temperature, [8]: relative_humidity, [9]: illuminance,
+// [10]: uv, [11]: solar_radiation, [12]: rain_accumulated, [13]: precipitation_type,
 // [14]: lightning_strike_avg_distance, [15]: lightning_strike_count, [16]: battery, [17]: report_interval
 func parseDeviceObservations(obsData [][]interface{}) []*Observation {
 	var observations []*Observation
@@ -461,23 +461,23 @@ func parseDeviceObservations(obsData [][]interface{}) []*Observation {
 		}
 
 		obs := &Observation{
-			Timestamp:            int64(getFloat64(obsArray[0])),  // timestamp
-			WindLull:             getFloat64(obsArray[1]),         // wind_lull
-			WindAvg:              getFloat64(obsArray[2]),         // wind_avg
-			WindGust:             getFloat64(obsArray[3]),         // wind_gust
-			WindDirection:        getFloat64(obsArray[4]),         // wind_direction
-			StationPressure:      getFloat64(obsArray[6]),         // station_pressure (skip [5])
-			AirTemperature:       getFloat64(obsArray[7]),         // air_temperature
-			RelativeHumidity:     getFloat64(obsArray[8]),         // relative_humidity
-			Illuminance:          getFloat64(obsArray[9]),         // illuminance
-			UV:                   getFloat64(obsArray[10]),        // uv
-			SolarRadiation:       getFloat64(obsArray[11]),        // solar_radiation
-			RainAccumulated:      getFloat64(obsArray[12]),        // rain_accumulated
-			PrecipitationType:    getInt(obsArray[13]),            // precipitation_type
-			LightningStrikeAvg:   getFloat64(obsArray[14]),        // lightning_strike_avg_distance
-			LightningStrikeCount: getInt(obsArray[15]),            // lightning_strike_count
-			Battery:              getFloat64(obsArray[16]),        // battery
-			ReportInterval:       getInt(obsArray[17]),            // report_interval
+			Timestamp:            int64(getFloat64(obsArray[0])), // timestamp
+			WindLull:             getFloat64(obsArray[1]),        // wind_lull
+			WindAvg:              getFloat64(obsArray[2]),        // wind_avg
+			WindGust:             getFloat64(obsArray[3]),        // wind_gust
+			WindDirection:        getFloat64(obsArray[4]),        // wind_direction
+			StationPressure:      getFloat64(obsArray[6]),        // station_pressure (skip [5])
+			AirTemperature:       getFloat64(obsArray[7]),        // air_temperature
+			RelativeHumidity:     getFloat64(obsArray[8]),        // relative_humidity
+			Illuminance:          getFloat64(obsArray[9]),        // illuminance
+			UV:                   getFloat64(obsArray[10]),       // uv
+			SolarRadiation:       getFloat64(obsArray[11]),       // solar_radiation
+			RainAccumulated:      getFloat64(obsArray[12]),       // rain_accumulated
+			PrecipitationType:    getInt(obsArray[13]),           // precipitation_type
+			LightningStrikeAvg:   getFloat64(obsArray[14]),       // lightning_strike_avg_distance
+			LightningStrikeCount: getInt(obsArray[15]),           // lightning_strike_count
+			Battery:              getFloat64(obsArray[16]),       // battery
+			ReportInterval:       getInt(obsArray[17]),           // report_interval
 		}
 		observations = append(observations, obs)
 	}
@@ -525,7 +525,7 @@ func filterToOneMinuteIncrements(observations []*Observation, maxCount int) []*O
 // GetForecast fetches forecast data from the WeatherFlow better_forecast endpoint
 func GetForecast(stationID int, token string) (*ForecastResponse, error) {
 	url := fmt.Sprintf("%s/better_forecast?station_id=%d&token=%s", BaseURL, stationID, token)
-	
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch forecast data: %v", err)

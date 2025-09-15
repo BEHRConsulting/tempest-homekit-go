@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"sort"
 	"strings"
@@ -14,24 +15,26 @@ import (
 )
 
 type WebServer struct {
-	port                 string
-	server               *http.Server
-	weatherData          *weather.Observation
-	forecastData         *weather.ForecastResponse
-	homekitStatus        map[string]interface{}
-	dataHistory          []weather.Observation
-	maxHistorySize       int
-	stationName          string
-	startTime            time.Time
-	historicalDataLoaded bool
-	historicalDataCount  int
+	port                   string
+	server                 *http.Server
+	weatherData            *weather.Observation
+	forecastData           *weather.ForecastResponse
+	homekitStatus          map[string]interface{}
+	dataHistory            []weather.Observation
+	maxHistorySize         int
+	stationName            string
+	elevation              float64 // elevation in meters
+	logLevel               string  // log level for filtering debug messages
+	startTime              time.Time
+	historicalDataLoaded   bool
+	historicalDataCount    int
 	historyLoadingProgress struct {
-		isLoading    bool
-		currentStep  int
-		totalSteps   int
-		description  string
+		isLoading   bool
+		currentStep int
+		totalSteps  int
+		description string
 	}
-	mu                   sync.RWMutex
+	mu sync.RWMutex
 }
 
 type WeatherResponse struct {
@@ -44,6 +47,7 @@ type WeatherResponse struct {
 	RainDailyTotal       float64 `json:"rainDailyTotal"`
 	PrecipitationType    int     `json:"precipitationType"`
 	Pressure             float64 `json:"pressure"`
+	SeaLevelPressure     float64 `json:"seaLevelPressure"`
 	PressureCondition    string  `json:"pressure_condition"`
 	PressureTrend        string  `json:"pressure_trend"`
 	WeatherForecast      string  `json:"weather_forecast"`
@@ -56,22 +60,23 @@ type WeatherResponse struct {
 }
 
 type StatusResponse struct {
-	Connected            bool                   `json:"connected"`
-	LastUpdate           string                 `json:"lastUpdate"`
-	Uptime               string                 `json:"uptime"`
-	StationName          string                 `json:"stationName,omitempty"`
-	HomeKit              map[string]interface{} `json:"homekit"`
-	DataHistory          []WeatherResponse      `json:"dataHistory"`
-	ObservationCount     int                    `json:"observationCount"`
-	HistoricalDataLoaded bool                   `json:"historicalDataLoaded"`
-	HistoricalDataCount  int                    `json:"historicalDataCount"`
+	Connected              bool                   `json:"connected"`
+	LastUpdate             string                 `json:"lastUpdate"`
+	Uptime                 string                 `json:"uptime"`
+	StationName            string                 `json:"stationName,omitempty"`
+	Elevation              float64                `json:"elevation"`
+	HomeKit                map[string]interface{} `json:"homekit"`
+	DataHistory            []WeatherResponse      `json:"dataHistory"`
+	ObservationCount       int                    `json:"observationCount"`
+	HistoricalDataLoaded   bool                   `json:"historicalDataLoaded"`
+	HistoricalDataCount    int                    `json:"historicalDataCount"`
 	HistoryLoadingProgress struct {
-		IsLoading    bool   `json:"isLoading"`
-		CurrentStep  int    `json:"currentStep"`
-		TotalSteps   int    `json:"totalSteps"`
-		Description  string `json:"description"`
+		IsLoading   bool   `json:"isLoading"`
+		CurrentStep int    `json:"currentStep"`
+		TotalSteps  int    `json:"totalSteps"`
+		Description string `json:"description"`
 	} `json:"historyLoadingProgress"`
-	Forecast             *weather.ForecastResponse `json:"forecast,omitempty"`
+	Forecast *weather.ForecastResponse `json:"forecast,omitempty"`
 }
 
 // Precipitation type helper function
@@ -96,7 +101,9 @@ func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 	defer ws.mu.RUnlock()
 
 	if len(ws.dataHistory) == 0 {
-		log.Printf("DEBUG: No data history available for daily rain calculation")
+		if ws.logLevel == "debug" {
+			log.Printf("DEBUG: No data history available for daily rain calculation")
+		}
 		return 0.0
 	}
 
@@ -113,11 +120,15 @@ func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 		}
 	}
 
-	log.Printf("DEBUG: Daily rain calculation - Total history: %d, Today's observations: %d, Start of day: %s",
-		len(ws.dataHistory), len(dailyObservations), startOfDay.Format("2006-01-02 15:04:05"))
+	if ws.logLevel == "debug" {
+		log.Printf("DEBUG: Daily rain calculation - Total history: %d, Today's observations: %d, Start of day: %s",
+			len(ws.dataHistory), len(dailyObservations), startOfDay.Format("2006-01-02 15:04:05"))
+	}
 
 	if len(dailyObservations) == 0 {
-		log.Printf("DEBUG: No observations found for today")
+		if ws.logLevel == "debug" {
+			log.Printf("DEBUG: No observations found for today")
+		}
 		return 0.0
 	}
 
@@ -133,7 +144,9 @@ func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 		// Only one observation today, so we can't calculate a difference
 		// Return the accumulated value if it seems reasonable for a daily total
 		singleValue := dailyObservations[0].RainAccumulated
-		log.Printf("DEBUG: Only one observation today, rain value: %.3f", singleValue)
+		if ws.logLevel == "debug" {
+			log.Printf("DEBUG: Only one observation today, rain value: %.3f", singleValue)
+		}
 		if singleValue <= 10.0 { // Reasonable daily limit in inches
 			return singleValue
 		}
@@ -144,26 +157,50 @@ func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 	earliestToday := dailyObservations[0].RainAccumulated
 	latestToday := dailyObservations[len(dailyObservations)-1].RainAccumulated
 
-	log.Printf("DEBUG: Daily rain calculation - Earliest: %.3f, Latest: %.3f, Observations count: %d",
-		earliestToday, latestToday, len(dailyObservations))
+	if ws.logLevel == "debug" {
+		log.Printf("DEBUG: Daily rain calculation - Earliest: %.3f, Latest: %.3f, Observations count: %d",
+			earliestToday, latestToday, len(dailyObservations))
+	}
 
 	// If latest is greater than earliest, we have rain accumulation for the day
 	if latestToday >= earliestToday {
 		dailyTotal := latestToday - earliestToday
-		log.Printf("DEBUG: Daily rain total calculated: %.3f inches", dailyTotal)
+		if ws.logLevel == "debug" {
+			log.Printf("DEBUG: Daily rain total calculated: %.3f inches", dailyTotal)
+		}
 		// Sanity check: daily total shouldn't exceed reasonable limits
 		if dailyTotal <= 20.0 { // 20 inches would be extreme but possible
 			return dailyTotal
 		}
-		log.Printf("DEBUG: Daily rain total exceeds sanity limit (%.3f > 20.0), returning 0", dailyTotal)
+		if ws.logLevel == "debug" {
+			log.Printf("DEBUG: Daily rain total exceeds sanity limit (%.3f > 20.0), returning 0", dailyTotal)
+		}
 	}
 
 	// If we can't calculate a reliable daily total, return 0
-	log.Printf("DEBUG: Cannot calculate reliable daily total, returning 0")
+	if ws.logLevel == "debug" {
+		log.Printf("DEBUG: Cannot calculate reliable daily total, returning 0")
+	}
 	return 0.0
 }
 
 // Pressure analysis functions
+func calculateSeaLevelPressure(stationPressure, temperature, elevation float64) float64 {
+	// Convert temperature from Celsius to Kelvin
+	tempK := temperature + 273.15
+
+	// Standard atmosphere lapse rate in K/m
+	lapseRate := 0.0065
+
+	// Calculate sea level pressure using barometric formula
+	// P_sea = P_station * (1 - (L * h) / (T + L * h))^(-g*M/(R*L))
+	// Where: L = lapse rate, h = elevation, T = temperature at station, g*M/(R*L) ≈ 5.257
+	factor := (lapseRate * elevation) / (tempK + lapseRate*elevation)
+	seaLevelPressure := stationPressure * math.Pow(1-factor, -5.257)
+
+	return seaLevelPressure
+}
+
 func getPressureDescription(pressure float64) string {
 	if pressure < 980 {
 		return "Low"
@@ -225,9 +262,11 @@ func getPressureWeatherForecast(pressure float64, trend string) string {
 	}
 }
 
-func NewWebServer(port string) *WebServer {
+func NewWebServer(port string, elevation float64, logLevel string) *WebServer {
 	ws := &WebServer{
 		port:           port,
+		elevation:      elevation,
+		logLevel:       logLevel,
 		maxHistorySize: 1000,
 		dataHistory:    make([]weather.Observation, 0, 1000),
 		startTime:      time.Now(),
@@ -395,10 +434,15 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	// Calculate daily rain accumulation
 	dailyRainTotal := ws.calculateDailyRainAccumulation()
 
-	log.Printf("DEBUG: Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s, Pressure: %.2f mb",
-		pressureCondition, pressureTrend, weatherForecast, ws.weatherData.StationPressure)
-	log.Printf("DEBUG: Rain data calculated - Current: %.3f in, Daily Total: %.3f in",
-		ws.weatherData.RainAccumulated, dailyRainTotal)
+	if ws.logLevel == "debug" {
+		log.Printf("DEBUG: Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s, Pressure: %.2f mb",
+			pressureCondition, pressureTrend, weatherForecast, ws.weatherData.StationPressure)
+		log.Printf("DEBUG: Rain data calculated - Current: %.3f in, Daily Total: %.3f in",
+			ws.weatherData.RainAccumulated, dailyRainTotal)
+	}
+
+	// Calculate sea level pressure using configured station elevation
+	seaLevelPressure := calculateSeaLevelPressure(ws.weatherData.StationPressure, ws.weatherData.AirTemperature, ws.elevation)
 
 	response := WeatherResponse{
 		Temperature:          ws.weatherData.AirTemperature,
@@ -410,6 +454,7 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		RainDailyTotal:       dailyRainTotal,
 		PrecipitationType:    ws.weatherData.PrecipitationType,
 		Pressure:             ws.weatherData.StationPressure,
+		SeaLevelPressure:     seaLevelPressure,
 		PressureCondition:    pressureCondition,
 		PressureTrend:        pressureTrend,
 		WeatherForecast:      weatherForecast,
@@ -421,8 +466,10 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		LastUpdate:           time.Unix(ws.weatherData.Timestamp, 0).Format(time.RFC3339),
 	}
 
-	log.Printf("DEBUG: Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %.1f, Illuminance: %.0f lux",
-		response.Temperature, response.Humidity, response.UV, response.Illuminance)
+	if ws.logLevel == "debug" {
+		log.Printf("DEBUG: Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %.1f, Illuminance: %.0f lux",
+			response.Temperature, response.Humidity, response.UV, response.Illuminance)
+	}
 
 	json.NewEncoder(w).Encode(response)
 }
@@ -473,13 +520,14 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 		Connected:            connected,
 		LastUpdate:           lastUpdate,
 		Uptime:               uptimeStr,
+		Elevation:            ws.elevation,
 		HomeKit:              ws.homekitStatus,
 		DataHistory:          history,
 		ObservationCount:     len(ws.dataHistory),
 		HistoricalDataLoaded: ws.historicalDataLoaded,
 		HistoricalDataCount:  ws.historicalDataCount,
 	}
-	
+
 	// Add progress information
 	response.HistoryLoadingProgress.IsLoading = ws.historyLoadingProgress.isLoading
 	response.HistoryLoadingProgress.CurrentStep = ws.historyLoadingProgress.currentStep
@@ -1525,6 +1573,10 @@ func (ws *WebServer) getDashboardHTML() string {
                         <span style="color: #666; font-weight: 500;">Forecast:</span>
                         <span id="pressure-forecast" style="color: #333; font-weight: 600;">--</span>
                     </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 4px;">
+                        <span style="color: #666; font-weight: 500;">Sea Level:</span>
+                        <span id="pressure-sea-level" style="color: #333; font-weight: 600;">--</span>
+                    </div>
                 </div>
                 <div class="pressure-context" id="pressure-context">
                     <div class="pressure-tooltip" id="pressure-tooltip">
@@ -1715,6 +1767,10 @@ func (ws *WebServer) getDashboardHTML() string {
                     <div class="info-row">
                         <span class="info-label">Station:</span>
                         <span class="info-value" id="tempest-station">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Elevation:</span>
+                        <span class="info-value" id="tempest-elevation">--</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Last Update:</span>

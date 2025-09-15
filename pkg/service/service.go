@@ -44,7 +44,7 @@ func StartService(cfg *config.Config) error {
 		log.Printf("DEBUG: Initializing HomeKit accessories with sensor config: %s", cfg.Sensors)
 	}
 	sensorConfig := config.ParseSensorConfig(cfg.Sensors)
-	ws, setupErr := homekit.NewWeatherSystemModern(cfg.Pin, &sensorConfig)
+	ws, setupErr := homekit.NewWeatherSystemModern(cfg.Pin, &sensorConfig, cfg.LogLevel)
 	if setupErr != nil {
 		return fmt.Errorf("failed to setup HomeKit: %v", setupErr)
 	}
@@ -61,12 +61,14 @@ func StartService(cfg *config.Config) error {
 
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
 		log.Printf("INFO: HomeKit server started successfully with PIN: %s", cfg.Pin)
+	}
+	if cfg.LogLevel == "debug" {
 		log.Printf("DEBUG: HomeKit - Bridge ready to accept connections")
 		log.Printf("DEBUG: HomeKit - Listening for iOS/HomeKit client connections...")
 	}
 
 	// Setup web dashboard
-	webServer := web.NewWebServer(cfg.WebPort)
+	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel)
 	webServer.SetStationName(station.Name)
 	go func() {
 		defer func() {
@@ -188,7 +190,7 @@ func StartService(cfg *config.Config) error {
 	forecastUpdateCounter := 0
 	for range ticker.C {
 		updateWeatherData(station, cfg, ws, webServer)
-		
+
 		// Update forecast every 30 minutes (30 ticks)
 		forecastUpdateCounter++
 		if forecastUpdateCounter >= 30 {
