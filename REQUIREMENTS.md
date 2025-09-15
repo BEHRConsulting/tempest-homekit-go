@@ -2,7 +2,7 @@
 
 ## Overview
 
-✅ **COMPLETE**: Create a complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data. The service enables smart home automation based on temperature, humidity, wind speed, rain accumulation, UV index, and ambient light readings. Include a modern web dashboard with interactive unit conversions, UV exposure monitoring with NCBI reference data, information tooltips, and real-time accessories status monitoring.
+✅ **COMPLETE**: Create a complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data. The service enables smart home automation based on temperature, humidity, wind speed, rain accumulation, UV index, and ambient light readings. Include a modern web dashboard with external JavaScript architecture, pressure analysis system, interactive unit conversions, UV exposure monitoring with NCBI reference data, information tooltips with proper event handling, and real-time accessories status monitoring.
 
 ## Functional Requirements
 
@@ -24,9 +24,12 @@
 - ✅ **Pairing**: Support HomeKit pairing with configurable PIN
 
 #### Web Dashboard
-- ✅ **HTTP Server**: Serve modern web interface on configurable port (default: 8080)
-- ✅ **Real-time Updates**: Dashboard updates every 10 seconds via JavaScript fetch API
-- ✅ **Complete Sensor Display**: Temperature, Humidity (%, Relative, Dew point), Wind (Speed, Direction, Gust), Atmospheric pressure, UV Index, Ambient Light (lux)
+- ✅ **HTTP Server**: Serve modern web interface on configurable port (default: 8080) with static file serving
+- ✅ **External JavaScript Architecture**: Complete separation of concerns with ~800+ lines moved to `script.js`
+- ✅ **Cache-Busting File Serving**: Static files served with timestamps to prevent browser caching
+- ✅ **Real-time Updates**: Dashboard updates every 10 seconds via JavaScript fetch API with comprehensive error handling
+- ✅ **Pressure Analysis System**: Server-side pressure calculations with interactive info icons (ℹ️) for detailed explanations
+- ✅ **Complete Sensor Display**: Temperature, Humidity (%, Relative, Dew point), Wind (Speed, Direction, Gust), Atmospheric pressure with forecasting, UV Index, Ambient Light (lux)
 - ✅ **Interactive Unit Conversion**: Click-to-toggle between metric and imperial units:
   - Temperature: Celsius (°C) ↔ Fahrenheit (°F)
   - Wind Speed, Wind Gust: Miles per hour (mph) ↔ Kilometers per hour (kph)
@@ -40,12 +43,13 @@
   - Moderate (5-6): High risk with orange coding
   - High (7-9): Very high risk with red coding
   - Very High (10+): Extreme risk with violet coding
-- ✅ **Information Tooltips**: Detailed sensor information with standardized positioning (top-left aligned to bottom-right of info button)
+- ✅ **Enhanced Information System**: Detailed sensor tooltips with proper event propagation handling and standardized positioning
+- ✅ **Event Management**: MutationObserver-based event listener attachment with retry mechanisms and comprehensive DOM debugging
 - ✅ **Accessories Status Display**: Real-time HomeKit sensor status showing enabled/disabled state with priority sorting
 - ✅ **Unit Persistence**: Save user preferences in browser localStorage
 - ✅ **HomeKit Status Display**: Show bridge status, accessory count, and pairing PIN
 - ✅ **Connection Status**: Real-time Tempest station connection status
-- ✅ **Responsive Design**: Mobile-friendly interface with modern CSS styling
+- ✅ **Responsive Design**: Mobile-friendly interface with modern CSS styling and enhanced debugging capabilities
 
 #### Weather Data Mapping
 - ✅ **Temperature**: Air temperature in Fahrenheit/Celsius
@@ -1110,11 +1114,15 @@ This requirements document provides complete specifications for implementing the
 **Status**: ✅ **COMPLETE** - All planned features implemented and tested
 - ✅ Weather monitoring with 11 HomeKit sensors (Temperature + 10 custom weather sensors)  
 - ✅ Complete HomeKit integration with compliance optimization
-- ✅ Modern web dashboard with real-time updates and interactive features
+- ✅ Modern web dashboard with external JavaScript architecture (~800+ lines externalized)
+- ✅ Pressure analysis system with interactive info icons and forecasting calculations
+- ✅ Enhanced debug logging with multi-level system (DEBUG, INFO, WARN, ERROR) and comprehensive DOM inspection
 - ✅ UV Index monitoring with NCBI reference data and EPA color coding
-- ✅ Information tooltips system with standardized positioning  
+- ✅ Information tooltips system with proper event propagation and standardized positioning  
 - ✅ HomeKit accessories status monitoring with enabled/disabled indicators
 - ✅ Interactive unit conversions with localStorage persistence
+- ✅ Static file serving with cache-busting timestamps
+- ✅ Advanced event listener management with MutationObserver and retry mechanisms
 - ✅ Cross-platform build and deployment with automated service management
 - ✅ Professional styling and enhanced user experience
 - ✅ Comprehensive logging and error handling

@@ -13,12 +13,15 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 - **HomeKit Integration**: Creates individual HomeKit accessories for each weather sensor
 - **Multiple Sensor Support**: Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, UV Index, and Ambient Light
 - **Modern Web Dashboard**: Interactive web interface with real-time updates, unit conversions, and professional styling
+  - **External JavaScript Architecture**: Clean separation of concerns with all JavaScript externalized to `script.js`
+  - **Pressure Analysis System**: Advanced pressure forecasting with trend analysis and weather predictions
+  - **Interactive Info Icons**: Clickable info icons (ℹ️) with detailed tooltips for pressure calculations and sensor explanations
   - **UV Index Display**: Complete UV exposure categories using NCBI reference data with EPA color coding
   - **Interactive Tooltips**: Information tooltips for all sensors with standardized positioning
   - **Accessories Status**: Real-time display of enabled/disabled sensor status in HomeKit bridge card
 - **Cross-platform Support**: Runs on macOS, Linux, and Windows with automated service installation
 - **Flexible Configuration**: Command-line flags and environment variables for easy deployment
-- **Comprehensive Logging**: Multi-level logging with debug output for troubleshooting
+- **Enhanced Debug Logging**: Multi-level logging with emoji indicators, calculated values, API calls/responses, and comprehensive DOM debugging
 
 ## Quick Start
 
@@ -147,30 +150,37 @@ The following sensors will appear as separate HomeKit accessories:
 Access the modern web dashboard at `http://localhost:8080` (or your configured port).
 
 ### Dashboard Features
-- **Real-time Updates**: Weather data refreshes every 10 seconds
+- **External JavaScript Architecture**: Clean separation with all ~800+ lines of JavaScript moved to external `script.js` file
+- **Real-time Updates**: Weather data refreshes every 10 seconds with comprehensive error handling
+- **Pressure Analysis System**: Advanced atmospheric pressure monitoring with:
+  - **Trend Analysis**: Rising, Falling, or Stable pressure trends
+  - **Weather Forecasting**: Predictions based on pressure patterns (Fair, Cloudy, Stormy)
+  - **Interactive Info Icon**: Click the ℹ️ icon for detailed pressure calculation explanations
 - **Interactive Unit Conversion**: Click any sensor card to toggle units:
   - 🌡️ **Temperature**: Celsius (°C) ↔ Fahrenheit (°F)
   - 🌬️ **Wind Speed**: Miles per hour (mph) ↔ Kilometers per hour (kph)
   - 🌧️ **Rain**: Inches (in) ↔ Millimeters (mm)
+  - 🌀 **Pressure**: Millibars (mb) ↔ Inches of Mercury (inHg)
 - **UV Index Monitor**: 🌞 Complete UV exposure assessment with NCBI reference categories:
   - **Minimal (0-2)**: Low risk exposure with EPA green color coding
   - **Low (3-4)**: Moderate risk with yellow coding  
   - **Moderate (5-6)**: High risk with orange coding
   - **High (7-9)**: Very high risk with red coding
   - **Very High (10+)**: Extreme risk with violet coding
-- **Information Tooltips**: ℹ️ Detailed sensor information with standardized positioning for easy access
+- **Enhanced Information System**: ℹ️ Detailed sensor tooltips with proper event propagation handling
 - **Accessories Status**: Real-time HomeKit sensor status showing enabled/disabled state with priority sorting
 - **Wind Direction Display**: Shows cardinal direction + degrees (e.g., "WSW (241°)")
 - **Unit Persistence**: Preferences saved in browser localStorage
-- **Modern Design**: Responsive interface with weather-themed styling
-- **All Sensors**: Complete weather data display
+- **Modern Design**: Responsive interface with weather-themed styling and cache-busting script loading
+- **All Sensors**: Complete weather data display with comprehensive DOM debugging
 - **HomeKit Status**: Bridge status, accessory count, and pairing PIN
 - **Connection Status**: Real-time Tempest station connection status
-- **Mobile Friendly**: Works perfectly on all devices
+- **Mobile Friendly**: Works perfectly on all devices with enhanced event listener management
 
 ### API Endpoints
-- `GET /`: Main dashboard with embedded HTML/CSS/JavaScript
-- `GET /api/weather`: JSON weather data
+- `GET /`: Main dashboard HTML with external JavaScript
+- `GET /pkg/web/static/script.js`: External JavaScript file with cache-busting timestamps
+- `GET /api/weather`: JSON weather data with pressure analysis
 - `GET /api/status`: Service and HomeKit status
 
 ## Architecture
@@ -192,9 +202,14 @@ tempest-homekit-go/
 │   ├── weather/              # WeatherFlow API client
 │   │   └── client.go
 │   ├── homekit/              # HomeKit accessory setup
-│   │   └── setup.go
+│   │   ├── modern_setup.go   # Modern HAP library implementation
+│   │   └── custom_characteristics.go # Custom weather characteristics
 │   ├── web/                  # Web dashboard server
-│   │   └── server.go
+│   │   ├── server.go         # HTTP server with static file serving
+│   │   └── static/           # Static web assets
+│   │       ├── script.js     # External JavaScript (~800+ lines)
+│   │       ├── styles.css    # CSS styling
+│   │       └── date-fns.min.js # Date manipulation library
 │   └── service/              # Main service orchestration
 │       └── service.go
 └── README.md
@@ -402,7 +417,26 @@ Enable detailed logging for troubleshooting:
 
 ## Recent Enhancements
 
-### UV Index Monitoring (Latest)
+### JavaScript Architecture Modernization (Latest)
+- **Complete Separation of Concerns**: Moved all ~800+ lines of JavaScript from HTML template to external `script.js`
+- **Cache-Busting File Serving**: Static files served with timestamps to prevent browser caching issues
+- **Enhanced Event Management**: MutationObserver-based event listener attachment with retry mechanisms
+- **Comprehensive DOM Debugging**: Advanced element detection and interaction logging
+- **Improved Maintainability**: Clean HTML templates with external asset references
+
+### Pressure Analysis System
+- **Advanced Forecasting**: Server-side pressure trend analysis with weather predictions
+- **Interactive Info Icons**: Clickable ℹ️ icons with detailed calculation explanations
+- **Event Propagation Control**: Proper handling of nested click events to prevent unit toggle interference
+- **Real-time Calculations**: Live pressure condition assessment (Normal, High, Low) with trend indicators
+
+### Enhanced Debug Logging
+- **Multi-Level System**: DEBUG, INFO, WARN, ERROR levels with emoji indicators (🐛, ℹ️, ⚠️, ❌)
+- **Structured Data Output**: API calls/responses, calculated values, and sensor updates
+- **DOM Inspection Tools**: Comprehensive element detection and HTML content analysis
+- **Event Listener Monitoring**: Detailed tracking of event attachment and retry attempts
+
+### UV Index Monitoring
 - **Complete UV Exposure Assessment**: Professional UV Index display with NCBI reference categories
 - **EPA Color Coding**: Visual risk indicators from green (minimal) to violet (extreme)
 - **Real-time Updates**: Live UV Index monitoring with automatic risk category assessment
@@ -412,7 +446,7 @@ Enable detailed logging for troubleshooting:
 - **Standardized Positioning**: All information tooltips consistently aligned for optimal visibility
 - **Rich Content**: Detailed sensor information including measurement ranges and units
 - **Professional Design**: Clean tooltip styling with proper contrast and readability
-- **Mobile-Friendly**: Touch-optimized tooltip interaction for mobile devices
+- **Event Handling**: Proper click event management with stopPropagation for nested elements
 
 ### HomeKit Accessories Status
 - **Real-time Status Monitoring**: Live display of enabled/disabled sensor status in web dashboard

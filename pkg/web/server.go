@@ -190,12 +190,12 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		} else {
 			filename = strings.TrimPrefix(r.URL.Path, "/static/")
 		}
-		
+
 		log.Printf("Static file request: %s (path: %s)", filename, r.URL.Path)
-		
+
 		// Serve the file from the physical directory
 		filePath := "./pkg/web/static/" + filename
-		
+
 		// Set appropriate content type
 		switch filename {
 		case "styles.css":
@@ -205,9 +205,9 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		case "date-fns.min.js":
 			w.Header().Set("Content-Type", "application/javascript")
 		}
-		
+
 		log.Printf("Serving static file: %s", filePath)
-		
+
 		// Try to serve the file
 		http.ServeFile(w, r, filePath)
 		return
@@ -243,8 +243,8 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	pressureCondition := getPressureDescription(ws.weatherData.StationPressure)
 	pressureTrend := getPressureTrend(ws.dataHistory)
 	weatherForecast := getPressureWeatherForecast(ws.weatherData.StationPressure, pressureTrend)
-	
-	log.Printf("DEBUG: Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s, Pressure: %.2f mb", 
+
+	log.Printf("DEBUG: Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s, Pressure: %.2f mb",
 		pressureCondition, pressureTrend, weatherForecast, ws.weatherData.StationPressure)
 
 	response := WeatherResponse{
@@ -265,8 +265,8 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		LightningStrikeCount: ws.weatherData.LightningStrikeCount,
 		LastUpdate:           time.Unix(ws.weatherData.Timestamp, 0).Format(time.RFC3339),
 	}
-	
-	log.Printf("DEBUG: Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %.1f, Illuminance: %.0f lux", 
+
+	log.Printf("DEBUG: Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %.1f, Illuminance: %.0f lux",
 		response.Temperature, response.Humidity, response.UV, response.Illuminance)
 
 	json.NewEncoder(w).Encode(response)
