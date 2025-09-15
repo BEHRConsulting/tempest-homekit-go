@@ -464,8 +464,34 @@ Enable detailed logging for troubleshooting:
 
 ### Running Tests
 ```bash
+# Run all tests
 go test ./...
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run verbose tests
+go test -v ./...
+
+# Run specific package tests
+go test ./pkg/config/...
+go test ./pkg/weather/...
+go test ./pkg/web/...
+go test ./pkg/service/...
 ```
+
+### Test Coverage Overview
+- **pkg/config**: 66.4% coverage - Configuration management, elevation parsing, database operations
+- **pkg/weather**: 16.2% coverage - WeatherFlow API client, data parsing utilities, station discovery
+- **pkg/web**: 50.5% coverage - HTTP server, pressure analysis, status endpoints
+- **pkg/service**: 3.6% coverage - Service orchestration, logging, environmental detection
+
+### Testing Architecture
+The project includes comprehensive unit tests covering:
+- **Configuration Management**: Flag parsing, environment variables, elevation parsing (feet/meters)
+- **Weather Client**: Station discovery, device ID extraction, JSON parsing helpers, time filtering
+- **Web Server**: HTTP endpoints, pressure trend analysis, history loading progress
+- **Service Functions**: Log level management, night time detection based on illuminance
 
 ### Building for Development
 ```bash
@@ -474,9 +500,11 @@ go build -o tempest-homekit-go
 
 ### Code Quality
 - Comprehensive error handling and recovery
-- Unit test coverage for all packages
+- Unit test coverage for all packages with table-driven tests
 - Modular design for maintainability
 - Follows Go best practices and conventions
+- HTTP testing with `httptest.ResponseRecorder`
+- Mock data creation for realistic test scenarios
 
 ## Contributing
 
