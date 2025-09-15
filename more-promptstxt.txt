@@ -26,3 +26,9 @@ update readme.md, requirements.md, core_review.md
 Update readme.md to show you and I are the authors. Add a reference section to show what you may have used in this program
 
 lets re-implment the homekit sensors. Place all sensors in the Tempest Weather group. All sensors report a number. Sensors: (1) Wind Average: floating point, (2) Wind Guest: floating point, (3) wind direction: integer 0-360, (4) Air temperature: floating point, (5) relitive humidity: integer, percentage, (6) lux: floating, range: 0.0001 - 100000, (7) uv: integer, (8) rain: floating, (9) percipition type: integer, (10)lightning strike count: integer, (11) lightning strike distance: integer, (12) lightning strike count: integer
+
+
+on the web console, add fair, clearing, storm, etc to the pressure card based on preasure history. Add tool tip showing table to calculation as with the light card
+
+web console, include precipitation_type on rain card
+
