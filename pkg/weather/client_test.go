@@ -99,10 +99,10 @@ func TestGetFloat64(t *testing.T) {
 		expected float64
 	}{
 		{float64(123.45), 123.45},
-		{nil, 0.0},               // Should return 0 for nil
-		{"123.45", 0.0},          // Should return 0 for string
-		{int(123), 0.0},          // Should return 0 for int (JSON only uses float64)
-		{true, 0.0},              // Should return 0 for bool
+		{nil, 0.0},      // Should return 0 for nil
+		{"123.45", 0.0}, // Should return 0 for string
+		{int(123), 0.0}, // Should return 0 for int (JSON only uses float64)
+		{true, 0.0},     // Should return 0 for bool
 	}
 
 	for _, test := range tests {
@@ -147,7 +147,7 @@ func TestFilterToOneMinuteIncrements(t *testing.T) {
 	}
 
 	filtered := filterToOneMinuteIncrements(observations, 1000)
-	
+
 	// Should keep observations at roughly 1-minute intervals
 	if len(filtered) < 3 {
 		t.Errorf("Expected at least 3 filtered observations, got %d", len(filtered))
@@ -165,7 +165,7 @@ func TestFilterToOneMinuteIncrements(t *testing.T) {
 func TestFilterToOneMinuteIncrementsMaxCount(t *testing.T) {
 	baseTime := time.Now()
 	var observations []*Observation
-	
+
 	// Create 1000 observations
 	for i := 0; i < 1000; i++ {
 		observations = append(observations, &Observation{
@@ -175,7 +175,7 @@ func TestFilterToOneMinuteIncrementsMaxCount(t *testing.T) {
 
 	maxCount := 100
 	filtered := filterToOneMinuteIncrements(observations, maxCount)
-	
+
 	if len(filtered) > maxCount {
 		t.Errorf("Expected max %d observations, got %d", maxCount, len(filtered))
 	}

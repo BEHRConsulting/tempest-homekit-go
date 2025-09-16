@@ -106,8 +106,8 @@ func TestParseElevationFeet(t *testing.T) {
 		expected float64
 		hasError bool
 	}{
-		{"903ft", 275.2344, false},     // 903 feet = 275.2344 meters (more precise)
-		{"1000ft", 304.8, false},       // 1000 feet = 304.8 meters
+		{"903ft", 275.2344, false}, // 903 feet = 275.2344 meters (more precise)
+		{"1000ft", 304.8, false},   // 1000 feet = 304.8 meters
 		{"0ft", 0.0, false},
 		{"100.5ft", 30.6324, false}, // 100.5 feet = 30.6324 meters
 	}

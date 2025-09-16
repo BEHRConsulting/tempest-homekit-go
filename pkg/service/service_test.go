@@ -7,7 +7,7 @@ import (
 func TestSetLogLevel(t *testing.T) {
 	// Test that setLogLevel doesn't panic with various inputs
 	testLevels := []string{"debug", "info", "error", "invalid"}
-	
+
 	for _, level := range testLevels {
 		// Should not panic
 		func() {
@@ -37,7 +37,7 @@ func TestIsNightTime(t *testing.T) {
 	for _, test := range tests {
 		result := isNightTime(test.illuminance)
 		if result != test.expected {
-			t.Errorf("isNightTime(%f) = %t, expected %t (%s)", 
+			t.Errorf("isNightTime(%f) = %t, expected %t (%s)",
 				test.illuminance, result, test.expected, test.description)
 		}
 	}

@@ -11,7 +11,7 @@ import (
 
 func TestNewWebServer(t *testing.T) {
 	server := NewWebServer("8080", 100.0, "info")
-	
+
 	if server.port != "8080" {
 		t.Errorf("Expected port 8080, got %s", server.port)
 	}
@@ -25,7 +25,7 @@ func TestNewWebServer(t *testing.T) {
 
 func TestGetPressureDescription(t *testing.T) {
 	tests := []struct {
-		pressure    float64
+		pressure       float64
 		expectContains string
 	}{
 		{970.0, "Stormy"},
@@ -108,7 +108,7 @@ func TestGetPressureTrendInsufficientData(t *testing.T) {
 
 func TestWebServerWeatherEndpoint(t *testing.T) {
 	server := NewWebServer("8080", 100.0, "info")
-	
+
 	// Add some test data
 	testObs := &weather.Observation{
 		Timestamp:        time.Now().Unix(),
@@ -168,7 +168,7 @@ func TestWebServerStatusEndpoint(t *testing.T) {
 
 func TestUpdateWeather(t *testing.T) {
 	server := NewWebServer("8080", 100.0, "info")
-	
+
 	testObs := &weather.Observation{
 		Timestamp:        time.Now().Unix(),
 		AirTemperature:   25.0,
@@ -187,9 +187,9 @@ func TestUpdateWeather(t *testing.T) {
 
 func TestSetHistoryLoadingProgress(t *testing.T) {
 	server := NewWebServer("8080", 100.0, "info")
-	
+
 	server.SetHistoryLoadingProgress(1, 3, "Loading data...")
-	
+
 	if !server.historyLoadingProgress.isLoading {
 		t.Error("History loading should be marked as in progress")
 	}
@@ -203,13 +203,13 @@ func TestSetHistoryLoadingProgress(t *testing.T) {
 
 func TestSetHistoryLoadingComplete(t *testing.T) {
 	server := NewWebServer("8080", 100.0, "info")
-	
+
 	// First set it to loading
 	server.SetHistoryLoadingProgress(1, 3, "Loading...")
-	
+
 	// Then mark as complete
 	server.SetHistoryLoadingComplete()
-	
+
 	if server.historyLoadingProgress.isLoading {
 		t.Error("History loading should be marked as complete")
 	}

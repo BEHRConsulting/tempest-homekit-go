@@ -16,6 +16,9 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
   - **External JavaScript Architecture**: Clean separation of concerns with all JavaScript externalized to `script.js`
   - **Pressure Analysis System**: Advanced pressure forecasting with trend analysis and weather predictions
   - **Interactive Info Icons**: Clickable info icons (ℹ️) with detailed tooltips for pressure calculations and sensor explanations
+  - **Consistent Positioning**: All tooltips positioned with top-left corner aligned with bottom-right of info icons
+  - **Rain Info Icon Fix**: Resolved JavaScript issue where unit updates removed the rain info icon
+  - **Proper Event Handling**: Enhanced event propagation control to prevent unit toggle interference
   - **UV Index Display**: Complete UV exposure categories using NCBI reference data with EPA color coding
   - **Interactive Tooltips**: Information tooltips for all sensors with standardized positioning
   - **Accessories Status**: Real-time display of enabled/disabled sensor status in HomeKit bridge card
@@ -417,7 +420,14 @@ Enable detailed logging for troubleshooting:
 
 ## Recent Enhancements
 
-### JavaScript Architecture Modernization (Latest)
+### Tooltip Positioning & User Experience Improvements (Latest)
+- **Consistent Tooltip Positioning**: All information tooltips now open with their top-left corner aligned with the bottom-right of their respective info icons
+- **Rain Info Icon Resolution**: Fixed JavaScript issue where `updateUnits()` function was removing the rain info icon during unit conversions
+- **Enhanced Event Handling**: Implemented proper event propagation control with `stopPropagation()` to prevent interference between info icon clicks and unit toggles
+- **Humidity Description Addition**: Added visible humidity comfort level descriptions below units, matching the lux card pattern
+- **Context Container Architecture**: Added proper `position: relative` containers for all tooltips to ensure consistent positioning behavior
+
+### JavaScript Architecture Modernization
 - **Complete Separation of Concerns**: Moved all ~800+ lines of JavaScript from HTML template to external `script.js`
 - **Cache-Busting File Serving**: Static files served with timestamps to prevent browser caching issues
 - **Enhanced Event Management**: MutationObserver-based event listener attachment with retry mechanisms
