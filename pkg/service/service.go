@@ -72,7 +72,7 @@ func StartService(cfg *config.Config) error {
 	}
 
 	// Setup web dashboard
-	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel)
+	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID)
 	webServer.SetStationName(station.Name)
 	go func() {
 		defer func() {

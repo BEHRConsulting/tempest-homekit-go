@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"sort"
 	"time"
 )
@@ -556,4 +557,177 @@ func GetForecast(stationID int, token string) (*ForecastResponse, error) {
 	}
 
 	return &forecastResp, nil
+}
+
+// StationStatus represents the status information from the TempestWX station status page
+type StationStatus struct {
+	HubNetworkStatus    string  `json:"hubNetworkStatus"`
+	HubLastStatus       string  `json:"hubLastStatus"`
+	HubWiFiSignal       string  `json:"hubWiFiSignal"`
+	HubSerialNumber     string  `json:"hubSerialNumber"`
+	HubFirmware         string  `json:"hubFirmware"`
+	HubUptime           string  `json:"hubUptime"`
+	DeviceNetworkStatus string  `json:"deviceNetworkStatus"`
+	DeviceLastObs       string  `json:"deviceLastObs"`
+	DeviceSignal        string  `json:"deviceSignal"`
+	DeviceSerialNumber  string  `json:"deviceSerialNumber"`
+	DeviceFirmware      string  `json:"deviceFirmware"`
+	DeviceUptime        string  `json:"deviceUptime"`
+	BatteryVoltage      string  `json:"batteryVoltage"`
+	BatteryStatus       string  `json:"batteryStatus"`
+	SensorStatus        string  `json:"sensorStatus"`
+}
+
+// GetStationStatus scrapes the TempestWX station status page for detailed device information
+func GetStationStatus(stationID int) (*StationStatus, error) {
+	url := fmt.Sprintf("https://tempestwx.com/settings/station/%d/status", stationID)
+	
+	fmt.Printf("DEBUG: Fetching station status from %s\n", url)
+	
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Printf("DEBUG: HTTP request failed: %v\n", err)
+		return nil, fmt.Errorf("failed to fetch station status: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("DEBUG: HTTP request returned status %d\n", resp.StatusCode)
+		return nil, fmt.Errorf("station status request failed with status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("DEBUG: Failed to read response body: %v\n", err)
+		return nil, fmt.Errorf("failed to read station status response: %v", err)
+	}
+
+	fmt.Printf("DEBUG: Retrieved %d bytes of HTML content\n", len(body))
+
+	// Parse the HTML to extract status information
+	status, err := parseStationStatusHTML(string(body))
+	if err != nil {
+		fmt.Printf("DEBUG: HTML parsing failed: %v\n", err)
+		return nil, err
+	}
+	
+	fmt.Printf("DEBUG: Parsed station status - Battery: %s, Device Uptime: %s\n", status.BatteryVoltage, status.DeviceUptime)
+	return status, nil
+}
+
+// parseStationStatusHTML parses the HTML content from the TempestWX station status page
+func parseStationStatusHTML(html string) (*StationStatus, error) {
+	status := &StationStatus{}
+	
+	fmt.Printf("DEBUG: Parsing HTML content (%d bytes)\n", len(html))
+	
+	// Debug: Print a portion of the HTML to understand the structure
+	if len(html) > 1000 {
+		fmt.Printf("DEBUG: First 1000 chars of HTML:\n%s\n", html[:1000])
+		end := 2000 + 500
+		if end > len(html) {
+			end = len(html)
+		}
+		if len(html) > 2000 {
+			fmt.Printf("DEBUG: HTML around position 2000:\n%s\n", html[2000:end])
+		}
+	}
+	
+	// Extract battery voltage - look for "Battery Voltage" followed by status and voltage
+	// Pattern: "Battery VoltageGood (2.73v)" or similar
+	batteryPattern := regexp.MustCompile(`Battery Voltage\s*([A-Za-z]+)\s*\(([0-9.]+)v\)`)
+	if match := batteryPattern.FindStringSubmatch(html); len(match) >= 3 {
+		status.BatteryStatus = match[1]   // "Good", "Fair", etc.
+		status.BatteryVoltage = match[2] + "V"  // "2.73V"
+		fmt.Printf("DEBUG: Found battery info - Status: %s, Voltage: %s\n", status.BatteryStatus, status.BatteryVoltage)
+	} else {
+		fmt.Printf("DEBUG: Battery voltage pattern not found\n")
+	}
+	
+	// Extract uptime patterns - look for device uptime (longer uptime typically belongs to device)
+	// Pattern: "126d 4h 49m 29s" - multiple patterns for different formats
+	uptimePatterns := []*regexp.Regexp{
+		regexp.MustCompile(`(\d+d\s+\d+h\s+\d+m\s+\d+s)`),                     // "126d 4h 49m 29s"
+		regexp.MustCompile(`(\d+d\s+\d+h\s+\d+m)`),                            // "126d 4h 49m"  
+		regexp.MustCompile(`(\d+h\s+\d+m\s+\d+s)`),                            // "14h 26m 1s"
+		regexp.MustCompile(`(\d+m\s+\d+s)`),                                    // "26m 1s"
+	}
+	
+	var foundUptimes []string
+	for _, pattern := range uptimePatterns {
+		matches := pattern.FindAllString(html, -1)
+		foundUptimes = append(foundUptimes, matches...)
+	}
+	
+	fmt.Printf("DEBUG: Found %d uptime matches: %v\n", len(foundUptimes), foundUptimes)
+	
+	if len(foundUptimes) >= 2 {
+		// If we have multiple uptimes, use the longer one as device uptime (devices typically run longer)
+		if len(foundUptimes[0]) > len(foundUptimes[1]) {
+			status.DeviceUptime = foundUptimes[0]
+			status.HubUptime = foundUptimes[1]
+		} else {
+			status.DeviceUptime = foundUptimes[1]
+			status.HubUptime = foundUptimes[0]
+		}
+	} else if len(foundUptimes) == 1 {
+		status.DeviceUptime = foundUptimes[0]
+	}
+	
+	// Extract network status - look for "Network Status" followed by "Online" or "Offline"
+	networkPattern := regexp.MustCompile(`Network Status\s*(Online|Offline)`)
+	networkMatches := networkPattern.FindAllStringSubmatch(html, -1)
+	if len(networkMatches) > 0 {
+		status.HubNetworkStatus = networkMatches[0][1]
+		if len(networkMatches) > 1 {
+			status.DeviceNetworkStatus = networkMatches[1][1]
+		}
+	}
+	
+	// Extract signal strength patterns
+	signalPattern := regexp.MustCompile(`(Strong|Good|Fair|Poor)\s+\((-?\d+)\)`)
+	signalMatches := signalPattern.FindAllStringSubmatch(html, -1)
+	fmt.Printf("DEBUG: Found %d signal matches: %v\n", len(signalMatches), signalMatches)
+	
+	for i, match := range signalMatches {
+		if len(match) >= 3 {
+			signalStr := fmt.Sprintf("%s (%s)", match[1], match[2])
+			if i == 0 {
+				status.HubWiFiSignal = signalStr  // First signal is usually Wi-Fi
+			} else {
+				status.DeviceSignal = signalStr   // Second signal is device signal
+			}
+		}
+	}
+	
+	// Extract serial numbers
+	hubSerialPattern := regexp.MustCompile(`HB-(\d+)`)
+	if match := hubSerialPattern.FindStringSubmatch(html); len(match) >= 2 {
+		status.HubSerialNumber = "HB-" + match[1]
+	}
+	
+	deviceSerialPattern := regexp.MustCompile(`ST-(\d+)`)
+	if match := deviceSerialPattern.FindStringSubmatch(html); len(match) >= 2 {
+		status.DeviceSerialNumber = "ST-" + match[1]
+	}
+	
+	// Extract firmware versions
+	firmwarePattern := regexp.MustCompile(`Firmware Revision\s*(\d+)`)
+	firmwareMatches := firmwarePattern.FindAllStringSubmatch(html, -1)
+	if len(firmwareMatches) >= 2 {
+		status.HubFirmware = firmwareMatches[0][1]
+		status.DeviceFirmware = firmwareMatches[1][1]
+	} else if len(firmwareMatches) == 1 {
+		status.DeviceFirmware = firmwareMatches[0][1]
+	}
+	
+	// Set sensor status based on battery availability
+	if status.BatteryVoltage != "" {
+		status.SensorStatus = "Good"
+	}
+	
+	fmt.Printf("DEBUG: Final parsed status - Battery: %s, DeviceUptime: %s, HubUptime: %s\n", 
+		status.BatteryVoltage, status.DeviceUptime, status.HubUptime)
+		
+	return status, nil
 }

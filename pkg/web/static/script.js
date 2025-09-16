@@ -1139,10 +1139,22 @@ function updateDisplay() {
 
     // Wind data
     let windSpeed = weatherData.windSpeed;
+    let windGust = weatherData.windGust;
     if (units.wind === 'kph') {
         windSpeed = mphToKph(windSpeed);
+        windGust = mphToKph(windGust);
     }
     document.getElementById('wind-speed').textContent = windSpeed.toFixed(1);
+    
+    // Wind gust information
+    const windUnit = units.wind === 'kph' ? 'kph' : 'mph';
+    if (windGust > windSpeed) {
+        document.getElementById('wind-gust-info').textContent = `Winds gusting to ${windGust.toFixed(1)} ${windUnit}`;
+    } else if (windGust > 0) {
+        document.getElementById('wind-gust-info').textContent = `Gusts up to ${windGust.toFixed(1)} ${windUnit}`;
+    } else {
+        document.getElementById('wind-gust-info').textContent = 'No gusts detected';
+    }
     
     const direction = degreesToDirection(weatherData.windDirection);
     document.getElementById('wind-direction').textContent = direction + ' (' + weatherData.windDirection.toFixed(0) + '°)';
@@ -1150,6 +1162,8 @@ function updateDisplay() {
     debugLog(logLevels.DEBUG, 'Wind data updated', {
         originalSpeed: weatherData.windSpeed,
         convertedSpeed: windSpeed,
+        originalGust: weatherData.windGust,
+        convertedGust: windGust,
         direction: weatherData.windDirection,
         directionText: direction,
         unit: units.wind
@@ -1299,6 +1313,18 @@ function updateDisplay() {
         hour12: false
     });
     document.getElementById('last-update').textContent = lastUpdateText;
+    
+    // Battery level (update from current weather data)
+    const tempestBatteryFromWeather = document.getElementById('tempest-battery');
+    if (tempestBatteryFromWeather && weatherData.battery !== undefined) {
+        if (weatherData.battery === 0) {
+            tempestBatteryFromWeather.textContent = 'N/A';
+            debugLog(logLevels.DEBUG, '🔋 Battery data not available from API (returned 0)');
+        } else {
+            tempestBatteryFromWeather.textContent = `${weatherData.battery.toFixed(1)}V`;
+            debugLog(logLevels.DEBUG, '🔋 Battery updated from weather data:', `${weatherData.battery.toFixed(1)}V`);
+        }
+    }
     
     debugLog(logLevels.INFO, 'Display update completed', {
         lastUpdate: weatherData.lastUpdate,
@@ -1639,6 +1665,7 @@ async function fetchStatus() {
 
 function updateStatusDisplay(status) {
     debugLog(logLevels.DEBUG, 'Updating status display', status);
+    debugLog(logLevels.DEBUG, '🔍 STATUS DEBUG - Full status object:', JSON.stringify(status, null, 2));
     
     // Store status data globally for unit conversions
     statusData = status;
@@ -1681,6 +1708,35 @@ function updateStatusDisplay(status) {
         hour12: false
     }) : '--';
     if (tempestUptime) tempestUptime.textContent = status.uptime || '--';
+    
+    // Update battery level and device uptime from station status
+    const tempestBattery = document.getElementById('tempest-battery');
+    
+    // Use station status data if available, otherwise fall back to weather data
+    if (status.stationStatus && status.stationStatus.batteryVoltage) {
+        tempestBattery.textContent = status.stationStatus.batteryVoltage;
+        debugLog(logLevels.DEBUG, '🔋 Battery updated from station status:', status.stationStatus.batteryVoltage);
+        
+        // Update uptime with more accurate device uptime
+        if (tempestUptime && status.stationStatus.deviceUptime) {
+            tempestUptime.textContent = status.stationStatus.deviceUptime;
+            debugLog(logLevels.DEBUG, '⏱️ Device uptime updated from station status:', status.stationStatus.deviceUptime);
+        }
+    } else if (tempestBattery && status.dataHistory && status.dataHistory.length > 0) {
+        // Fallback to weather data
+        const latestData = status.dataHistory[status.dataHistory.length - 1];
+        if (latestData.battery !== undefined && latestData.battery !== 0) {
+            tempestBattery.textContent = `${latestData.battery.toFixed(1)}V`;
+            debugLog(logLevels.DEBUG, '🔋 Battery set from weather data:', `${latestData.battery.toFixed(1)}V`);
+        } else {
+            tempestBattery.textContent = 'N/A';
+            debugLog(logLevels.DEBUG, '🔋 Battery data not available');
+        }
+    } else if (tempestBattery) {
+        tempestBattery.textContent = '--';
+        debugLog(logLevels.DEBUG, '🔋 No battery data available');
+    }
+    
     if (tempestDataCount) tempestDataCount.textContent = status.observationCount || '0';
     
     // Handle historical data loading progress
