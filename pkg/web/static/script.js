@@ -1764,6 +1764,9 @@ function updateStatusDisplay(status) {
         populateChartsWithHistoricalData(status.dataHistory);
     }
 
+    // Update detailed station status from stationStatus data
+    updateDetailedStationStatus(status.stationStatus);
+
     // Update HomeKit status
     const homekitStatus = document.getElementById('homekit-status');
     const homekitAccessories = document.getElementById('homekit-accessories');
@@ -1787,6 +1790,79 @@ function updateStatusDisplay(status) {
         homekitActive: hk.bridge,
         accessoryCount: hk.accessories
     });
+}
+
+function updateDetailedStationStatus(stationStatus) {
+    debugLog(logLevels.DEBUG, 'updateDetailedStationStatus called', stationStatus);
+    
+    // Device Status Fields
+    const deviceUptime = document.getElementById('tempest-device-uptime');
+    const deviceNetwork = document.getElementById('tempest-device-network');
+    const deviceSignal = document.getElementById('tempest-device-signal');
+    const deviceLastObs = document.getElementById('tempest-device-last-obs');
+    const deviceSerial = document.getElementById('tempest-device-serial');
+    const deviceFirmware = document.getElementById('tempest-device-firmware');
+    const sensorStatus = document.getElementById('tempest-sensor-status');
+    const batteryStatus = document.getElementById('tempest-battery-status');
+
+    // Hub Status Fields
+    const hubUptime = document.getElementById('tempest-hub-uptime');
+    const hubNetwork = document.getElementById('tempest-hub-network');
+    const hubWifi = document.getElementById('tempest-hub-wifi');
+    const hubLastStatus = document.getElementById('tempest-hub-last-status');
+    const hubSerial = document.getElementById('tempest-hub-serial');
+    const hubFirmware = document.getElementById('tempest-hub-firmware');
+
+    // Debug: Check which fields are missing
+    console.log('🔍 Field Availability Check:', {
+        'deviceLastObs exists': !!deviceLastObs,
+        'deviceSerial exists': !!deviceSerial,
+        'deviceFirmware exists': !!deviceFirmware,
+        'hubLastStatus exists': !!hubLastStatus,
+        'hubSerial exists': !!hubSerial,
+        'hubFirmware exists': !!hubFirmware
+    });
+
+    if (stationStatus && stationStatus.batteryVoltage) {
+        console.log('📡 Using actual station status data');
+        // Update Device Status fields from actual station status
+        if (deviceUptime) deviceUptime.textContent = stationStatus.deviceUptime || '--';
+        if (deviceNetwork) deviceNetwork.textContent = stationStatus.deviceNetworkStatus || '--';
+        if (deviceSignal) deviceSignal.textContent = stationStatus.deviceSignal || '--';
+        if (deviceLastObs) deviceLastObs.textContent = stationStatus.deviceLastObs || '--';
+        if (deviceSerial) deviceSerial.textContent = stationStatus.deviceSerialNumber || '--';
+        if (deviceFirmware) deviceFirmware.textContent = stationStatus.deviceFirmware || '--';
+        if (sensorStatus) sensorStatus.textContent = stationStatus.sensorStatus || '--';
+        if (batteryStatus) batteryStatus.textContent = stationStatus.batteryStatus || '--';
+
+        // Update Hub Status fields from actual station status
+        if (hubUptime) hubUptime.textContent = stationStatus.hubUptime || '--';
+        if (hubNetwork) hubNetwork.textContent = stationStatus.hubNetworkStatus || '--';
+        if (hubWifi) hubWifi.textContent = stationStatus.hubWiFiSignal || '--';
+        if (hubLastStatus) hubLastStatus.textContent = stationStatus.hubLastStatus || '--';
+        if (hubSerial) hubSerial.textContent = stationStatus.hubSerialNumber || '--';
+        if (hubFirmware) hubFirmware.textContent = stationStatus.hubFirmware || '--';
+
+        debugLog(logLevels.DEBUG, 'Detailed station status updated from stationStatus data');
+    } else {
+        console.log('➖ Using "--" fallback for all fields');
+        // Use "--" for all fields when station status is not available
+        const allStatusFields = [
+            deviceUptime, deviceNetwork, deviceSignal, deviceLastObs, deviceSerial, deviceFirmware,
+            sensorStatus, batteryStatus, hubUptime, hubNetwork, hubWifi, hubLastStatus, hubSerial, hubFirmware
+        ];
+        
+        allStatusFields.forEach((field, index) => {
+            if (field) {
+                field.textContent = '--';
+                console.log(`✅ Set field ${field.id} to "--"`);
+            } else {
+                console.log(`❌ Field at index ${index} is null/undefined`);
+            }
+        });
+        
+        debugLog(logLevels.DEBUG, 'Station status data unavailable, using "--" for all detailed status fields');
+    }
 }
 
 function updateForecastDisplay(status) {
