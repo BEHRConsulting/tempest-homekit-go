@@ -472,6 +472,25 @@ Enable detailed logging for troubleshooting:
 
 ## Development
 
+### GoDoc Server
+Browse the complete Go documentation and API references locally:
+```bash
+# Start GoDoc server on port 6060 (opens browser automatically)
+./scripts/start-godoc.sh
+
+# Start on custom port without opening browser
+./scripts/start-godoc.sh --port 8080 --no-browser
+
+# View help
+./scripts/start-godoc.sh --help
+```
+
+Then visit `http://localhost:6060` to browse:
+- Package documentation for all modules (`pkg/config`, `pkg/weather`, etc.)
+- Function and type definitions with examples
+- Cross-referenced source code
+- Standard library documentation
+
 ### Running Tests
 ```bash
 # Run all tests

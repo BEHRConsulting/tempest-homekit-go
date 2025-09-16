@@ -22,6 +22,34 @@ Platform-specific build script that compiles the Go application for the current 
 - `tempest-homekit-go-macos-amd64` - macOS x86_64
 - `tempest-homekit-go-macos-arm64` - macOS ARM64 (Apple Silicon)
 
+### `start-godoc.sh`
+Starts a local GoDoc server for browsing Go documentation and API references.
+
+**Features:**
+- Auto-installs `godoc` if not present
+- Configurable port (default: 6060)
+- Auto-opens browser (optional)
+- Cross-platform support (macOS, Linux, Windows)
+- Port conflict detection
+
+**Usage:**
+```bash
+# Start on default port 6060 with browser
+./scripts/start-godoc.sh
+
+# Start on custom port without browser
+./scripts/start-godoc.sh --port 8080 --no-browser
+
+# Show help
+./scripts/start-godoc.sh --help
+```
+
+**Environment Variables:**
+- `GODOC_PORT`: Set default port (default: 6060)
+- `OPEN_BROWSER`: Set to 'false' to disable auto browser open
+
+**Access:** http://localhost:6060 (or your configured port)
+
 ### `build-cross-platform.sh`
 Cross-platform build script that compiles the Go application for all supported platforms.
 
