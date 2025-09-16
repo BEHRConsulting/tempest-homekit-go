@@ -17,19 +17,41 @@ in the web dashboard, As with the light box, use the table at https://en.wikiped
 
 in the web dashboard temperature box, add a line for average temp on this day over the last 5 years.
 
-Add a trend line for the pressure graph.
+[] Adjust pressure to sea level and show that it is adjusted. Click to toggle.
 
-Adjust pressure to sea level and show that it is adjusted. Click to toggle.
+[x] [x] update readme.md, requirements.md, code_review.md
 
-update readme.md, requirements.md, core_review.md
-
-Update readme.md to show you and I are the authors. Add a reference section to show what you may have used in this program
+[x] Update readme.md to show you and I are the authors. Add a reference section to show what you may have used in this program
 
 lets re-implment the homekit sensors. Place all sensors in the Tempest Weather group. All sensors report a number. Sensors: (1) Wind Average: floating point, (2) Wind Guest: floating point, (3) wind direction: integer 0-360, (4) Air temperature: floating point, (5) relitive humidity: integer, percentage, (6) lux: floating, range: 0.0001 - 100000, (7) uv: integer, (8) rain: floating, (9) percipition type: integer, (10)lightning strike count: integer, (11) lightning strike distance: integer, (12) lightning strike count: integer
 
 
-on the web console, add fair, clearing, storm, etc to the pressure card based on preasure history. Add tool tip showing table to calculation as with the light card
+[x] on the web console, add fair, clearing, storm, etc to the pressure card based on preasure history. Add tool tip showing table to calculation as with the light card
 
-web console, include precipitation_type on rain card
+[x] web console, include precipitation_type on rain card
 
-can we move all javascript to script.js and keep the html clean? with loglevel dubug shouls also include calculated values, api calls and responces
+[x] can we move all javascript to script.js and keep the html clean? with loglevel dubug shouls also include calculated values, api calls and responces
+
+[x] web console, allow grid to expand past 3 wide for larger screens
+
+[x] web console, Add a trend line for the pressure graph based on all saved data for preasure.
+
+[x] add the command line parameter --read-history to use the tempest API to preload 200 point, at 5 minute intervals, to keep API rate limiting happy.
+
+[x] if reading historical data, update card tempest station status to "Reading Historical Observations" and Historical line to <n>/200 when <n> is the sample being read.
+
+[x] web console, rain card, add local day rain accumulation
+
+[] add the command line parameter --use-fixed-weather <1-10> for ui testing. this setting will select a fixed setting from 1 to 10 for all sensor settings. Create 10 diverse weather settings that will prove out the ui. When using fixed weather - update the web console showing this is fixed data and not live data
+
+[x] web console, new card Tempest Forcast, fill card with tempest API GET /better_forecast
+
+[x] time format for card graphs: wind, uv index. use light as a guide
+
+[x] web console, wind card, add Winds gusting to <speed>
+
+[x] web console, tempest card, add battery level
+
+[] Fix homekit lux sensor
+
+[] fox homekit humidity sensor
