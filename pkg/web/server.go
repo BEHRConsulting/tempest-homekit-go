@@ -908,6 +908,18 @@ func (ws *WebServer) getDashboardHTML() string {
             margin-top: 5px;
         }
 
+        .rain-context {
+            position: relative;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .humidity-context {
+            position: relative;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
         .lux-tooltip {
             visibility: hidden;
             width: 300px;
@@ -918,7 +930,7 @@ func (ws *WebServer) getDashboardHTML() string {
             padding: 10px;
             position: absolute;
             z-index: 1;
-            top: 100%;
+            top: 0;
             left: 100%;
             margin-top: 2px;
             margin-left: 2px;
@@ -984,7 +996,148 @@ func (ws *WebServer) getDashboardHTML() string {
             margin-left: 5px;
         }
 
+        .humidity-tooltip {
+            visibility: hidden;
+            width: 380px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .humidity-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .humidity-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .humidity-tooltip-close {
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ccc;
+        }
+
+        .humidity-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .humidity-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .humidity-table th, .humidity-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        .humidity-table th {
+            background-color: #333;
+            font-weight: bold;
+        }
+
+        .humidity-table td:first-child {
+            text-align: center;
+            font-family: monospace;
+        }
+
+        .rain-tooltip {
+            visibility: hidden;
+            width: 320px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .rain-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .rain-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .rain-tooltip-close {
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ccc;
+        }
+
+        .rain-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .rain-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .rain-table th, .rain-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        .rain-table th {
+            background-color: #333;
+            font-weight: bold;
+        }
+
+        .rain-table td:first-child, .rain-table td:nth-child(2) {
+            text-align: right;
+            font-family: monospace;
+        }
+
         .lux-description {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .humidity-description {
             font-size: 0.8rem;
             color: #666;
             margin-top: 5px;
@@ -1006,7 +1159,7 @@ func (ws *WebServer) getDashboardHTML() string {
             padding: 12px;
             position: absolute;
             z-index: 1;
-            top: 100%;
+            top: 0;
             left: 100%;
             margin-top: 2px;
             margin-left: 2px;
@@ -1078,7 +1231,7 @@ func (ws *WebServer) getDashboardHTML() string {
             padding: 10px;
             position: absolute;
             z-index: 1;
-            top: 100%;
+            top: 0;
             left: 100%;
             margin-top: 2px;
             margin-left: 2px;
@@ -1476,7 +1629,33 @@ func (ws *WebServer) getDashboardHTML() string {
                     <span class="card-title">Humidity</span>
                 </div>
                 <div class="card-value" id="humidity">--</div>
-                <div class="card-unit">%</div>
+                <div class="card-unit">% <span class="info-icon" id="humidity-info-icon" title="Click for humidity reference information">ℹ️</span></div>
+                <div class="humidity-description" id="humidity-description">--</div>
+                <div class="humidity-context" id="humidity-context">
+                    <div class="humidity-tooltip" id="humidity-tooltip">
+                        <div class="humidity-tooltip-header">
+                            <strong>Humidity Comfort Levels:</strong>
+                            <span class="humidity-tooltip-close" id="humidity-tooltip-close" title="Close">×</span>
+                        </div>
+                        <table class="humidity-table">
+                            <thead>
+                                <tr>
+                                    <th>Humidity Range</th>
+                                    <th>Comfort Level</th>
+                                    <th>Effects</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>0-30%</td><td>Very Dry</td><td>Static electricity, dry skin, respiratory discomfort</td></tr>
+                                <tr><td>30-40%</td><td>Dry</td><td>Comfortable for most people, minimal static</td></tr>
+                                <tr><td>40-60%</td><td>Ideal</td><td>Most comfortable range for humans</td></tr>
+                                <tr><td>60-70%</td><td>Humid</td><td>Slightly sticky feeling, still comfortable</td></tr>
+                                <tr><td>70-80%</td><td>Very Humid</td><td>Sticky, harder to cool down, mold risk</td></tr>
+                                <tr><td>80%+</td><td>Extremely Humid</td><td>Very uncomfortable, high mold/mildew risk</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 <div class="feels-like-info" style="margin-top: 10px; font-size: 0.9rem; color: #666;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span>Heat Index (feels like):</span>
@@ -1538,7 +1717,64 @@ func (ws *WebServer) getDashboardHTML() string {
                     <span class="card-title">Rain & Lightning</span>
                 </div>
                 <div class="card-value" id="rain">--</div>
-                <div class="card-unit" id="rain-unit" onclick="toggleUnit('rain')">in</div>
+                <div class="card-unit" id="rain-unit" onclick="toggleUnit('rain')">in <span class="info-icon" id="rain-info-icon" title="Click for rain intensity reference table" onclick="event.stopPropagation(); toggleRainTooltip(event);">ℹ️</span></div>
+                <div class="rain-context" id="rain-context">
+                    <div class="rain-tooltip" id="rain-tooltip">
+                        <div class="rain-tooltip-header">
+                            <strong>Rain Intensity Reference Table:</strong>
+                            <span class="rain-tooltip-close" id="rain-tooltip-close" title="Close">×</span>
+                        </div>
+                        <table class="rain-table">
+                            <thead>
+                                <tr>
+                                    <th>Amount (mm)</th>
+                                    <th>Amount (in)</th>
+                                    <th>Description</th>
+                                    <th>Intensity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>0.0 - 0.25</td><td>0.00 - 0.01</td><td>No rain to very light drizzle</td><td>None/Trace</td></tr>
+                                <tr><td>0.25 - 1.0</td><td>0.01 - 0.04</td><td>Light drizzle</td><td>Very Light</td></tr>
+                                <tr><td>1.0 - 2.5</td><td>0.04 - 0.10</td><td>Light rain</td><td>Light</td></tr>
+                                <tr><td>2.5 - 7.5</td><td>0.10 - 0.30</td><td>Moderate rain</td><td>Moderate</td></tr>
+                                <tr><td>7.5 - 20</td><td>0.30 - 0.79</td><td>Heavy rain</td><td>Heavy</td></tr>
+                                <tr><td>20 - 50</td><td>0.79 - 1.97</td><td>Very heavy rain</td><td>Very Heavy</td></tr>
+                                <tr><td>50+</td><td>1.97+</td><td>Extreme rainfall</td><td>Extreme</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="rain-context" id="rain-context">
+                    <div class="rain-tooltip" id="rain-tooltip">
+                        <div class="rain-tooltip-header">
+                            <strong>Rain Intensity Reference Table:</strong>
+                            <span class="rain-tooltip-close" id="rain-tooltip-close" title="Close">×</span>
+                        </div>
+                        <table class="rain-table">
+                            <thead>
+                                <tr>
+                                    <th>Amount (mm)</th>
+                                    <th>Amount (in)</th>
+                                    <th>Description</th>
+                                    <th>Intensity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>0.0 - 0.25</td><td>0.00 - 0.01</td><td>No rain to very light drizzle</td><td>None/Trace</td></tr>
+                                <tr><td>0.25 - 1.0</td><td>0.01 - 0.04</td><td>Light drizzle</td><td>Very Light</td></tr>
+                                <tr><td>1.0 - 2.5</td><td>0.04 - 0.10</td><td>Light rain</td><td>Light</td></tr>
+                                <tr><td>2.5 - 7.5</td><td>0.10 - 0.30</td><td>Moderate rain</td><td>Moderate</td></tr>
+                                <tr><td>7.5 - 20</td><td>0.30 - 0.79</td><td>Heavy rain</td><td>Heavy</td></tr>
+                                <tr><td>20 - 50</td><td>0.79 - 1.97</td><td>Very heavy rain</td><td>Very Heavy</td></tr>
+                                <tr><td>50+</td><td>1.97+</td><td>Extreme rainfall</td><td>Extreme</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="rain-description" style="margin-top: 4px; font-size: 0.8rem; color: #555; text-align: left;">
+                    <span id="rain-description">--</span>
+                </div>
                 <div class="daily-rain-info" style="margin-top: 8px; padding: 6px 8px; background-color: rgba(54, 162, 235, 0.1); border-radius: 6px; border-left: 3px solid #36a2eb;">
                     <div class="daily-rain-content" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
                         <span style="color: #666; font-weight: 500;">Today Total:</span>
@@ -1554,6 +1790,32 @@ func (ws *WebServer) getDashboardHTML() string {
                 </div>
                 <div class="chart-container">
                     <canvas id="rain-chart"></canvas>
+                </div>
+                <div class="rain-tooltip" id="rain-tooltip">
+                    <div class="rain-tooltip-header">
+                        <strong>Rain Intensity Reference Table:</strong>
+                        <span class="rain-tooltip-close" id="rain-tooltip-close" title="Close">×</span>
+                    </div>
+                    <table class="rain-table">
+                        <thead>
+                            <tr>
+                                <th>Amount (mm)</th>
+                                <th>Amount (inches)</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>0</td><td>0</td><td>No precipitation ☀️</td></tr>
+                            <tr><td>≤0.1</td><td>≤0.004</td><td>Trace - Barely measurable 🌫️</td></tr>
+                            <tr><td>≤0.5</td><td>≤0.02</td><td>Very light - Gentle mist 💧</td></tr>
+                            <tr><td>≤2</td><td>≤0.08</td><td>Light - Soft drizzle 🌦️</td></tr>
+                            <tr><td>≤5</td><td>≤0.2</td><td>Moderate - Steady shower 🌧️</td></tr>
+                            <tr><td>≤15</td><td>≤0.6</td><td>Heavy - Strong downpour ⛈️</td></tr>
+                            <tr><td>≤30</td><td>≤1.2</td><td>Very heavy - Intense deluge 🌩️</td></tr>
+                            <tr><td>≤75</td><td>≤3.0</td><td>Extreme - Torrential rain ⛈️💦</td></tr>
+                            <tr><td>>75</td><td>>3.0</td><td>Cats and dogs - Epic deluge! 🐱🐶💧</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 

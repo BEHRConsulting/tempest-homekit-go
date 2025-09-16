@@ -453,7 +453,23 @@ function updateElevationDisplay() {
 function updateUnits() {
     document.getElementById('temperature-unit').textContent = units.temperature === 'celsius' ? '°C' : '°F';
     document.getElementById('wind-unit').textContent = units.wind === 'mph' ? 'mph' : 'kph';
-    document.getElementById('rain-unit').textContent = units.rain === 'inches' ? 'in' : 'mm';
+    
+    // Special handling for rain-unit to preserve the info icon
+    const rainUnitElement = document.getElementById('rain-unit');
+    const rainInfoIcon = rainUnitElement.querySelector('.info-icon');
+    const newRainUnitText = units.rain === 'inches' ? 'in ' : 'mm ';
+    
+    if (rainInfoIcon) {
+        rainUnitElement.innerHTML = newRainUnitText + rainInfoIcon.outerHTML;
+        // Re-attach click event listener to the rain info icon
+        const newRainInfoIcon = rainUnitElement.querySelector('.info-icon');
+        if (newRainInfoIcon) {
+            newRainInfoIcon.addEventListener('click', function(event) {
+                event.stopPropagation();
+                toggleRainTooltip(event);
+            });
+        }
+    }
     
     // Special handling for pressure-unit to preserve the info icon
     const pressureUnitElement = document.getElementById('pressure-unit');
@@ -825,6 +841,46 @@ function getLuxDescription(lux) {
     return description;
 }
 
+function getHumidityDescription(humidity) {
+    let description;
+    if (humidity <= 30) description = "Very dry - may cause discomfort";
+    else if (humidity <= 40) description = "Dry - comfortable for most people";
+    else if (humidity <= 60) description = "Comfortable humidity level";
+    else if (humidity <= 70) description = "Slightly humid - still comfortable";
+    else if (humidity <= 80) description = "Humid - may feel sticky";
+    else description = "Very humid - uncomfortable for most";
+    
+    debugLog(logLevels.DEBUG, 'Humidity description calculated', {
+        humidity: humidity,
+        description: description
+    });
+    
+    return description;
+}
+
+function getRainDescription(rainAccumMm) {
+    // Convert accumulated rainfall to descriptive categories
+    // Based on standard meteorological classifications and colorful descriptions
+    let description = "";
+    
+    if (rainAccumMm <= 0) description = "No precipitation ☀️";
+    else if (rainAccumMm <= 0.1) description = "Trace - Barely measurable 🌫️";
+    else if (rainAccumMm <= 0.5) description = "Very light - Gentle mist 💧";
+    else if (rainAccumMm <= 2) description = "Light - Soft drizzle 🌦️";
+    else if (rainAccumMm <= 5) description = "Moderate - Steady shower 🌧️";
+    else if (rainAccumMm <= 15) description = "Heavy - Strong downpour ⛈️";
+    else if (rainAccumMm <= 30) description = "Very heavy - Intense deluge 🌩️";
+    else if (rainAccumMm <= 75) description = "Extreme - Torrential rain ⛈️💦";
+    else description = "Cats and dogs - Epic deluge! 🐱🐶💧";
+    
+    debugLog(logLevels.DEBUG, 'Rain description calculated', {
+        rainMm: rainAccumMm,
+        description: description
+    });
+    
+    return description;
+}
+
 function getUVDescription(uvIndex) {
     let description;
     if (uvIndex <= 2) description = "Low - Low danger from the sun's UV rays";
@@ -942,6 +998,58 @@ function handleLuxTooltipClickOutside(event) {
     }
 }
 
+// Rain tooltip functions
+function toggleRainTooltip(event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    const tooltip = document.getElementById('rain-tooltip');
+    tooltip.classList.toggle('show');
+    debugLog(logLevels.DEBUG, 'Rain tooltip toggled', { visible: tooltip.classList.contains('show') });
+}
+
+function closeRainTooltip() {
+    const tooltip = document.getElementById('rain-tooltip');
+    tooltip.classList.remove('show');
+    debugLog(logLevels.DEBUG, 'Rain tooltip closed');
+}
+
+function handleRainTooltipClickOutside(event) {
+    const tooltip = document.getElementById('rain-tooltip');
+    const infoIcon = document.getElementById('rain-info-icon');
+    
+    if (tooltip && tooltip.classList.contains('show') && 
+        !tooltip.contains(event.target) && !infoIcon.contains(event.target)) {
+        closeRainTooltip();
+    }
+}
+
+// Humidity tooltip functions
+function toggleHumidityTooltip(event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    const tooltip = document.getElementById('humidity-tooltip');
+    tooltip.classList.toggle('show');
+    debugLog(logLevels.DEBUG, 'Humidity tooltip toggled', { visible: tooltip.classList.contains('show') });
+}
+
+function closeHumidityTooltip() {
+    const tooltip = document.getElementById('humidity-tooltip');
+    tooltip.classList.remove('show');
+    debugLog(logLevels.DEBUG, 'Humidity tooltip closed');
+}
+
+function handleHumidityTooltipClickOutside(event) {
+    const tooltip = document.getElementById('humidity-tooltip');
+    const infoIcon = document.getElementById('humidity-info-icon');
+    
+    if (tooltip && tooltip.classList.contains('show') && 
+        !tooltip.contains(event.target) && !infoIcon.contains(event.target)) {
+        closeHumidityTooltip();
+    }
+}
+
 function toggleHeatIndexTooltip() {
     const tooltip = document.getElementById('heat-index-tooltip');
     tooltip.classList.toggle('show');
@@ -1010,6 +1118,7 @@ function updateDisplay() {
 
     // Humidity and heat index
     document.getElementById('humidity').textContent = weatherData.humidity.toFixed(1);
+    document.getElementById('humidity-description').textContent = getHumidityDescription(weatherData.humidity);
     
     // Calculate and display heat index
     const heatIndexC = calculateHeatIndex(weatherData.temperature, weatherData.humidity);
@@ -1062,6 +1171,14 @@ function updateDisplay() {
         dailyRainElement.textContent = dailyRain.toFixed(3) + ' ' + rainUnit;
     }
     
+    // Display rain description based on current accumulated rain
+    const rainDescElement = document.getElementById('rain-description');
+    if (rainDescElement) {
+        // Convert to mm for description calculation (standard meteorological unit)
+        let rainMm = units.rain === 'inches' ? rain * 25.4 : rain;
+        rainDescElement.textContent = getRainDescription(rainMm);
+    }
+    
     // Precipitation type data
     const precipitationTypeElement = document.getElementById('precipitation-type');
     if (precipitationTypeElement) {
@@ -1100,6 +1217,7 @@ function updateDisplay() {
         originalDailyRain: weatherData.rainDailyTotal,
         convertedDailyRain: dailyRain,
         rainUnit: units.rain,
+        rainDescription: getRainDescription(units.rain === 'inches' ? rain * 25.4 : rain),
         lightningCount: weatherData.lightningStrikeCount,
         lightningDistance: weatherData.lightningStrikeAvg
     });
@@ -2220,6 +2338,10 @@ document.addEventListener('DOMContentLoaded', function() {
     attachEventListener('accessories-row', 'click', toggleAccessoriesExpansion, 'Toggle accessories expansion');
     attachEventListener('lux-info-icon', 'click', toggleLuxTooltip, 'Show/hide lux information tooltip');
     attachEventListener('lux-tooltip-close', 'click', closeLuxTooltip, 'Close lux tooltip');
+    attachEventListener('rain-info-icon', 'click', toggleRainTooltip, 'Show/hide rain information tooltip');
+    attachEventListener('rain-tooltip-close', 'click', closeRainTooltip, 'Close rain tooltip');
+    attachEventListener('humidity-info-icon', 'click', toggleHumidityTooltip, 'Show/hide humidity information tooltip');
+    attachEventListener('humidity-tooltip-close', 'click', closeHumidityTooltip, 'Close humidity tooltip');
     attachEventListener('heat-index-info-icon', 'click', toggleHeatIndexTooltip, 'Show/hide heat index tooltip');
     attachEventListener('heat-index-tooltip-close', 'click', closeHeatIndexTooltip, 'Close heat index tooltip');
     attachEventListener('uv-info-icon', 'click', toggleUVTooltip, 'Show/hide UV information tooltip');
@@ -2229,6 +2351,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Global click handlers for closing tooltips
     document.addEventListener('click', handleLuxTooltipClickOutside);
+    document.addEventListener('click', handleRainTooltipClickOutside);
+    document.addEventListener('click', handleHumidityTooltipClickOutside);
     document.addEventListener('click', handleHeatIndexTooltipClickOutside);
     document.addEventListener('click', handleUVTooltipClickOutside);
     document.addEventListener('click', handlePressureTooltipClickOutside);
