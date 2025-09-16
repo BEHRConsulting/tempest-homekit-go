@@ -425,35 +425,7 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, progress
 	return uniqueObs, nil
 }
 
-// parseObservations converts raw observation maps to Observation structs (for station API)
-func parseObservations(obsData []map[string]interface{}) []*Observation {
-	var observations []*Observation
 
-	for _, obsMap := range obsData {
-		obs := &Observation{
-			Timestamp:            int64(getFloat64(obsMap["timestamp"])),
-			WindLull:             getFloat64(obsMap["wind_lull"]),
-			WindAvg:              getFloat64(obsMap["wind_avg"]),
-			WindGust:             getFloat64(obsMap["wind_gust"]),
-			WindDirection:        getFloat64(obsMap["wind_direction"]),
-			StationPressure:      getFloat64(obsMap["station_pressure"]),
-			AirTemperature:       getFloat64(obsMap["air_temperature"]),
-			RelativeHumidity:     getFloat64(obsMap["relative_humidity"]),
-			Illuminance:          getFloat64(obsMap["brightness"]), // API uses "brightness" instead of "illuminance"
-			UV:                   getInt(obsMap["uv"]),
-			SolarRadiation:       getFloat64(obsMap["solar_radiation"]),
-			RainAccumulated:      getFloat64(obsMap["precip"]),                     // API uses "precip" instead of "rain_accumulated"
-			PrecipitationType:    getInt(obsMap["precip_analysis_type_yesterday"]), // Note: might need adjustment
-			LightningStrikeAvg:   getFloat64(obsMap["lightning_strike_last_distance"]),
-			LightningStrikeCount: getInt(obsMap["lightning_strike_count"]),
-			Battery:              0, // Not provided in historical data
-			ReportInterval:       0, // Not provided in historical data
-		}
-		observations = append(observations, obs)
-	}
-
-	return observations
-}
 
 // parseDeviceObservations converts device API observations (arrays) to Observation structs
 // Device API returns observations as arrays. Based on API testing, the structure is:

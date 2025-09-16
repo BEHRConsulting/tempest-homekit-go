@@ -85,22 +85,6 @@ type StatusResponse struct {
 	StationStatus *weather.StationStatus    `json:"stationStatus,omitempty"`
 }
 
-// Precipitation type helper function
-func getPrecipitationTypeDescription(precipType int) string {
-	switch precipType {
-	case 0:
-		return "None"
-	case 1:
-		return "Rain"
-	case 2:
-		return "Hail"
-	case 3:
-		return "Rain + Hail"
-	default:
-		return "Unknown"
-	}
-}
-
 // Calculate daily rain accumulation from historical data
 func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 	ws.mu.RLock()
@@ -583,12 +567,12 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 			HubWiFiSignal:       "Strong (-34)",
 			SensorStatus:        "Good",
 			// Add the missing fields that were requested
-			DeviceLastObs:       "2 minutes ago",
-			DeviceSerialNumber:  "ST-00178915",
-			DeviceFirmware:      "v143",
-			HubLastStatus:       "Online",
-			HubSerialNumber:     "HB-00178915",
-			HubFirmware:         "v177",
+			DeviceLastObs:      "2 minutes ago",
+			DeviceSerialNumber: "ST-00178915",
+			DeviceFirmware:     "v143",
+			HubLastStatus:      "Online",
+			HubSerialNumber:    "HB-00178915",
+			HubFirmware:        "v177",
 		}
 		response.StationStatus = fallbackStatus
 		if ws.logLevel == "debug" {

@@ -245,7 +245,11 @@ func getStationCoordinates(token, stationName string) (lat, lon float64, err err
 }
 
 // fetchWeatherFlowStationCoords attempts to get coordinates from WeatherFlow API
-func fetchWeatherFlowStationCoords(token, stationName string) (coords [2]float64, err error) {
+func fetchWeatherFlowStationCoords(_token, _stationName string) (coords [2]float64, err error) {
+	// Explicitly ignore unused parameters to satisfy linter
+	_ = _token
+	_ = _stationName
+	
 	// This would query the WeatherFlow API stations endpoint for detailed station info
 	// The API might have an endpoint like: /stations/:station_id/details that includes lat/lon
 	// For now, we return an error to fall back to known locations
