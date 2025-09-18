@@ -125,25 +125,15 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 
 		// Add Light service if enabled
 		if sensorConfig.Light {
-			// Add custom light service (HomeKit doesn't have built-in light sensor)
-			lightService := service.New("F190-0001-1000-8000-0026BB765291")
-			lightChar := characteristic.NewFloat("F191-0001-1000-8000-0026BB765291")
-			lightChar.Format = characteristic.FormatFloat
-			lightChar.Unit = "lux"
-			lightChar.Permissions = []string{characteristic.PermissionRead, characteristic.PermissionEvents}
-			lightChar.SetMinValue(0.0001)
-			lightChar.SetMaxValue(100000.0)
-			lightChar.SetStepValue(0.1)
-			lightChar.SetValue(0.0)
-			lightService.AddC(lightChar.C)
-			weatherAccessory.AddS(lightService)
-
+			// Try to use built-in Light Sensor service for presence detection
+			lightService := service.NewLightSensor()
+			weatherAccessory.AddS(lightService.S)
 			accessories["Ambient Light"] = &WeatherAccessoryModern{
 				AccessoryPtr: weatherAccessory,
-				WeatherValue: lightChar,
+				WeatherValue: lightService.CurrentAmbientLightLevel.Float,
 			}
 			if logLevel == "debug" {
-				log.Printf("DEBUG: Added light service to weather station")
+				log.Printf("DEBUG: Added built-in light sensor service to weather station")
 			}
 		}
 
