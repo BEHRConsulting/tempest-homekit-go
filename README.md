@@ -10,7 +10,27 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 ## Features
 
 - **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest station data every 60 seconds
-- **HomeKit Integration**: Creates individual HomeKit accessories for each weather sensor
+- **HomeKit Integratio---
+
+**Status**: ✅ **COMPLETE** - All planned features implemented and tested
+- ✅ Weather monitoring with 11 HomeKit sensors (Temperature + 10 custom weather sensors)
+- ✅ Complete HomeKit integration with compliance optimization
+- ✅ Modern web dashboard with external JavaScript architecture
+- ✅ TempestWX Device Status Scraping with `--use-web-status` flag:
+  - ✅ Headless browser automation using Chrome/Chromium
+  - ✅ 15-minute periodic updates with caching and fallback strategies
+  - ✅ 12+ device status fields including battery voltage, uptimes, signal strength
+  - ✅ Data source transparency with metadata and timestamps
+  - ✅ Graceful fallback chain: Browser → HTTP → API → Fallback
+- ✅ UV Index monitoring with NCBI reference data and EPA color coding
+- ✅ Information tooltips system with standardized positioning
+- ✅ HomeKit accessories status monitoring with enabled/disabled indicators
+- ✅ Interactive unit conversions with localStorage persistence
+- ✅ Cross-platform build and deployment with automated service management
+- ✅ Professional styling and enhanced user experience
+- ✅ Comprehensive logging and error handling
+- ✅ Database management with --cleardb command
+- ✅ Production-ready with graceful error recoverydividual HomeKit accessories for each weather sensor
 - **Multiple Sensor Support**: Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, UV Index, and Ambient Light
 - **Modern Web Dashboard**: Interactive web interface with real-time updates, unit conversions, and professional styling
   - **External JavaScript Architecture**: Clean separation of concerns with all JavaScript externalized to `script.js`
@@ -23,6 +43,13 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
   - **Interactive Tooltips**: Information tooltips for all sensors with standardized positioning
   - **Accessories Status**: Real-time display of enabled/disabled sensor status in HomeKit bridge card
 - **Cross-platform Support**: Runs on macOS, Linux, and Windows with automated service installation
+- **TempestWX Device Status Scraping** (Optional):
+  - **Headless Browser Integration**: Uses Chrome/Chromium to scrape detailed device status from TempestWX
+  - **15-Minute Periodic Updates**: Background scraping with automatic caching
+  - **Comprehensive Device Data**: Battery voltage, uptime, signal strength, firmware versions, serial numbers
+  - **Multiple Fallback Layers**: Headless browser → HTTP scraping → API fallback for reliability
+  - **Data Source Transparency**: Clear indication of data source (web-scraped, http-scraped, api, fallback)
+  - **Enable with `--use-web-status` flag**: Optional enhancement for users who want detailed device monitoring
 - **Flexible Configuration**: Command-line flags and environment variables for easy deployment
 - **Enhanced Debug Logging**: Multi-level logging with emoji indicators, calculated values, API calls/responses, and comprehensive DOM debugging
 
@@ -32,6 +59,7 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 - Go 1.24.2 or later
 - WeatherFlow Tempest station with API access
 - Apple device with HomeKit support
+- Google Chrome (optional, for detailed device status via `--use-web-status`)
 
 ### Build and Run
 ```bash
@@ -88,6 +116,7 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 
 ### Dependencies
 - `github.com/brutella/hap` - Modern HomeKit Accessory Protocol implementation (v0.0.32)
+- `github.com/chromedp/chromedp` - Headless browser automation for TempestWX status scraping
 - Custom weather services with unique UUIDs to prevent temperature conversion issues
 
 ## Usage
@@ -105,6 +134,7 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 - `--pin`: HomeKit pairing PIN (default: "00102003")
 - `--loglevel`: Logging level - debug, info, error (default: "error")
 - `--web-port`: Web dashboard port (default: "8080")
+- `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome)
 - `--cleardb`: Clear HomeKit database and reset device pairing
 
 #### Environment Variables
@@ -121,8 +151,74 @@ sudo ./scripts/install-service.sh --token "your-api-token"
   --station "Your Station Name" \
   --pin "12345678" \
   --web-port 8080 \
-  --loglevel info
+  --loglevel info \
+  --use-web-status
 ```
+
+### TempestWX Device Status Scraping
+
+Enable detailed device status monitoring with the `--use-web-status` flag:
+
+```bash
+# Basic usage with device status scraping
+./tempest-homekit-go --token "your-token" --use-web-status
+
+# With full configuration
+./tempest-homekit-go --token "your-token" --use-web-status --loglevel debug
+```
+
+**Requirements:**
+- Google Chrome or Chromium installed
+- Internet access to https://tempestwx.com
+
+**What it provides:**
+- **Battery Status**: Real battery voltage (e.g., "2.69V") and condition (Good/Fair/Poor)
+- **Device Uptime**: How long your Tempest device has been running
+- **Hub Uptime**: How long your Tempest hub has been running  
+- **Signal Strength**: Wi-Fi signal strength for hub, device signal strength
+- **Firmware Versions**: Current firmware for both hub and device
+- **Serial Numbers**: Hardware serial numbers for troubleshooting
+- **Last Activity**: Timestamps of last status updates and observations
+
+**Status API Response with Web Scraping:**
+```json
+{
+  "stationStatus": {
+    "batteryVoltage": "2.69V",
+    "batteryStatus": "Good",
+    "deviceUptime": "128d 6h 19m 29s",
+    "hubUptime": "63d 15h 55m 1s",
+    "hubWiFiSignal": "Strong (-42)",
+    "deviceSignal": "Good (-65)",
+    "hubSerialNumber": "HB-00168934",
+    "deviceSerialNumber": "ST-00163375",
+    "hubFirmware": "v329",
+    "deviceFirmware": "v179",
+    "dataSource": "web-scraped",
+    "lastScraped": "2025-09-18T03:15:30Z",
+    "scrapingEnabled": true
+  }
+}
+```
+
+**Without `--use-web-status` (default):**
+Basic status with API-only data:
+```json
+{
+  "stationStatus": {
+    "batteryVoltage": "--",
+    "dataSource": "api",
+    "scrapingEnabled": false
+  }
+}
+```
+
+**How it works:**
+1. **Headless Browser**: Launches Chrome to load the TempestWX status page
+2. **JavaScript Execution**: Waits for JavaScript to populate the device status data
+3. **Data Extraction**: Parses the loaded content to extract device information
+4. **15-Minute Updates**: Automatically refreshes data every 15 minutes
+5. **Graceful Fallbacks**: Falls back to HTTP scraping, then API-only if issues occur
 
 ## HomeKit Setup
 
@@ -184,7 +280,7 @@ Access the modern web dashboard at `http://localhost:8080` (or your configured p
 - `GET /`: Main dashboard HTML with external JavaScript
 - `GET /pkg/web/static/script.js`: External JavaScript file with cache-busting timestamps
 - `GET /api/weather`: JSON weather data with pressure analysis
-- `GET /api/status`: Service and HomeKit status
+- `GET /api/status`: Service and HomeKit status with optional TempestWX device status
 
 ## Architecture
 
@@ -203,7 +299,8 @@ tempest-homekit-go/
 │   ├── config/               # Configuration management
 │   │   └── config.go
 │   ├── weather/              # WeatherFlow API client
-│   │   └── client.go
+│   │   ├── client.go         # API client and TempestWX scraping
+│   │   └── status_manager.go # Periodic status scraping manager
 │   ├── homekit/              # HomeKit accessory setup
 │   │   ├── modern_setup.go   # Modern HAP library implementation
 │   │   └── custom_characteristics.go # Custom weather characteristics

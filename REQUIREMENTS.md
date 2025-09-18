@@ -60,6 +60,15 @@
 - ✅ **UV Index**: UV exposure level with NCBI reference categories
 - ✅ **Ambient Light**: Light level in lux
 
+#### TempestWX Device Status Scraping (Optional)
+- ✅ **Headless Browser Integration**: Use Chrome/Chromium to scrape JavaScript-loaded content
+- ✅ **Periodic Updates**: Automatic scraping every 15 minutes with background goroutine
+- ✅ **Multiple Fallback Strategy**: Headless browser → HTTP scraping → API fallback
+- ✅ **Device Status Data**: Battery voltage/status, device/hub uptimes, signal strength, firmware versions, serial numbers
+- ✅ **Data Source Transparency**: Clear metadata indicating scraping source and timestamp
+- ✅ **Graceful Degradation**: Continue operation even if Chrome is not available
+- ✅ **Status API Integration**: Include scraped data in `/api/status` endpoint response
+
 ### Configuration Management
 
 #### Command-Line Flags
@@ -97,6 +106,20 @@
 #### API Endpoints
 - ✅ **Stations**: `GET https://swd.weatherflow.com/swd/rest/stations?token={token}`
 - ✅ **Observations**: `GET https://swd.weatherflow.com/swd/rest/observations/station/{station_id}?token={token}`
+
+#### TempestWX Status Page Scraping
+- ✅ **Status Page**: `https://tempestwx.com/settings/station/{station_id}/status`
+- ✅ **Headless Browser**: Chrome/Chromium via `github.com/chromedp/chromedp`
+- ✅ **JavaScript Content Loading**: Wait for dynamic content population
+- ✅ **HTML Parsing**: Extract device status from populated DOM elements
+- ✅ **Status Manager**: Background service for periodic scraping and caching
+
+#### TempestWX Status Page Scraping
+- ✅ **Status Page**: `https://tempestwx.com/settings/station/{station_id}/status`
+- ✅ **Headless Browser**: Chrome/Chromium via `github.com/chromedp/chromedp`
+- ✅ **JavaScript Content Loading**: Wait for dynamic content population
+- ✅ **HTML Parsing**: Extract device status from populated DOM elements
+- ✅ **Status Manager**: Background service for periodic scraping and caching
 
 #### Data Structures
 
@@ -255,8 +278,19 @@ tempest-homekit-go/
 - ✅ `GetStations(token string)` → `[]Station`
 - ✅ `GetObservation(stationID int, token string)` → `*Observation`
 - ✅ `FindStationByName(stations []Station, name string)` → `*Station`
+- ✅ `GetStationStatus(stationID int, logLevel string)` → `*StationStatus`
+- ✅ `GetStationStatusWithBrowser(stationID int, logLevel string)` → `*StationStatus`
 - ✅ Handle JSON parsing and HTTP error responses
+- ✅ Implement headless browser automation with Chrome/Chromium
 - ✅ Implement proper timeout and retry logic
+
+**Status Manager (pkg/weather/status_manager.go):**
+- ✅ `NewStatusManager(stationID int, logLevel string, useWebScraping bool)` → `*StatusManager`
+- ✅ `Start()`: Begin periodic scraping with 15-minute intervals
+- ✅ `Stop()`: Gracefully stop scraping operations
+- ✅ `GetStatus()` → `*StationStatus`: Return cached status with metadata
+- ✅ Automatic fallback handling and error recovery
+- ✅ Thread-safe caching with read-write mutex
 
 **HomeKit Setup (pkg/homekit/setup.go):**
 - ✅ `NewWeatherAccessories()` → `*WeatherAccessories`
@@ -424,6 +458,9 @@ require (
 - ✅ HomeKit pairing successful
 - ✅ Debug logging shows all weather values
 - ✅ Web dashboard displays wind direction
+- ✅ `--use-web-status` enables device status scraping
+- ✅ Status API includes TempestWX device data when web scraping enabled
+- ✅ Graceful fallback when Chrome not available
 
 ### Quality Assurance
 - ✅ All unit tests pass
@@ -943,9 +980,11 @@ require (
 ```
 
 #### Runtime Requirements
-- Network access to WeatherFlow API
-- Local network access for HomeKit
-- Persistent storage for HomeKit database (`./db`)
+- ✅ Network access to WeatherFlow API
+- ✅ Network access to TempestWX (optional, for `--use-web-status`)
+- ✅ Google Chrome or Chromium browser (optional, for `--use-web-status`)
+- ✅ Local network access for HomeKit
+- ✅ Persistent storage for HomeKit database (`./db`)
 
 ## Future Enhancements
 
@@ -1131,13 +1170,19 @@ This requirements document provides complete specifications for implementing the
 - ✅ Weather monitoring with 11 HomeKit sensors (Temperature + 10 custom weather sensors)  
 - ✅ Complete HomeKit integration with compliance optimization
 - ✅ Modern web dashboard with external JavaScript architecture (~800+ lines externalized)
+- ✅ TempestWX Device Status Scraping Feature:
+  - ✅ `--use-web-status` command-line flag for optional enhancement
+  - ✅ Headless browser automation with Chrome/Chromium integration
+  - ✅ 15-minute periodic scraping with background goroutine management
+  - ✅ Multi-layer fallback strategy (Browser → HTTP → API → Fallback)
+  - ✅ Real device data extraction: battery voltage, uptimes, signal strength, firmware versions
+  - ✅ Data source transparency with metadata and timestamps in API responses
+  - ✅ Graceful operation when Chrome not available
+  - ✅ StatusManager architecture for thread-safe caching and updates
 - ✅ Pressure analysis system with interactive info icons and forecasting calculations
 - ✅ Enhanced debug logging with multi-level system (DEBUG, INFO, WARN, ERROR) and comprehensive DOM inspection
 - ✅ UV Index monitoring with NCBI reference data and EPA color coding
 - ✅ Information tooltips system with consistent positioning and proper event handling
-  - ✅ **Rain Info Icon Resolution**: Fixed unit conversion issues preserving rain tooltip functionality
-  - ✅ **Consistent Positioning**: All tooltips aligned with top-left to bottom-right of info icons
-  - ✅ **Enhanced Event Management**: Proper event propagation control preventing interface conflicts
 - ✅ HomeKit accessories status monitoring with enabled/disabled indicators
 - ✅ Interactive unit conversions with localStorage persistence
 - ✅ Static file serving with cache-busting timestamps
