@@ -355,6 +355,13 @@ func (ws *WebServer) UpdateForecast(forecast *weather.ForecastResponse) {
 	ws.forecastData = forecast
 }
 
+// UpdateBatteryFromObservation updates the status manager with battery data from the latest observation
+func (ws *WebServer) UpdateBatteryFromObservation(obs *weather.Observation) {
+	if ws.statusManager != nil {
+		ws.statusManager.UpdateBatteryFromObservation(obs)
+	}
+}
+
 func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
 
@@ -2077,6 +2084,10 @@ func (ws *WebServer) getDashboardHTML() string {
                 </div>
                 <div class="card-content">
                     <!-- General Status -->
+                    <div class="info-row">
+                        <span class="info-label">Data Source:</span>
+                        <span class="info-value" id="tempest-data-source">--</span>
+                    </div>
                     <div class="info-row">
                         <span class="info-label">Status:</span>
                         <span class="info-value" id="tempest-status">Disconnected</span>

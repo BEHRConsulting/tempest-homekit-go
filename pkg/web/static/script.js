@@ -1813,6 +1813,9 @@ function updateDetailedStationStatus(stationStatus) {
     const hubSerial = document.getElementById('tempest-hub-serial');
     const hubFirmware = document.getElementById('tempest-hub-firmware');
 
+    // Data Source Field
+    const dataSource = document.getElementById('tempest-data-source');
+
     // Debug: Check which fields are missing
     console.log('🔍 Field Availability Check:', {
         'deviceLastObs exists': !!deviceLastObs,
@@ -1824,7 +1827,9 @@ function updateDetailedStationStatus(stationStatus) {
     });
 
     if (stationStatus && stationStatus.batteryVoltage) {
-        console.log('📡 Using actual station status data');
+        // Update Data Source field
+        if (dataSource) dataSource.textContent = stationStatus.dataSource || 'api';
+        
         // Update Device Status fields from actual station status
         if (deviceUptime) deviceUptime.textContent = stationStatus.deviceUptime || '--';
         if (deviceNetwork) deviceNetwork.textContent = stationStatus.deviceNetworkStatus || '--';
@@ -1845,7 +1850,9 @@ function updateDetailedStationStatus(stationStatus) {
 
         debugLog(logLevels.DEBUG, 'Detailed station status updated from stationStatus data');
     } else {
-        console.log('➖ Using "--" fallback for all fields');
+        // Update Data Source field for fallback case
+        if (dataSource) dataSource.textContent = 'api';
+        
         // Use "--" for all fields when station status is not available
         const allStatusFields = [
             deviceUptime, deviceNetwork, deviceSignal, deviceLastObs, deviceSerial, deviceFirmware,
@@ -1855,9 +1862,6 @@ function updateDetailedStationStatus(stationStatus) {
         allStatusFields.forEach((field, index) => {
             if (field) {
                 field.textContent = '--';
-                console.log(`✅ Set field ${field.id} to "--"`);
-            } else {
-                console.log(`❌ Field at index ${index} is null/undefined`);
             }
         });
         

@@ -286,6 +286,11 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit
 	if cfg.LogLevel == "debug" {
 		log.Printf("DEBUG: Web dashboard updated with latest weather data")
 	}
+
+	// Update battery data in status manager if using fallback status
+	if !cfg.UseWebStatus {
+		webServer.UpdateBatteryFromObservation(obs)
+	}
 }
 
 func updateForecastData(station *weather.Station, cfg *config.Config, webServer *web.WebServer) {

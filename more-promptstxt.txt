@@ -17,14 +17,13 @@ in the web dashboard, As with the light box, use the table at https://en.wikiped
 
 in the web dashboard temperature box, add a line for average temp on this day over the last 5 years.
 
-[] Adjust pressure to sea level and show that it is adjusted. Click to toggle.
+[x] Adjust pressure to sea level and show that it is adjusted. Click to toggle.
 
-[x] [x] update readme.md, requirements.md, code_review.md
+[x] update readme.md, requirements.md, code_review.md
 
 [x] Update readme.md to show you and I are the authors. Add a reference section to show what you may have used in this program
 
-lets re-implment the homekit sensors. Place all sensors in the Tempest Weather group. All sensors report a number. Sensors: (1) Wind Average: floating point, (2) Wind Guest: floating point, (3) wind direction: integer 0-360, (4) Air temperature: floating point, (5) relitive humidity: integer, percentage, (6) lux: floating, range: 0.0001 - 100000, (7) uv: integer, (8) rain: floating, (9) percipition type: integer, (10)lightning strike count: integer, (11) lightning strike distance: integer, (12) lightning strike count: integer
-
+[x] lets re-implment the homekit sensors. Place all sensors in the Tempest Weather group. All sensors report a number. Sensors: (1) Wind Average: floating point, (2) Wind Guest: floating point, (3) wind direction: integer 0-360, (4) Air temperature: floating point, (5) relitive humidity: integer, percentage, (6) lux: floating, range: 0.0001 - 100000, (7) uv: integer, (8) rain: floating, (9) percipition type: integer, (10)lightning strike count: integer, (11) lightning strike distance: integer, (12) lightning strike count: integer
 
 [x] on the web console, add fair, clearing, storm, etc to the pressure card based on preasure history. Add tool tip showing table to calculation as with the light card
 
@@ -42,7 +41,7 @@ lets re-implment the homekit sensors. Place all sensors in the Tempest Weather g
 
 [x] web console, rain card, add local day rain accumulation
 
-[] add the command line parameter --use-fixed-weather <1-10> for ui testing. this setting will select a fixed setting from 1 to 10 for all sensor settings. Create 10 diverse weather settings that will prove out the ui. When using fixed weather - update the web console showing this is fixed data and not live data
+[] add the command line parameter --use-generated-weather for ui testing. 
 
 [x] web console, new card Tempest Forcast, fill card with tempest API GET /better_forecast
 
@@ -52,7 +51,7 @@ lets re-implment the homekit sensors. Place all sensors in the Tempest Weather g
 
 [x] web console, tempest card, add battery level
 
-[] fox homekit humidity sensor
+[x] fox homekit humidity sensor
 
 [] fix homekit lux sensor
 

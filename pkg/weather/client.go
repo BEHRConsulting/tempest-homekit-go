@@ -798,7 +798,6 @@ func GetStationStatusWithBrowser(stationID int, logLevel string) (*StationStatus
 	}
 
 	// Add metadata about the scraping
-	status.DataSource = "web-scraped"
 	status.LastScraped = time.Now().UTC().Format(time.RFC3339)
 	status.ScrapingEnabled = true
 

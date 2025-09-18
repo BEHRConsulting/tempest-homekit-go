@@ -3,6 +3,7 @@
 package weather
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -111,14 +112,29 @@ func (sm *StatusManager) performScrape() {
 			// Fall back to regular HTTP scraping
 			status, err = GetStationStatus(sm.stationID, sm.logLevel)
 			if err == nil && sm.hasUsefulData(status) {
-				status.DataSource = "http-scraped"
+				status.DataSource = "api, web status page"
 				status.LastScraped = time.Now().UTC().Format(time.RFC3339)
 				status.ScrapingEnabled = true
+				if sm.logLevel == "debug" {
+					log.Printf("DEBUG: HTTP scraping succeeded with useful data")
+				}
+			} else if err == nil && !sm.hasUsefulData(status) {
+				if sm.logLevel == "debug" {
+					log.Printf("DEBUG: HTTP scraping succeeded but no useful data found")
+				}
 			}
 		} else if sm.hasUsefulData(status) {
 			// Browser scraping succeeded and got useful data
+			status.DataSource = "api, web status page"
+			status.LastScraped = time.Now().UTC().Format(time.RFC3339)
+			status.ScrapingEnabled = true
 			if sm.logLevel == "debug" {
 				log.Printf("DEBUG: Browser scraping succeeded with useful data")
+			}
+		} else if status != nil && !sm.hasUsefulData(status) {
+			if sm.logLevel == "debug" {
+				log.Printf("DEBUG: Browser scraping succeeded but no useful data found - Battery: %s, DeviceUptime: %s, HubUptime: %s",
+					status.BatteryVoltage, status.DeviceUptime, status.HubUptime)
 			}
 		}
 	}
@@ -149,21 +165,33 @@ func (sm *StatusManager) hasUsefulData(status *StationStatus) bool {
 	}
 
 	// Consider it successful if we got any of these key data points
-	return (status.BatteryVoltage != "" && status.BatteryVoltage != "--") ||
+	hasData := (status.BatteryVoltage != "" && status.BatteryVoltage != "--") ||
 		(status.DeviceUptime != "" && status.DeviceUptime != "--") ||
 		(status.HubUptime != "" && status.HubUptime != "--") ||
 		(status.DeviceNetworkStatus != "" && status.DeviceNetworkStatus != "--") ||
-		(status.HubNetworkStatus != "" && status.HubNetworkStatus != "--")
+		(status.HubNetworkStatus != "" && status.HubNetworkStatus != "--") ||
+		(status.DeviceSerialNumber != "" && status.DeviceSerialNumber != "--") ||
+		(status.HubSerialNumber != "" && status.HubSerialNumber != "--")
+
+	if sm.logLevel == "debug" {
+		log.Printf("DEBUG: hasUsefulData check - Battery: '%s', DeviceUptime: '%s', HubUptime: '%s', DeviceNetwork: '%s', HubNetwork: '%s', DeviceSerial: '%s', HubSerial: '%s' -> %t",
+			status.BatteryVoltage, status.DeviceUptime, status.HubUptime,
+			status.DeviceNetworkStatus, status.HubNetworkStatus,
+			status.DeviceSerialNumber, status.HubSerialNumber, hasData)
+	}
+
+	return hasData
 }
 
 // createFallbackStatus creates a status with fallback values and appropriate metadata
+// If latestObs is provided, it will use the battery voltage from the observation
 func (sm *StatusManager) createFallbackStatus() *StationStatus {
 	dataSource := "api"
 	if sm.useWebScraping {
-		dataSource = "fallback"
+		dataSource = "api" // Even when scraping is enabled but fails, we still have API data
 	}
 
-	return &StationStatus{
+	status := &StationStatus{
 		BatteryVoltage:      "--",
 		BatteryStatus:       "--",
 		DeviceUptime:        "--",
@@ -182,5 +210,28 @@ func (sm *StatusManager) createFallbackStatus() *StationStatus {
 		DataSource:          dataSource,
 		LastScraped:         time.Now().UTC().Format(time.RFC3339),
 		ScrapingEnabled:     sm.useWebScraping,
+	}
+
+	return status
+}
+
+// UpdateBatteryFromObservation updates the cached status with battery data from the latest observation
+func (sm *StatusManager) UpdateBatteryFromObservation(obs *Observation) {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+
+	if sm.cachedStatus == nil {
+		return
+	}
+
+	// Only update battery data if we're using API-only data (no scraping or scraping failed)
+	if sm.cachedStatus.DataSource == "api" || sm.cachedStatus.DataSource == "fallback" {
+		if obs != nil && obs.Battery > 0 {
+			sm.cachedStatus.BatteryVoltage = fmt.Sprintf("%.1fV", obs.Battery)
+			sm.cachedStatus.BatteryStatus = "Good" // Assume good status if we have battery data
+			if sm.logLevel == "debug" {
+				log.Printf("DEBUG: Updated battery data from observation: %s", sm.cachedStatus.BatteryVoltage)
+			}
+		}
 	}
 }
