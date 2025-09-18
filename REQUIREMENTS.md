@@ -179,7 +179,7 @@
 - ✅ **Lightning Distance**: Custom float characteristic (float, km) - UUID F161-0001-1000-8000-0026BB765291
 - ✅ **Precipitation Type**: Custom float characteristic (float, type) - UUID F171-0001-1000-8000-0026BB765291
 - ✅ **Humidity**: Custom float characteristic (float, percent) - UUID F181-0001-1000-8000-0026BB765291
-- ✅ **Ambient Light**: Custom float characteristic (float, lux) - UUID F191-0001-1000-8000-0026BB765291
+- ✅ **Ambient Light**: Built-in HomeKit Light Sensor service with CurrentAmbientLightLevel characteristic
 
 ### Web Dashboard Implementation
 
@@ -1192,3 +1192,5 @@ This requirements document provides complete specifications for implementing the
 - ✅ Comprehensive logging and error handling
 - ✅ Database management with --cleardb command
 - ✅ Production-ready with graceful error recovery
+- ✅ Built-in HomeKit Light Sensor service for lux measurement
+- ✅ Updated default sensor configuration (temp,lux,humidity)

@@ -134,6 +134,7 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 - `--pin`: HomeKit pairing PIN (default: "00102003")
 - `--loglevel`: Logging level - debug, info, error (default: "error")
 - `--web-port`: Web dashboard port (default: "8080")
+- `--sensors`: Sensors to enable - 'all', 'min' (temp,lux,humidity), 'temp-only', or comma-delimited list (temp,humidity,lux,wind,rain,pressure,uv,lightning) (default: "temp,lux,humidity")
 - `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome)
 - `--cleardb`: Clear HomeKit database and reset device pairing
 
@@ -143,6 +144,7 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 - `HOMEKIT_PIN`: HomeKit PIN
 - `LOG_LEVEL`: Logging level
 - `WEB_PORT`: Web dashboard port
+- `SENSORS`: Sensors to enable (default: "temp,lux,humidity")
 
 ### Example with Full Configuration
 ```bash
@@ -231,18 +233,18 @@ Basic status with API-only data:
 
 The following sensors will appear as separate HomeKit accessories:
 - **Temperature Sensor**: Air temperature in Celsius (uses standard HomeKit temperature characteristic)
+- **Humidity Sensor**: Relative humidity as percentage (uses standard HomeKit humidity characteristic)
+- **Light Sensor**: Ambient light level in lux (uses built-in HomeKit Light Sensor service)
 - **Custom Wind Speed Sensor**: Wind speed in miles per hour (custom service prevents unit conversion)
 - **Custom Wind Gust Sensor**: Wind gust speed in miles per hour (custom service)
 - **Custom Wind Direction Sensor**: Wind direction in cardinal format with degrees (custom service)
-- **Custom Humidity Sensor**: Relative humidity as percentage (custom service)
 - **Custom Rain Sensor**: Rain accumulation in inches (custom service)
 - **Custom UV Index Sensor**: UV index value (custom service)
 - **Custom Lightning Count Sensor**: Lightning strike count (custom service)
 - **Custom Lightning Distance Sensor**: Lightning strike distance (custom service)
 - **Custom Precipitation Type Sensor**: Precipitation type indicator (custom service)
-- **Custom Light Sensor**: Ambient light level in lux (custom service)
 
-**Note**: Custom sensors use unique service UUIDs to prevent HomeKit's automatic temperature unit conversion, ensuring accurate display of weather data without unwanted Celsius-to-Fahrenheit conversion.
+**Note**: The application uses a mix of standard HomeKit services (Temperature, Humidity, Light) and custom services for specialized weather sensors. Custom sensors use unique service UUIDs to prevent HomeKit's automatic temperature unit conversion, ensuring accurate display of weather data without unwanted Celsius-to-Fahrenheit conversion.
 
 ## Web Dashboard
 

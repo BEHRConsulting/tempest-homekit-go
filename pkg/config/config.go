@@ -40,7 +40,7 @@ func LoadConfig() *Config {
 		Pin:         getEnvOrDefault("HOMEKIT_PIN", "00102003"),
 		LogLevel:    getEnvOrDefault("LOG_LEVEL", "error"),
 		WebPort:     getEnvOrDefault("WEB_PORT", "8080"),
-		Sensors:     getEnvOrDefault("SENSORS", "min"),
+		Sensors:     getEnvOrDefault("SENSORS", "temp,lux,humidity"),
 		Elevation:   275.2, // 903ft default elevation in meters
 	}
 
@@ -51,7 +51,7 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.Pin, "pin", cfg.Pin, "HomeKit PIN")
 	flag.StringVar(&cfg.LogLevel, "loglevel", cfg.LogLevel, "Log level (debug, info, error)")
 	flag.StringVar(&cfg.WebPort, "web-port", cfg.WebPort, "Web dashboard port")
-	flag.StringVar(&cfg.Sensors, "sensors", cfg.Sensors, "Sensors to enable: 'all', 'min', 'temp-only', or comma-delimited list (temp,humidity,lux,wind,rain,pressure)")
+	flag.StringVar(&cfg.Sensors, "sensors", cfg.Sensors, "Sensors to enable: 'all', 'min' (temp,lux,humidity), 'temp-only', or comma-delimited list (temp,humidity,lux,wind,rain,pressure)")
 	flag.StringVar(&elevationStr, "elevation", "", "Station elevation (e.g., 903ft, 275m). If not provided, elevation will be auto-detected from coordinates")
 	flag.BoolVar(&cfg.ClearDB, "cleardb", false, "Clear HomeKit database and reset device pairing")
 	flag.BoolVar(&cfg.ReadHistory, "read-history", false, "Preload last 24 hours of weather data from Tempest API")
@@ -149,7 +149,9 @@ func ParseSensorConfig(sensorsFlag string) SensorConfig {
 	case "min":
 		return SensorConfig{
 			Temperature: true,
-			// Only temperature sensor is HomeKit compliant - others cause "out of compliance" errors
+			Humidity:    true,
+			Light:       true,
+			// Core sensors: temperature, humidity, and lux for comprehensive weather monitoring
 		}
 	case "temp-only":
 		return SensorConfig{
