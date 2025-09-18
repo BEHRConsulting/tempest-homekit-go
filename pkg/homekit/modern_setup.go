@@ -91,7 +91,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 		weatherInfo := accessory.Info{
 			Name:         "Tempest Weather Station",
 			SerialNumber: "TWS-001",
-			Manufacturer: "WeatherFlow", 
+			Manufacturer: "WeatherFlow",
 			Model:        "Tempest",
 			Firmware:     "1.0.0",
 		}
@@ -110,7 +110,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 			}
 		}
 
-		// Add Humidity service if enabled  
+		// Add Humidity service if enabled
 		if sensorConfig.Humidity {
 			humidityService := service.NewHumiditySensor()
 			weatherAccessory.AddS(humidityService.S)

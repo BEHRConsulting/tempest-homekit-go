@@ -17,7 +17,7 @@ import (
 
 // StartService initializes and starts the Tempest HomeKit service with the provided configuration.
 // It sets up HomeKit accessories, starts the web server, and begins weather data polling.
-func StartService(cfg *config.Config) error {
+func StartService(cfg *config.Config, version string) error {
 	// Set log level
 	setLogLevel(cfg.LogLevel)
 
@@ -72,7 +72,7 @@ func StartService(cfg *config.Config) error {
 	}
 
 	// Setup web dashboard
-	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus)
+	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version)
 	webServer.SetStationName(station.Name)
 	go func() {
 		defer func() {

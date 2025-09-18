@@ -27,8 +27,9 @@ type Config struct {
 	Sensors      string
 	ReadHistory  bool
 	TestAPI      bool
-	UseWebStatus bool // Enable headless browser scraping of TempestWX status
+	UseWebStatus bool    // Enable headless browser scraping of TempestWX status
 	Elevation    float64 // elevation in meters
+	Version      bool    // Show version and exit
 }
 
 // LoadConfig initializes and returns a new Config struct with values from
@@ -57,6 +58,7 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.ReadHistory, "read-history", false, "Preload last 24 hours of weather data from Tempest API")
 	flag.BoolVar(&cfg.TestAPI, "test-api", false, "Test WeatherFlow API endpoints and data points")
 	flag.BoolVar(&cfg.UseWebStatus, "use-web-status", false, "Enable headless browser scraping of TempestWX status page every 15 minutes")
+	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
 
 	// Parse flags but check if elevation was actually provided
 	flag.Parse()
@@ -253,7 +255,7 @@ func fetchWeatherFlowStationCoords(_token, _stationName string) (coords [2]float
 	// Explicitly ignore unused parameters to satisfy linter
 	_ = _token
 	_ = _stationName
-	
+
 	// This would query the WeatherFlow API stations endpoint for detailed station info
 	// The API might have an endpoint like: /stations/:station_id/details that includes lat/lon
 	// For now, we return an error to fall back to known locations

@@ -429,8 +429,6 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, progress
 	return uniqueObs, nil
 }
 
-
-
 // parseDeviceObservations converts device API observations (arrays) to Observation structs
 // Device API returns observations as arrays. Based on API testing, the structure is:
 // [0]: timestamp, [1]: wind_lull, [2]: wind_avg, [3]: wind_gust, [4]: wind_direction, [5]: ?,
@@ -553,9 +551,9 @@ type StationStatus struct {
 	BatteryStatus       string `json:"batteryStatus"`
 	SensorStatus        string `json:"sensorStatus"`
 	// Metadata for tracking data source and freshness
-	DataSource          string `json:"dataSource"`          // "web-scraped", "api", "fallback"
-	LastScraped         string `json:"lastScraped"`         // ISO 8601 timestamp when data was scraped
-	ScrapingEnabled     bool   `json:"scrapingEnabled"`     // Whether web scraping is enabled
+	DataSource      string `json:"dataSource"`      // "web-scraped", "api", "fallback"
+	LastScraped     string `json:"lastScraped"`     // ISO 8601 timestamp when data was scraped
+	ScrapingEnabled bool   `json:"scrapingEnabled"` // Whether web scraping is enabled
 }
 
 // GetStationStatus scrapes the TempestWX station status page for detailed device information
@@ -627,7 +625,7 @@ func parseStationStatusHTML(html string, logLevel string) (*StationStatus, error
 	}
 
 	// Extract data using the actual HTML structure: <span class="lv-param-label">Label</span>...<span class="lv-value-display">Value</span>
-	
+
 	// Extract Battery Voltage - pattern: "Good (2.69v)" from Battery Voltage row
 	// Handle multi-line whitespace between tags
 	batteryPattern := regexp.MustCompile(`<span class="lv-param-label">Battery Voltage</span>.*?<span class="lv-value-display"[^>]*>\s*([^<(]*?)\s*\(([0-9.]+)v\)\s*</span>`)
@@ -656,11 +654,11 @@ func parseStationStatusHTML(html string, logLevel string) (*StationStatus, error
 	// Extract Uptime values - look for both Hub and Device uptime patterns
 	uptimePattern := regexp.MustCompile(`<span class="lv-param-label">Uptime</span>.*?<span class="lv-value-display">([0-9]+d\s+[0-9]+h\s+[0-9]+m\s+[0-9]+s)</span>`)
 	uptimeMatches := uptimePattern.FindAllStringSubmatch(html, -1)
-	
+
 	if logLevel == "debug" {
 		fmt.Printf("DEBUG: Found %d uptime matches\n", len(uptimeMatches))
 	}
-	
+
 	if len(uptimeMatches) >= 2 {
 		// First uptime is Hub, second is Device (based on HTML order)
 		status.HubUptime = uptimeMatches[0][1]    // "63d 13h 6m 1s"
@@ -805,7 +803,7 @@ func GetStationStatusWithBrowser(stationID int, logLevel string) (*StationStatus
 	status.ScrapingEnabled = true
 
 	if logLevel == "debug" {
-		fmt.Printf("DEBUG: Browser-scraped station status - Battery: %s, Device Uptime: %s\n", 
+		fmt.Printf("DEBUG: Browser-scraped station status - Battery: %s, Device Uptime: %s\n",
 			status.BatteryVoltage, status.DeviceUptime)
 	}
 

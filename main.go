@@ -19,6 +19,14 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
+	// Handle version flag
+	if cfg.Version {
+		fmt.Println("tempest-homekit-go v1.2.0")
+		fmt.Println("Built with Go 1.24.2")
+		fmt.Println("HomeKit integration for WeatherFlow Tempest weather stations")
+		os.Exit(0)
+	}
+
 	// Handle API testing if requested
 	if cfg.TestAPI {
 		log.Println("TestAPI flag detected, running API endpoint tests...")
@@ -37,7 +45,7 @@ func main() {
 	}
 
 	log.Printf("Starting service with config: WebPort=%s, LogLevel=%s", cfg.WebPort, cfg.LogLevel)
-	err := service.StartService(cfg)
+	err := service.StartService(cfg, "1.2.0")
 	if err != nil {
 		log.Fatalf("Service failed: %v", err)
 	}

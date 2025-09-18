@@ -40,6 +40,7 @@ type WebServer struct {
 		description string
 	}
 	statusManager *weather.StatusManager // Manages periodic status scraping
+	version       string                 // application version
 	mu            sync.RWMutex
 }
 
@@ -253,7 +254,7 @@ func getPressureWeatherForecast(pressure float64, trend string) string {
 	}
 }
 
-func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool) *WebServer {
+func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string) *WebServer {
 	ws := &WebServer{
 		port:           port,
 		elevation:      elevation,
@@ -262,6 +263,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 		maxHistorySize: 1000,
 		dataHistory:    make([]weather.Observation, 0, 1000),
 		startTime:      time.Now(),
+		version:        version,
 		homekitStatus: map[string]interface{}{
 			"bridge":      false,
 			"accessories": 0,
@@ -287,10 +289,10 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 
 func (ws *WebServer) Start() error {
 	log.Printf("Starting web server on port %s", ws.port)
-	
+
 	// Start status manager for periodic scraping
 	ws.statusManager.Start()
-	
+
 	return ws.server.ListenAndServe()
 }
 
@@ -558,7 +560,7 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	response.StationStatus = stationStatus
 
 	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Station status retrieved - Source: %s, Battery: %s, LastScraped: %s", 
+		log.Printf("DEBUG: Station status retrieved - Source: %s, Battery: %s, LastScraped: %s",
 			stationStatus.DataSource, stationStatus.BatteryVoltage, stationStatus.LastScraped)
 	}
 
@@ -2206,7 +2208,7 @@ func (ws *WebServer) getDashboardHTML() string {
 
         <div class="footer">
             <p>Last updated: <span id="last-update">--</span></p>
-            <p>Tempest HomeKit Service</p>
+            <p>Tempest HomeKit Service v` + ws.version + `</p>
         </div>
     <!-- External JavaScript Libraries -->
     <script src="https://unpkg.com/chart.js@4.4.4/dist/chart.umd.js"></script>

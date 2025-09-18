@@ -10,13 +10,13 @@ import (
 
 // StatusManager handles periodic scraping and caching of station status
 type StatusManager struct {
-	stationID       int
-	logLevel        string
-	useWebScraping  bool
-	cachedStatus    *StationStatus
-	mutex           sync.RWMutex
-	stopChan        chan bool
-	scrapingActive  bool
+	stationID      int
+	logLevel       string
+	useWebScraping bool
+	cachedStatus   *StationStatus
+	mutex          sync.RWMutex
+	stopChan       chan bool
+	scrapingActive bool
 }
 
 // NewStatusManager creates a new status manager
@@ -137,7 +137,7 @@ func (sm *StatusManager) performScrape() {
 	sm.mutex.Unlock()
 
 	if sm.logLevel == "debug" {
-		log.Printf("DEBUG: Status updated - Source: %s, Battery: %s, DeviceUptime: %s, LastScraped: %s", 
+		log.Printf("DEBUG: Status updated - Source: %s, Battery: %s, DeviceUptime: %s, LastScraped: %s",
 			status.DataSource, status.BatteryVoltage, status.DeviceUptime, status.LastScraped)
 	}
 }
@@ -147,13 +147,13 @@ func (sm *StatusManager) hasUsefulData(status *StationStatus) bool {
 	if status == nil {
 		return false
 	}
-	
+
 	// Consider it successful if we got any of these key data points
 	return (status.BatteryVoltage != "" && status.BatteryVoltage != "--") ||
-		   (status.DeviceUptime != "" && status.DeviceUptime != "--") ||
-		   (status.HubUptime != "" && status.HubUptime != "--") ||
-		   (status.DeviceNetworkStatus != "" && status.DeviceNetworkStatus != "--") ||
-		   (status.HubNetworkStatus != "" && status.HubNetworkStatus != "--")
+		(status.DeviceUptime != "" && status.DeviceUptime != "--") ||
+		(status.HubUptime != "" && status.HubUptime != "--") ||
+		(status.DeviceNetworkStatus != "" && status.DeviceNetworkStatus != "--") ||
+		(status.HubNetworkStatus != "" && status.HubNetworkStatus != "--")
 }
 
 // createFallbackStatus creates a status with fallback values and appropriate metadata

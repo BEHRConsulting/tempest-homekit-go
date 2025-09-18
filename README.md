@@ -137,6 +137,7 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 - `--sensors`: Sensors to enable - 'all', 'min' (temp,lux,humidity), 'temp-only', or comma-delimited list (temp,humidity,lux,wind,rain,pressure,uv,lightning) (default: "temp,lux,humidity")
 - `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome)
 - `--cleardb`: Clear HomeKit database and reset device pairing
+- `--version`: Show version information and exit
 
 #### Environment Variables
 - `TEMPEST_TOKEN`: WeatherFlow API token

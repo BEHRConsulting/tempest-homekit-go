@@ -223,7 +223,7 @@ go test ./pkg/service/...
 
 ### ✅ Fully Met Requirements
 - ✅ Modular code structure with 5 packages
-- ✅ Command-line options including --loglevel, --token, --station, --pin, --web-port
+- ✅ Command-line options including --loglevel, --token, --station, --pin, --web-port, --version
 - ✅ Comprehensive error handling with detailed messages
 - ✅ No runtime panics (extensive testing)
 - ✅ Unit tests with good coverage
