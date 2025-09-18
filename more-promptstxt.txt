@@ -52,6 +52,7 @@ lets re-implment the homekit sensors. Place all sensors in the Tempest Weather g
 
 [x] web console, tempest card, add battery level
 
-[] Fix homekit lux sensor
-
 [] fox homekit humidity sensor
+
+[] fix homekit lux sensor
+

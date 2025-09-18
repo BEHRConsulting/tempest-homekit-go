@@ -18,16 +18,17 @@ import (
 
 // Config holds all configuration parameters for the Tempest HomeKit service.
 type Config struct {
-	Token       string
-	StationName string
-	Pin         string
-	LogLevel    string
-	WebPort     string
-	ClearDB     bool
-	Sensors     string
-	ReadHistory bool
-	TestAPI     bool
-	Elevation   float64 // elevation in meters
+	Token        string
+	StationName  string
+	Pin          string
+	LogLevel     string
+	WebPort      string
+	ClearDB      bool
+	Sensors      string
+	ReadHistory  bool
+	TestAPI      bool
+	UseWebStatus bool // Enable headless browser scraping of TempestWX status
+	Elevation    float64 // elevation in meters
 }
 
 // LoadConfig initializes and returns a new Config struct with values from
@@ -55,6 +56,7 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.ClearDB, "cleardb", false, "Clear HomeKit database and reset device pairing")
 	flag.BoolVar(&cfg.ReadHistory, "read-history", false, "Preload last 24 hours of weather data from Tempest API")
 	flag.BoolVar(&cfg.TestAPI, "test-api", false, "Test WeatherFlow API endpoints and data points")
+	flag.BoolVar(&cfg.UseWebStatus, "use-web-status", false, "Enable headless browser scraping of TempestWX status page every 15 minutes")
 
 	// Parse flags but check if elevation was actually provided
 	flag.Parse()

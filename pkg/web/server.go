@@ -39,7 +39,8 @@ type WebServer struct {
 		totalSteps  int
 		description string
 	}
-	mu sync.RWMutex
+	statusManager *weather.StatusManager // Manages periodic status scraping
+	mu            sync.RWMutex
 }
 
 type WeatherResponse struct {
@@ -252,7 +253,7 @@ func getPressureWeatherForecast(pressure float64, trend string) string {
 	}
 }
 
-func NewWebServer(port string, elevation float64, logLevel string, stationID int) *WebServer {
+func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool) *WebServer {
 	ws := &WebServer{
 		port:           port,
 		elevation:      elevation,
@@ -267,6 +268,9 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 			"pin":         "00102003",
 		},
 	}
+
+	// Initialize status manager
+	ws.statusManager = weather.NewStatusManager(stationID, logLevel, useWebStatus)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", ws.handleDashboard)
@@ -283,6 +287,10 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 
 func (ws *WebServer) Start() error {
 	log.Printf("Starting web server on port %s", ws.port)
+	
+	// Start status manager for periodic scraping
+	ws.statusManager.Start()
+	
 	return ws.server.ListenAndServe()
 }
 
@@ -542,42 +550,16 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch station status from TempestWX (async, don't block on errors)
+	// Get station status from status manager (handles both scraping and fallback)
 	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Attempting to fetch station status for station ID %d", ws.stationID)
+		log.Printf("DEBUG: Retrieving station status from status manager")
 	}
-	if stationStatus, err := weather.GetStationStatus(ws.stationID, ws.logLevel); err == nil && stationStatus.BatteryVoltage != "" {
-		response.StationStatus = stationStatus
-		if ws.logLevel == "debug" {
-			log.Printf("DEBUG: Successfully fetched station status - Battery: %s, Device Uptime: %s", stationStatus.BatteryVoltage, stationStatus.DeviceUptime)
-		}
-	} else {
-		if ws.logLevel == "debug" {
-			log.Printf("DEBUG: Station status fetch failed or returned empty data, using fallback: %v", err)
-		}
-		// Create fallback status with known good values for Station 178915
-		// Based on known values from https://tempestwx.com/settings/station/178915/status
-		fallbackStatus := &weather.StationStatus{
-			BatteryVoltage:      "2.73V",
-			BatteryStatus:       "Good",
-			DeviceUptime:        "126d 4h 49m 29s",
-			HubUptime:           "61d 14h 26m 1s",
-			DeviceNetworkStatus: "Online",
-			HubNetworkStatus:    "Online",
-			DeviceSignal:        "Good (-63)",
-			HubWiFiSignal:       "Strong (-34)",
-			SensorStatus:        "Good",
-			// Add the missing fields that were requested
-			DeviceLastObs:      "2 minutes ago",
-			DeviceSerialNumber: "ST-00178915",
-			DeviceFirmware:     "v143",
-			HubLastStatus:      "Online",
-			HubSerialNumber:    "HB-00178915",
-			HubFirmware:        "v177",
-		}
-		response.StationStatus = fallbackStatus
-		if ws.logLevel == "debug" {
-			log.Printf("DEBUG: Using fallback station status - Battery: %s, Device Uptime: %s", fallbackStatus.BatteryVoltage, fallbackStatus.DeviceUptime)
-		}
+	stationStatus := ws.statusManager.GetStatus()
+	response.StationStatus = stationStatus
+
+	if ws.logLevel == "debug" {
+		log.Printf("DEBUG: Station status retrieved - Source: %s, Battery: %s, LastScraped: %s", 
+			stationStatus.DataSource, stationStatus.BatteryVoltage, stationStatus.LastScraped)
 	}
 
 	json.NewEncoder(w).Encode(response)

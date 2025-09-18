@@ -86,94 +86,72 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 	// Create standard HomeKit accessories based on sensor configuration
 	var accessoryCount int
 
-	// 1. Temperature Sensor (if enabled)
-	if sensorConfig.Temperature {
-		tempInfo := accessory.Info{
-			Name:         "Air Temperature",
-			SerialNumber: "AT-001",
-			Manufacturer: "WeatherFlow",
+	// Option 1: Create a single multi-service Tempest Weather accessory (if any sensors enabled)
+	if sensorConfig.Temperature || sensorConfig.Humidity || sensorConfig.Light {
+		weatherInfo := accessory.Info{
+			Name:         "Tempest Weather Station",
+			SerialNumber: "TWS-001",
+			Manufacturer: "WeatherFlow", 
 			Model:        "Tempest",
 			Firmware:     "1.0.0",
 		}
-		tempAccessory := accessory.NewTemperatureSensor(tempInfo)
-		accessories["Air Temperature"] = &WeatherAccessoryModern{
-			AccessoryPtr: tempAccessory.A,
-			WeatherValue: tempAccessory.TempSensor.CurrentTemperature.Float,
+		weatherAccessory := accessory.New(weatherInfo, accessory.TypeSensor)
+
+		// Add Temperature service if enabled
+		if sensorConfig.Temperature {
+			tempService := service.NewTemperatureSensor()
+			weatherAccessory.AddS(tempService.S)
+			accessories["Air Temperature"] = &WeatherAccessoryModern{
+				AccessoryPtr: weatherAccessory,
+				WeatherValue: tempService.CurrentTemperature.Float,
+			}
+			if logLevel == "debug" {
+				log.Printf("DEBUG: Added temperature service to weather station")
+			}
 		}
-		hapAccessories = append(hapAccessories, tempAccessory.A)
-		accessoryCount++
+
+		// Add Humidity service if enabled  
+		if sensorConfig.Humidity {
+			humidityService := service.NewHumiditySensor()
+			weatherAccessory.AddS(humidityService.S)
+			accessories["Relative Humidity"] = &WeatherAccessoryModern{
+				AccessoryPtr: weatherAccessory,
+				WeatherValue: humidityService.CurrentRelativeHumidity.Float,
+			}
+			if logLevel == "debug" {
+				log.Printf("DEBUG: Added humidity service to weather station")
+			}
+		}
+
+		// Add Light service if enabled
+		if sensorConfig.Light {
+			// Add custom light service (HomeKit doesn't have built-in light sensor)
+			lightService := service.New("F190-0001-1000-8000-0026BB765291")
+			lightChar := characteristic.NewFloat("F191-0001-1000-8000-0026BB765291")
+			lightChar.Format = characteristic.FormatFloat
+			lightChar.Unit = "lux"
+			lightChar.Permissions = []string{characteristic.PermissionRead, characteristic.PermissionEvents}
+			lightChar.SetMinValue(0.0001)
+			lightChar.SetMaxValue(100000.0)
+			lightChar.SetStepValue(0.1)
+			lightChar.SetValue(0.0)
+			lightService.AddC(lightChar.C)
+			weatherAccessory.AddS(lightService)
+
+			accessories["Ambient Light"] = &WeatherAccessoryModern{
+				AccessoryPtr: weatherAccessory,
+				WeatherValue: lightChar,
+			}
+			if logLevel == "debug" {
+				log.Printf("DEBUG: Added light service to weather station")
+			}
+		}
+
+		// Add the single multi-service accessory to HomeKit
+		hapAccessories = append(hapAccessories, weatherAccessory)
+		accessoryCount = 1
 		if logLevel == "debug" {
-			log.Printf("DEBUG: Created standard temperature sensor")
-		}
-	}
-
-	// 2. Humidity Sensor (if enabled) - using custom service since hap doesn't have HumiditySensor
-	if sensorConfig.Humidity {
-		humidityInfo := accessory.Info{
-			Name:         "Relative Humidity",
-			SerialNumber: "RH-001",
-			Manufacturer: "WeatherFlow",
-			Model:        "Tempest",
-			Firmware:     "1.0.0",
-		}
-		humidityAccessory := accessory.New(humidityInfo, accessory.TypeSensor)
-
-		// Add custom humidity service
-		humidityService := service.New("F180-0001-1000-8000-0026BB765291")
-		humidityChar := characteristic.NewFloat("F181-0001-1000-8000-0026BB765291")
-		humidityChar.Format = characteristic.FormatFloat
-		humidityChar.Unit = "percentage"
-		humidityChar.Permissions = []string{characteristic.PermissionRead, characteristic.PermissionEvents}
-		humidityChar.SetMinValue(0.0)
-		humidityChar.SetMaxValue(100.0)
-		humidityChar.SetStepValue(0.1)
-		humidityChar.SetValue(0.0)
-		humidityService.AddC(humidityChar.C)
-		humidityAccessory.AddS(humidityService)
-
-		accessories["Relative Humidity"] = &WeatherAccessoryModern{
-			AccessoryPtr: humidityAccessory,
-			WeatherValue: humidityChar,
-		}
-		hapAccessories = append(hapAccessories, humidityAccessory)
-		accessoryCount++
-		if logLevel == "debug" {
-			log.Printf("DEBUG: Created humidity sensor")
-		}
-	}
-
-	// 3. Light Sensor (if enabled) - using custom service since hap doesn't have LightSensor
-	if sensorConfig.Light {
-		lightInfo := accessory.Info{
-			Name:         "Ambient Light",
-			SerialNumber: "AL-001",
-			Manufacturer: "WeatherFlow",
-			Model:        "Tempest",
-			Firmware:     "1.0.0",
-		}
-		lightAccessory := accessory.New(lightInfo, accessory.TypeSensor)
-
-		// Add custom light service
-		lightService := service.New("F190-0001-1000-8000-0026BB765291")
-		lightChar := characteristic.NewFloat("F191-0001-1000-8000-0026BB765291")
-		lightChar.Format = characteristic.FormatFloat
-		lightChar.Unit = "lux"
-		lightChar.Permissions = []string{characteristic.PermissionRead, characteristic.PermissionEvents}
-		lightChar.SetMinValue(0.0001)
-		lightChar.SetMaxValue(100000.0)
-		lightChar.SetStepValue(0.1)
-		lightChar.SetValue(0.0)
-		lightService.AddC(lightChar.C)
-		lightAccessory.AddS(lightService)
-
-		accessories["Ambient Light"] = &WeatherAccessoryModern{
-			AccessoryPtr: lightAccessory,
-			WeatherValue: lightChar,
-		}
-		hapAccessories = append(hapAccessories, lightAccessory)
-		accessoryCount++
-		if logLevel == "debug" {
-			log.Printf("DEBUG: Created light sensor")
+			log.Printf("DEBUG: Created combined weather station accessory with multiple services")
 		}
 	}
 

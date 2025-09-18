@@ -4,13 +4,17 @@
 package weather
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
+
+	"github.com/chromedp/chromedp"
 )
 
 const (
@@ -548,6 +552,10 @@ type StationStatus struct {
 	BatteryVoltage      string `json:"batteryVoltage"`
 	BatteryStatus       string `json:"batteryStatus"`
 	SensorStatus        string `json:"sensorStatus"`
+	// Metadata for tracking data source and freshness
+	DataSource          string `json:"dataSource"`          // "web-scraped", "api", "fallback"
+	LastScraped         string `json:"lastScraped"`         // ISO 8601 timestamp when data was scraped
+	ScrapingEnabled     bool   `json:"scrapingEnabled"`     // Whether web scraping is enabled
 }
 
 // GetStationStatus scrapes the TempestWX station status page for detailed device information
@@ -607,124 +615,198 @@ func parseStationStatusHTML(html string, logLevel string) (*StationStatus, error
 
 	if logLevel == "debug" {
 		fmt.Printf("DEBUG: Parsing HTML content (%d bytes)\n", len(html))
-	}
-
-	// Debug: Print a portion of the HTML to understand the structure
-	if len(html) > 1000 && logLevel == "debug" {
-		fmt.Printf("DEBUG: First 1000 chars of HTML:\n%s\n", html[:1000])
-		end := 2000 + 500
-		if end > len(html) {
-			end = len(html)
-		}
-		if len(html) > 2000 {
-			fmt.Printf("DEBUG: HTML around position 2000:\n%s\n", html[2000:end])
+		// Look for battery voltage section in the HTML for debugging
+		if strings.Contains(html, "Battery Voltage") {
+			start := strings.Index(html, "Battery Voltage")
+			end := start + 200
+			if end > len(html) {
+				end = len(html)
+			}
+			fmt.Printf("DEBUG: Found Battery Voltage section: %s\n", html[start:end])
 		}
 	}
 
-	// Extract battery voltage - look for "Battery Voltage" followed by status and voltage
-	// Pattern: "Battery VoltageGood (2.73v)" or similar
-	batteryPattern := regexp.MustCompile(`Battery Voltage\s*([A-Za-z]+)\s*\(([0-9.]+)v\)`)
+	// Extract data using the actual HTML structure: <span class="lv-param-label">Label</span>...<span class="lv-value-display">Value</span>
+	
+	// Extract Battery Voltage - pattern: "Good (2.69v)" from Battery Voltage row
+	// Handle multi-line whitespace between tags
+	batteryPattern := regexp.MustCompile(`<span class="lv-param-label">Battery Voltage</span>.*?<span class="lv-value-display"[^>]*>\s*([^<(]*?)\s*\(([0-9.]+)v\)\s*</span>`)
 	if match := batteryPattern.FindStringSubmatch(html); len(match) >= 3 {
-		status.BatteryStatus = match[1]        // "Good", "Fair", etc.
-		status.BatteryVoltage = match[2] + "V" // "2.73V"
+		status.BatteryStatus = strings.TrimSpace(match[1]) // "Good"
+		status.BatteryVoltage = match[2] + "V"             // "2.69V"
 		if logLevel == "debug" {
 			fmt.Printf("DEBUG: Found battery info - Status: %s, Voltage: %s\n", status.BatteryStatus, status.BatteryVoltage)
 		}
 	} else {
-		if logLevel == "debug" {
-			fmt.Printf("DEBUG: Battery voltage pattern not found\n")
-		}
-	}
-
-	// Extract uptime patterns - look for device uptime (longer uptime typically belongs to device)
-	// Pattern: "126d 4h 49m 29s" - multiple patterns for different formats
-	uptimePatterns := []*regexp.Regexp{
-		regexp.MustCompile(`(\d+d\s+\d+h\s+\d+m\s+\d+s)`), // "126d 4h 49m 29s"
-		regexp.MustCompile(`(\d+d\s+\d+h\s+\d+m)`),        // "126d 4h 49m"
-		regexp.MustCompile(`(\d+h\s+\d+m\s+\d+s)`),        // "14h 26m 1s"
-		regexp.MustCompile(`(\d+m\s+\d+s)`),               // "26m 1s"
-	}
-
-	var foundUptimes []string
-	for _, pattern := range uptimePatterns {
-		matches := pattern.FindAllString(html, -1)
-		foundUptimes = append(foundUptimes, matches...)
-	}
-
-	if logLevel == "debug" {
-		fmt.Printf("DEBUG: Found %d uptime matches: %v\n", len(foundUptimes), foundUptimes)
-	}
-
-	if len(foundUptimes) >= 2 {
-		// If we have multiple uptimes, use the longer one as device uptime (devices typically run longer)
-		if len(foundUptimes[0]) > len(foundUptimes[1]) {
-			status.DeviceUptime = foundUptimes[0]
-			status.HubUptime = foundUptimes[1]
+		// Try alternative pattern with more flexible whitespace handling
+		altBatteryPattern := regexp.MustCompile(`(?s)Battery Voltage.*?([A-Za-z]+)\s+\(([0-9.]+)v\)`)
+		if match := altBatteryPattern.FindStringSubmatch(html); len(match) >= 3 {
+			status.BatteryStatus = strings.TrimSpace(match[1]) // "Good"
+			status.BatteryVoltage = match[2] + "V"             // "2.69V"
+			if logLevel == "debug" {
+				fmt.Printf("DEBUG: Found battery info (alt pattern) - Status: %s, Voltage: %s\n", status.BatteryStatus, status.BatteryVoltage)
+			}
 		} else {
-			status.DeviceUptime = foundUptimes[1]
-			status.HubUptime = foundUptimes[0]
-		}
-	} else if len(foundUptimes) == 1 {
-		status.DeviceUptime = foundUptimes[0]
-	}
-
-	// Extract network status - look for "Network Status" followed by "Online" or "Offline"
-	networkPattern := regexp.MustCompile(`Network Status\s*(Online|Offline)`)
-	networkMatches := networkPattern.FindAllStringSubmatch(html, -1)
-	if len(networkMatches) > 0 {
-		status.HubNetworkStatus = networkMatches[0][1]
-		if len(networkMatches) > 1 {
-			status.DeviceNetworkStatus = networkMatches[1][1]
-		}
-	}
-
-	// Extract signal strength patterns
-	signalPattern := regexp.MustCompile(`(Strong|Good|Fair|Poor)\s+\((-?\d+)\)`)
-	signalMatches := signalPattern.FindAllStringSubmatch(html, -1)
-	if logLevel == "debug" {
-		fmt.Printf("DEBUG: Found %d signal matches: %v\n", len(signalMatches), signalMatches)
-	}
-
-	for i, match := range signalMatches {
-		if len(match) >= 3 {
-			signalStr := fmt.Sprintf("%s (%s)", match[1], match[2])
-			if i == 0 {
-				status.HubWiFiSignal = signalStr // First signal is usually Wi-Fi
-			} else {
-				status.DeviceSignal = signalStr // Second signal is device signal
+			if logLevel == "debug" {
+				fmt.Printf("DEBUG: Battery voltage pattern not found\n")
 			}
 		}
 	}
 
-	// Extract serial numbers
-	hubSerialPattern := regexp.MustCompile(`HB-(\d+)`)
-	if match := hubSerialPattern.FindStringSubmatch(html); len(match) >= 2 {
-		status.HubSerialNumber = "HB-" + match[1]
+	// Extract Uptime values - look for both Hub and Device uptime patterns
+	uptimePattern := regexp.MustCompile(`<span class="lv-param-label">Uptime</span>.*?<span class="lv-value-display">([0-9]+d\s+[0-9]+h\s+[0-9]+m\s+[0-9]+s)</span>`)
+	uptimeMatches := uptimePattern.FindAllStringSubmatch(html, -1)
+	
+	if logLevel == "debug" {
+		fmt.Printf("DEBUG: Found %d uptime matches\n", len(uptimeMatches))
+	}
+	
+	if len(uptimeMatches) >= 2 {
+		// First uptime is Hub, second is Device (based on HTML order)
+		status.HubUptime = uptimeMatches[0][1]    // "63d 13h 6m 1s"
+		status.DeviceUptime = uptimeMatches[1][1] // "128d 3h 30m 29s"
+	} else if len(uptimeMatches) == 1 {
+		// If only one, assume it's device uptime
+		status.DeviceUptime = uptimeMatches[0][1]
 	}
 
-	deviceSerialPattern := regexp.MustCompile(`ST-(\d+)`)
-	if match := deviceSerialPattern.FindStringSubmatch(html); len(match) >= 2 {
-		status.DeviceSerialNumber = "ST-" + match[1]
+	// Extract Network Status (appears twice - Hub and Device)
+	networkPattern := regexp.MustCompile(`<span class="lv-param-label">Network Status</span>.*?<span class="lv-value-display"[^>]*>.*?([A-Za-z]+)\s*</span>`)
+	networkMatches := networkPattern.FindAllStringSubmatch(html, -1)
+	if len(networkMatches) >= 2 {
+		status.HubNetworkStatus = strings.TrimSpace(networkMatches[0][1])    // First "Online"
+		status.DeviceNetworkStatus = strings.TrimSpace(networkMatches[1][1]) // Second "Online"
 	}
 
-	// Extract firmware versions
-	firmwarePattern := regexp.MustCompile(`Firmware Revision\s*(\d+)`)
+	// Extract Wi-Fi Signal (Hub)
+	wifiPattern := regexp.MustCompile(`<span class="lv-param-label">Wi-Fi Signal \(RSSI\)</span>.*?<span class="lv-value-display">([^<]+)</span>`)
+	if match := wifiPattern.FindStringSubmatch(html); len(match) >= 2 {
+		status.HubWiFiSignal = strings.TrimSpace(match[1]) // "Strong (-32)"
+	}
+
+	// Extract Device Signal
+	deviceSignalPattern := regexp.MustCompile(`<span class="lv-param-label">Device Signal \(RSSI\)</span>.*?<span class="lv-value-display">([^<]+)</span>`)
+	if match := deviceSignalPattern.FindStringSubmatch(html); len(match) >= 2 {
+		status.DeviceSignal = strings.TrimSpace(match[1]) // "Good (-63)"
+	}
+
+	// Extract Serial Numbers
+	serialPattern := regexp.MustCompile(`<span class="lv-param-label">Serial Number</span>.*?<span class="lv-value-display">([^<]+)</span>`)
+	serialMatches := serialPattern.FindAllStringSubmatch(html, -1)
+	if len(serialMatches) >= 2 {
+		for _, match := range serialMatches {
+			serialNum := strings.TrimSpace(match[1])
+			if strings.HasPrefix(serialNum, "HB-") {
+				status.HubSerialNumber = serialNum
+			} else if strings.HasPrefix(serialNum, "ST-") {
+				status.DeviceSerialNumber = serialNum
+			}
+		}
+	}
+
+	// Extract Firmware Revisions
+	firmwarePattern := regexp.MustCompile(`<span class="lv-param-label">Firmware Revision</span>.*?<span class="lv-value-display">([^<]+)</span>`)
 	firmwareMatches := firmwarePattern.FindAllStringSubmatch(html, -1)
 	if len(firmwareMatches) >= 2 {
-		status.HubFirmware = firmwareMatches[0][1]
-		status.DeviceFirmware = firmwareMatches[1][1]
-	} else if len(firmwareMatches) == 1 {
-		status.DeviceFirmware = firmwareMatches[0][1]
+		status.HubFirmware = "v" + strings.TrimSpace(firmwareMatches[0][1])    // "v329"
+		status.DeviceFirmware = "v" + strings.TrimSpace(firmwareMatches[1][1]) // "v179"
 	}
 
-	// Set sensor status based on battery availability
-	if status.BatteryVoltage != "" {
-		status.SensorStatus = "Good"
+	// Extract Last Status Message (Hub)
+	lastStatusPattern := regexp.MustCompile(`<span class="lv-param-label">Last Status Message</span>.*?<span class="lv-value-display">([^<]+)</span>`)
+	if match := lastStatusPattern.FindStringSubmatch(html); len(match) >= 2 {
+		status.HubLastStatus = strings.TrimSpace(match[1]) // "09/17/2025 5:26:08 pm"
+	}
+
+	// Extract Last Observation (Device)
+	lastObsPattern := regexp.MustCompile(`<span class="lv-param-label">Last Observation</span>.*?<span class="lv-value-display">([^<]+)</span>`)
+	if match := lastObsPattern.FindStringSubmatch(html); len(match) >= 2 {
+		status.DeviceLastObs = strings.TrimSpace(match[1]) // "09/17/2025 5:25:45 pm"
+	}
+
+	// Extract Sensor Status
+	sensorStatusPattern := regexp.MustCompile(`<span class="lv-param-label">Sensor Status</span>.*?<span class="lv-value-display"[^>]*>.*?([A-Za-z]+)\s*</span>`)
+	if match := sensorStatusPattern.FindStringSubmatch(html); len(match) >= 2 {
+		status.SensorStatus = strings.TrimSpace(match[1]) // "Good"
 	}
 
 	if logLevel == "debug" {
 		fmt.Printf("DEBUG: Final parsed status - Battery: %s, DeviceUptime: %s, HubUptime: %s\n",
 			status.BatteryVoltage, status.DeviceUptime, status.HubUptime)
+	}
+
+	return status, nil
+}
+
+// GetStationStatusWithBrowser uses a headless browser to scrape the TempestWX status page
+// This version waits for JavaScript to load the content before parsing
+func GetStationStatusWithBrowser(stationID int, logLevel string) (*StationStatus, error) {
+	url := fmt.Sprintf("https://tempestwx.com/settings/station/%d/status", stationID)
+
+	if logLevel == "debug" {
+		fmt.Printf("DEBUG: Fetching station status with headless browser from %s\n", url)
+	}
+
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Create headless browser context
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("headless", true),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+	)
+
+	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
+	defer allocCancel()
+
+	taskCtx, taskCancel := chromedp.NewContext(allocCtx)
+	defer taskCancel()
+
+	var htmlContent string
+
+	// Run browser tasks
+	err := chromedp.Run(taskCtx,
+		chromedp.Navigate(url),
+		// Wait for the diagnostic info div to be populated
+		chromedp.WaitVisible(`#diagnostic-info ul.sw-list`, chromedp.ByID),
+		// Wait a bit more for JavaScript to finish loading content
+		chromedp.Sleep(3*time.Second),
+		// Get the HTML content of the diagnostic info section
+		chromedp.OuterHTML(`#diagnostic-info`, &htmlContent, chromedp.ByID),
+	)
+
+	if err != nil {
+		if logLevel == "debug" {
+			fmt.Printf("DEBUG: Headless browser failed: %v\n", err)
+		}
+		return nil, fmt.Errorf("failed to scrape status with browser: %v", err)
+	}
+
+	if logLevel == "debug" {
+		fmt.Printf("DEBUG: Retrieved %d bytes of HTML content from browser\n", len(htmlContent))
+	}
+
+	// Parse the HTML content
+	status, err := parseStationStatusHTML(htmlContent, logLevel)
+	if err != nil {
+		if logLevel == "debug" {
+			fmt.Printf("DEBUG: HTML parsing failed: %v\n", err)
+		}
+		return nil, err
+	}
+
+	// Add metadata about the scraping
+	status.DataSource = "web-scraped"
+	status.LastScraped = time.Now().UTC().Format(time.RFC3339)
+	status.ScrapingEnabled = true
+
+	if logLevel == "debug" {
+		fmt.Printf("DEBUG: Browser-scraped station status - Battery: %s, Device Uptime: %s\n", 
+			status.BatteryVoltage, status.DeviceUptime)
 	}
 
 	return status, nil
