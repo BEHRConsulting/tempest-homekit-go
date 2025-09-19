@@ -23,6 +23,8 @@
 - ✅ **Real-time Updates**: Update all sensor values with each weather poll
 - ✅ **Pairing**: Support HomeKit pairing with configurable PIN
 
+**Note**: The UV sensor uses the same HomeKit Light Sensor service as the lux sensor for compliance reasons. In the Home app, it will appear as "Light Sensor #2". Users should manually rename it to "UV Sensor" in the Home app for clarity.
+
 #### Web Dashboard
 - ✅ **HTTP Server**: Serve modern web interface on configurable port (default: 8080) with static file serving
 - ✅ **External JavaScript Architecture**: Complete separation of concerns with ~800+ lines moved to `script.js`

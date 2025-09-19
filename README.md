@@ -1,6 +1,8 @@
 # Tempest HomeKit Go
 
-A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on temperature, humidity, wind speed, rain accumulation, and wind direction. Includes a modern web dashboard with interactive unit conversions and cross-platform deployment scripts.
+A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on temperature, humidity, wind spee**Note**: The application uses a mix of standard HomeKit services (Temperature, Humidity, Light) and custom services for specialized weather sensors. Custom sensors use unique service UUIDs to prevent HomeKit's automatic temperature conversion, ensuring accurate display of weather data without unwanted Celsius-to-Fahrenheit conversion.
+
+**Note**: The UV sensor uses the same HomeKit Light Sensor service as the lux sensor for compliance reasons. In the Home app, it will appear as "Light Sensor #2". Users should manually rename it to "UV Sensor" in the Home app for clarity., rain accumulation, and wind direction. Includes a modern web dashboard with interactive unit conversions and cross-platform deployment scripts.
 
 ## Authors
 
