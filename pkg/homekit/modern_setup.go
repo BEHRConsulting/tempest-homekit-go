@@ -87,7 +87,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 	var accessoryCount int
 
 	// Option 1: Create a single multi-service Tempest Weather accessory (if any sensors enabled)
-	if sensorConfig.Temperature || sensorConfig.Humidity || sensorConfig.Light {
+	if sensorConfig.Temperature || sensorConfig.Humidity || sensorConfig.Light || sensorConfig.UV {
 		weatherInfo := accessory.Info{
 			Name:         "Tempest Weather Station",
 			SerialNumber: "TWS-001",
@@ -137,6 +137,22 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 			}
 		}
 
+		// Add UV service if enabled (using Light Sensor service with custom name)
+		if sensorConfig.UV {
+			// Use Light Sensor service for UV but with custom characteristic name
+			uvService := service.NewLightSensor()
+			// Rename the characteristic to indicate it's UV
+			uvService.CurrentAmbientLightLevel.Description = "UV Index"
+			weatherAccessory.AddS(uvService.S)
+			accessories["UV Index"] = &WeatherAccessoryModern{
+				AccessoryPtr: weatherAccessory,
+				WeatherValue: uvService.CurrentAmbientLightLevel.Float,
+			}
+			if logLevel == "debug" {
+				log.Printf("DEBUG: Added UV sensor service to weather station")
+			}
+		}
+
 		// Add the single multi-service accessory to HomeKit
 		hapAccessories = append(hapAccessories, weatherAccessory)
 		accessoryCount = 1
@@ -147,7 +163,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 
 	// Store all other sensors as null references to maintain API compatibility
 	allSensorNames := []string{
-		"Wind Speed", "Wind Gust", "Wind Direction", "Rain Accumulation", "UV Index",
+		"Wind Speed", "Wind Gust", "Wind Direction", "Rain Accumulation",
 		"Lightning Count", "Lightning Distance", "Precipitation Type",
 	}
 	// Add the configured sensors to null list if not enabled
@@ -185,7 +201,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 	if logLevel == "debug" {
 		log.Printf("DEBUG: Weather system created successfully with PIN: %s", pin)
 		log.Printf("DEBUG: HomeKit compliance: %d accessories created based on sensor configuration", accessoryCount)
-		log.Printf("DEBUG: Sensors enabled: Temp=%v, Humidity=%v, Light=%v", sensorConfig.Temperature, sensorConfig.Humidity, sensorConfig.Light)
+		log.Printf("DEBUG: Sensors enabled: Temp=%v, Humidity=%v, Light=%v, UV=%v", sensorConfig.Temperature, sensorConfig.Humidity, sensorConfig.Light, sensorConfig.UV)
 	}
 
 	return &WeatherSystemModern{

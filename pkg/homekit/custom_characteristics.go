@@ -66,9 +66,9 @@ type UVIndexCharacteristic struct {
 }
 
 func NewUVIndexCharacteristic() *UVIndexCharacteristic {
-	c := characteristic.NewFloat("F004-0001-1000-8000-0026BB765291") // Custom UUID
+	c := characteristic.NewFloat("00000001-0000-1000-8000-0026BB765291") // HomeKit-compliant custom UUID for UV Index
 	c.Format = characteristic.FormatFloat
-	c.Unit = "UV Index"
+	c.Unit = "UV Index" // Set unit to UV Index
 	c.Permissions = []string{characteristic.PermissionRead, characteristic.PermissionEvents}
 	c.SetMinValue(0.0)
 	c.SetMaxValue(15.0)
