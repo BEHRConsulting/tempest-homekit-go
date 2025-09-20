@@ -118,7 +118,7 @@ func runAPITests(cfg *config.Config) {
 	// Test 5: Get historical observations using day_offset
 	fmt.Println("\n5. Testing Historical Observations API (day_offset)...")
 	startTime := time.Now()
-	observations, err := weather.GetHistoricalObservations(station.StationID, cfg.Token)
+	observations, err := weather.GetHistoricalObservations(station.StationID, cfg.Token, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("❌ Failed to get historical observations: %v", err)
 	}

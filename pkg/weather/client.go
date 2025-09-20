@@ -262,12 +262,12 @@ func GetTempestDeviceID(station *Station) (int, error) {
 type ProgressCallback func(currentStep, totalSteps int, description string)
 
 // GetHistoricalObservations fetches historical weather data using the device-based endpoint with day_offset
-func GetHistoricalObservations(stationID int, token string) ([]*Observation, error) {
-	return GetHistoricalObservationsWithProgress(stationID, token, nil)
+func GetHistoricalObservations(stationID int, token string, logLevel string) ([]*Observation, error) {
+	return GetHistoricalObservationsWithProgress(stationID, token, logLevel, nil)
 }
 
 // GetHistoricalObservationsWithProgress fetches historical weather data with progress reporting
-func GetHistoricalObservationsWithProgress(stationID int, token string, progressCallback ProgressCallback) ([]*Observation, error) {
+func GetHistoricalObservationsWithProgress(stationID int, token string, logLevel string, progressCallback ProgressCallback) ([]*Observation, error) {
 	// First get station details to find the Tempest device ID
 	stationDetails, err := GetStationDetails(stationID, token)
 	if err != nil {
@@ -281,8 +281,10 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, progress
 
 	var allObservations []*Observation
 
-	fmt.Printf("INFO: Collecting historical data for station %d using device %d\n", stationID, deviceID)
-	fmt.Printf("INFO: Fetching today and yesterday's observations using day_offset parameter...\n")
+	if logLevel == "debug" {
+		fmt.Printf("DEBUG: Collecting historical data for station %d using device %d\n", stationID, deviceID)
+		fmt.Printf("DEBUG: Fetching today and yesterday's observations using day_offset parameter...\n")
+	}
 
 	successCount := 0
 	errorCount := 0
@@ -309,7 +311,9 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, progress
 		url := fmt.Sprintf("%s/observations/device/%d?day_offset=%d&token=%s",
 			BaseURL, deviceID, dayOffset, token)
 
-		fmt.Printf("INFO: Fetching observations for %s (day_offset=%d)...\n", dayName, dayOffset)
+		if logLevel == "debug" {
+			fmt.Printf("DEBUG: Fetching observations for %s (day_offset=%d)...\n", dayName, dayOffset)
+		}
 
 		resp, err := http.Get(url)
 		if err != nil {
@@ -348,7 +352,9 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, progress
 		if len(observations) > 0 {
 			allObservations = append(allObservations, observations...)
 			successCount++
-			fmt.Printf("INFO: Successfully retrieved %d observations for %s\n", len(observations), dayName)
+			if logLevel == "debug" {
+				fmt.Printf("DEBUG: Successfully retrieved %d observations for %s\n", len(observations), dayName)
+			}
 
 			// Report progress after successful fetch
 			if progressCallback != nil {
@@ -362,8 +368,10 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, progress
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	fmt.Printf("INFO: Collection complete - %d successful calls, %d errors, %d total observations\n",
-		successCount, errorCount, len(allObservations))
+	if logLevel == "debug" {
+		fmt.Printf("DEBUG: Collection complete - %d successful calls, %d errors, %d total observations\n",
+			successCount, errorCount, len(allObservations))
+	}
 
 	// Sort observations by timestamp (newest first)
 	sort.Slice(allObservations, func(i, j int) bool {
@@ -394,14 +402,16 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, progress
 		timeSpanHours = newestTime.Sub(oldestTime).Hours()
 	}
 
-	fmt.Printf("INFO: Final dataset: %d unique observations spanning %.1f hours of data\n",
-		len(uniqueObs), timeSpanHours)
+	if logLevel == "debug" {
+		fmt.Printf("DEBUG: Final dataset: %d unique observations spanning %.1f hours of data\n",
+			len(uniqueObs), timeSpanHours)
+	}
 
 	// Print detailed statistics for verification
-	if len(uniqueObs) > 0 {
+	if logLevel == "debug" && len(uniqueObs) > 0 {
 		oldestObs := time.Unix(uniqueObs[len(uniqueObs)-1].Timestamp, 0)
 		newestObs := time.Unix(uniqueObs[0].Timestamp, 0)
-		fmt.Printf("INFO: Data range: %s to %s\n",
+		fmt.Printf("DEBUG: Data range: %s to %s\n",
 			oldestObs.Format("2006-01-02 15:04:05"),
 			newestObs.Format("2006-01-02 15:04:05"))
 
@@ -423,7 +433,7 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, progress
 			}
 		}
 
-		fmt.Printf("INFO: Today: %d observations, Yesterday: %d observations\n", todayCount, yesterdayCount)
+		fmt.Printf("DEBUG: Today: %d observations, Yesterday: %d observations\n", todayCount, yesterdayCount)
 	}
 
 	return uniqueObs, nil

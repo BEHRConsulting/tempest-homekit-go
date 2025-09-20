@@ -136,7 +136,7 @@ func StartService(cfg *config.Config, version string) error {
 			webServer.SetHistoryLoadingProgress(currentStep, totalSteps, description)
 		}
 
-		historicalObs, err := weather.GetHistoricalObservationsWithProgress(station.StationID, cfg.Token, progressCallback)
+		historicalObs, err := weather.GetHistoricalObservationsWithProgress(station.StationID, cfg.Token, cfg.LogLevel, progressCallback)
 		if err != nil {
 			log.Printf("WARNING: Failed to fetch historical data: %v", err)
 			webServer.SetHistoryLoadingComplete()
