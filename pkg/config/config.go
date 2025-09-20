@@ -41,7 +41,7 @@ func LoadConfig() *Config {
 		Pin:         getEnvOrDefault("HOMEKIT_PIN", "00102003"),
 		LogLevel:    getEnvOrDefault("LOG_LEVEL", "error"),
 		WebPort:     getEnvOrDefault("WEB_PORT", "8080"),
-		Sensors:     getEnvOrDefault("SENSORS", "temp,lux,humidity"),
+		Sensors:     getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
 		Elevation:   275.2, // 903ft default elevation in meters
 	}
 
@@ -153,7 +153,8 @@ func ParseSensorConfig(sensorsFlag string) SensorConfig {
 			Temperature: true,
 			Humidity:    true,
 			Light:       true,
-			// Core sensors: temperature, humidity, and lux for comprehensive weather monitoring
+			UV:          true,
+			// Core sensors: temperature, humidity, lux, and UV for comprehensive weather monitoring
 		}
 	case "temp-only":
 		return SensorConfig{

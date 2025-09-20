@@ -42,7 +42,7 @@ func NewWeatherService(serviceType, characteristicType string) *WeatherService {
 // WeatherAccessoryModern - Simplified accessory structure using the new hap library
 type WeatherAccessoryModern struct {
 	AccessoryPtr *accessory.A
-	WeatherValue *characteristic.Float
+	WeatherValue interface{} // Changed to interface{} to support custom characteristics
 }
 
 // WeatherSystemModern - New implementation using hap library and custom services
@@ -86,78 +86,104 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 	// Create standard HomeKit accessories based on sensor configuration
 	var accessoryCount int
 
-	// Option 1: Create a single multi-service Tempest Weather accessory (if any sensors enabled)
-	if sensorConfig.Temperature || sensorConfig.Humidity || sensorConfig.Light || sensorConfig.UV {
-		weatherInfo := accessory.Info{
-			Name:         "Tempest Weather Station",
-			SerialNumber: "TWS-001",
+	// Create separate accessories for each sensor type (more compliant approach)
+	
+	// Temperature Sensor Accessory
+	if sensorConfig.Temperature {
+		tempInfo := accessory.Info{
+			Name:         "Temperature Sensor",
+			SerialNumber: "TWS-TEMP-001",
 			Manufacturer: "WeatherFlow",
-			Model:        "Tempest",
+			Model:        "Tempest Temperature",
 			Firmware:     "1.0.0",
 		}
-		weatherAccessory := accessory.New(weatherInfo, accessory.TypeSensor)
-
-		// Add Temperature service if enabled
-		if sensorConfig.Temperature {
-			tempService := service.NewTemperatureSensor()
-			weatherAccessory.AddS(tempService.S)
-			accessories["Air Temperature"] = &WeatherAccessoryModern{
-				AccessoryPtr: weatherAccessory,
-				WeatherValue: tempService.CurrentTemperature.Float,
-			}
-			if logLevel == "debug" {
-				log.Printf("DEBUG: Added temperature service to weather station")
-			}
+		tempAccessory := accessory.New(tempInfo, accessory.TypeSensor)
+		tempService := service.NewTemperatureSensor()
+		tempAccessory.AddS(tempService.S)
+		
+		hapAccessories = append(hapAccessories, tempAccessory)
+		accessories["Air Temperature"] = &WeatherAccessoryModern{
+			AccessoryPtr: tempAccessory,
+			WeatherValue: tempService.CurrentTemperature.Float,
 		}
-
-		// Add Humidity service if enabled
-		if sensorConfig.Humidity {
-			humidityService := service.NewHumiditySensor()
-			weatherAccessory.AddS(humidityService.S)
-			accessories["Relative Humidity"] = &WeatherAccessoryModern{
-				AccessoryPtr: weatherAccessory,
-				WeatherValue: humidityService.CurrentRelativeHumidity.Float,
-			}
-			if logLevel == "debug" {
-				log.Printf("DEBUG: Added humidity service to weather station")
-			}
-		}
-
-		// Add Light service if enabled
-		if sensorConfig.Light {
-			// Try to use built-in Light Sensor service for presence detection
-			lightService := service.NewLightSensor()
-			weatherAccessory.AddS(lightService.S)
-			accessories["Ambient Light"] = &WeatherAccessoryModern{
-				AccessoryPtr: weatherAccessory,
-				WeatherValue: lightService.CurrentAmbientLightLevel.Float,
-			}
-			if logLevel == "debug" {
-				log.Printf("DEBUG: Added built-in light sensor service to weather station")
-			}
-		}
-
-		// Add UV service if enabled (using Light Sensor service with custom name)
-		if sensorConfig.UV {
-			// Use Light Sensor service for UV but with custom characteristic name
-			uvService := service.NewLightSensor()
-			// Rename the characteristic to indicate it's UV
-			uvService.CurrentAmbientLightLevel.Description = "UV Index"
-			weatherAccessory.AddS(uvService.S)
-			accessories["UV Index"] = &WeatherAccessoryModern{
-				AccessoryPtr: weatherAccessory,
-				WeatherValue: uvService.CurrentAmbientLightLevel.Float,
-			}
-			if logLevel == "debug" {
-				log.Printf("DEBUG: Added UV sensor service to weather station")
-			}
-		}
-
-		// Add the single multi-service accessory to HomeKit
-		hapAccessories = append(hapAccessories, weatherAccessory)
-		accessoryCount = 1
+		accessoryCount++
 		if logLevel == "debug" {
-			log.Printf("DEBUG: Created combined weather station accessory with multiple services")
+			log.Printf("DEBUG: Created temperature sensor accessory")
+		}
+	}
+
+	// Humidity Sensor Accessory
+	if sensorConfig.Humidity {
+		humidityInfo := accessory.Info{
+			Name:         "Humidity Sensor",
+			SerialNumber: "TWS-HUM-001",
+			Manufacturer: "WeatherFlow",
+			Model:        "Tempest Humidity",
+			Firmware:     "1.0.0",
+		}
+		humidityAccessory := accessory.New(humidityInfo, accessory.TypeSensor)
+		humidityService := service.NewHumiditySensor()
+		humidityAccessory.AddS(humidityService.S)
+		
+		hapAccessories = append(hapAccessories, humidityAccessory)
+		accessories["Relative Humidity"] = &WeatherAccessoryModern{
+			AccessoryPtr: humidityAccessory,
+			WeatherValue: humidityService.CurrentRelativeHumidity.Float,
+		}
+		accessoryCount++
+		if logLevel == "debug" {
+			log.Printf("DEBUG: Created humidity sensor accessory")
+		}
+	}
+
+	// Light Sensor Accessory (Lux)
+	if sensorConfig.Light {
+		lightInfo := accessory.Info{
+			Name:         "Light Sensor",
+			SerialNumber: "TWS-LUX-001",
+			Manufacturer: "WeatherFlow",
+			Model:        "Tempest Light",
+			Firmware:     "1.0.0",
+		}
+		lightAccessory := accessory.New(lightInfo, accessory.TypeSensor)
+		lightService := service.NewLightSensor()
+		lightAccessory.AddS(lightService.S)
+		
+		hapAccessories = append(hapAccessories, lightAccessory)
+		accessories["Ambient Light"] = &WeatherAccessoryModern{
+			AccessoryPtr: lightAccessory,
+			WeatherValue: lightService.CurrentAmbientLightLevel.Float,
+		}
+		accessoryCount++
+		if logLevel == "debug" {
+			log.Printf("DEBUG: Created light sensor accessory")
+		}
+	}
+
+	// UV Sensor Accessory
+	if sensorConfig.UV {
+		uvInfo := accessory.Info{
+			Name:         "UV Index Sensor",
+			SerialNumber: "TWS-UV-001",
+			Manufacturer: "WeatherFlow",
+			Model:        "Tempest UV",
+			Firmware:     "1.0.0",
+		}
+		uvAccessory := accessory.New(uvInfo, accessory.TypeSensor)
+		
+		// Use Light Sensor service for UV (with distinct accessory name)
+		uvService := service.NewLightSensor()
+		uvService.CurrentAmbientLightLevel.Description = "UV Index"
+		uvAccessory.AddS(uvService.S)
+		
+		hapAccessories = append(hapAccessories, uvAccessory)
+		accessories["UV Index"] = &WeatherAccessoryModern{
+			AccessoryPtr: uvAccessory,
+			WeatherValue: uvService.CurrentAmbientLightLevel.Float,
+		}
+		accessoryCount++
+		if logLevel == "debug" {
+			log.Printf("DEBUG: Created UV Index sensor accessory")
 		}
 	}
 
@@ -253,7 +279,13 @@ func (ws *WeatherSystemModern) UpdateSensor(sensorName string, value float64) {
 			if ws.LogLevel == "debug" {
 				log.Printf("DEBUG: Updating %s: %.3f", sensorName, value)
 			}
-			accessory.WeatherValue.SetValue(value)
+			// Handle different characteristic types
+			switch v := accessory.WeatherValue.(type) {
+			case *characteristic.Float:
+				v.SetValue(value)
+			default:
+				log.Printf("WARNING: Unsupported characteristic type for sensor %s", sensorName)
+			}
 		} else {
 			if ws.LogLevel == "debug" {
 				log.Printf("DEBUG: Skipping %s (not included in minimal setup)", sensorName)

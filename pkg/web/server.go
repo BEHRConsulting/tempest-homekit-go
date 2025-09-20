@@ -202,15 +202,17 @@ func getPressureDescription(pressure float64) string {
 	return "Normal"
 }
 
-func getPressureTrend(dataHistory []weather.Observation) string {
+func getPressureTrend(dataHistory []weather.Observation, elevation float64) string {
 	if len(dataHistory) < 2 {
 		return "Stable"
 	}
 
-	// Look at last hour of data for trend
+	// Look at last hour of data for trend (using sea level pressure for accurate analysis)
 	recentData := make([]float64, 0)
 	for i := len(dataHistory) - 1; i >= 0 && len(recentData) < 60; i-- {
-		recentData = append([]float64{dataHistory[i].StationPressure}, recentData...)
+		// Calculate sea level pressure for each historical point
+		seaLevelPressure := calculateSeaLevelPressure(dataHistory[i].StationPressure, dataHistory[i].AirTemperature, elevation)
+		recentData = append([]float64{seaLevelPressure}, recentData...)
 	}
 
 	if len(recentData) < 2 {
@@ -438,23 +440,22 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Calculate pressure analysis with debug logging
-	pressureCondition := getPressureDescription(ws.weatherData.StationPressure)
-	pressureTrend := getPressureTrend(ws.dataHistory)
-	weatherForecast := getPressureWeatherForecast(ws.weatherData.StationPressure, pressureTrend)
+	// Calculate sea level pressure using configured station elevation
+	seaLevelPressure := calculateSeaLevelPressure(ws.weatherData.StationPressure, ws.weatherData.AirTemperature, ws.elevation)
+
+	// Calculate pressure analysis with debug logging (using sea level pressure for accurate forecasting)
+	pressureCondition := getPressureDescription(seaLevelPressure)
+	pressureTrend := getPressureTrend(ws.dataHistory, ws.elevation)
+	weatherForecast := getPressureWeatherForecast(seaLevelPressure, pressureTrend)
 
 	// Calculate daily rain accumulation
 	dailyRainTotal := ws.calculateDailyRainAccumulation()
 
 	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s, Pressure: %.2f mb",
-			pressureCondition, pressureTrend, weatherForecast, ws.weatherData.StationPressure)
-		log.Printf("DEBUG: Rain data calculated - Current: %.3f in, Daily Total: %.3f in",
-			ws.weatherData.RainAccumulated, dailyRainTotal)
+		log.Printf("DEBUG: Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s", pressureCondition, pressureTrend, weatherForecast)
+		log.Printf("DEBUG: Pressure values - Station: %.2f mb, Sea Level: %.2f mb (used for forecasting)", ws.weatherData.StationPressure, seaLevelPressure)
+		log.Printf("DEBUG: Rain data calculated - Current: %.3f in, Daily Total: %.3f in", ws.weatherData.RainAccumulated, dailyRainTotal)
 	}
-
-	// Calculate sea level pressure using configured station elevation
-	seaLevelPressure := calculateSeaLevelPressure(ws.weatherData.StationPressure, ws.weatherData.AirTemperature, ws.elevation)
 
 	response := WeatherResponse{
 		Temperature:          ws.weatherData.AirTemperature,
