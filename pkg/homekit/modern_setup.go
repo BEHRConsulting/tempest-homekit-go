@@ -17,28 +17,6 @@ import (
 // Custom service for weather sensors that don't interfere with temperature conversion
 const TypeWeatherSensor = "F000-0001-1000-8000-0026BB765291"
 
-// WeatherService - Custom service for weather data without temperature conversion issues
-type WeatherService struct {
-	*service.S
-	WeatherValue *characteristic.Float
-}
-
-func NewWeatherService(serviceType, characteristicType string) *WeatherService {
-	s := service.New(serviceType)
-
-	// Create a custom float characteristic that won't be treated as temperature
-	weatherValue := characteristic.NewFloat(characteristicType)
-	weatherValue.Format = characteristic.FormatFloat
-	weatherValue.Permissions = []string{characteristic.PermissionRead, characteristic.PermissionEvents}
-	weatherValue.SetValue(0.0)
-	s.AddC(weatherValue.C)
-
-	return &WeatherService{
-		S:            s,
-		WeatherValue: weatherValue,
-	}
-}
-
 // WeatherAccessoryModern - Simplified accessory structure using the new hap library
 type WeatherAccessoryModern struct {
 	AccessoryPtr *accessory.A
@@ -87,7 +65,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 	var accessoryCount int
 
 	// Create separate accessories for each sensor type (more compliant approach)
-	
+
 	// Temperature Sensor Accessory
 	if sensorConfig.Temperature {
 		tempInfo := accessory.Info{
@@ -100,7 +78,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 		tempAccessory := accessory.New(tempInfo, accessory.TypeSensor)
 		tempService := service.NewTemperatureSensor()
 		tempAccessory.AddS(tempService.S)
-		
+
 		hapAccessories = append(hapAccessories, tempAccessory)
 		accessories["Air Temperature"] = &WeatherAccessoryModern{
 			AccessoryPtr: tempAccessory,
@@ -124,7 +102,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 		humidityAccessory := accessory.New(humidityInfo, accessory.TypeSensor)
 		humidityService := service.NewHumiditySensor()
 		humidityAccessory.AddS(humidityService.S)
-		
+
 		hapAccessories = append(hapAccessories, humidityAccessory)
 		accessories["Relative Humidity"] = &WeatherAccessoryModern{
 			AccessoryPtr: humidityAccessory,
@@ -148,7 +126,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 		lightAccessory := accessory.New(lightInfo, accessory.TypeSensor)
 		lightService := service.NewLightSensor()
 		lightAccessory.AddS(lightService.S)
-		
+
 		hapAccessories = append(hapAccessories, lightAccessory)
 		accessories["Ambient Light"] = &WeatherAccessoryModern{
 			AccessoryPtr: lightAccessory,
@@ -170,12 +148,17 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 			Firmware:     "1.0.0",
 		}
 		uvAccessory := accessory.New(uvInfo, accessory.TypeSensor)
-		
-		// Use Light Sensor service for UV (with distinct accessory name)
+
+		// Use Light Sensor service for UV with proper UV Index range
 		uvService := service.NewLightSensor()
 		uvService.CurrentAmbientLightLevel.Description = "UV Index"
+		uvService.CurrentAmbientLightLevel.Unit = "UV Index"
+		uvService.CurrentAmbientLightLevel.SetMinValue(0.0)
+		uvService.CurrentAmbientLightLevel.SetMaxValue(15.0)
+		uvService.CurrentAmbientLightLevel.SetStepValue(0.1)
+		uvService.CurrentAmbientLightLevel.SetValue(0.0)
 		uvAccessory.AddS(uvService.S)
-		
+
 		hapAccessories = append(hapAccessories, uvAccessory)
 		accessories["UV Index"] = &WeatherAccessoryModern{
 			AccessoryPtr: uvAccessory,
@@ -183,7 +166,40 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 		}
 		accessoryCount++
 		if logLevel == "debug" {
-			log.Printf("DEBUG: Created UV Index sensor accessory")
+			log.Printf("DEBUG: Created UV Index sensor accessory using light sensor service with UV range")
+		}
+	}
+
+	// Pressure Sensor Accessory (using standard light sensor service with custom labels)
+	if sensorConfig.Pressure {
+		pressureInfo := accessory.Info{
+			Name:         "Pressure Sensor",
+			SerialNumber: "TWS-PRESS-001",
+			Manufacturer: "WeatherFlow",
+			Model:        "Tempest Pressure",
+			Firmware:     "1.0.0",
+		}
+		pressureAccessory := accessory.New(pressureInfo, accessory.TypeSensor)
+
+		// Use standard Light Sensor service but customize for pressure
+		pressureService := service.NewLightSensor()
+		pressureService.CurrentAmbientLightLevel.Description = "Atmospheric Pressure (mb)"
+		pressureService.CurrentAmbientLightLevel.Unit = "mb"
+		pressureService.CurrentAmbientLightLevel.SetMinValue(700.0)
+		pressureService.CurrentAmbientLightLevel.SetMaxValue(1200.0)
+		pressureService.CurrentAmbientLightLevel.SetStepValue(0.1) // Decimal precision
+		pressureService.CurrentAmbientLightLevel.SetValue(1013.25) // Standard atmospheric pressure
+
+		pressureAccessory.AddS(pressureService.S)
+
+		hapAccessories = append(hapAccessories, pressureAccessory)
+		accessories["Atmospheric Pressure"] = &WeatherAccessoryModern{
+			AccessoryPtr: pressureAccessory,
+			WeatherValue: pressureService.CurrentAmbientLightLevel.Float,
+		}
+		accessoryCount++
+		if logLevel == "debug" {
+			log.Printf("DEBUG: Created atmospheric pressure sensor accessory using standard light sensor service with custom labels")
 		}
 	}
 
@@ -227,7 +243,7 @@ func NewWeatherSystemModern(pin string, sensorConfig *config.SensorConfig, logLe
 	if logLevel == "debug" {
 		log.Printf("DEBUG: Weather system created successfully with PIN: %s", pin)
 		log.Printf("DEBUG: HomeKit compliance: %d accessories created based on sensor configuration", accessoryCount)
-		log.Printf("DEBUG: Sensors enabled: Temp=%v, Humidity=%v, Light=%v, UV=%v", sensorConfig.Temperature, sensorConfig.Humidity, sensorConfig.Light, sensorConfig.UV)
+		log.Printf("DEBUG: Sensors enabled: Temp=%v, Humidity=%v, Light=%v, UV=%v, Pressure=%v", sensorConfig.Temperature, sensorConfig.Humidity, sensorConfig.Light, sensorConfig.UV, sensorConfig.Pressure)
 	}
 
 	return &WeatherSystemModern{

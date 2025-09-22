@@ -1775,7 +1775,7 @@ function updateStatusDisplay(status) {
 
     const hk = status.homekit || {};
     if (homekitStatus) {
-        homekitStatus.textContent = hk.bridge ? 'Active' : 'Inactive';
+        homekitStatus.textContent = hk.bridge ? 'Active' : 'Disabled';
         homekitStatus.style.color = hk.bridge ? '#28a745' : '#dc3545';
     }
     if (homekitAccessories) homekitAccessories.textContent = hk.accessories || '--';

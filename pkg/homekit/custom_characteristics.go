@@ -131,3 +131,21 @@ func NewPrecipitationTypeCharacteristic() *PrecipitationTypeCharacteristic {
 
 	return &PrecipitationTypeCharacteristic{c}
 }
+
+// PressureCharacteristic - Custom characteristic for atmospheric pressure in mb
+type PressureCharacteristic struct {
+	*characteristic.Float
+}
+
+func NewPressureCharacteristic() *PressureCharacteristic {
+	c := characteristic.NewFloat("F008-0001-1000-8000-0026BB765291") // Custom UUID
+	c.Format = characteristic.FormatFloat
+	c.Unit = "mb"
+	c.Permissions = []string{characteristic.PermissionRead, characteristic.PermissionEvents}
+	c.SetMinValue(800.0)
+	c.SetMaxValue(1100.0)
+	c.SetStepValue(0.1)
+	c.SetValue(1013.25) // Standard atmospheric pressure
+
+	return &PressureCharacteristic{c}
+}

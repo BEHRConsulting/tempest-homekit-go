@@ -1,8 +1,25 @@
 # Tempest HomeKit Go
 
-A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on temperature, humidity, wind spee**Note**: The application uses a mix of standard HomeKit services (Temperature, Humidity, Light) and custom services for specialized weather sensors. Custom sensors use unique service UUIDs to prevent HomeKit's automatic temperature conversion, ensuring accurate display of weather data without unwanted Celsius-to-Fahrenheit conversion.
+A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on weather conditions. Includes a modern web dashboard with interactive unit conversions and cross-platform deployment scripts.
 
-**Note**: The UV sensor uses the same HomeKit Light Sensor service as the lux sensor for compliance reasons. In the Home app, it will appear as "Light Sensor #2". Users should manually rename it to "UV Sensor" in the Home app for clarity., rain accumulation, and wind direction. Includes a modern web dashboard with interactive unit conversions and cross-platform deployment scripts.
+**Version**: v1.3.0
+
+## Key v1.3.0 Enhancements
+
+🚀 **Enhanced User Experience**:
+- ✅ **Comprehensive Command Line Validation**: Detailed error messages with usage information for invalid arguments
+- ✅ **Sensor Name Aliases**: Support for common sensor names (`temp`/`temperature`, `lux`/`light`, `uv`/`uvi`)
+- ✅ **Earth-Realistic Elevation Validation**: Range validation (-430m to 8848m) with helpful geographic references
+- ✅ **Complete Logging Compliance**: All log messages include proper level prefixes (DEBUG:, INFO:, WARNING:, ERROR:)
+- ✅ **UV Value Precision**: UV sensor values now rounded to integers before HomeKit transmission
+- ✅ **Improved Sensor Configuration**: Fixed "min" preset (temp,humidity,lux) and removed invalid "temp-only" preset
+- ✅ **78% Test Coverage**: Comprehensive unit tests for command line validation and configuration parsing
+
+## Important Sensor Notes
+
+⚠️ **HomeKit Sensor Compliance**: Due to HomeKit's limited native sensor types, the **Pressure** and **UV Index** sensors use the standard HomeKit **Light Sensor** service for compliance. In the Home app, these will appear as "Light Sensor" with units showing as "lux" - **please ignore the "lux" unit** for these sensors as they represent atmospheric pressure (mb) and UV index values respectively. This is a HomeKit limitation, not an application issue.
+
+🏠 **Web Console Only Mode**: This application can be run with HomeKit services completely disabled by using the `--disable-homekit` flag. In this mode, only the web dashboard will be available, providing a lightweight weather monitoring solution without HomeKit integration.
 
 ## Authors
 
@@ -12,7 +29,11 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 ## Features
 
 - **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest station data every 60 seconds
-- **HomeKit Integratio---
+- **HomeKit Integration**: Individual HomeKit accessories for each weather sensor
+- **Multiple Sensor Support**: Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, UV Index, Pressure, and Ambient Light
+- **Modern Web Dashboard**: Interactive web interface with real-time updates, unit conversions, and professional styling
+- **Cross-platform Support**: Runs on macOS, Linux, and Windows with automated service installation
+- **Flexible Configuration**: Command-line flags and environment variables for easy deployment
 
 **Status**: ✅ **COMPLETE** - All planned features implemented and tested
 - ✅ Weather monitoring with 11 HomeKit sensors (Temperature + 10 custom weather sensors)
@@ -65,7 +86,7 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 
 ### Build and Run
 ```bash
-git clone https://github.com/yourusername/tempest-homekit-go.git
+git clone https://github.com/BEHRConsulting/tempest-homekit-go.git
 cd tempest-homekit-go
 go build
 ./tempest-homekit-go --token "your-api-token"
@@ -85,7 +106,7 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 
 ### Option 1: Build from Source
 ```bash
-git clone https://github.com/yourusername/tempest-homekit-go.git
+git clone https://github.com/BEHRConsulting/tempest-homekit-go.git
 cd tempest-homekit-go
 go mod tidy
 go build -o tempest-homekit-go
@@ -130,16 +151,23 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 
 ### Configuration Options
 
-#### Command-Line Flags
-- `--token`: WeatherFlow API access token (required)
-- `--station`: Tempest station name (default: "Chino Hills")
-- `--pin`: HomeKit pairing PIN (default: "00102003")
-- `--loglevel`: Logging level - debug, info, error (default: "error")
-- `--web-port`: Web dashboard port (default: "8080")
-- `--sensors`: Sensors to enable - 'all', 'min' (temp,lux,humidity), 'temp-only', or comma-delimited list (temp,humidity,lux,wind,rain,pressure,uv,lightning) (default: "temp,lux,humidity")
-- `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome)
+#### Command-Line Flags (alphabetical order)
 - `--cleardb`: Clear HomeKit database and reset device pairing
+- `--disable-homekit`: Disable HomeKit services and run web console only
+- `--elevation`: Station elevation in meters (default: auto-detect, valid range: -430m to 8848m)
+- `--loglevel`: Logging level - debug, info, error (default: "error")
+- `--pin`: HomeKit pairing PIN (default: "00102003")  
+- `--sensors`: Sensors to enable - 'all', 'min' (temp,lux,humidity), or comma-delimited list with aliases supported:
+  - **Temperature**: `temp` or `temperature`
+  - **Light**: `lux` or `light`
+  - **UV**: `uv` or `uvi`
+  - **Other sensors**: `humidity`, `wind`, `rain`, `pressure`, `lightning`
+  - (default: "temp,lux,humidity")
+- `--station`: Tempest station name (default: "Chino Hills")
+- `--token`: WeatherFlow API access token (required)
+- `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome)
 - `--version`: Show version information and exit
+- `--web-port`: Web dashboard port (default: "8080")
 
 #### Environment Variables
 - `TEMPEST_TOKEN`: WeatherFlow API token
@@ -157,7 +185,52 @@ sudo ./scripts/install-service.sh --token "your-api-token"
   --pin "12345678" \
   --web-port 8080 \
   --loglevel info \
+  --sensors "temp,humidity,lux,uv,pressure" \
+  --elevation 150 \
   --use-web-status
+```
+
+### Sensor Configuration Examples
+```bash
+# Using sensor aliases (recommended for readability)
+./tempest-homekit-go --token "your-token" --sensors "temperature,light,uvi"
+
+# Traditional sensor names (also supported)
+./tempest-homekit-go --token "your-token" --sensors "temp,lux,uv"
+
+# Mixed aliases and traditional names
+./tempest-homekit-go --token "your-token" --sensors "temperature,humidity,light,wind"
+
+# All available sensors
+./tempest-homekit-go --token "your-token" --sensors "all"
+
+# Minimal sensor set
+./tempest-homekit-go --token "your-token" --sensors "min"
+```
+
+### Validation Examples
+```bash
+# Invalid elevation (too high) - shows helpful error message
+./tempest-homekit-go --token "your-token" --elevation 10000
+# Error: elevation must be between -430m and 8848m (Earth's surface range)
+
+# Invalid sensor name - shows available options
+./tempest-homekit-go --token "your-token" --sensors "invalid-sensor"
+# Error: invalid sensor 'invalid-sensor'. Available: temp/temperature, lux/light, uv/uvi, humidity, wind, rain, pressure, lightning
+
+# Missing required token - shows usage
+./tempest-homekit-go --sensors "temp"
+# Error: WeatherFlow API token is required. Use --token flag or TEMPEST_TOKEN environment variable
+```
+
+### Web Console Only (No HomeKit)
+```bash
+# Run web dashboard only without HomeKit services
+./tempest-homekit-go \
+  --token "your-api-token" \
+  --disable-homekit \
+  --web-port 8080 \
+  --loglevel info
 ```
 
 ### TempestWX Device Status Scraping
@@ -236,18 +309,21 @@ Basic status with API-only data:
 
 The following sensors will appear as separate HomeKit accessories:
 - **Temperature Sensor**: Air temperature in Celsius (uses standard HomeKit temperature characteristic)
-- **Humidity Sensor**: Relative humidity as percentage (uses standard HomeKit humidity characteristic)
+- **Humidity Sensor**: Relative humidity as percentage (uses standard HomeKit humidity characteristic)  
 - **Light Sensor**: Ambient light level in lux (uses built-in HomeKit Light Sensor service)
+- **Pressure Sensor**: Atmospheric pressure in mb (uses Light Sensor service for compliance - ignore "lux" unit label)
+- **UV Index Sensor**: UV index value (uses Light Sensor service for compliance - ignore "lux" unit label)
 - **Custom Wind Speed Sensor**: Wind speed in miles per hour (custom service prevents unit conversion)
 - **Custom Wind Gust Sensor**: Wind gust speed in miles per hour (custom service)
 - **Custom Wind Direction Sensor**: Wind direction in cardinal format with degrees (custom service)
 - **Custom Rain Sensor**: Rain accumulation in inches (custom service)
-- **Custom UV Index Sensor**: UV index value (custom service)
 - **Custom Lightning Count Sensor**: Lightning strike count (custom service)
 - **Custom Lightning Distance Sensor**: Lightning strike distance (custom service)
 - **Custom Precipitation Type Sensor**: Precipitation type indicator (custom service)
 
-**Note**: The application uses a mix of standard HomeKit services (Temperature, Humidity, Light) and custom services for specialized weather sensors. Custom sensors use unique service UUIDs to prevent HomeKit's automatic temperature unit conversion, ensuring accurate display of weather data without unwanted Celsius-to-Fahrenheit conversion.
+**Important**: The **Pressure** and **UV Index** sensors use HomeKit's standard Light Sensor service for maximum compatibility. In the Home app, they will appear as "Light Sensor" with "lux" units, but display the correct pressure (mb) and UV index values. Please ignore the "lux" unit label for these sensors - this is a HomeKit platform limitation, not an application issue.
+
+⚠️ **HomeKit Compliance Warning**: As of Home.app v10.0, all sensors labeled as "(custom service)" above will return an "Out of Compliance" error when attempting to add the accessory to the Home app. Only the standard HomeKit services (Temperature, Humidity, Light, Pressure, UV Index) will successfully pair. This is due to Apple's stricter compliance enforcement in recent Home app versions.
 
 ## Web Dashboard
 
@@ -332,7 +408,9 @@ tempest-homekit-go/
 - ✅ **Wind Speed**: Average wind speed in mph/kph
 - ✅ **Wind Direction**: Degrees with cardinal conversion
 - ✅ **Rain Accumulation**: Total precipitation in inches/mm
-- 🚧 **Air Pressure**: Planned for future release
+- ✅ **Air Pressure**: Atmospheric pressure in mb/inHg
+- ✅ **UV Index**: UV exposure level (0-15)
+- ✅ **Ambient Light**: Illuminance in lux
 
 ## Logging
 
@@ -343,14 +421,33 @@ tempest-homekit-go/
 
 ### Example Log Output (Info Level)
 ```
-2024-01-15 10:30:00 INFO Station found: Chino Hills (ID: 178915)
-2024-01-15 10:30:00 INFO Weather update: Temp=72.5°F, Humidity=45%, Wind=3.2mph WSW, Rain=0.0in
-2024-01-15 10:30:00 INFO HomeKit updated: 5 accessories
+2025-09-21 10:30:00 Starting service with config: WebPort=8080, LogLevel=info
+2025-09-21 10:30:00 Starting Tempest HomeKit service...
+2025-09-21 10:30:00 Found station: Chino Hills (ID: 178915)
+2025-09-21 10:30:00 INFO: HomeKit server started successfully with PIN: 00102003
+2025-09-21 10:30:00 INFO: Starting web dashboard on port 8080
+2025-09-21 10:30:00 Starting web server on port 8080
+2025-09-21 10:30:00 INFO: Successfully read weather data from Tempest API - Station: Chino Hills
+2025-09-21 10:30:00 INFO: Sensor data - Temp: 22.7°C, Humidity: 77%, Wind: 0.3 mph (238°), Rain: 0.000 in, Light: 1 lux
 ```
 
 ### Example Log Output (Debug Level)
 ```
-2024-01-15 10:30:00 DEBUG API Response: {"status":{"status_code":0},"obs":[{"timestamp":1705312200,"air_temperature":72.5,"relative_humidity":45,"wind_avg":3.2,"wind_direction":247,"precip":0.0}]}
+2025-09-21 10:30:00 service.go:25: Starting Tempest HomeKit service...
+2025-09-21 10:30:00 service.go:29: DEBUG: Fetching stations from WeatherFlow API
+2025-09-21 10:30:00 modern_setup.go:39: DEBUG: Creating new weather system with hap library
+2025-09-21 10:30:00 modern_setup.go:89: DEBUG: Created temperature sensor accessory
+2025-09-21 10:30:00 modern_setup.go:169: DEBUG: Created UV Index sensor accessory using light sensor service with UV range
+2025-09-21 10:30:00 service.go:284: DEBUG: HomeKit - UV Index: 0
+2025-09-21 10:30:00 service.go:304: DEBUG: Updating UV Index: 0.000
+```
+
+### Example Log Output (Error Level - Default)
+```
+2025-09-21 10:30:00 Starting service with config: WebPort=8080, LogLevel=error
+2025-09-21 10:30:00 Starting Tempest HomeKit service...
+2025-09-21 10:30:00 Found station: Chino Hills (ID: 178915)
+2025-09-21 10:30:00 Starting web server on port 8080
 ```
 
 ## Service Management

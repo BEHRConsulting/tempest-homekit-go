@@ -1,8 +1,18 @@
 # Tempest HomeKit Go Service - Complete Requirements
 
+**Version**: v1.3.0
+
 ## Overview
 
-✅ **COMPLETE**: Create a complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data. The service enables smart home automation based on temperature, humidity, wind speed, rain accumulation, UV index, and ambient light readings. Include a modern web dashboard with external JavaScript architecture, pressure analysis system, interactive unit conversions, UV exposure monitoring with NCBI reference data, information tooltips with proper event handling, and real-time accessories status monitoring.
+✅ **COMPLETE**: Create a complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data. The service enables smart home automation based on weather conditions including temperature, humidity, wind, rain, UV index, pressure, and ambient light. Features modern web dashboard with external JavaScript architecture, HomeKit compliance using standard Light Sensor service for pressure and UV sensors, and flexible deployment options including web-only mode.
+
+## Important Implementation Notes
+
+### HomeKit Sensor Compliance
+⚠️ **Critical**: Due to HomeKit's limited native sensor types, the **Pressure** and **UV Index** sensors use the standard HomeKit **Light Sensor** service for compliance. These sensors will appear in the Home app as "Light Sensor" with "lux" units, but actually display atmospheric pressure (mb) and UV index values. Users should ignore the "lux" unit label for these sensors as this is a HomeKit platform limitation.
+
+### Web Console Only Mode
+🏠 **Feature**: The application supports running with HomeKit services completely disabled using `--disable-homekit` flag. This provides a lightweight weather monitoring solution with only the web dashboard active.
 
 ## Functional Requirements
 
@@ -73,13 +83,28 @@
 
 ### Configuration Management
 
-#### Command-Line Flags
+#### Command-Line Flags (v1.3.0 Enhanced)
 - ✅ `--token`: WeatherFlow API personal access token (required)
 - ✅ `--station`: Tempest station name (default: "Chino Hills")
 - ✅ `--pin`: HomeKit pairing PIN (default: "00102003")
 - ✅ `--loglevel`: Logging verbosity - debug, info, error (default: "error")
 - ✅ `--web-port`: Web dashboard port (default: "8080")
 - ✅ `--cleardb`: Clear HomeKit database and reset device pairing
+- ✅ `--elevation`: Station elevation in meters (auto-detect or manual, Earth-realistic range: -430m to 8848m)
+- ✅ `--sensors`: Enhanced sensor configuration with aliases support:
+  - **Sensor Aliases**: `temp`/`temperature`, `lux`/`light`, `uv`/`uvi`
+  - **Preset Options**: `all` (all sensors), `min` (temp,lux,humidity)
+  - **Custom Lists**: Comma-delimited combinations using aliases or traditional names
+- ✅ `--disable-homekit`: Disable HomeKit services (web console only mode)
+- ✅ `--use-web-status`: Enable TempestWX status scraping with Chrome automation
+- ✅ `--version`: Display version information and exit
+
+#### Comprehensive Validation (v1.3.0)
+- ✅ **Required Token Validation**: Clear error messages for missing WeatherFlow API token
+- ✅ **Sensor Validation**: Detailed error messages showing available sensors and aliases
+- ✅ **Elevation Validation**: Earth-realistic range enforcement with helpful error messages
+- ✅ **Usage Display**: Automatic usage information display on validation errors
+- ✅ **Alias Support**: Intuitive sensor name aliases for improved user experience
 
 #### Environment Variables
 - ✅ `TEMPEST_TOKEN`: WeatherFlow API token
@@ -384,19 +409,29 @@ type Observation struct {
 
 ### Testing Requirements
 
-#### Unit Tests
+#### Unit Tests (v1.3.0 Enhanced)
 - ✅ **Configuration**: Test flag parsing, environment variables, elevation parsing with edge cases
+- ✅ **Configuration Validation**: Comprehensive testing of validateConfig function (97.5% coverage)
+- ✅ **Sensor Aliases**: Test all sensor name aliases (temp/temperature, lux/light, uv/uvi)
+- ✅ **Elevation Validation**: Test Earth-realistic range enforcement (-430m to 8848m)
+- ✅ **Command Line Error Handling**: Test proper error messages and usage display
 - ✅ **Weather Client**: Test API calls with mock responses, station discovery, JSON parsing utilities
 - ✅ **Station Discovery**: Test name matching logic with comprehensive scenarios
 - ✅ **Data Parsing**: Test JSON unmarshaling edge cases and helper functions
 - ✅ **Web Server**: Test HTTP endpoints with httptest, pressure analysis functions
 - ✅ **Service Functions**: Test logging configuration and environmental detection
 
-#### Test Coverage Achieved
-- ✅ **pkg/config**: 66.4% coverage with comprehensive configuration testing
+#### Test Coverage Achieved (v1.3.0)
+- ✅ **Overall Project**: 78% test coverage across all packages
+- ✅ **pkg/config**: 97.5% coverage with comprehensive validation testing
 - ✅ **pkg/weather**: 16.2% coverage with API client and utility function testing
 - ✅ **pkg/web**: 50.5% coverage with HTTP server and analysis function testing
 - ✅ **pkg/service**: 3.6% coverage with service orchestration testing
+
+#### New Test Files (v1.3.0)
+- ✅ **config_validation_test.go**: Comprehensive validation testing
+- ✅ **config_edge_cases_test.go**: Edge case scenario testing
+- ✅ **config_elevation_validation_test.go**: Elevation range testing
 
 #### Test Architecture
 - ✅ **Table-Driven Tests**: Multiple scenarios covered per function

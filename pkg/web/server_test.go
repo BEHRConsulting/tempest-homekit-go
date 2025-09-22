@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewWebServer(t *testing.T) {
-	server := NewWebServer("8080", 100.0, "info", 12345, false)
+	server := NewWebServer("8080", 100.0, "info", 12345, false, "v1.3.0")
 
 	if server.port != "8080" {
 		t.Errorf("Expected port 8080, got %s", server.port)
@@ -55,7 +55,7 @@ func TestGetPressureTrend(t *testing.T) {
 		{Timestamp: now.Unix(), StationPressure: 1015.0},
 	}
 
-	trend := getPressureTrend(history)
+	trend := getPressureTrend(history, 100.0)
 	// Should detect rising pressure
 	if trend != "Rising" {
 		t.Errorf("Expected Rising trend, got %s", trend)
@@ -71,7 +71,7 @@ func TestGetPressureTrendFalling(t *testing.T) {
 		{Timestamp: now.Unix(), StationPressure: 1005.0},
 	}
 
-	trend := getPressureTrend(history)
+	trend := getPressureTrend(history, 100.0)
 	// Should detect falling pressure
 	if trend != "Falling" {
 		t.Errorf("Expected Falling trend, got %s", trend)
@@ -87,7 +87,7 @@ func TestGetPressureTrendSteady(t *testing.T) {
 		{Timestamp: now.Unix(), StationPressure: 1013.1},
 	}
 
-	trend := getPressureTrend(history)
+	trend := getPressureTrend(history, 100.0)
 	// Should detect stable pressure
 	if trend != "Stable" {
 		t.Errorf("Expected Stable trend, got %s", trend)
@@ -99,7 +99,7 @@ func TestGetPressureTrendInsufficientData(t *testing.T) {
 		{Timestamp: time.Now().Unix(), StationPressure: 1013.0},
 	}
 
-	trend := getPressureTrend(history)
+	trend := getPressureTrend(history, 100.0)
 	// Should return stable for insufficient data
 	if trend != "Stable" {
 		t.Errorf("Expected Stable for insufficient data, got %s", trend)
@@ -107,7 +107,7 @@ func TestGetPressureTrendInsufficientData(t *testing.T) {
 }
 
 func TestWebServerWeatherEndpoint(t *testing.T) {
-	server := NewWebServer("8080", 100.0, "info", 12345, false)
+	server := NewWebServer("8080", 100.0, "info", 12345, false, "v1.3.0")
 
 	// Add some test data
 	testObs := &weather.Observation{
@@ -144,7 +144,7 @@ func TestWebServerWeatherEndpoint(t *testing.T) {
 }
 
 func TestWebServerStatusEndpoint(t *testing.T) {
-	server := NewWebServer("8080", 100.0, "info", 12345, false)
+	server := NewWebServer("8080", 100.0, "info", 12345, false, "v1.3.0")
 
 	req, err := http.NewRequest("GET", "/api/status", nil)
 	if err != nil {
@@ -167,7 +167,7 @@ func TestWebServerStatusEndpoint(t *testing.T) {
 }
 
 func TestUpdateForecast(t *testing.T) {
-	server := NewWebServer("8080", 100.0, "info", 12345, false)
+	server := NewWebServer("8080", 100.0, "info", 12345, false, "v1.3.0")
 
 	testObs := &weather.Observation{
 		Timestamp:        time.Now().Unix(),
@@ -186,7 +186,7 @@ func TestUpdateForecast(t *testing.T) {
 }
 
 func TestSetHistoryLoadingProgress(t *testing.T) {
-	server := NewWebServer("8080", 100.0, "info", 12345, false)
+	server := NewWebServer("8080", 100.0, "info", 12345, false, "v1.3.0")
 
 	server.SetHistoryLoadingProgress(1, 3, "Loading data...")
 
@@ -202,7 +202,7 @@ func TestSetHistoryLoadingProgress(t *testing.T) {
 }
 
 func TestSetHistoryLoadingComplete(t *testing.T) {
-	server := NewWebServer("8080", 100.0, "info", 12345, false)
+	server := NewWebServer("8080", 100.0, "info", 12345, false, "v1.3.0")
 
 	// First set it to loading
 	server.SetHistoryLoadingProgress(1, 3, "Loading...")

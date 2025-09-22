@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"tempest-homekit-go/pkg/config"
+	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/service"
 	"tempest-homekit-go/pkg/weather"
 )
@@ -19,9 +20,17 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
+	// Set up logging first (before any other operations that might log)
+	logger.SetLogLevel(cfg.LogLevel)
+
+	// Log the auto-detected elevation if it was set during config loading
+	if cfg.Elevation > 0 {
+		logger.Info("Auto-detected elevation: %.1f meters (%.0f feet)", cfg.Elevation, cfg.Elevation*3.28084)
+	}
+
 	// Handle version flag
 	if cfg.Version {
-		fmt.Println("tempest-homekit-go v1.2.0")
+		fmt.Println("tempest-homekit-go v1.3.0")
 		fmt.Println("Built with Go 1.24.2")
 		fmt.Println("HomeKit integration for WeatherFlow Tempest weather stations")
 		os.Exit(0)
@@ -29,34 +38,32 @@ func main() {
 
 	// Handle API testing if requested
 	if cfg.TestAPI {
-		log.Println("TestAPI flag detected, running API endpoint tests...")
+		logger.Info("TestAPI flag detected, running API endpoint tests...")
 		runAPITests(cfg)
 		return
 	}
 
 	// Handle database clearing if requested
 	if cfg.ClearDB {
-		log.Println("ClearDB flag detected, clearing HomeKit database...")
+		logger.Info("ClearDB flag detected, clearing HomeKit database...")
 		if err := config.ClearDatabase("./db"); err != nil {
 			log.Fatalf("Failed to clear database: %v", err)
 		}
-		log.Println("Database cleared successfully. Please restart the application without --cleardb flag.")
+		logger.Info("Database cleared successfully. Please restart the application without --cleardb flag.")
 		return
 	}
 
-	log.Printf("Starting service with config: WebPort=%s, LogLevel=%s", cfg.WebPort, cfg.LogLevel)
-	err := service.StartService(cfg, "1.2.0")
+	logger.Info("Starting service with config: WebPort=%s, LogLevel=%s", cfg.WebPort, cfg.LogLevel)
+	err := service.StartService(cfg, "1.3.0")
 	if err != nil {
 		log.Fatalf("Service failed: %v", err)
 	}
 
-	log.Println("Service started successfully, waiting for interrupt signal...")
-
-	// Wait for interrupt
+	logger.Info("Service started successfully, waiting for interrupt signal...") // Wait for interrupt
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	sig := <-c
-	log.Printf("Received signal %v, shutting down...", sig)
+	logger.Info("Received signal %v, shutting down...", sig)
 }
 
 // runAPITests performs comprehensive testing of all WeatherFlow API endpoints

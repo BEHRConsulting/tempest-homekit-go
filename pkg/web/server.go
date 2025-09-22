@@ -44,6 +44,25 @@ type WebServer struct {
 	mu            sync.RWMutex
 }
 
+// logDebug prints debug messages only if log level is debug
+func (ws *WebServer) logDebug(format string, v ...interface{}) {
+	if ws.logLevel == "debug" {
+		log.Printf("DEBUG: "+format, v...)
+	}
+}
+
+// logInfo prints info and debug messages only if log level is debug or info
+func (ws *WebServer) logInfo(format string, v ...interface{}) {
+	if ws.logLevel == "debug" || ws.logLevel == "info" {
+		log.Printf("INFO: "+format, v...)
+	}
+}
+
+// logError always prints error messages
+func (ws *WebServer) logError(format string, v ...interface{}) {
+	log.Printf("ERROR: "+format, v...)
+}
+
 type WeatherResponse struct {
 	Temperature          float64 `json:"temperature"`
 	Humidity             float64 `json:"humidity"`
@@ -93,9 +112,7 @@ func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 	defer ws.mu.RUnlock()
 
 	if len(ws.dataHistory) == 0 {
-		if ws.logLevel == "debug" {
-			log.Printf("DEBUG: No data history available for daily rain calculation")
-		}
+		ws.logDebug("No data history available for daily rain calculation")
 		return 0.0
 	}
 
@@ -112,15 +129,11 @@ func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 		}
 	}
 
-	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Daily rain calculation - Total history: %d, Today's observations: %d, Start of day: %s",
-			len(ws.dataHistory), len(dailyObservations), startOfDay.Format("2006-01-02 15:04:05"))
-	}
+	ws.logDebug("Daily rain calculation - Total history: %d, Today's observations: %d, Start of day: %s",
+		len(ws.dataHistory), len(dailyObservations), startOfDay.Format("2006-01-02 15:04:05"))
 
 	if len(dailyObservations) == 0 {
-		if ws.logLevel == "debug" {
-			log.Printf("DEBUG: No observations found for today")
-		}
+		ws.logDebug("No observations found for today")
 		return 0.0
 	}
 
@@ -136,9 +149,7 @@ func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 		// Only one observation today, so we can't calculate a difference
 		// Return the accumulated value if it seems reasonable for a daily total
 		singleValue := dailyObservations[0].RainAccumulated
-		if ws.logLevel == "debug" {
-			log.Printf("DEBUG: Only one observation today, rain value: %.3f", singleValue)
-		}
+		ws.logDebug("Only one observation today, rain value: %.3f", singleValue)
 		if singleValue <= 10.0 { // Reasonable daily limit in inches
 			return singleValue
 		}
@@ -149,30 +160,22 @@ func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 	earliestToday := dailyObservations[0].RainAccumulated
 	latestToday := dailyObservations[len(dailyObservations)-1].RainAccumulated
 
-	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Daily rain calculation - Earliest: %.3f, Latest: %.3f, Observations count: %d",
-			earliestToday, latestToday, len(dailyObservations))
-	}
+	ws.logDebug("Daily rain calculation - Earliest: %.3f, Latest: %.3f, Observations count: %d",
+		earliestToday, latestToday, len(dailyObservations))
 
 	// If latest is greater than earliest, we have rain accumulation for the day
 	if latestToday >= earliestToday {
 		dailyTotal := latestToday - earliestToday
-		if ws.logLevel == "debug" {
-			log.Printf("DEBUG: Daily rain total calculated: %.3f inches", dailyTotal)
-		}
+		ws.logDebug("Daily rain total calculated: %.3f inches", dailyTotal)
 		// Sanity check: daily total shouldn't exceed reasonable limits
 		if dailyTotal <= 20.0 { // 20 inches would be extreme but possible
 			return dailyTotal
 		}
-		if ws.logLevel == "debug" {
-			log.Printf("DEBUG: Daily rain total exceeds sanity limit (%.3f > 20.0), returning 0", dailyTotal)
-		}
+		ws.logDebug("Daily rain total exceeds sanity limit (%.3f > 20.0), returning 0", dailyTotal)
 	}
 
 	// If we can't calculate a reliable daily total, return 0
-	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Cannot calculate reliable daily total, returning 0")
-	}
+	ws.logDebug("Cannot calculate reliable daily total, returning 0")
 	return 0.0
 }
 
@@ -290,7 +293,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 }
 
 func (ws *WebServer) Start() error {
-	log.Printf("Starting web server on port %s", ws.port)
+	ws.logInfo("Starting web server on port %s", ws.port)
 
 	// Start status manager for periodic scraping
 	ws.statusManager.Start()
@@ -365,7 +368,7 @@ func (ws *WebServer) UpdateBatteryFromObservation(obs *weather.Observation) {
 }
 
 func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+	ws.logDebug("Request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
 
 	// Handle test-api.html specifically
 	if r.URL.Path == "/test-api.html" {
@@ -382,7 +385,7 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			filename = strings.TrimPrefix(r.URL.Path, "/static/")
 		}
 
-		log.Printf("Static file request: %s (path: %s)", filename, r.URL.Path)
+		ws.logDebug("Static file request: %s (path: %s)", filename, r.URL.Path)
 
 		// Serve the file from the physical directory
 		filePath := "./pkg/web/static/" + filename
@@ -403,7 +406,7 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/javascript")
 		}
 
-		log.Printf("Serving static file: %s", filePath)
+		ws.logDebug("Serving static file: %s", filePath)
 
 		// Try to serve the file
 		http.ServeFile(w, r, filePath)
@@ -425,17 +428,13 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	if ws.logLevel == "info" || ws.logLevel == "debug" {
-		log.Printf("API: Weather endpoint called from %s", r.RemoteAddr)
-	}
+	ws.logDebug("Weather endpoint called from %s", r.RemoteAddr)
 
 	ws.mu.RLock()
 	defer ws.mu.RUnlock()
 
 	if ws.weatherData == nil {
-		if ws.logLevel == "info" || ws.logLevel == "debug" {
-			log.Printf("API: No weather data available")
-		}
+		ws.logDebug("No weather data available")
 		http.Error(w, "No weather data available", http.StatusServiceUnavailable)
 		return
 	}
@@ -451,11 +450,9 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	// Calculate daily rain accumulation
 	dailyRainTotal := ws.calculateDailyRainAccumulation()
 
-	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s", pressureCondition, pressureTrend, weatherForecast)
-		log.Printf("DEBUG: Pressure values - Station: %.2f mb, Sea Level: %.2f mb (used for forecasting)", ws.weatherData.StationPressure, seaLevelPressure)
-		log.Printf("DEBUG: Rain data calculated - Current: %.3f in, Daily Total: %.3f in", ws.weatherData.RainAccumulated, dailyRainTotal)
-	}
+	ws.logDebug("Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s", pressureCondition, pressureTrend, weatherForecast)
+	ws.logDebug("Pressure values - Station: %.2f mb, Sea Level: %.2f mb (used for forecasting)", ws.weatherData.StationPressure, seaLevelPressure)
+	ws.logDebug("Rain data calculated - Current: %.3f in, Daily Total: %.3f in", ws.weatherData.RainAccumulated, dailyRainTotal)
 
 	response := WeatherResponse{
 		Temperature:          ws.weatherData.AirTemperature,
@@ -479,10 +476,8 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		LastUpdate:           time.Unix(ws.weatherData.Timestamp, 0).Format(time.RFC3339),
 	}
 
-	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %d, Illuminance: %.0f lux",
-			response.Temperature, response.Humidity, response.UV, response.Illuminance)
-	}
+	ws.logDebug("Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %d, Illuminance: %.0f lux",
+		response.Temperature, response.Humidity, response.UV, response.Illuminance)
 
 	json.NewEncoder(w).Encode(response)
 }
@@ -491,17 +486,13 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	if ws.logLevel == "info" || ws.logLevel == "debug" {
-		log.Printf("API: Status endpoint called from %s", r.RemoteAddr)
-	}
+	ws.logDebug("Status endpoint called from %s", r.RemoteAddr)
 
 	ws.mu.RLock()
 	defer ws.mu.RUnlock()
 
 	connected := ws.weatherData != nil
-	if ws.logLevel == "info" || ws.logLevel == "debug" {
-		log.Printf("API: Status check - weatherData exists: %t", connected)
-	}
+	ws.logDebug("Status check - weatherData exists: %t", connected)
 	lastUpdate := ""
 	if ws.weatherData != nil {
 		lastUpdate = time.Unix(ws.weatherData.Timestamp, 0).Format(time.RFC3339)
@@ -561,16 +552,12 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 
 	// Fetch station status from TempestWX (async, don't block on errors)
 	// Get station status from status manager (handles both scraping and fallback)
-	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Retrieving station status from status manager")
-	}
+	ws.logDebug("Retrieving station status from status manager")
 	stationStatus := ws.statusManager.GetStatus()
 	response.StationStatus = stationStatus
 
-	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: Station status retrieved - Source: %s, Battery: %s, LastScraped: %s",
-			stationStatus.DataSource, stationStatus.BatteryVoltage, stationStatus.LastScraped)
-	}
+	ws.logDebug("Station status retrieved - Source: %s, Battery: %s, LastScraped: %s",
+		stationStatus.DataSource, stationStatus.BatteryVoltage, stationStatus.LastScraped)
 
 	json.NewEncoder(w).Encode(response)
 }
@@ -2086,12 +2073,12 @@ func (ws *WebServer) getDashboardHTML() string {
                 <div class="card-content">
                     <!-- General Status -->
                     <div class="info-row">
-                        <span class="info-label">Data Source:</span>
-                        <span class="info-value" id="tempest-data-source">--</span>
-                    </div>
-                    <div class="info-row">
                         <span class="info-label">Status:</span>
                         <span class="info-value" id="tempest-status">Disconnected</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Data Source:</span>
+                        <span class="info-value" id="tempest-data-source">--</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Station:</span>

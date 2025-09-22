@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"tempest-homekit-go/pkg/config"
 	"tempest-homekit-go/pkg/homekit"
+	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/weather"
 	"tempest-homekit-go/pkg/web"
 )
@@ -19,14 +19,12 @@ import (
 // It sets up HomeKit accessories, starts the web server, and begins weather data polling.
 func StartService(cfg *config.Config, version string) error {
 	// Set log level
-	setLogLevel(cfg.LogLevel)
+	logger.SetLogLevel(cfg.LogLevel)
 
-	log.Println("Starting Tempest HomeKit service...")
+	logger.Info("Starting Tempest HomeKit service...")
 
 	// Get stations
-	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: Fetching stations from WeatherFlow API")
-	}
+	logger.Debug("Fetching stations from WeatherFlow API")
 	stations, err := weather.GetStations(cfg.Token)
 	if err != nil {
 		return fmt.Errorf("failed to get stations: %v", err)
@@ -34,19 +32,17 @@ func StartService(cfg *config.Config, version string) error {
 
 	station := weather.FindStationByName(stations, cfg.StationName)
 	if station == nil {
-		log.Printf("Available stations:")
+		logger.Info("Available stations:")
 		for _, s := range stations {
-			log.Printf("  - ID: %d, Name: '%s', StationName: '%s'", s.StationID, s.Name, s.StationName)
+			logger.Info("  - ID: %d, Name: '%s', StationName: '%s'", s.StationID, s.Name, s.StationName)
 		}
 		return fmt.Errorf("station '%s' not found", cfg.StationName)
 	}
 
-	log.Printf("Found station: %s (ID: %d)", station.Name, station.StationID)
+	logger.Info("Found station: %s (ID: %d)", station.Name, station.StationID)
 
 	// Setup HomeKit with sensor configuration
-	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: Initializing HomeKit accessories with sensor config: %s", cfg.Sensors)
-	}
+	logger.Debug("Initializing HomeKit accessories with sensor config: %s", cfg.Sensors)
 	sensorConfig := config.ParseSensorConfig(cfg.Sensors)
 	ws, setupErr := homekit.NewWeatherSystemModern(cfg.Pin, &sensorConfig, cfg.LogLevel)
 	if setupErr != nil {
@@ -54,22 +50,16 @@ func StartService(cfg *config.Config, version string) error {
 	}
 
 	// Start the HomeKit server
-	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: Starting weather system server")
-	}
+	logger.Debug("Starting weather system server")
 	go func() {
 		if err := ws.Start(); err != nil {
-			log.Printf("HomeKit server error: %v", err)
+			logger.Error("HomeKit server error: %v", err)
 		}
 	}()
 
-	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-		log.Printf("INFO: HomeKit server started successfully with PIN: %s", cfg.Pin)
-	}
-	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: HomeKit - Bridge ready to accept connections")
-		log.Printf("DEBUG: HomeKit - Listening for iOS/HomeKit client connections...")
-	}
+	logger.Info("HomeKit server started successfully with PIN: %s", cfg.Pin)
+	logger.Debug("HomeKit - Bridge ready to accept connections")
+	logger.Debug("HomeKit - Listening for iOS/HomeKit client connections...")
 
 	// Setup web dashboard
 	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version)
@@ -77,14 +67,12 @@ func StartService(cfg *config.Config, version string) error {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("Web server panic recovered: %v", r)
+				logger.Error("Web server panic recovered: %v", r)
 			}
 		}()
-		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-			log.Printf("INFO: Starting web dashboard on port %s", cfg.WebPort)
-		}
+		logger.Info("Starting web dashboard on port %s", cfg.WebPort)
 		if err := webServer.Start(); err != nil {
-			log.Printf("Web server error: %v", err)
+			logger.Error("Web server error: %v", err)
 		}
 	}()
 
@@ -128,7 +116,7 @@ func StartService(cfg *config.Config, version string) error {
 	// Preload historical data if requested
 	if cfg.ReadHistory {
 		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-			log.Printf("INFO: --read-history flag detected, preloading last 24 hours of weather data...")
+			logger.Info("--read-history flag detected, preloading last 24 hours of weather data...")
 		}
 
 		// Create a progress callback function
@@ -138,22 +126,16 @@ func StartService(cfg *config.Config, version string) error {
 
 		historicalObs, err := weather.GetHistoricalObservationsWithProgress(station.StationID, cfg.Token, cfg.LogLevel, progressCallback)
 		if err != nil {
-			log.Printf("WARNING: Failed to fetch historical data: %v", err)
+			logger.Error("Failed to fetch historical data: %v", err)
 			webServer.SetHistoryLoadingComplete()
 		} else {
-			if cfg.LogLevel == "debug" {
-				log.Printf("DEBUG: Successfully fetched %d historical observations", len(historicalObs))
-			}
-
-			// Set progress for data processing
+			logger.Debug("Successfully fetched %d historical observations", len(historicalObs)) // Set progress for data processing
 			webServer.SetHistoryLoadingProgress(2, 3, "Processing historical data...")
 
 			// Send historical data to web server for charts
 			for _, obs := range historicalObs {
 				webServer.UpdateWeather(obs)
-				if cfg.LogLevel == "debug" {
-					log.Printf("DEBUG: Added historical observation from %v", time.Unix(obs.Timestamp, 0))
-				}
+				logger.Debug("Added historical observation from %v", time.Unix(obs.Timestamp, 0))
 			}
 
 			// Complete the loading process
@@ -163,32 +145,32 @@ func StartService(cfg *config.Config, version string) error {
 			webServer.SetHistoricalDataStatus(len(historicalObs))
 
 			if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-				log.Printf("INFO: Historical data preload completed - loaded %d observations", len(historicalObs))
+				logger.Info("Historical data preload completed - loaded %d observations", len(historicalObs))
 			}
 		}
 	}
 
 	// Poll weather data
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-		log.Printf("INFO: Setting up weather polling every 60 seconds")
+		logger.Info("Setting up weather polling every 60 seconds")
 	}
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 
 	// Initial data fetch to populate HomeKit immediately
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-		log.Printf("INFO: Fetching initial weather data to populate HomeKit")
+		logger.Info("Fetching initial weather data to populate HomeKit")
 	}
 	updateWeatherData(station, cfg, ws, webServer)
 
 	// Fetch initial forecast data
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-		log.Printf("INFO: Fetching initial forecast data")
+		logger.Info("Fetching initial forecast data")
 	}
 	updateForecastData(station, cfg, webServer)
 
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-		log.Printf("INFO: Starting weather data polling loop")
+		logger.Info("Starting weather data polling loop")
 	}
 
 	forecastUpdateCounter := 0
@@ -206,19 +188,14 @@ func StartService(cfg *config.Config, version string) error {
 }
 
 func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit.WeatherSystemModern, webServer *web.WebServer) {
-	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: Polling iteration started - fetching observation from station %d", station.StationID)
-	}
-
+	logger.Debug("Polling iteration started - fetching observation from station %d", station.StationID)
 	obs, err := weather.GetObservation(station.StationID, cfg.Token)
 	if err != nil {
-		log.Printf("Error getting observation: %v", err)
+		logger.Error("Error getting observation: %v", err)
 		return
 	}
 
-	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-		log.Printf("INFO: Successfully read weather data from Tempest API - Station: %s", station.Name)
-	}
+	logger.Info("Successfully read weather data from Tempest API - Station: %s", station.Name)
 
 	// Info level logging - show sensor data and night detection
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
@@ -227,38 +204,36 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit
 		if isNight {
 			nightIndicator = " 🌙 NIGHT"
 		}
-		log.Printf("INFO: Sensor data - Temp: %.1f°C, Humidity: %.1f%%, Wind: %.1f mph (%.0f°), Rain: %.3f in, Light: %.0f lux%s",
+		logger.Info("Sensor data - Temp: %.1f°C, Humidity: %.1f%%, Wind: %.1f mph (%.0f°), Rain: %.3f in, Light: %.0f lux%s",
 			obs.AirTemperature, obs.RelativeHumidity, obs.WindAvg, obs.WindDirection, obs.RainAccumulated, obs.Illuminance, nightIndicator)
 	}
 
 	// Debug logging - show all weather metrics and pretty printed JSON
-	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: Full weather data - Temp: %.1f°C, Humidity: %.1f%%, Wind: %.1f mph (%.0f°), Rain: %.3f in, Pressure: %.1f mb, UV: %d, Solar: %.0f W/m², Battery: %.1fV",
-			obs.AirTemperature, obs.RelativeHumidity, obs.WindAvg, obs.WindDirection, obs.RainAccumulated,
-			obs.StationPressure, obs.UV, obs.SolarRadiation, obs.Battery)
+	logger.Debug("Full weather data - Temp: %.1f°C, Humidity: %.1f%%, Wind: %.1f mph (%.0f°), Rain: %.3f in, Pressure: %.1f mb, UV: %d, Solar: %.0f W/m², Battery: %.1fV",
+		obs.AirTemperature, obs.RelativeHumidity, obs.WindAvg, obs.WindDirection, obs.RainAccumulated,
+		obs.StationPressure, obs.UV, obs.SolarRadiation, obs.Battery)
 
-		// Pretty print the observation data as JSON
-		jsonData, err := json.MarshalIndent(obs, "", "  ")
-		if err == nil {
-			log.Printf("DEBUG: Raw Tempest API JSON response:\n%s", string(jsonData))
-		}
-
-		log.Printf("DEBUG: Updating HomeKit accessories with new sensor values")
+	// Pretty print the observation data as JSON
+	jsonData, err := json.MarshalIndent(obs, "", "  ")
+	if err == nil {
+		logger.Debug("Raw Tempest API JSON response:\n%s", string(jsonData))
 	}
+
+	logger.Debug("Updating HomeKit accessories with new sensor values")
 
 	// Update HomeKit sensors with detailed logging
 	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: HomeKit - Air Temperature: %.1f°C", obs.AirTemperature)
-		log.Printf("DEBUG: HomeKit - Relative Humidity: %.1f%%", obs.RelativeHumidity)
-		log.Printf("DEBUG: HomeKit - Wind Average: %.1f mph", obs.WindAvg)
-		log.Printf("DEBUG: HomeKit - Wind Gust: %.1f mph", obs.WindGust)
-		log.Printf("DEBUG: HomeKit - Wind Direction: %.0f°", obs.WindDirection)
-		log.Printf("DEBUG: HomeKit - Rain: %.3f in", obs.RainAccumulated)
-		log.Printf("DEBUG: HomeKit - Precipitation Type: %d", obs.PrecipitationType)
-		log.Printf("DEBUG: HomeKit - Lightning Distance: %.0f", obs.LightningStrikeAvg)
-		log.Printf("DEBUG: HomeKit - Lightning Count: %d", obs.LightningStrikeCount)
-		log.Printf("DEBUG: HomeKit - Lux: %.0f lux", obs.Illuminance)
-		log.Printf("DEBUG: HomeKit - UV Index: %d", obs.UV)
+		logger.Debug("HomeKit - Air Temperature: %.1f°C", obs.AirTemperature)
+		logger.Debug("HomeKit - Relative Humidity: %.1f%%", obs.RelativeHumidity)
+		logger.Debug("HomeKit - Wind Average: %.1f mph", obs.WindAvg)
+		logger.Debug("HomeKit - Wind Gust: %.1f mph", obs.WindGust)
+		logger.Debug("HomeKit - Wind Direction: %.0f°", obs.WindDirection)
+		logger.Debug("HomeKit - Rain: %.3f in", obs.RainAccumulated)
+		logger.Debug("HomeKit - Precipitation Type: %d", obs.PrecipitationType)
+		logger.Debug("HomeKit - Lightning Distance: %.0f", obs.LightningStrikeAvg)
+		logger.Debug("HomeKit - Lightning Count: %d", obs.LightningStrikeCount)
+		logger.Debug("HomeKit - Lux: %.0f lux", obs.Illuminance)
+		logger.Debug("HomeKit - UV Index: %d", obs.UV)
 	}
 
 	// Update all sensors in the Tempest Weather Station using the new UpdateSensor method:
@@ -275,16 +250,16 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit
 	ws.UpdateSensor("Lightning Distance", obs.LightningStrikeAvg)
 
 	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: HomeKit accessory updates completed - ULTRA-MINIMAL: Only temperature sensor active")
-		log.Printf("DEBUG: HomeKit - All other sensors ignored for maximum compliance")
-		log.Printf("DEBUG: HomeKit - Temperature characteristic changes pushed to connected iOS devices")
+		logger.Debug("HomeKit accessory updates completed - ULTRA-MINIMAL: Only temperature sensor active")
+		logger.Debug("HomeKit - All other sensors ignored for maximum compliance")
+		logger.Debug("HomeKit - Temperature characteristic changes pushed to connected iOS devices")
 	}
 
 	// Update web dashboard
 	webServer.UpdateWeather(obs)
 
 	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: Web dashboard updated with latest weather data")
+		logger.Debug("Web dashboard updated with latest weather data")
 	}
 
 	// Update battery data in status manager if using fallback status
@@ -294,9 +269,7 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit
 }
 
 func updateForecastData(station *weather.Station, cfg *config.Config, webServer *web.WebServer) {
-	if cfg.LogLevel == "debug" {
-		log.Printf("DEBUG: Fetching forecast data for station %d", station.StationID)
-	}
+	logger.Debug("Fetching forecast data for station %d", station.StationID)
 
 	forecast, err := weather.GetForecast(station.StationID, cfg.Token)
 	if err != nil {
@@ -313,19 +286,6 @@ func updateForecastData(station *weather.Station, cfg *config.Config, webServer 
 
 	if cfg.LogLevel == "debug" {
 		log.Printf("DEBUG: Web dashboard updated with latest forecast data")
-	}
-}
-
-func setLogLevel(level string) {
-	switch level {
-	case "debug":
-		log.SetFlags(log.LstdFlags | log.Lshortfile)
-	case "info":
-		log.SetFlags(log.LstdFlags)
-	case "error":
-		log.SetOutput(os.Stderr)
-	default:
-		log.SetOutput(os.Stderr)
 	}
 }
 

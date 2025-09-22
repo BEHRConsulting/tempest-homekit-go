@@ -53,8 +53,8 @@ func TestParseSensorConfigMin(t *testing.T) {
 	config := ParseSensorConfig("min")
 	expected := SensorConfig{
 		Temperature: true,
-		Humidity:    false,
-		Light:       false,
+		Humidity:    true,
+		Light:       true,
 		Wind:        false,
 		Rain:        false,
 		Pressure:    false,
@@ -67,7 +67,7 @@ func TestParseSensorConfigMin(t *testing.T) {
 }
 
 func TestParseSensorConfigTempOnly(t *testing.T) {
-	config := ParseSensorConfig("temp-only")
+	config := ParseSensorConfig("temp")
 	expected := SensorConfig{
 		Temperature: true,
 		Humidity:    false,

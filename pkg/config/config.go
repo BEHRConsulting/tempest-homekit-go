@@ -52,7 +52,7 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.Pin, "pin", cfg.Pin, "HomeKit PIN")
 	flag.StringVar(&cfg.LogLevel, "loglevel", cfg.LogLevel, "Log level (debug, info, error)")
 	flag.StringVar(&cfg.WebPort, "web-port", cfg.WebPort, "Web dashboard port")
-	flag.StringVar(&cfg.Sensors, "sensors", cfg.Sensors, "Sensors to enable: 'all', 'min' (temp,lux,humidity), 'temp-only', or comma-delimited list (temp,humidity,lux,wind,rain,pressure)")
+	flag.StringVar(&cfg.Sensors, "sensors", cfg.Sensors, "Sensors to enable: 'all', 'min' (temp,humidity,lux), or comma-delimited list (temp/temperature,humidity,lux/light,wind,rain,pressure,uv/uvi,lightning)")
 	flag.StringVar(&elevationStr, "elevation", "", "Station elevation (e.g., 903ft, 275m). If not provided, elevation will be auto-detected from coordinates")
 	flag.BoolVar(&cfg.ClearDB, "cleardb", false, "Clear HomeKit database and reset device pairing")
 	flag.BoolVar(&cfg.ReadHistory, "read-history", false, "Preload last 24 hours of weather data from Tempest API")
@@ -62,6 +62,13 @@ func LoadConfig() *Config {
 
 	// Parse flags but check if elevation was actually provided
 	flag.Parse()
+
+	// Validate command line arguments
+	if err := validateConfig(cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n\n", err)
+		flag.Usage()
+		os.Exit(2)
+	}
 
 	// Check if elevation was provided by user
 	flag.Visit(func(f *flag.Flag) {
@@ -74,10 +81,10 @@ func LoadConfig() *Config {
 	if !elevationProvided || strings.ToLower(elevationStr) == "auto" {
 		if elevation, err := lookupStationElevation(cfg.Token, cfg.StationName); err != nil {
 			log.Printf("Warning: Failed to lookup elevation automatically: %v", err)
-			log.Printf("Using fallback elevation 903ft (275.2m)")
+			log.Printf("INFO: Using fallback elevation 903ft (275.2m)")
 		} else {
 			cfg.Elevation = elevation
-			log.Printf("Auto-detected elevation: %.1f meters (%.0f feet)", elevation, elevation*3.28084)
+			// Don't log here - will be logged later in main.go after logger is set up
 		}
 	} else {
 		// Parse manually provided elevation with units
@@ -85,20 +92,98 @@ func LoadConfig() *Config {
 			log.Printf("Warning: Invalid elevation format '%s', using fallback 903ft (275.2m): %v", elevationStr, err)
 		} else {
 			cfg.Elevation = elevation
-			log.Printf("Using specified elevation: %.1f meters (%.0f feet)", elevation, elevation*3.28084)
+			log.Printf("INFO: Using specified elevation: %.1f meters (%.0f feet)", elevation, elevation*3.28084)
 		}
 	}
 
 	return cfg
 }
 
+// validateConfig validates command line arguments and returns an error if invalid
+func validateConfig(cfg *Config) error {
+	// Validate log level
+	validLogLevels := []string{"debug", "info", "error"}
+	validLevel := false
+	for _, level := range validLogLevels {
+		if cfg.LogLevel == level {
+			validLevel = true
+			break
+		}
+	}
+	if !validLevel {
+		return fmt.Errorf("invalid log level '%s'. Valid options: debug, info, error", cfg.LogLevel)
+	}
+
+	// Validate sensor configuration by testing parsing
+	if cfg.Sensors != "" {
+		// Test if sensor config is valid by attempting to parse it
+		// This will help catch invalid sensor names early
+		validSensorNames := []string{"temp", "temperature", "humidity", "lux", "light", "wind", "rain", "pressure", "uv", "uvi", "lightning"}
+		validPresets := []string{"all", "min"}
+
+		// Check if it's a preset
+		isPreset := false
+		for _, preset := range validPresets {
+			if cfg.Sensors == preset {
+				isPreset = true
+				break
+			}
+		}
+
+		if !isPreset {
+			// Parse comma-separated sensor list
+			sensors := strings.Split(strings.ToLower(cfg.Sensors), ",")
+			for _, sensor := range sensors {
+				sensor = strings.TrimSpace(sensor)
+				if sensor == "" {
+					continue
+				}
+				valid := false
+				for _, validName := range validSensorNames {
+					if sensor == validName {
+						valid = true
+						break
+					}
+				}
+				if !valid {
+					return fmt.Errorf("invalid sensor '%s'. Valid sensors: %s. Valid presets: %s",
+						sensor, strings.Join(validSensorNames, ", "), strings.Join(validPresets, ", "))
+				}
+			}
+		}
+	}
+
+	// Validate web port is numeric
+	if _, err := strconv.Atoi(cfg.WebPort); err != nil {
+		return fmt.Errorf("invalid web port '%s'. Port must be a number", cfg.WebPort)
+	}
+
+	// Validate HomeKit PIN format (8 digits)
+	if len(cfg.Pin) != 8 {
+		return fmt.Errorf("invalid HomeKit PIN '%s'. PIN must be exactly 8 digits", cfg.Pin)
+	}
+	if _, err := strconv.Atoi(cfg.Pin); err != nil {
+		return fmt.Errorf("invalid HomeKit PIN '%s'. PIN must contain only digits", cfg.Pin)
+	}
+
+	// Validate required fields
+	if cfg.Token == "" {
+		return fmt.Errorf("WeatherFlow API token is required. Set via --token flag or TEMPEST_TOKEN environment variable")
+	}
+	if cfg.StationName == "" {
+		return fmt.Errorf("station name is required. Set via --station flag or TEMPEST_STATION_NAME environment variable")
+	}
+
+	return nil
+}
+
 // ClearDatabase removes all files in the HomeKit database directory
 func ClearDatabase(dbPath string) error {
-	log.Printf("Clearing HomeKit database at: %s", dbPath)
+	log.Printf("INFO: Clearing HomeKit database at: %s", dbPath)
 
 	// Check if directory exists
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		log.Printf("Database directory does not exist: %s", dbPath)
+		log.Printf("INFO: Database directory does not exist: %s", dbPath)
 		return nil
 	}
 
@@ -112,11 +197,11 @@ func ClearDatabase(dbPath string) error {
 		if err := os.Remove(file); err != nil {
 			log.Printf("Warning: Failed to remove %s: %v", file, err)
 		} else {
-			log.Printf("Removed: %s", filepath.Base(file))
+			log.Printf("INFO: Removed: %s", filepath.Base(file))
 		}
 	}
 
-	log.Printf("HomeKit database cleared successfully")
+	log.Printf("INFO: HomeKit database cleared successfully")
 	return nil
 }
 
@@ -134,7 +219,7 @@ type SensorConfig struct {
 
 // ParseSensorConfig parses the sensor configuration string and returns a SensorConfig
 // with appropriate sensor types enabled based on the input string.
-// Supported values: "all", "min", "temp-only", or comma-separated sensor names.
+// Supported values: "all", "min", or comma-separated sensor names.
 func ParseSensorConfig(sensorsFlag string) SensorConfig {
 	switch strings.ToLower(sensorsFlag) {
 	case "all":
@@ -153,12 +238,7 @@ func ParseSensorConfig(sensorsFlag string) SensorConfig {
 			Temperature: true,
 			Humidity:    true,
 			Light:       true,
-			UV:          true,
-			// Core sensors: temperature, humidity, lux, and UV for comprehensive weather monitoring
-		}
-	case "temp-only":
-		return SensorConfig{
-			Temperature: true,
+			// Minimal sensors: temperature, humidity, and light for basic weather monitoring
 		}
 	default:
 		// Parse comma-delimited sensor list
@@ -179,7 +259,7 @@ func ParseSensorConfig(sensorsFlag string) SensorConfig {
 				config.Rain = true
 			case "pressure":
 				config.Pressure = true
-			case "uv":
+			case "uv", "uvi":
 				config.UV = true
 			case "lightning":
 				config.Lightning = true
@@ -324,30 +404,46 @@ func getElevationFromCoordinates(lat, lon float64) (float64, error) {
 func parseElevation(elevationStr string) (float64, error) {
 	elevationStr = strings.TrimSpace(strings.ToLower(elevationStr))
 
+	var meters float64
+	var err error
+
 	if strings.HasSuffix(elevationStr, "ft") {
 		// Parse feet and convert to meters
 		valueStr := strings.TrimSuffix(elevationStr, "ft")
-		feet, err := strconv.ParseFloat(valueStr, 64)
-		if err != nil {
-			return 0, err
+		feet, parseErr := strconv.ParseFloat(valueStr, 64)
+		if parseErr != nil {
+			return 0, parseErr
 		}
-		return feet * 0.3048, nil // 1 foot = 0.3048 meters
+		meters = feet * 0.3048 // 1 foot = 0.3048 meters
 	} else if strings.HasSuffix(elevationStr, "m") {
 		// Parse meters directly
 		valueStr := strings.TrimSuffix(elevationStr, "m")
-		meters, err := strconv.ParseFloat(valueStr, 64)
+		meters, err = strconv.ParseFloat(valueStr, 64)
 		if err != nil {
 			return 0, err
 		}
-		return meters, nil
 	} else {
 		// Try to parse as number without unit, assume meters
-		meters, err := strconv.ParseFloat(elevationStr, 64)
+		meters, err = strconv.ParseFloat(elevationStr, 64)
 		if err != nil {
 			return 0, err
 		}
-		return meters, nil
 	}
+
+	// Validate elevation range: -1411ft to 29029ft (-430m to 8848m)
+	// Dead Sea area is the lowest at -430m, Mount Everest is highest at 8848m
+	// Add small tolerance for floating point precision
+	const minElevationMeters = -430.1 // -1411 feet with tolerance
+	const maxElevationMeters = 8848.1 // 29029 feet with tolerance
+
+	if meters < minElevationMeters {
+		return 0, fmt.Errorf("elevation %.1fm is below Earth's lowest point (%.1fm, Dead Sea area)", meters, minElevationMeters)
+	}
+	if meters > maxElevationMeters {
+		return 0, fmt.Errorf("elevation %.1fm is above Earth's highest point (%.1fm, Mount Everest)", meters, maxElevationMeters)
+	}
+
+	return meters, nil
 }
 
 func getEnvOrDefault(key, defaultValue string) string {
