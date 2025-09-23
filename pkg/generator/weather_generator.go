@@ -36,18 +36,18 @@ type Location struct {
 
 // WeatherGenerator generates synthetic weather data
 type WeatherGenerator struct {
-	Location        Location
-	Season          Season
-	CurrentTime     time.Time
-	BaseTemperature float64 // Celsius
-	BasePressure    float64 // mb
-	BaseHumidity    float64 // %
-	current         *weather.Observation
-	history         []*weather.Observation
-	rng             *rand.Rand
-	cumulativeRain        float64 // Total accumulated rain since station start (like real Tempest)
-	dailyRainTotal        float64 // Total rain for the current day (resets at midnight)
-	lastDayCheck          int     // Day of year for checking when to reset daily total
+	Location               Location
+	Season                 Season
+	CurrentTime            time.Time
+	BaseTemperature        float64 // Celsius
+	BasePressure           float64 // mb
+	BaseHumidity           float64 // %
+	current                *weather.Observation
+	history                []*weather.Observation
+	rng                    *rand.Rand
+	cumulativeRain         float64 // Total accumulated rain since station start (like real Tempest)
+	dailyRainTotal         float64 // Total rain for the current day (resets at midnight)
+	lastDayCheck           int     // Day of year for checking when to reset daily total
 	isGeneratingHistorical bool    // Flag to prevent historical generation from affecting daily totals
 }
 
@@ -132,8 +132,8 @@ func (wg *WeatherGenerator) initializeBaseValues() {
 
 	// Initialize cumulative rain and daily total
 	wg.cumulativeRain = 1.5 + wg.rng.Float64()*8.0 // Start with some pre-existing accumulation (1.5-9.5 inches)
-	wg.dailyRainTotal = 0.0                         // Start daily total at 0
-	wg.lastDayCheck = wg.CurrentTime.YearDay()      // Track current day
+	wg.dailyRainTotal = 0.0                        // Start daily total at 0
+	wg.lastDayCheck = wg.CurrentTime.YearDay()     // Track current day
 }
 
 // getSeasonalTemperature returns realistic temperatures for location and season
@@ -381,7 +381,7 @@ func (wg *WeatherGenerator) generateRain() float64 {
 			wg.lastDayCheck = currentDay
 		}
 	}
-	
+
 	// Base probability of rain
 	rainChance := 0.1 // 10% base chance
 
@@ -411,7 +411,7 @@ func (wg *WeatherGenerator) generateRain() float64 {
 		// Light to moderate rain (per minute/observation)
 		newRain := wg.rng.Float64() * 0.1 // 0-0.1 inches per observation
 		wg.cumulativeRain += newRain
-		
+
 		// Only add to daily total if not generating historical data
 		if !wg.isGeneratingHistorical {
 			wg.dailyRainTotal += newRain
@@ -490,14 +490,14 @@ func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*weather.Observa
 	originalDailyTotal := wg.dailyRainTotal
 	originalCumulativeRain := wg.cumulativeRain
 	originalTime := wg.CurrentTime
-	
+
 	// Start from 24 hours ago and work forward
 	startTime := time.Now().Add(-24 * time.Hour)
 	interval := 24 * time.Hour / time.Duration(count)
 
 	// Set a flag to prevent rain generation from affecting daily totals during historical generation
 	wg.isGeneratingHistorical = true
-	
+
 	for i := 0; i < count; i++ {
 		// Set the current time for this observation
 		wg.CurrentTime = startTime.Add(time.Duration(i) * interval)
@@ -520,7 +520,7 @@ func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*weather.Observa
 
 	// Clear the historical generation flag
 	wg.isGeneratingHistorical = false
-	
+
 	// Restore the original state (historical generation should not corrupt current day)
 	wg.dailyRainTotal = originalDailyTotal
 	wg.cumulativeRain = originalCumulativeRain

@@ -125,6 +125,9 @@ go build
 # New flexible station URL approach
 ./tempest-homekit-go --station-url http://localhost:8080/api/generate-weather
 
+# Using environment variable (equivalent to above)
+STATION_URL=http://localhost:8080/api/generate-weather ./tempest-homekit-go
+
 # With historical data preloading
 ./tempest-homekit-go --use-generated-weather --read-history
 ```
@@ -211,6 +214,7 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 #### Environment Variables
 - `TEMPEST_TOKEN`: WeatherFlow API token
 - `TEMPEST_STATION_NAME`: Station name
+- `STATION_URL`: Custom station URL for weather data (overrides Tempest API)
 - `HOMEKIT_PIN`: HomeKit PIN
 - `LOG_LEVEL`: Logging level
 - `WEB_PORT`: Web dashboard port

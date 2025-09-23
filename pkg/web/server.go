@@ -28,6 +28,7 @@ type WebServer struct {
 	dataHistory            []weather.Observation
 	maxHistorySize         int
 	stationName            string
+	stationURL             string  // station URL for weather data
 	stationID              int     // station ID for TempestWX status scraping
 	elevation              float64 // elevation in meters
 	logLevel               string  // log level for filtering debug messages
@@ -93,6 +94,7 @@ type StatusResponse struct {
 	LastUpdate             string                 `json:"lastUpdate"`
 	Uptime                 string                 `json:"uptime"`
 	StationName            string                 `json:"stationName,omitempty"`
+	StationURL             string                 `json:"stationURL,omitempty"`
 	Elevation              float64                `json:"elevation"`
 	HomeKit                map[string]interface{} `json:"homekit"`
 	DataHistory            []WeatherResponse      `json:"dataHistory"`
@@ -328,7 +330,7 @@ func getPressureWeatherForecast(pressure float64, trend string) string {
 	}
 }
 
-func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface) *WebServer {
+func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, stationURL string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface) *WebServer {
 	ws := &WebServer{
 		port:             port,
 		elevation:        elevation,
@@ -338,6 +340,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 		dataHistory:      make([]weather.Observation, 0, 1000),
 		startTime:        time.Now(),
 		version:          version,
+		stationURL:       stationURL,
 		generatedWeather: generatedWeather,
 		weatherGenerator: weatherGenerator,
 		homekitStatus: map[string]interface{}{
@@ -644,6 +647,11 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	// Add station name if available
 	if ws.stationName != "" {
 		response.StationName = ws.stationName
+	}
+
+	// Add station URL if available
+	if ws.stationURL != "" {
+		response.StationURL = ws.stationURL
 	}
 
 	// Add generated weather information if available
@@ -2224,6 +2232,10 @@ func (ws *WebServer) getDashboardHTML() string {
                         <span class="info-value" id="tempest-station">--</span>
                     </div>
                     <div class="info-row">
+                        <span class="info-label">Station URL:</span>
+                        <span class="info-value" id="tempest-station-url">--</span>
+                    </div>
+                    <div class="info-row">
                         <span class="info-label">Elevation:</span>
                         <span class="info-value" id="tempest-elevation">--</span>
                     </div>
@@ -2361,7 +2373,7 @@ func (ws *WebServer) getDashboardHTML() string {
 // handleGenerateWeatherAPI returns Tempest API-compatible JSON format for generated weather data
 func (ws *WebServer) handleGenerateWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	ws.logDebug("Generate weather API endpoint called from %s", r.RemoteAddr)
-	
+
 	// Only allow GET requests
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -2380,7 +2392,7 @@ func (ws *WebServer) handleGenerateWeatherAPI(w http.ResponseWriter, r *http.Req
 
 	// Ensure we're in current weather mode (not historical)
 	ws.weatherGenerator.SetCurrentWeatherMode()
-	
+
 	// Generate a fresh observation
 	obs := ws.weatherGenerator.GenerateObservation()
 	if obs == nil {
@@ -2394,28 +2406,28 @@ func (ws *WebServer) handleGenerateWeatherAPI(w http.ResponseWriter, r *http.Req
 	response := map[string]interface{}{
 		"obs": []map[string]interface{}{
 			{
-				"timestamp":                    obs.Timestamp,
-				"wind_lull":                    obs.WindLull,
-				"wind_avg":                     obs.WindAvg,
-				"wind_gust":                    obs.WindGust,
-				"wind_direction":               obs.WindDirection,
-				"station_pressure":             obs.StationPressure,
-				"air_temperature":              obs.AirTemperature,
-				"relative_humidity":            obs.RelativeHumidity,
-				"illuminance":                  obs.Illuminance,
-				"uv":                          obs.UV,
-				"solar_radiation":             obs.SolarRadiation,
-				"rain_accumulated":            obs.RainAccumulated,
-				"precipitation_type":          obs.PrecipitationType,
+				"timestamp":                     obs.Timestamp,
+				"wind_lull":                     obs.WindLull,
+				"wind_avg":                      obs.WindAvg,
+				"wind_gust":                     obs.WindGust,
+				"wind_direction":                obs.WindDirection,
+				"station_pressure":              obs.StationPressure,
+				"air_temperature":               obs.AirTemperature,
+				"relative_humidity":             obs.RelativeHumidity,
+				"illuminance":                   obs.Illuminance,
+				"uv":                            obs.UV,
+				"solar_radiation":               obs.SolarRadiation,
+				"rain_accumulated":              obs.RainAccumulated,
+				"precipitation_type":            obs.PrecipitationType,
 				"lightning_strike_avg_distance": obs.LightningStrikeAvg,
-				"lightning_strike_count":      obs.LightningStrikeCount,
-				"battery":                     obs.Battery,
-				"report_interval":             obs.ReportInterval,
+				"lightning_strike_count":        obs.LightningStrikeCount,
+				"battery":                       obs.Battery,
+				"report_interval":               obs.ReportInterval,
 			},
 		},
 	}
 
-	ws.logDebug("Generated weather API response - Temp: %.1f°C, Rain: %.3f in, Battery: %.1fV", 
+	ws.logDebug("Generated weather API response - Temp: %.1f°C, Rain: %.3f in, Battery: %.1fV",
 		obs.AirTemperature, obs.RainAccumulated, obs.Battery)
 
 	w.Header().Set("Content-Type", "application/json")

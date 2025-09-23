@@ -97,7 +97,15 @@ func StartService(cfg *config.Config, version string) error {
 			ClimateZone: location.ClimateZone,
 		}
 	}
-	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, generatedWeatherInfo, weatherGen)
+
+	// Determine the effective station URL that will be used for weather data
+	effectiveStationURL := cfg.StationURL
+	if effectiveStationURL == "" {
+		// Construct the actual Tempest API URL that will be used
+		effectiveStationURL = fmt.Sprintf("https://swd.weatherflow.com/swd/rest/observations/station/%d?token=%s", station.StationID, cfg.Token)
+	}
+
+	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, effectiveStationURL, generatedWeatherInfo, weatherGen)
 	webServer.SetStationName(station.Name)
 	go func() {
 		defer func() {

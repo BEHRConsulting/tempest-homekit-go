@@ -1854,6 +1854,7 @@ function updateStatusDisplay(status) {
     // Update Tempest status
     const tempestStatus = document.getElementById('tempest-status');
     const tempestStation = document.getElementById('tempest-station');
+    const tempestStationURL = document.getElementById('tempest-station-url');
     const tempestElevation = document.getElementById('tempest-elevation');
     const tempestLastUpdate = document.getElementById('tempest-last-update');
     const tempestUptime = document.getElementById('tempest-uptime');
@@ -1887,6 +1888,17 @@ function updateStatusDisplay(status) {
             tempestStation.innerHTML = `<span style="cursor: pointer; color: #007bff; text-decoration: underline;" onclick="regenerateWeather()" title="Click to regenerate with new location/season">${status.generatedWeather.location} (${status.generatedWeather.season})</span>`;
         } else {
             tempestStation.textContent = status.stationName || '--';
+        }
+    }
+    
+    // Update station URL
+    if (tempestStationURL) {
+        if (status.stationURL) {
+            // Make the URL clickable and truncate if too long
+            const displayURL = status.stationURL.length > 50 ? status.stationURL.substring(0, 47) + '...' : status.stationURL;
+            tempestStationURL.innerHTML = `<a href="${status.stationURL}" target="_blank" style="color: #007bff; text-decoration: none;" title="${status.stationURL}">${displayURL}</a>`;
+        } else {
+            tempestStationURL.textContent = '--';
         }
     }
     
