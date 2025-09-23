@@ -29,6 +29,7 @@ type Config struct {
 	TestAPI             bool
 	UseWebStatus        bool    // Enable headless browser scraping of TempestWX status
 	UseGeneratedWeather bool    // Use generated weather data for testing instead of Tempest API
+	StationURL          string  // Custom station URL for weather data (overrides Tempest API)
 	Elevation           float64 // elevation in meters
 	Version             bool    // Show version and exit
 }
@@ -59,11 +60,21 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.ReadHistory, "read-history", false, "Preload last 24 hours of weather data from Tempest API")
 	flag.BoolVar(&cfg.TestAPI, "test-api", false, "Test WeatherFlow API endpoints and data points")
 	flag.BoolVar(&cfg.UseWebStatus, "use-web-status", false, "Enable headless browser scraping of TempestWX status page every 15 minutes")
+	flag.StringVar(&cfg.StationURL, "station-url", "", "Custom station URL for weather data (e.g., http://localhost:8080/api/generate-weather). Overrides Tempest API")
 	flag.BoolVar(&cfg.UseGeneratedWeather, "use-generated-weather", false, "Use generated weather data for UI testing instead of Tempest API")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
 
 	// Parse flags but check if elevation was actually provided
 	flag.Parse()
+
+	// Handle station URL configuration
+	if cfg.StationURL != "" {
+		// If station URL is provided, automatically enable generated weather mode
+		cfg.UseGeneratedWeather = true
+	} else if cfg.UseGeneratedWeather {
+		// If use-generated-weather is set but no custom URL, use default local endpoint
+		cfg.StationURL = "http://localhost:8080/api/generate-weather"
+	}
 
 	// Validate command line arguments
 	if err := validateConfig(cfg); err != nil {

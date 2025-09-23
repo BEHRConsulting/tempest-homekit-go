@@ -1,6 +1,6 @@
-# Tempest HomeKit Go Service - Complete Requirements
+# Tempest HomeKit Go Service - Requirements & Features
 
-**Version**: v1.3.0
+**Version**: v1.4.0
 
 ## Overview
 
@@ -13,6 +13,14 @@
 
 ### Web Console Only Mode
 🏠 **Feature**: The application supports running with HomeKit services completely disabled using `--disable-homekit` flag. This provides a lightweight weather monitoring solution with only the web dashboard active.
+
+### Recent Architectural Improvements (September 2025)
+🚀 **Unified Data Architecture**: 
+- ✅ **Fixed Rain Totals**: Resolved daily rain accumulation calculation bugs
+- ✅ **Single Data Pipeline**: Eliminated complex branching between real and generated weather data
+- ✅ **Flexible Station URLs**: Support for custom weather endpoints via `--station-url` flag
+- ✅ **Mock Tempest API**: Built-in `/api/generate-weather` endpoint with perfect API compatibility
+- ✅ **Clean Architecture**: Removed scattered special case handling for maintainable code
 
 ## Functional Requirements
 
@@ -133,6 +141,14 @@
 #### API Endpoints
 - ✅ **Stations**: `GET https://swd.weatherflow.com/swd/rest/stations?token={token}`
 - ✅ **Observations**: `GET https://swd.weatherflow.com/swd/rest/observations/station/{station_id}?token={token}`
+- ✅ **NEW: Custom Station URLs**: Support for any weather endpoint via `--station-url` flag
+- ✅ **NEW: Generated Weather API**: Built-in `/api/generate-weather` endpoint with Tempest API compatibility
+
+#### Flexible Data Sources (New Architecture)
+- ✅ **Unified Processing**: Single data pipeline handles all weather sources
+- ✅ **API Compatibility**: Custom endpoints must return Tempest API-compatible JSON format
+- ✅ **Generated Weather Mode**: Built-in weather simulation with realistic patterns
+- ✅ **Backwards Compatibility**: `--use-generated-weather` flag still supported
 
 #### TempestWX Status Page Scraping
 - ✅ **Status Page**: `https://tempestwx.com/settings/station/{station_id}/status`

@@ -246,13 +246,14 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit
 	var obs *weather.Observation
 	var err error
 
-	if cfg.UseGeneratedWeather && weatherGen != nil {
-		// Ensure we're in current weather mode (not historical)
-		weatherGen.SetCurrentWeatherMode()
-		// Use generated weather data
-		obs = weatherGen.GenerateObservation()
-		logger.Info("Successfully generated weather data - Location: %s (%s season)",
-			weatherGen.GetLocation().Name, weatherGen.GetSeason().String())
+	if cfg.StationURL != "" {
+		// Use custom station URL (e.g., generated weather endpoint)
+		obs, err = weather.GetObservationFromURL(cfg.StationURL)
+		if err != nil {
+			logger.Error("Error getting observation from URL %s: %v", cfg.StationURL, err)
+			return
+		}
+		logger.Info("Successfully read weather data from custom station URL: %s", cfg.StationURL)
 	} else {
 		// Use real Tempest API data
 		obs, err = weather.GetObservation(station.StationID, cfg.Token)

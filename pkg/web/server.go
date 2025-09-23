@@ -124,6 +124,8 @@ type WeatherGeneratorInterface interface {
 	GetLocation() generator.Location
 	GetSeason() generator.Season
 	GetDailyRainTotal() float64
+	SetCurrentWeatherMode()
+	GenerateObservation() *weather.Observation
 }
 
 // Calculate daily rain accumulation from historical data
@@ -353,6 +355,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 	mux.HandleFunc("/api/weather", ws.handleWeatherAPI)
 	mux.HandleFunc("/api/status", ws.handleStatusAPI)
 	mux.HandleFunc("/api/regenerate-weather", ws.handleRegenerateWeatherAPI)
+	mux.HandleFunc("/api/generate-weather", ws.handleGenerateWeatherAPI)
 
 	ws.server = &http.Server{
 		Addr:    ":" + port,
@@ -2353,6 +2356,70 @@ func (ws *WebServer) getDashboardHTML() string {
     <script src="pkg/web/static/script.js?v=` + fmt.Sprintf("%d", time.Now().UnixNano()) + `"></script>
 </body>
 </html>`
+}
+
+// handleGenerateWeatherAPI returns Tempest API-compatible JSON format for generated weather data
+func (ws *WebServer) handleGenerateWeatherAPI(w http.ResponseWriter, r *http.Request) {
+	ws.logDebug("Generate weather API endpoint called from %s", r.RemoteAddr)
+	
+	// Only allow GET requests
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	ws.mu.RLock()
+	defer ws.mu.RUnlock()
+
+	// Check if we have a weather generator
+	if ws.weatherGenerator == nil {
+		ws.logDebug("No weather generator available - cannot generate weather data")
+		http.Error(w, "Weather generator not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Ensure we're in current weather mode (not historical)
+	ws.weatherGenerator.SetCurrentWeatherMode()
+	
+	// Generate a fresh observation
+	obs := ws.weatherGenerator.GenerateObservation()
+	if obs == nil {
+		ws.logDebug("Failed to generate weather observation")
+		http.Error(w, "Failed to generate weather data", http.StatusInternalServerError)
+		return
+	}
+
+	// Return in Tempest API format - single observation wrapped in obs array
+	// This matches the format expected by the weather client
+	response := map[string]interface{}{
+		"obs": []map[string]interface{}{
+			{
+				"timestamp":                    obs.Timestamp,
+				"wind_lull":                    obs.WindLull,
+				"wind_avg":                     obs.WindAvg,
+				"wind_gust":                    obs.WindGust,
+				"wind_direction":               obs.WindDirection,
+				"station_pressure":             obs.StationPressure,
+				"air_temperature":              obs.AirTemperature,
+				"relative_humidity":            obs.RelativeHumidity,
+				"illuminance":                  obs.Illuminance,
+				"uv":                          obs.UV,
+				"solar_radiation":             obs.SolarRadiation,
+				"rain_accumulated":            obs.RainAccumulated,
+				"precipitation_type":          obs.PrecipitationType,
+				"lightning_strike_avg_distance": obs.LightningStrikeAvg,
+				"lightning_strike_count":      obs.LightningStrikeCount,
+				"battery":                     obs.Battery,
+				"report_interval":             obs.ReportInterval,
+			},
+		},
+	}
+
+	ws.logDebug("Generated weather API response - Temp: %.1f°C, Rain: %.3f in, Battery: %.1fV", 
+		obs.AirTemperature, obs.RainAccumulated, obs.Battery)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func (ws *WebServer) Stop() error {

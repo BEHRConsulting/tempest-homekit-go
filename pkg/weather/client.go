@@ -137,6 +137,11 @@ func GetStations(token string) ([]Station, error) {
 // GetObservation retrieves the latest weather observation for the specified station.
 func GetObservation(stationID int, token string) (*Observation, error) {
 	url := fmt.Sprintf("%s/observations/station/%d?token=%s", BaseURL, stationID, token)
+	return GetObservationFromURL(url)
+}
+
+// GetObservationFromURL fetches weather data from a custom URL (e.g., generated weather endpoint)
+func GetObservationFromURL(url string) (*Observation, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err

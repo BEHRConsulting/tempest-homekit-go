@@ -2,7 +2,7 @@
 
 A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on weather conditions. Includes a modern web dashboard with interactive unit conversions and cross-platform deployment scripts.
 
-**Version**: v1.3.0
+**Version**: v1.4.0
 
 ## Key v1.3.0 Enhancements
 
@@ -53,8 +53,33 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 - ✅ Professional styling and enhanced user experience
 - ✅ Comprehensive logging and error handling
 - ✅ Database management with --cleardb command
-- ✅ Production-ready with graceful error recoverydividual HomeKit accessories for each weather sensor
-- **Multiple Sensor Support**: Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, UV Index, and Ambient Light
+- ✅ Production-ready with graceful error recovery
+
+## Recent Major Improvements (September 2025)
+
+### 🚀 Unified Data Architecture
+- **Rain Totals Fixed**: Proper daily accumulation calculation (resolved 0.0 rain total bug)
+- **Single Data Pipeline**: Eliminated complex branching between real and generated weather
+- **Flexible Station URLs**: Support for custom weather endpoints with `--station-url`
+- **Mock Tempest API**: Perfect API compatibility at `/api/generate-weather` endpoint
+- **Clean Architecture**: Removed scattered special case handling throughout codebase
+
+### 📊 Enhanced Visualization
+- **Chart Improvements**: Fixed dataset rendering order for proper line visibility
+- **Simplified Solar Charts**: Removed unnecessary average lines from light/UV charts
+- **Better Tooltips**: All datasets now display properly in hover interactions
+- **Data Accuracy**: Charts reflect actual weather data with proper timestamps
+
+### 🔧 Technical Enhancements  
+- **Backwards Compatibility**: `--use-generated-weather` still works seamlessly
+- **Code Quality**: Single unified weather processing pipeline
+- **Maintainability**: Much cleaner architecture without dual data paths
+
+## Features
+
+- **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest station data every 60 seconds
+- **HomeKit Integration**: Individual HomeKit accessories for each weather sensor
+- **Multiple Sensor Support**: Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, UV Index, Pressure, and Ambient Light
 - **Modern Web Dashboard**: Interactive web interface with real-time updates, unit conversions, and professional styling
   - **External JavaScript Architecture**: Clean separation of concerns with all JavaScript externalized to `script.js`
   - **Pressure Analysis System**: Advanced pressure forecasting with trend analysis and weather predictions
@@ -90,6 +115,18 @@ git clone https://github.com/BEHRConsulting/tempest-homekit-go.git
 cd tempest-homekit-go
 go build
 ./tempest-homekit-go --token "your-api-token"
+```
+
+### Test with Generated Weather
+```bash
+# Traditional approach
+./tempest-homekit-go --use-generated-weather
+
+# New flexible station URL approach
+./tempest-homekit-go --station-url http://localhost:8080/api/generate-weather
+
+# With historical data preloading
+./tempest-homekit-go --use-generated-weather --read-history
 ```
 
 ### Cross-Platform Build (All Platforms)
@@ -164,7 +201,9 @@ sudo ./scripts/install-service.sh --token "your-api-token"
   - **Other sensors**: `humidity`, `wind`, `rain`, `pressure`, `lightning`
   - (default: "temp,lux,humidity")
 - `--station`: Tempest station name (default: "Chino Hills")
-- `--token`: WeatherFlow API access token (required)
+- `--station-url`: Custom station URL for weather data (e.g., `http://localhost:8080/api/generate-weather`). Overrides Tempest API
+- `--token`: WeatherFlow API access token (required)*
+- `--use-generated-weather`: Use simulated weather data for testing (automatically sets station-url)
 - `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome)
 - `--version`: Show version information and exit
 - `--web-port`: Web dashboard port (default: "8080")

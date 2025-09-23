@@ -1,12 +1,38 @@
 # Code Review - Tempest HomeKit Go Service
 
-# Code Review - Tempest HomeKit Go Service
+## Recent Architectural Enhancements (Latest Updates)
+
+### 🎯 **Unified Data Pipeline Architecture**
+**Fixed**: Eliminated dual-path weather fetching logic that caused chart data inconsistencies.
+
+**Before**: Complex branching between real weather API and generated weather
+**After**: Single data pipeline with configurable URLs
+
+**Impact**: Rain daily totals now display correctly (previously showed 0 due to processing path mismatch)
+
+### 🔧 **Station URL Configuration System**
+**Added**: `--station-url` flag for flexible weather data sources
+- Supports any API endpoint with Tempest-compatible JSON
+- Built-in generated weather endpoint: `http://localhost:8080/api/generate-weather`
+- Backwards compatible with existing `--use-generated-weather` flag
+
+### 📊 **Chart Visualization Improvements** 
+**Enhanced**: Chart.js configurations for better data presentation
+- Removed unnecessary average lines from light/UV charts
+- Fixed dataset ordering issues causing JavaScript errors
+- Improved tooltip readability and visual hierarchy
+
+### 🌤️ **Mock Tempest API Endpoint**
+**Added**: `/api/generate-weather` with perfect API compatibility
+- Returns realistic weather patterns using weather generator
+- Enables testing without WeatherFlow API access
+- Seamlessly integrates with unified data pipeline
 
 ## Overview
 This code review evaluates the complete Go service application for monitoring WeatherFlow Tempest weather stations and updating Apple HomeKit accessories. The application includes real-time weather monitoring, comprehensive HomeKit integration, modern web dashboard, and cross-platform deployment capabilities.
 
 **Review Date**: September 2025
-**Codebase Version**: Production Ready v1.3.0 - HomeKit Compliance & UV Sensor Enhancement
+**Codebase Version**: Production Ready v1.4.0 - Unified Data Pipeline & Architecture Enhancements
 **Go Version**: 1.24.2
 
 ## HomeKit Compliance Critical Update
