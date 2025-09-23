@@ -41,8 +41,6 @@ in the web dashboard temperature box, add a line for average temp on this day ov
 
 [x] web console, rain card, add local day rain accumulation
 
-[] add the command line parameter --use-generated-weather for ui testing. 
-
 [x] web console, new card Tempest Forcast, fill card with tempest API GET /better_forecast
 
 [x] time format for card graphs: wind, uv index. use light as a guide
@@ -51,7 +49,9 @@ in the web dashboard temperature box, add a line for average temp on this day ov
 
 [x] web console, tempest card, add battery level
 
-[x] fox homekit humidity sensor
+[x] fix homekit humidity sensor
 
-[] fix homekit lux sensor
+[x] fix homekit lux sensor
+
+[] add the command line parameter --use-generated-weather for ui testing. This replaces data from Tempest API with programm generated data for all sensors. Generate all 1000 points for all sensors if --use-history has been set, continue generating for live data. Ramdomly select a season and location, generate appropiate data for that season and location. Set status for Tempest Station to "Generated" and a line below labeled Generated Season/Loc with a clickable value of the generated location and season. Clickong on the value will regenerate all data.
 

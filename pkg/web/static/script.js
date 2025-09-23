@@ -260,18 +260,50 @@ function initCharts() {
                 fill: false,
                 tension: 0.4,
                 spanGaps: false,
-                label: 'Rain'
+                label: 'Rain (incremental)',
+                pointRadius: 2,
+                pointHoverRadius: 4,
+                order: 3  // Render data points at bottom layer
             }, {
                 data: [],
                 borderColor: '#66ff66',
                 backgroundColor: 'rgba(102, 255, 102, 0.2)',
                 borderDash: [5, 5],
-                borderWidth: 2,
+                borderWidth: 3,
                 fill: false,
                 pointRadius: 0,
                 tension: 0,
-                label: 'Average'
+                label: 'Average',
+                order: 2  // Render above data points
+            }, {
+                data: [],
+                borderColor: '#ff6b35',
+                backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                borderDash: [3, 3],
+                borderWidth: 4,
+                fill: false,
+                pointRadius: 0,
+                tension: 0,
+                label: 'Today Total',
+                order: 1  // Render on top of everything
             }]
+        },
+        options: {
+            ...chartConfig.options,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            plugins: {
+                ...chartConfig.options.plugins,
+                tooltip: {
+                    ...chartConfig.options.plugins.tooltip,
+                    filter: function(tooltipItem) {
+                        // Always show all datasets in rain chart tooltips
+                        return true;
+                    }
+                }
+            }
         }
     });
 
@@ -321,16 +353,6 @@ function initCharts() {
                 tension: 0.4,
                 spanGaps: false,
                 label: 'Light'
-            }, {
-                data: [],
-                borderColor: '#8a56ff',
-                backgroundColor: 'rgba(138, 86, 255, 0.2)',
-                borderDash: [5, 5],
-                borderWidth: 2,
-                fill: false,
-                pointRadius: 0,
-                tension: 0,
-                label: 'Average'
             }]
         }
     });
@@ -348,16 +370,6 @@ function initCharts() {
                     tension: 0.4,
                     spanGaps: false,
                     label: 'UV Index'
-                }, {
-                    data: [],
-                    borderColor: '#66ff66',
-                    backgroundColor: 'rgba(102, 255, 102, 0.2)',
-                    borderDash: [5, 5],
-                    borderWidth: 2,
-                    fill: false,
-                    pointRadius: 0,
-                    tension: 0,
-                    label: 'Average'
                 }]
             }
         });
@@ -401,10 +413,12 @@ function forceChartColors() {
         });
     }
     
-    // Rain: Purple data → Yellow-green average
+    // Rain: Purple data → Yellow-green average → Orange 24h total
     if (charts.rain) {
         charts.rain.data.datasets[1].borderColor = '#66ff66';
         charts.rain.data.datasets[1].backgroundColor = 'rgba(102, 255, 102, 0.2)';
+        charts.rain.data.datasets[2].borderColor = '#ff6b35';
+        charts.rain.data.datasets[2].backgroundColor = 'rgba(255, 107, 53, 0.1)';
         charts.rain.update('none');
     }
     
@@ -415,19 +429,11 @@ function forceChartColors() {
         charts.pressure.update('none');
     }
     
-    // Light: Yellow data → Purple average
-    if (charts.light) {
-        charts.light.data.datasets[1].borderColor = '#8a56ff';
-        charts.light.data.datasets[1].backgroundColor = 'rgba(138, 86, 255, 0.2)';
-        charts.light.update('none');
-    }
+    // Light: Only has main data, no average line needed
+    // (Light naturally goes to zero at night)
     
-    // UV: Purple data → Yellow-green average
-    if (charts.uv) {
-        charts.uv.data.datasets[1].borderColor = '#66ff66';
-        charts.uv.data.datasets[1].backgroundColor = 'rgba(102, 255, 102, 0.2)';
-        charts.uv.update('none');
-    }
+    // UV: Only has main data, no average line needed  
+    // (UV naturally goes to zero at night)
     
     debugLog(logLevels.INFO, '✅ Chart colors forced - complementary pairs applied');
 }
@@ -753,6 +759,147 @@ function updateAverageLine(chart, data) {
     });
 }
 
+function update24HourAccumulationLine(chart, rainDailyTotal, units) {
+    // For rain chart only - updates the third dataset (index 2) with 24-hour accumulation
+    debugLog(logLevels.INFO, 'Updating 24h Rain Line', {
+        rainDailyTotal: rainDailyTotal,
+        units: units?.rain || 'inches',
+        hasDataset2: !!chart.data.datasets[2]
+    });
+    
+    // Also log to console for debugging
+    console.log('Rain Daily Total:', rainDailyTotal, 'Type:', typeof rainDailyTotal);
+    
+    if (!chart.data.datasets[2] || rainDailyTotal === undefined || rainDailyTotal === null) {
+        if (chart.data.datasets[2]) {
+            chart.data.datasets[2].data = [];
+        }
+        console.log('WARNING: No rain daily total data available');
+        debugLog(logLevels.WARN, '24h Rain Line: No data or dataset - line will be empty');
+        return;
+    }
+
+    // Convert daily total based on current units
+    let convertedDailyTotal = rainDailyTotal;
+    if (units && units.rain === 'mm') {
+        convertedDailyTotal = inchesToMm(rainDailyTotal);
+    }
+
+    // Create a horizontal line at the daily total level across the current time range
+    const mainData = chart.data.datasets[0].data;
+    if (mainData.length === 0) {
+        chart.data.datasets[2].data = [];
+        return;
+    }
+
+    // Get the time range from main data
+    const startTime = mainData[0].x;
+    const endTime = mainData[mainData.length - 1].x;
+
+    // Create horizontal line data points
+    const accumulationLineData = [
+        { x: startTime, y: convertedDailyTotal },
+        { x: endTime, y: convertedDailyTotal }
+    ];
+
+    chart.data.datasets[2].data = accumulationLineData;
+    
+    // Adjust Y-axis scale to ensure both incremental rain data and daily total are visible
+    // This handles the case where rain data is near 0.0 but daily total is much higher
+    if (convertedDailyTotal > 0.001) { // Changed from > 0 to > 0.001 to handle very small values
+        const mainDataValues = mainData.map(point => point.y);
+        const minDataValue = Math.min(...mainDataValues, 0);
+        const maxDataValue = Math.max(...mainDataValues);
+        
+        // Ensure the scale includes both the data range and the daily total
+        const suggestedMin = Math.min(minDataValue, 0);
+        const suggestedMax = Math.max(maxDataValue, convertedDailyTotal * 1.1); // Add 10% padding above daily total
+        
+        chart.options.scales.y.min = suggestedMin;
+        chart.options.scales.y.max = suggestedMax;
+        
+        debugLog(logLevels.DEBUG, 'Rain chart Y-axis adjusted', {
+            minData: minDataValue,
+            maxData: maxDataValue,
+            dailyTotal: convertedDailyTotal,
+            scaleMin: suggestedMin,
+            scaleMax: suggestedMax
+        });
+    } else {
+        // For very small or zero daily totals, remove Y-axis constraints to allow auto-scaling
+        delete chart.options.scales.y.min;
+        delete chart.options.scales.y.max;
+        
+        debugLog(logLevels.DEBUG, 'Rain chart Y-axis reset to auto-scale', {
+            dailyTotal: convertedDailyTotal
+        });
+    }
+    
+    debugLog(logLevels.DEBUG, '24h accumulation line updated', {
+        originalTotal: rainDailyTotal,
+        convertedTotal: convertedDailyTotal,
+        unit: units?.rain || 'inches',
+        dataPoints: accumulationLineData.length,
+        lineData: accumulationLineData
+    });
+}
+
+// Temporary test function to simulate the rain issue (for debugging)
+function testRainChartScaling() {
+    if (charts.rain && weatherData) {
+        // Simulate the scenario: rain data near 0.0 but daily total is 6.724
+        const testDailyTotal = 6.724;
+        
+        debugLog(logLevels.INFO, 'Testing rain chart scaling with simulated data', {
+            currentRainData: weatherData.rainAccum,
+            currentDailyTotal: weatherData.rainDailyTotal,
+            testDailyTotal: testDailyTotal
+        });
+        
+        // Temporarily override the daily total for testing
+        const originalDailyTotal = weatherData.rainDailyTotal;
+        weatherData.rainDailyTotal = testDailyTotal;
+        
+        // Update the 24-hour accumulation line with test data
+        update24HourAccumulationLine(charts.rain, testDailyTotal, units);
+        charts.rain.update();
+        
+        // Update the display
+        const dailyRainElement = document.getElementById('daily-rain-total');
+        if (dailyRainElement) {
+            const rainUnit = units.rain === 'inches' ? 'in' : 'mm';
+            let displayValue = testDailyTotal;
+            if (units.rain === 'mm') {
+                displayValue = inchesToMm(testDailyTotal);
+            }
+            dailyRainElement.textContent = displayValue.toFixed(3) + ' ' + rainUnit;
+        }
+        
+        debugLog(logLevels.INFO, 'Rain chart test applied - check the rain card for scaling');
+        
+        // Restore original value after 10 seconds
+        setTimeout(() => {
+            weatherData.rainDailyTotal = originalDailyTotal;
+            update24HourAccumulationLine(charts.rain, originalDailyTotal, units);
+            charts.rain.update();
+            
+            if (dailyRainElement) {
+                const rainUnit = units.rain === 'inches' ? 'in' : 'mm';
+                let displayValue = originalDailyTotal;
+                if (units.rain === 'mm') {
+                    displayValue = inchesToMm(originalDailyTotal);
+                }
+                dailyRainElement.textContent = displayValue.toFixed(3) + ' ' + rainUnit;
+            }
+            
+            debugLog(logLevels.INFO, 'Rain chart test restored to original values');
+        }, 10000);
+    }
+}
+
+// Make test function available globally
+window.testRainChartScaling = testRainChartScaling;
+
 function validateAndSortChartData(chart) {
     // Validate and sort data for the main dataset
     if (chart.data.datasets[0] && chart.data.datasets[0].data) {
@@ -770,16 +917,8 @@ function validateAndSortChartData(chart) {
         // Sort by timestamp
         data.sort((a, b) => new Date(a.x) - new Date(b.x));
         
-        // Remove duplicate timestamps, keeping the most recent value
-        const uniqueData = [];
-        for (let i = 0; i < data.length; i++) {
-            const current = data[i];
-            const next = data[i + 1];
-            
-            if (!next || new Date(current.x).getTime() !== new Date(next.x).getTime()) {
-                uniqueData.push(current);
-            }
-        }
+        // DISABLE duplicate removal for generated weather data - allow all points to accumulate
+        const uniqueData = data; // Skip duplicate removal entirely
         
         chart.data.datasets[0].data = uniqueData;
         
@@ -1333,13 +1472,27 @@ function updateDisplay() {
 }
 
 function updateCharts() {
+    console.log('🚀 DEBUG: updateCharts() called', { weatherData: weatherData });
+    
     if (!weatherData) {
+        console.warn('⚠️ DEBUG: updateCharts called but no weatherData available');
         debugLog(logLevels.WARN, 'updateCharts called but no weatherData available');
         return;
     }
     
+    console.log('🚀 DEBUG: Starting chart updates with data:', weatherData);
     debugLog(logLevels.DEBUG, 'Starting chart updates');
-    const now = new Date(weatherData.lastUpdate);
+    
+    // Use current time for live data updates - this creates real-time progression
+    const now = new Date();
+    
+    // Debug generated weather data freshness
+    console.log('📊 CHART UPDATE DEBUG:', {
+        currentTime: now.toISOString(),
+        weatherLastUpdate: weatherData.lastUpdate,
+        temperature: weatherData.temperature,
+        timeDiff: now.getTime() - new Date(weatherData.lastUpdate).getTime()
+    });
 
     // Temperature chart
     let tempValue = weatherData.temperature;
@@ -1347,11 +1500,22 @@ function updateCharts() {
         tempValue = celsiusToFahrenheit(tempValue);
     }
     charts.temperature.data.datasets[0].data.push({ x: now, y: tempValue });
+    console.log('📈 TEMP CHART DATA AFTER PUSH:', {
+        totalPoints: charts.temperature.data.datasets[0].data.length,
+        latestPoint: charts.temperature.data.datasets[0].data[charts.temperature.data.datasets[0].data.length - 1],
+        allTimestamps: charts.temperature.data.datasets[0].data.map(d => d.x.toISOString())
+    });
+    
     if (charts.temperature.data.datasets[0].data.length > maxDataPoints) {
         charts.temperature.data.datasets[0].data.shift();
     }
     const tempAvg = calculateAverage(charts.temperature.data.datasets[0].data);
     validateAndSortChartData(charts.temperature);
+    console.log('📈 TEMP CHART DATA AFTER VALIDATION:', {
+        totalPoints: charts.temperature.data.datasets[0].data.length,
+        removedPoints: charts.temperature.data.datasets[0].data.length,
+        latestPoint: charts.temperature.data.datasets[0].data[charts.temperature.data.datasets[0].data.length - 1]
+    });
     updateAverageLine(charts.temperature, charts.temperature.data.datasets[0].data);
     charts.temperature.options.scales.y.title = {
         display: true,
@@ -1406,6 +1570,7 @@ function updateCharts() {
     }
     const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
     updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
+    update24HourAccumulationLine(charts.rain, weatherData.rainDailyTotal, units);
     charts.rain.options.scales.y.title = {
         display: true,
         text: units.rain === 'inches' ? 'in' : 'mm'
@@ -1522,6 +1687,10 @@ function recalculateAverages(changedSensor) {
         });
         const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
         updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
+        // Update 24-hour accumulation line with current units and weatherData
+        if (weatherData && weatherData.rainDailyTotal !== undefined) {
+            update24HourAccumulationLine(charts.rain, weatherData.rainDailyTotal, units);
+        }
         charts.rain.update();
     }
 
@@ -1611,10 +1780,22 @@ async function fetchWeather() {
             });
             
             updateDisplay();
-            updateCharts();
+            
+            // Explicit chart update with error handling
+            try {
+                console.log('🚀 DEBUG: About to call updateCharts with weatherData:', weatherData);
+                updateCharts();
+                console.log('🚀 DEBUG: updateCharts completed successfully');
+            } catch (error) {
+                console.error('❌ ERROR in updateCharts:', error);
+                // Log error to server as well
+                debugLog(logLevels.ERROR, 'updateCharts error', { error: error.message, stack: error.stack });
+            }
+            
             document.getElementById('status').textContent = 'Connected to Tempest station';
             document.getElementById('status').style.background = 'rgba(40, 167, 69, 0.1)';
             
+            console.log('🚀 DEBUG: fetchWeather completed, calling updateCharts');
             debugLog(logLevels.INFO, 'Weather fetch completed successfully', {
                 totalTime: (performance.now() - startTime).toFixed(2) + 'ms'
             });
@@ -1690,11 +1871,24 @@ function updateStatusDisplay(status) {
     } else {
         // Not loading - show normal connection status
         if (tempestStatus) {
-            tempestStatus.textContent = status.connected ? 'Connected' : 'Disconnected';
-            tempestStatus.style.color = status.connected ? '#28a745' : '#dc3545';
+            if (status.generatedWeather && status.generatedWeather.enabled) {
+                tempestStatus.textContent = 'Generated';
+                tempestStatus.style.color = '#17a2b8'; // Info blue for generated
+            } else {
+                tempestStatus.textContent = status.connected ? 'Connected' : 'Disconnected';
+                tempestStatus.style.color = status.connected ? '#28a745' : '#dc3545';
+            }
         }
     }
-    if (tempestStation) tempestStation.textContent = status.stationName || '--';
+    
+    // Update station name or generated weather location
+    if (tempestStation) {
+        if (status.generatedWeather && status.generatedWeather.enabled) {
+            tempestStation.innerHTML = `<span style="cursor: pointer; color: #007bff; text-decoration: underline;" onclick="regenerateWeather()" title="Click to regenerate with new location/season">${status.generatedWeather.location} (${status.generatedWeather.season})</span>`;
+        } else {
+            tempestStation.textContent = status.stationName || '--';
+        }
+    }
     
     // Update elevation display with unit conversion
     updateElevationDisplay();
@@ -2071,21 +2265,58 @@ function populateChartsWithHistoricalData(dataHistory) {
         dataPoints: dataHistory.length
     });
 
-    // Clear existing chart data
-    charts.temperature.data.datasets[0].data = [];
-    charts.humidity.data.datasets[0].data = [];
-    charts.wind.data.datasets[0].data = [];
-    charts.rain.data.datasets[0].data = [];
-    charts.pressure.data.datasets[0].data = [];
-    charts.light.data.datasets[0].data = [];
-    if (charts.uv && charts.uv.data) {
-        charts.uv.data.datasets[0].data = [];
+    // Check if we have any historical data with actual timestamps
+    const hasActualTimestamps = dataHistory.some(obs => obs.lastUpdate);
+    const currentDataLength = charts.temperature.data.datasets[0].data.length;
+    
+    // Always process historical data if it has actual timestamps (real weather data)
+    // or if charts are completely empty (generated weather data)
+    const shouldPopulate = hasActualTimestamps || currentDataLength === 0;
+    
+    if (shouldPopulate) {
+        debugLog(logLevels.INFO, 'Processing historical data', {
+            reason: hasActualTimestamps ? 'has actual timestamps' : 'charts empty',
+            currentDataPoints: currentDataLength,
+            historicalDataPoints: dataHistory.length
+        });
+        
+        // Clear existing chart data to populate with historical data
+        charts.temperature.data.datasets[0].data = [];
+        charts.humidity.data.datasets[0].data = [];
+        charts.wind.data.datasets[0].data = [];
+        charts.rain.data.datasets[0].data = [];
+        charts.pressure.data.datasets[0].data = [];
+        charts.light.data.datasets[0].data = [];
+        if (charts.uv && charts.uv.data) {
+            charts.uv.data.datasets[0].data = [];
+        }
+    } else {
+        debugLog(logLevels.INFO, 'Skipping historical data population - charts already have live data without timestamps');
+        return; // Don't overwrite existing live data
     }
 
     // Process each historical data point
     for (let i = 0; i < dataHistory.length; i++) {
         const obs = dataHistory[i];
-        const timestamp = new Date(obs.lastUpdate);
+        
+        // Use actual timestamp from historical data if available, otherwise create backwards timeline
+        let timestamp;
+        if (obs.lastUpdate) {
+            // Use the actual historical timestamp
+            timestamp = new Date(obs.lastUpdate);
+        } else {
+            // Fallback to backwards timeline for generated data (for compatibility)
+            const now = new Date();
+            const secondsBack = (dataHistory.length - i - 1) * 10; // 10 seconds between each point
+            timestamp = new Date(now.getTime() - (secondsBack * 1000));
+        }
+
+        debugLog(logLevels.DEBUG, `Historical data point ${i + 1}/${dataHistory.length}`, {
+            timestamp: timestamp.toISOString(),
+            hasActualTimestamp: !!obs.lastUpdate,
+            temperature: obs.temperature,
+            rain: obs.rainAccum
+        });
 
         // Temperature
         let tempValue = obs.temperature;
@@ -2183,6 +2414,10 @@ function updateAverageAndTrendLines() {
         validateAndSortChartData(charts.rain);
         const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
         updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
+        // Update 24-hour accumulation line if weatherData is available
+        if (weatherData && weatherData.rainDailyTotal !== undefined) {
+            update24HourAccumulationLine(charts.rain, weatherData.rainDailyTotal, units);
+        }
     }
 
     // Update pressure average and trend
@@ -2193,19 +2428,9 @@ function updateAverageAndTrendLines() {
         updateTrendLine(charts.pressure, charts.pressure.data.datasets[0].data);
     }
 
-    // Update light average
-    if (charts.light.data.datasets[0].data.length > 0) {
-        validateAndSortChartData(charts.light);
-        const lightAvg = calculateAverage(charts.light.data.datasets[0].data);
-        updateAverageLine(charts.light, charts.light.data.datasets[0].data);
-    }
+    // Light data naturally goes to zero at night - no average needed
 
-    // Update UV average
-    if (charts.uv && charts.uv.data && charts.uv.data.datasets[0].data.length > 0) {
-        validateAndSortChartData(charts.uv);
-        const uvAvg = calculateAverage(charts.uv.data.datasets[0].data);
-        updateAverageLine(charts.uv, charts.uv.data.datasets[0].data);
-    }
+    // UV data naturally goes to zero at night - no average needed
 }
 
 // Continue with HomeKit status update
@@ -2451,7 +2676,11 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('🔧 Initial setup - Attached click event listener to pressure info icon');
     }
     
+    console.log('🚀 DEBUG: Starting chart initialization');
     initCharts();
+    console.log('🚀 DEBUG: Charts initialized:', Object.keys(charts));
+    console.log('🚀 DEBUG: Temperature chart exists:', !!charts.temperature);
+    console.log('🚀 DEBUG: Rain chart exists:', !!charts.rain);
 
     // Attach event listeners with debug logging
     debugLog(logLevels.DEBUG, 'Starting to attach event listeners');
@@ -2497,10 +2726,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Start data fetching
     debugLog(logLevels.INFO, 'Starting periodic data fetching (10-second intervals)');
+    console.log('🚀 DEBUG: Starting initial data fetch');
     fetchWeather();
     fetchStatus();
     
     setInterval(() => {
+        console.log('🚀 DEBUG: Periodic data fetch triggered');
         debugLog(logLevels.DEBUG, 'Periodic data fetch triggered');
         fetchWeather();
         fetchStatus();
@@ -2508,3 +2739,331 @@ document.addEventListener('DOMContentLoaded', function() {
     
     debugLog(logLevels.INFO, 'Dashboard initialization completed');
 });
+
+// Regenerate weather data for testing (for generated weather mode)
+async function regenerateWeather() {
+    try {
+        debugLog(logLevels.INFO, 'Regenerating weather data...');
+        
+        const response = await fetch('/api/regenerate-weather', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to regenerate weather: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        debugLog(logLevels.INFO, 'Weather regenerated successfully', result);
+        
+        // Show a brief notification
+        const stationElement = document.getElementById('tempest-station');
+        if (stationElement) {
+            const originalContent = stationElement.innerHTML;
+            stationElement.innerHTML = '<span style="color: #28a745;">Regenerated! Refreshing...</span>';
+            
+            // Refresh the data after a short delay
+            setTimeout(() => {
+                stationElement.innerHTML = originalContent;
+                fetchWeather();
+                fetchStatus();
+            }, 1500);
+        }
+        
+    } catch (error) {
+        debugLog(logLevels.ERROR, 'Failed to regenerate weather', error);
+        console.error('Failed to regenerate weather:', error);
+        
+        // Show error notification
+        const stationElement = document.getElementById('tempest-station');
+        if (stationElement) {
+            const originalContent = stationElement.innerHTML;
+            stationElement.innerHTML = '<span style="color: #dc3545;">Regeneration failed</span>';
+            setTimeout(() => {
+                stationElement.innerHTML = originalContent;
+            }, 2000);
+        }
+    }
+}
+
+// Debug function to test chart functionality
+window.testCharts = function() {
+    console.log('🔧 Testing charts functionality');
+    console.log('Charts object:', charts);
+    console.log('Chart.js available:', typeof Chart !== 'undefined');
+    console.log('Temperature chart exists:', !!charts.temperature);
+    console.log('Rain chart exists:', !!charts.rain);
+    
+    if (charts.temperature) {
+        console.log('Temperature chart data length:', charts.temperature.data.datasets[0].data.length);
+    }
+    
+    if (charts.rain) {
+        console.log('Rain chart data length:', charts.rain.data.datasets[0].data.length);
+        console.log('Rain chart datasets:', charts.rain.data.datasets.length);
+    }
+    
+    console.log('weatherData:', weatherData);
+    
+    // Try to add a test point
+    if (weatherData && charts.temperature) {
+        try {
+            const testPoint = { x: new Date(), y: 25 };
+            charts.temperature.data.datasets[0].data.push(testPoint);
+            charts.temperature.update();
+            console.log('✅ Successfully added test point to temperature chart');
+        } catch (error) {
+            console.error('❌ Failed to add test point:', error);
+        }
+    }
+};
+
+// Deep chart diagnosis function
+window.diagnoseCharts = function() {
+    console.log("🔬 DEEP CHART DIAGNOSIS:");
+    
+    Object.keys(charts).forEach(chartName => {
+        const chart = charts[chartName];
+        const canvas = document.getElementById(`${chartName}-chart`);
+        
+        console.log(`\n📊 ${chartName.toUpperCase()} CHART:`);
+        console.log("  Chart Object:", !!chart);
+        console.log("  Canvas Element:", !!canvas);
+        console.log("  Canvas Visible:", canvas ? (canvas.offsetWidth > 0 && canvas.offsetHeight > 0) : false);
+        console.log("  Canvas Dimensions:", canvas ? `${canvas.width}x${canvas.height}` : 'N/A');
+        
+        if (chart) {
+            console.log("  Chart Data:");
+            console.log("    Datasets:", chart.data?.datasets?.length || 0);
+            console.log("    Labels:", chart.data?.labels?.length || 0);
+            
+            chart.data?.datasets?.forEach((dataset, idx) => {
+                console.log(`    Dataset ${idx}:`, {
+                    label: dataset.label,
+                    dataPoints: dataset.data?.length || 0,
+                    lastPoint: dataset.data?.[dataset.data.length - 1],
+                    borderColor: dataset.borderColor,
+                    backgroundColor: dataset.backgroundColor
+                });
+            });
+            
+            // Try to force update
+            try {
+                chart.update('none');
+                console.log("  ✅ Chart.update() succeeded");
+            } catch (error) {
+                console.log("  ❌ Chart.update() failed:", error.message);
+            }
+        }
+    });
+    
+    // Also test Chart.js availability
+    console.log("\n🔧 CHART.JS STATUS:");
+    console.log("  Chart.js loaded:", typeof Chart !== 'undefined');
+    console.log("  Chart version:", Chart?.version || 'Unknown');
+    console.log("  Chart instances:", Chart?.instances?.length || 0);
+};
+
+// Canvas inspection function
+window.inspectCanvas = function() {
+    console.log("🎨 CANVAS INSPECTION:");
+    
+    const chartNames = ['temperature', 'humidity', 'wind', 'rain', 'pressure', 'light', 'uv'];
+    
+    chartNames.forEach(chartName => {
+        const canvas = document.getElementById(`${chartName}-chart`);
+        const container = canvas?.parentElement;
+        
+        console.log(`\n🖼️ ${chartName.toUpperCase()} CANVAS:`);
+        console.log("  Canvas exists:", !!canvas);
+        
+        if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            console.log("  Canvas position:", {
+                width: canvas.width,
+                height: canvas.height,
+                clientWidth: canvas.clientWidth,
+                clientHeight: canvas.clientHeight,
+                offsetWidth: canvas.offsetWidth,
+                offsetHeight: canvas.offsetHeight,
+                boundingRect: {
+                    width: rect.width,
+                    height: rect.height,
+                    top: rect.top,
+                    left: rect.left
+                }
+            });
+            
+            console.log("  Canvas style:", {
+                display: canvas.style.display || getComputedStyle(canvas).display,
+                visibility: canvas.style.visibility || getComputedStyle(canvas).visibility,
+                position: getComputedStyle(canvas).position
+            });
+            
+            console.log("  Container:", {
+                exists: !!container,
+                className: container?.className,
+                offsetWidth: container?.offsetWidth,
+                offsetHeight: container?.offsetHeight
+            });
+        }
+    });
+};
+
+// Force chart render function
+window.forceRenderCharts = function() {
+    console.log("🔄 FORCING CHART RENDERS:");
+    
+    Object.keys(charts).forEach(chartName => {
+        const chart = charts[chartName];
+        if (chart) {
+            try {
+                console.log(`📊 Forcing render for ${chartName} chart...`);
+                
+                // Force multiple update strategies
+                chart.update('none'); // No animation
+                chart.render(); // Force immediate render
+                chart.draw(); // Force draw
+                
+                console.log(`✅ ${chartName} chart render completed`);
+                console.log(`   Data points: ${chart.data.datasets[0]?.data?.length || 0}`);
+                console.log(`   Canvas attached: ${!!chart.canvas}`);
+                console.log(`   Chart rendered: ${chart.rendered || 'unknown'}`);
+            } catch (error) {
+                console.error(`❌ Error rendering ${chartName} chart:`, error);
+            }
+        }
+    });
+};
+
+// Recreate charts function 
+window.recreateCharts = function() {
+    console.log("🔨 RECREATING ALL CHARTS:");
+    
+    // Destroy existing charts
+    Object.keys(charts).forEach(chartName => {
+        if (charts[chartName]) {
+            try {
+                charts[chartName].destroy();
+                console.log(`🗑️ Destroyed ${chartName} chart`);
+            } catch (error) {
+                console.error(`Error destroying ${chartName} chart:`, error);
+            }
+        }
+    });
+    
+    // Clear charts object
+    Object.keys(charts).forEach(key => delete charts[key]);
+    
+    // Wait a moment then reinitialize
+    setTimeout(() => {
+        console.log("🔄 Reinitializing charts...");
+        initCharts();
+        
+        // Try to repopulate with current data if available
+        if (typeof weatherData !== 'undefined' && weatherData) {
+            setTimeout(() => {
+                updateCharts(weatherData);
+                console.log("📊 Charts recreated and populated with current data");
+            }, 100);
+        }
+    }, 100);
+};
+
+// Debug chart scales and force visible data
+window.debugChartScales = function() {
+    console.log("🔍 DEBUGGING CHART SCALES:");
+    
+    Object.keys(charts).forEach(chartName => {
+        const chart = charts[chartName];
+        if (chart) {
+            console.log(`\n📊 ${chartName.toUpperCase()} CHART SCALE DEBUG:`);
+            
+            // Check data ranges
+            chart.data.datasets.forEach((dataset, idx) => {
+                console.log(`  Dataset ${idx} (${dataset.label}):`);
+                console.log(`    Data points: ${dataset.data.length}`);
+                if (dataset.data.length > 0) {
+                    const values = dataset.data.map(d => typeof d === 'object' ? d.y : d);
+                    console.log(`    Values: [${values.join(', ')}]`);
+                    console.log(`    Min: ${Math.min(...values)}, Max: ${Math.max(...values)}`);
+                }
+            });
+            
+            // Check scales
+            if (chart.scales) {
+                Object.keys(chart.scales).forEach(scaleId => {
+                    const scale = chart.scales[scaleId];
+                    console.log(`  Scale ${scaleId}:`);
+                    console.log(`    Min: ${scale.min}, Max: ${scale.max}`);
+                    console.log(`    Range: ${scale.max - scale.min}`);
+                });
+            }
+            
+            // Force a visible range and update
+            try {
+                // Add some test data points with visible values
+                const testData = [
+                    { x: new Date(Date.now() - 60000), y: 20 },
+                    { x: new Date(Date.now() - 30000), y: 25 },
+                    { x: new Date(), y: 30 }
+                ];
+                
+                chart.data.datasets[0].data = [...chart.data.datasets[0].data, ...testData];
+                chart.update('none');
+                
+                console.log(`  ✅ Added test data to ${chartName} chart`);
+            } catch (error) {
+                console.error(`  ❌ Error adding test data to ${chartName}:`, error);
+            }
+        }
+    });
+};
+
+// Fix timestamp issues in all charts
+window.fixChartTimestamps = function() {
+    console.log("🔧 FIXING CHART TIMESTAMPS:");
+    
+    const now = new Date();
+    const oneMinuteAgo = new Date(now.getTime() - 60000);
+    const twoMinutesAgo = new Date(now.getTime() - 120000);
+    
+    Object.keys(charts).forEach(chartName => {
+        const chart = charts[chartName];
+        if (chart) {
+            console.log(`📊 Fixing ${chartName} chart timestamps...`);
+            
+            // Clear existing data and add properly timestamped data
+            chart.data.datasets.forEach((dataset, idx) => {
+                // Get current values or use defaults
+                let value1 = 20, value2 = 25, value3 = 30;
+                
+                if (dataset.data.length > 0) {
+                    const lastPoint = dataset.data[dataset.data.length - 1];
+                    const baseValue = typeof lastPoint === 'object' ? lastPoint.y : lastPoint;
+                    value1 = baseValue * 0.9;
+                    value2 = baseValue * 0.95; 
+                    value3 = baseValue;
+                }
+                
+                // Set properly timestamped data
+                dataset.data = [
+                    { x: twoMinutesAgo, y: value1 },
+                    { x: oneMinuteAgo, y: value2 },
+                    { x: now, y: value3 }
+                ];
+                
+                console.log(`  Dataset ${idx}: ${dataset.data.length} points with proper timestamps`);
+            });
+            
+            // Force chart update
+            chart.update('none');
+            console.log(`  ✅ ${chartName} chart timestamps fixed`);
+        }
+    });
+    
+    console.log("🎯 All chart timestamps fixed! Charts should now be visible.");
+};

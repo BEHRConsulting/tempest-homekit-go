@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"tempest-homekit-go/pkg/config"
+	"tempest-homekit-go/pkg/generator"
 	"tempest-homekit-go/pkg/homekit"
 	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/weather"
@@ -23,23 +24,47 @@ func StartService(cfg *config.Config, version string) error {
 
 	logger.Info("Starting Tempest HomeKit service...")
 
-	// Get stations
-	logger.Debug("Fetching stations from WeatherFlow API")
-	stations, err := weather.GetStations(cfg.Token)
-	if err != nil {
-		return fmt.Errorf("failed to get stations: %v", err)
-	}
+	var station *weather.Station
+	var weatherGen *generator.WeatherGenerator
 
-	station := weather.FindStationByName(stations, cfg.StationName)
-	if station == nil {
-		logger.Info("Available stations:")
-		for _, s := range stations {
-			logger.Info("  - ID: %d, Name: '%s', StationName: '%s'", s.StationID, s.Name, s.StationName)
+	if cfg.UseGeneratedWeather {
+		// Use generated weather data for testing
+		logger.Info("Using generated weather data for testing")
+		weatherGen = generator.NewWeatherGenerator()
+
+		// Create a fake station for the generated location
+		location := weatherGen.GetLocation()
+		station = &weather.Station{
+			StationID:   99999, // Fake station ID
+			Name:        location.Name,
+			StationName: location.Name,
 		}
-		return fmt.Errorf("station '%s' not found", cfg.StationName)
-	}
 
-	logger.Info("Found station: %s (ID: %d)", station.Name, station.StationID)
+		// Update the config elevation to match the generated location
+		cfg.Elevation = location.Elevation
+		logger.Info("Using generated location elevation: %.1f meters (%.0f feet)", location.Elevation, location.Elevation*3.28084)
+
+		logger.Info("Generated weather location: %s (%s, %s season)",
+			location.Name, location.ClimateZone, weatherGen.GetSeason().String())
+	} else {
+		// Use real Tempest API data
+		logger.Debug("Fetching stations from WeatherFlow API")
+		stations, err := weather.GetStations(cfg.Token)
+		if err != nil {
+			return fmt.Errorf("failed to get stations: %v", err)
+		}
+
+		station = weather.FindStationByName(stations, cfg.StationName)
+		if station == nil {
+			logger.Info("Available stations:")
+			for _, s := range stations {
+				logger.Info("  - ID: %d, Name: '%s', StationName: '%s'", s.StationID, s.Name, s.StationName)
+			}
+			return fmt.Errorf("station '%s' not found", cfg.StationName)
+		}
+
+		logger.Info("Found station: %s (ID: %d)", station.Name, station.StationID)
+	}
 
 	// Setup HomeKit with sensor configuration
 	logger.Debug("Initializing HomeKit accessories with sensor config: %s", cfg.Sensors)
@@ -62,7 +87,17 @@ func StartService(cfg *config.Config, version string) error {
 	logger.Debug("HomeKit - Listening for iOS/HomeKit client connections...")
 
 	// Setup web dashboard
-	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version)
+	var generatedWeatherInfo *web.GeneratedWeatherInfo
+	if cfg.UseGeneratedWeather {
+		location := weatherGen.GetLocation()
+		generatedWeatherInfo = &web.GeneratedWeatherInfo{
+			Enabled:     true,
+			Location:    location.Name,
+			Season:      weatherGen.GetSeason().String(),
+			ClimateZone: location.ClimateZone,
+		}
+	}
+	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, generatedWeatherInfo, weatherGen)
 	webServer.SetStationName(station.Name)
 	go func() {
 		defer func() {
@@ -124,12 +159,26 @@ func StartService(cfg *config.Config, version string) error {
 			webServer.SetHistoryLoadingProgress(currentStep, totalSteps, description)
 		}
 
-		historicalObs, err := weather.GetHistoricalObservationsWithProgress(station.StationID, cfg.Token, cfg.LogLevel, progressCallback)
-		if err != nil {
-			logger.Error("Failed to fetch historical data: %v", err)
-			webServer.SetHistoryLoadingComplete()
+		var historicalObs []*weather.Observation
+		var err error
+
+		if cfg.UseGeneratedWeather && weatherGen != nil {
+			// Generate historical data
+			logger.Info("Generating 1000 historical weather data points...")
+			historicalObs = weatherGen.GenerateHistoricalData(1000)
+			logger.Debug("Successfully generated %d historical observations", len(historicalObs))
 		} else {
-			logger.Debug("Successfully fetched %d historical observations", len(historicalObs)) // Set progress for data processing
+			// Use real historical data from API
+			historicalObs, err = weather.GetHistoricalObservationsWithProgress(station.StationID, cfg.Token, cfg.LogLevel, progressCallback)
+			if err != nil {
+				logger.Error("Failed to fetch historical data: %v", err)
+				webServer.SetHistoryLoadingComplete()
+			} else {
+				logger.Debug("Successfully fetched %d historical observations", len(historicalObs))
+			}
+		}
+
+		if err == nil {
 			webServer.SetHistoryLoadingProgress(2, 3, "Processing historical data...")
 
 			// Send historical data to web server for charts
@@ -161,13 +210,15 @@ func StartService(cfg *config.Config, version string) error {
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
 		logger.Info("Fetching initial weather data to populate HomeKit")
 	}
-	updateWeatherData(station, cfg, ws, webServer)
+	updateWeatherData(station, cfg, ws, webServer, weatherGen)
 
-	// Fetch initial forecast data
-	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-		logger.Info("Fetching initial forecast data")
+	// Fetch initial forecast data (skip for generated weather)
+	if !cfg.UseGeneratedWeather {
+		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
+			logger.Info("Fetching initial forecast data")
+		}
+		updateForecastData(station, cfg, webServer)
 	}
-	updateForecastData(station, cfg, webServer)
 
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
 		logger.Info("Starting weather data polling loop")
@@ -175,27 +226,42 @@ func StartService(cfg *config.Config, version string) error {
 
 	forecastUpdateCounter := 0
 	for range ticker.C {
-		updateWeatherData(station, cfg, ws, webServer)
+		updateWeatherData(station, cfg, ws, webServer, weatherGen)
 
-		// Update forecast every 30 minutes (30 ticks)
-		forecastUpdateCounter++
-		if forecastUpdateCounter >= 30 {
-			updateForecastData(station, cfg, webServer)
-			forecastUpdateCounter = 0
+		// Update forecast every 30 minutes (30 ticks) - skip for generated weather
+		if !cfg.UseGeneratedWeather {
+			forecastUpdateCounter++
+			if forecastUpdateCounter >= 30 {
+				updateForecastData(station, cfg, webServer)
+				forecastUpdateCounter = 0
+			}
 		}
 	}
 	return nil
 }
 
-func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit.WeatherSystemModern, webServer *web.WebServer) {
+func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit.WeatherSystemModern, webServer *web.WebServer, weatherGen *generator.WeatherGenerator) {
 	logger.Debug("Polling iteration started - fetching observation from station %d", station.StationID)
-	obs, err := weather.GetObservation(station.StationID, cfg.Token)
-	if err != nil {
-		logger.Error("Error getting observation: %v", err)
-		return
-	}
 
-	logger.Info("Successfully read weather data from Tempest API - Station: %s", station.Name)
+	var obs *weather.Observation
+	var err error
+
+	if cfg.UseGeneratedWeather && weatherGen != nil {
+		// Ensure we're in current weather mode (not historical)
+		weatherGen.SetCurrentWeatherMode()
+		// Use generated weather data
+		obs = weatherGen.GenerateObservation()
+		logger.Info("Successfully generated weather data - Location: %s (%s season)",
+			weatherGen.GetLocation().Name, weatherGen.GetSeason().String())
+	} else {
+		// Use real Tempest API data
+		obs, err = weather.GetObservation(station.StationID, cfg.Token)
+		if err != nil {
+			logger.Error("Error getting observation: %v", err)
+			return
+		}
+		logger.Info("Successfully read weather data from Tempest API - Station: %s", station.Name)
+	}
 
 	// Info level logging - show sensor data and night detection
 	if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {

@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"tempest-homekit-go/pkg/generator"
 	"tempest-homekit-go/pkg/weather"
 )
 
@@ -33,6 +34,8 @@ type WebServer struct {
 	startTime              time.Time
 	historicalDataLoaded   bool
 	historicalDataCount    int
+	generatedWeather       *GeneratedWeatherInfo     // info about generated weather data
+	weatherGenerator       WeatherGeneratorInterface // weather generator for regeneration
 	historyLoadingProgress struct {
 		isLoading   bool
 		currentStep int
@@ -102,14 +105,38 @@ type StatusResponse struct {
 		TotalSteps  int    `json:"totalSteps"`
 		Description string `json:"description"`
 	} `json:"historyLoadingProgress"`
-	Forecast      *weather.ForecastResponse `json:"forecast,omitempty"`
-	StationStatus *weather.StationStatus    `json:"stationStatus,omitempty"`
+	Forecast         *weather.ForecastResponse `json:"forecast,omitempty"`
+	StationStatus    *weather.StationStatus    `json:"stationStatus,omitempty"`
+	GeneratedWeather *GeneratedWeatherInfo     `json:"generatedWeather,omitempty"`
+}
+
+// GeneratedWeatherInfo contains information about generated weather data
+type GeneratedWeatherInfo struct {
+	Enabled     bool   `json:"enabled"`
+	Location    string `json:"location"`
+	Season      string `json:"season"`
+	ClimateZone string `json:"climateZone"`
+}
+
+// WeatherGeneratorInterface defines the interface for weather generators
+type WeatherGeneratorInterface interface {
+	GenerateNewSeason()
+	GetLocation() generator.Location
+	GetSeason() generator.Season
+	GetDailyRainTotal() float64
 }
 
 // Calculate daily rain accumulation from historical data
 func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 	ws.mu.RLock()
 	defer ws.mu.RUnlock()
+
+	// For generated weather, use the generator's daily total
+	if ws.generatedWeather != nil && ws.generatedWeather.Enabled && ws.weatherGenerator != nil {
+		dailyTotal := ws.weatherGenerator.GetDailyRainTotal()
+		ws.logDebug("Using generated weather daily rain total: %.3f inches", dailyTotal)
+		return dailyTotal
+	}
 
 	if len(ws.dataHistory) == 0 {
 		ws.logDebug("No data history available for daily rain calculation")
@@ -177,6 +204,46 @@ func (ws *WebServer) calculateDailyRainAccumulation() float64 {
 	// If we can't calculate a reliable daily total, return 0
 	ws.logDebug("Cannot calculate reliable daily total, returning 0")
 	return 0.0
+}
+
+// calculateDailyRainForTime calculates the daily rain total for a specific time
+func (ws *WebServer) calculateDailyRainForTime(targetTime time.Time, startOfDay time.Time) float64 {
+	// Find observations from the start of the day up to the target time
+	var dayObservations []weather.Observation
+	for _, obs := range ws.dataHistory {
+		obsTime := time.Unix(obs.Timestamp, 0)
+		if (obsTime.After(startOfDay) || obsTime.Equal(startOfDay)) && !obsTime.After(targetTime) {
+			dayObservations = append(dayObservations, obs)
+		}
+	}
+
+	if len(dayObservations) == 0 {
+		return 0.0
+	}
+
+	// Sort by timestamp
+	sort.Slice(dayObservations, func(i, j int) bool {
+		return dayObservations[i].Timestamp < dayObservations[j].Timestamp
+	})
+
+	// Calculate rain since start of day
+	if len(dayObservations) == 1 {
+		return math.Max(0, dayObservations[0].RainAccumulated)
+	}
+
+	// Find the earliest reading at start of day and target time reading
+	earliestReading := dayObservations[0].RainAccumulated
+	var targetReading float64
+
+	// Find the reading closest to or at the target time
+	for _, obs := range dayObservations {
+		obsTime := time.Unix(obs.Timestamp, 0)
+		if obsTime.Equal(targetTime) || obsTime.Before(targetTime) {
+			targetReading = obs.RainAccumulated
+		}
+	}
+
+	return math.Max(0, targetReading-earliestReading)
 }
 
 // Pressure analysis functions
@@ -259,16 +326,18 @@ func getPressureWeatherForecast(pressure float64, trend string) string {
 	}
 }
 
-func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string) *WebServer {
+func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface) *WebServer {
 	ws := &WebServer{
-		port:           port,
-		elevation:      elevation,
-		logLevel:       logLevel,
-		stationID:      stationID,
-		maxHistorySize: 1000,
-		dataHistory:    make([]weather.Observation, 0, 1000),
-		startTime:      time.Now(),
-		version:        version,
+		port:             port,
+		elevation:        elevation,
+		logLevel:         logLevel,
+		stationID:        stationID,
+		maxHistorySize:   1000,
+		dataHistory:      make([]weather.Observation, 0, 1000),
+		startTime:        time.Now(),
+		version:          version,
+		generatedWeather: generatedWeather,
+		weatherGenerator: weatherGenerator,
 		homekitStatus: map[string]interface{}{
 			"bridge":      false,
 			"accessories": 0,
@@ -283,6 +352,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 	mux.HandleFunc("/", ws.handleDashboard)
 	mux.HandleFunc("/api/weather", ws.handleWeatherAPI)
 	mux.HandleFunc("/api/status", ws.handleStatusAPI)
+	mux.HandleFunc("/api/regenerate-weather", ws.handleRegenerateWeatherAPI)
 
 	ws.server = &http.Server{
 		Addr:    ":" + port,
@@ -450,9 +520,18 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	// Calculate daily rain accumulation
 	dailyRainTotal := ws.calculateDailyRainAccumulation()
 
+	// Calculate incremental rain since last sample
+	var incrementalRain float64
+	if len(ws.dataHistory) > 0 {
+		lastReading := ws.dataHistory[len(ws.dataHistory)-1].RainAccumulated
+		incrementalRain = math.Max(0, ws.weatherData.RainAccumulated-lastReading)
+	} else {
+		incrementalRain = 0 // No previous data
+	}
+
 	ws.logDebug("Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s", pressureCondition, pressureTrend, weatherForecast)
 	ws.logDebug("Pressure values - Station: %.2f mb, Sea Level: %.2f mb (used for forecasting)", ws.weatherData.StationPressure, seaLevelPressure)
-	ws.logDebug("Rain data calculated - Current: %.3f in, Daily Total: %.3f in", ws.weatherData.RainAccumulated, dailyRainTotal)
+	ws.logDebug("Rain data calculated - Incremental: %.3f in, Daily Total: %.3f in", incrementalRain, dailyRainTotal)
 
 	response := WeatherResponse{
 		Temperature:          ws.weatherData.AirTemperature,
@@ -460,8 +539,8 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		WindSpeed:            ws.weatherData.WindAvg,
 		WindGust:             ws.weatherData.WindGust,
 		WindDirection:        ws.weatherData.WindDirection,
-		RainAccum:            ws.weatherData.RainAccumulated,
-		RainDailyTotal:       dailyRainTotal,
+		RainAccum:            incrementalRain, // Rain since last sample
+		RainDailyTotal:       dailyRainTotal,  // Total rain since 00:00
 		PrecipitationType:    ws.weatherData.PrecipitationType,
 		Pressure:             ws.weatherData.StationPressure,
 		SeaLevelPressure:     seaLevelPressure,
@@ -502,17 +581,30 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	uptime := time.Since(ws.startTime)
 	uptimeStr := fmt.Sprintf("%dh%dm%ds", int(uptime.Hours()), int(uptime.Minutes())%60, int(uptime.Seconds())%60)
 
-	// Convert data history to response format
+	// Convert data history to response format with incremental rain calculation
 	history := make([]WeatherResponse, len(ws.dataHistory))
 	for i, obs := range ws.dataHistory {
+		// Calculate incremental rain since last observation
+		var incrementalRain float64
+		if i > 0 {
+			incrementalRain = math.Max(0, obs.RainAccumulated-ws.dataHistory[i-1].RainAccumulated)
+		} else {
+			incrementalRain = 0 // First observation, no previous data
+		}
+
+		// Calculate daily total for this observation
+		obsTime := time.Unix(obs.Timestamp, 0)
+		startOfDay := time.Date(obsTime.Year(), obsTime.Month(), obsTime.Day(), 0, 0, 0, 0, obsTime.Location())
+		dailyTotal := ws.calculateDailyRainForTime(obsTime, startOfDay)
+
 		history[i] = WeatherResponse{
 			Temperature:          obs.AirTemperature,
 			Humidity:             obs.RelativeHumidity,
 			WindSpeed:            obs.WindAvg,
 			WindGust:             obs.WindGust,
 			WindDirection:        obs.WindDirection,
-			RainAccum:            obs.RainAccumulated,
-			RainDailyTotal:       0, // Historical data doesn't calculate individual daily totals
+			RainAccum:            incrementalRain, // Incremental rain since last sample
+			RainDailyTotal:       dailyTotal,      // Total rain since 00:00
 			PrecipitationType:    obs.PrecipitationType,
 			Pressure:             obs.StationPressure,
 			Illuminance:          obs.Illuminance,
@@ -534,6 +626,7 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 		ObservationCount:     len(ws.dataHistory),
 		HistoricalDataLoaded: ws.historicalDataLoaded,
 		HistoricalDataCount:  ws.historicalDataCount,
+		GeneratedWeather:     ws.generatedWeather,
 	}
 
 	// Add progress information
@@ -550,6 +643,9 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 		response.StationName = ws.stationName
 	}
 
+	// Add generated weather information if available
+	response.GeneratedWeather = ws.generatedWeather
+
 	// Fetch station status from TempestWX (async, don't block on errors)
 	// Get station status from status manager (handles both scraping and fallback)
 	ws.logDebug("Retrieving station status from status manager")
@@ -558,6 +654,46 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 
 	ws.logDebug("Station status retrieved - Source: %s, Battery: %s, LastScraped: %s",
 		stationStatus.DataSource, stationStatus.BatteryVoltage, stationStatus.LastScraped)
+
+	json.NewEncoder(w).Encode(response)
+}
+
+// handleRegenerateWeatherAPI handles requests to regenerate weather data for testing
+func (ws *WebServer) handleRegenerateWeatherAPI(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Only allow POST requests
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Check if weather generation is enabled
+	if ws.weatherGenerator == nil {
+		http.Error(w, "Weather generation not enabled", http.StatusBadRequest)
+		return
+	}
+
+	// Regenerate weather with new random location/season
+	ws.weatherGenerator.GenerateNewSeason()
+
+	// Update the generated weather info
+	ws.mu.Lock()
+	if ws.generatedWeather != nil {
+		location := ws.weatherGenerator.GetLocation()
+		ws.generatedWeather.Location = location.Name
+		ws.generatedWeather.Season = ws.weatherGenerator.GetSeason().String()
+		ws.generatedWeather.ClimateZone = location.ClimateZone
+	}
+	ws.mu.Unlock()
+
+	// Return success response
+	response := map[string]interface{}{
+		"success":     true,
+		"location":    ws.generatedWeather.Location,
+		"season":      ws.generatedWeather.Season,
+		"climateZone": ws.generatedWeather.ClimateZone,
+	}
 
 	json.NewEncoder(w).Encode(response)
 }

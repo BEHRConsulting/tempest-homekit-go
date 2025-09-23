@@ -23,10 +23,7 @@ func main() {
 	// Set up logging first (before any other operations that might log)
 	logger.SetLogLevel(cfg.LogLevel)
 
-	// Log the auto-detected elevation if it was set during config loading
-	if cfg.Elevation > 0 {
-		logger.Info("Auto-detected elevation: %.1f meters (%.0f feet)", cfg.Elevation, cfg.Elevation*3.28084)
-	}
+	// Note: For generated weather, elevation will be logged by the service once location is selected
 
 	// Handle version flag
 	if cfg.Version {
