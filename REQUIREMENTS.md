@@ -34,14 +34,18 @@
 
 #### HomeKit Integration
 - ✅ **Bridge Setup**: Create HomeKit bridge accessory for device management
-- ✅ **Sensor Accessories**: Implement 11 separate HomeKit accessories using modern `brutella/hap` library:
-  - Air Temperature Sensor (standard HomeKit temperature characteristic)
-  - 10 Custom Weather Sensors (Wind Speed/Gust/Direction, Rain, UV, Lightning, Humidity, Light, Precipitation Type)
-- ✅ **Custom Service Solution**: Use unique service UUIDs to prevent HomeKit's automatic temperature conversion
+- ✅ **Sensor Accessories**: Implement up to 5 separate HomeKit accessories using modern `brutella/hap` library (configurable via --sensors flag):
+  - **Temperature Sensor** (standard HomeKit temperature characteristic) - when temp sensor enabled
+  - **Humidity Sensor** (standard HomeKit humidity characteristic) - when humidity sensor enabled  
+  - **Light Sensor** (standard HomeKit light sensor service) - when light sensor enabled
+  - **UV Index Sensor** (uses Light Sensor service for compliance) - when UV sensor enabled
+  - **Pressure Sensor** (uses Light Sensor service for compliance) - when pressure sensor enabled
+- ✅ **Standards Compliance**: Uses only standard HomeKit services for maximum compatibility
 - ✅ **Real-time Updates**: Update all sensor values with each weather poll
 - ✅ **Pairing**: Support HomeKit pairing with configurable PIN
+- ✅ **Web Console Only Mode**: Optional `--disable-homekit` flag for web-only operation
 
-**Note**: The UV sensor uses the same HomeKit Light Sensor service as the lux sensor for compliance reasons. In the Home app, it will appear as "Light Sensor #2". Users should manually rename it to "UV Sensor" in the Home app for clarity.
+**Note**: Wind, Rain, Lightning, and Precipitation Type sensors are **not implemented in HomeKit** but are available in the web dashboard. Only Temperature, Humidity, Light, UV Index, and Pressure sensors are available as HomeKit accessories.
 
 #### Web Dashboard
 - ✅ **HTTP Server**: Serve modern web interface on configurable port (default: 8080) with static file serving
@@ -101,7 +105,7 @@
 - ✅ `--elevation`: Station elevation in meters (auto-detect or manual, Earth-realistic range: -430m to 8848m)
 - ✅ `--sensors`: Enhanced sensor configuration with aliases support:
   - **Sensor Aliases**: `temp`/`temperature`, `lux`/`light`, `uv`/`uvi`
-  - **Preset Options**: `all` (all sensors), `min` (temp,lux,humidity)
+  - **Preset Options**: `all` (all sensors), `min` (temp,humidity,lux)
   - **Custom Lists**: Comma-delimited combinations using aliases or traditional names
 - ✅ `--disable-homekit`: Disable HomeKit services (web console only mode)
 - ✅ `--use-web-status`: Enable TempestWX status scraping with Chrome automation
@@ -203,26 +207,33 @@
 
 #### Accessory Types
 - ✅ **Bridge**: `accessory.NewBridge` for device management
-- ✅ **Temperature Sensor**: `accessory.NewTemperatureSensor` with standard temperature characteristic
-- ✅ **Custom Weather Sensors**: Individual accessories with custom service UUIDs (F1XX-0001-1000-8000-0026BB765291 pattern)
+- ✅ **Temperature Sensor**: `accessory.New` with `service.NewTemperatureSensor()` for air temperature
+- ✅ **Humidity Sensor**: `accessory.New` with `service.NewHumiditySensor()` for relative humidity
+- ✅ **Light Sensor**: `accessory.New` with `service.NewLightSensor()` for ambient light
+- ✅ **UV Index Sensor**: `accessory.New` with `service.NewLightSensor()` (custom range 0-15)
+- ✅ **Pressure Sensor**: `accessory.New` with `service.NewLightSensor()` (custom range 700-1200mb)
 
-#### Custom Service Architecture
-- ✅ **Unique Service UUIDs**: Each sensor type has its own service UUID to prevent HomeKit temperature conversion
-- ✅ **Custom Characteristics**: Float characteristics that don't trigger automatic unit conversion
+#### Standard Service Architecture
+- ✅ **Standard HomeKit Services**: Uses only built-in HomeKit service types for maximum compatibility
+- ✅ **Temperature Sensor**: Standard `service.NewTemperatureSensor()` for air temperature
+- ✅ **Humidity Sensor**: Standard `service.NewHumiditySensor()` for relative humidity  
+- ✅ **Light Sensor**: Standard `service.NewLightSensor()` for ambient light, UV index, and pressure
 - ✅ **Modern hap Library**: Uses `github.com/brutella/hap` v0.0.32 with context-based server lifecycle
+- ✅ **Configurable Sensors**: Sensor accessories created based on `--sensors` flag configuration
 
-#### Service Characteristics
+#### Service Characteristics (HomeKit Accessories Only)
 - ✅ **Air Temperature**: `CurrentTemperature` (float, Celsius) - standard HomeKit characteristic
-- ✅ **Wind Speed**: Custom float characteristic (float, mph) - UUID F101-0001-1000-8000-0026BB765291
-- ✅ **Wind Gust**: Custom float characteristic (float, mph) - UUID F111-0001-1000-8000-0026BB765291
-- ✅ **Wind Direction**: Custom float characteristic (float, degrees) - UUID F121-0001-1000-8000-0026BB765291
-- ✅ **Rain**: Custom float characteristic (float, inches) - UUID F131-0001-1000-8000-0026BB765291
-- ✅ **UV Index**: Custom float characteristic (float, index) - UUID F141-0001-1000-8000-0026BB765291
-- ✅ **Lightning Count**: Custom float characteristic (float, count) - UUID F151-0001-1000-8000-0026BB765291
-- ✅ **Lightning Distance**: Custom float characteristic (float, km) - UUID F161-0001-1000-8000-0026BB765291
-- ✅ **Precipitation Type**: Custom float characteristic (float, type) - UUID F171-0001-1000-8000-0026BB765291
-- ✅ **Humidity**: Custom float characteristic (float, percent) - UUID F181-0001-1000-8000-0026BB765291
-- ✅ **Ambient Light**: Built-in HomeKit Light Sensor service with CurrentAmbientLightLevel characteristic
+- ✅ **Relative Humidity**: `CurrentRelativeHumidity` (float, percentage) - standard HomeKit characteristic
+- ✅ **Ambient Light**: `CurrentAmbientLightLevel` (float, lux) - standard HomeKit light sensor characteristic
+- ✅ **UV Index**: `CurrentAmbientLightLevel` (float, UV index 0-15) - uses Light Sensor service for compliance
+- ✅ **Atmospheric Pressure**: `CurrentAmbientLightLevel` (float, mb 700-1200) - uses Light Sensor service for compliance
+
+**Not Implemented in HomeKit** (Available in Web Dashboard Only):
+- Wind Speed, Wind Gust, Wind Direction
+- Rain Accumulation, Precipitation Type
+- Lightning Count, Lightning Distance
+
+**Note**: Custom characteristics exist in `custom_characteristics.go` but are not used in the current implementation. The application uses only standard HomeKit services for maximum compatibility.
 
 ### Web Dashboard Implementation
 
@@ -232,6 +243,8 @@
   - `GET /`: Main dashboard HTML page
   - `GET /api/weather`: JSON weather data endpoint
   - `GET /api/status`: JSON service and HomeKit status endpoint
+  - `POST /api/regenerate-weather`: Regenerate weather data for testing
+  - `GET /api/generate-weather`: Mock Tempest API endpoint for generated weather
 - ✅ **CORS Support**: Allow cross-origin requests for API endpoints
 - ✅ **Content Types**: Serve HTML, JSON, and static assets appropriately
 
@@ -698,13 +711,17 @@ This requirements document has been updated to reflect the **COMPLETE** implemen
 
 #### HomeKit Integration
 - **Bridge Setup**: Create HomeKit bridge accessory for device management
-- **Sensor Accessories**: Implement 4 separate HomeKit accessories:
-  - Temperature Sensor (Air Temperature)
-  - Humidity Sensor (Relative Humidity)
-  - Wind Sensor (Average Wind Speed)
-  - Rain Sensor (Rain Accumulation)
+- **Sensor Accessories**: Implement up to 5 configurable HomeKit accessories:
+  - Temperature Sensor (Air Temperature) - when temp sensor enabled
+  - Humidity Sensor (Relative Humidity) - when humidity sensor enabled
+  - Light Sensor (Ambient Light) - when light sensor enabled  
+  - UV Index Sensor (UV Index 0-15) - when UV sensor enabled
+  - Pressure Sensor (Atmospheric Pressure) - when pressure sensor enabled
+- **Standards Compliance**: Uses only standard HomeKit services for maximum compatibility
 - **Real-time Updates**: Update all sensor values with each weather poll
 - **Pairing**: Support HomeKit pairing with configurable PIN
+
+**Note**: Wind and Rain sensors are not implemented in HomeKit but are available in the web dashboard.
 
 #### Web Dashboard
 - **HTTP Server**: Serve modern web interface on configurable port (default: 8080)
@@ -800,17 +817,23 @@ This requirements document has been updated to reflect the **COMPLETE** implemen
 ### HomeKit Implementation
 
 #### Accessory Types
-- **Bridge**: `accessory.TypeBridge` for device management
-- **Temperature Sensor**: `accessory.TypeOther` with `service.TemperatureSensor`
-- **Humidity Sensor**: `accessory.TypeOther` with `service.HumiditySensor`
-- **Wind Sensor**: `accessory.TypeOther` with `service.Fan` (On/Off for wind presence)
-- **Rain Sensor**: `accessory.TypeOther` with `service.HumiditySensor` (scaled for rain accumulation)
+- **Bridge**: `accessory.NewBridge` for device management
+- **Temperature Sensor**: `accessory.New` with `service.NewTemperatureSensor()` - when temperature sensor enabled
+- **Humidity Sensor**: `accessory.New` with `service.NewHumiditySensor()` - when humidity sensor enabled  
+- **Light Sensor**: `accessory.New` with `service.NewLightSensor()` - when light sensor enabled
+- **UV Index Sensor**: `accessory.New` with `service.NewLightSensor()` (range 0-15) - when UV sensor enabled
+- **Pressure Sensor**: `accessory.New` with `service.NewLightSensor()` (range 700-1200mb) - when pressure sensor enabled
 
-#### Service Characteristics
-- **Temperature**: `CurrentTemperature` (float, Celsius)
-- **Humidity**: `CurrentRelativeHumidity` (float, percentage)
-- **Wind**: `On` (boolean, wind presence)
-- **Rain**: `CurrentRelativeHumidity` (float, scaled 0-100%)
+**Note**: Only sensors enabled via `--sensors` flag are created as HomeKit accessories.
+
+#### Service Characteristics  
+- **Temperature**: `CurrentTemperature` (float, Celsius) - standard HomeKit
+- **Humidity**: `CurrentRelativeHumidity` (float, percentage) - standard HomeKit
+- **Ambient Light**: `CurrentAmbientLightLevel` (float, lux) - standard HomeKit
+- **UV Index**: `CurrentAmbientLightLevel` (float, 0-15 UV index) - uses Light Sensor for compliance
+- **Pressure**: `CurrentAmbientLightLevel` (float, 700-1200mb) - uses Light Sensor for compliance
+
+**Not in HomeKit**: Wind, Rain, Lightning, and Precipitation Type are available only in web dashboard.
 
 ### Web Dashboard Implementation
 
@@ -820,6 +843,8 @@ This requirements document has been updated to reflect the **COMPLETE** implemen
   - `GET /`: Main dashboard HTML page
   - `GET /api/weather`: JSON weather data endpoint
   - `GET /api/status`: JSON service and HomeKit status endpoint
+  - `POST /api/regenerate-weather`: Regenerate weather data for testing
+  - `GET /api/generate-weather`: Mock Tempest API endpoint for generated weather
 - **CORS Support**: Allow cross-origin requests for API endpoints
 - **Content Types**: Serve HTML, JSON, and static assets appropriately
 
@@ -1060,8 +1085,8 @@ require (
 - ✅ Application starts without errors
 - ✅ Discovers specified Tempest station
 - ✅ Polls weather data every 60 seconds
-- ✅ Updates all 11 HomeKit sensors (Temperature + 10 custom weather sensors)
-- ✅ Custom services prevent temperature conversion issues
+- ✅ Updates up to 5 HomeKit sensors (Temperature, Humidity, Light, UV, Pressure) based on sensor configuration
+- ✅ Standard HomeKit services ensure maximum compatibility
 - ✅ HomeKit pairing successful
 - ✅ Debug logging shows all weather values
 - ✅ Web dashboard displays wind direction
@@ -1220,7 +1245,7 @@ This requirements document provides complete specifications for implementing the
 ---
 
 **Status**: ✅ **COMPLETE** - All planned features implemented and tested
-- ✅ Weather monitoring with 11 HomeKit sensors (Temperature + 10 custom weather sensors)  
+- ✅ Weather monitoring with up to 5 configurable HomeKit sensors (Temperature, Humidity, Light, UV, Pressure)  
 - ✅ Complete HomeKit integration with compliance optimization
 - ✅ Modern web dashboard with external JavaScript architecture (~800+ lines externalized)
 - ✅ TempestWX Device Status Scraping Feature:
@@ -1246,4 +1271,4 @@ This requirements document provides complete specifications for implementing the
 - ✅ Database management with --cleardb command
 - ✅ Production-ready with graceful error recovery
 - ✅ Built-in HomeKit Light Sensor service for lux measurement
-- ✅ Updated default sensor configuration (temp,lux,humidity)
+- ✅ Updated default sensor configuration (temp,lux,humidity,uv)

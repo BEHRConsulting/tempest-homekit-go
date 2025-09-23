@@ -53,5 +53,6 @@ in the web dashboard temperature box, add a line for average temp on this day ov
 
 [x] fix homekit lux sensor
 
-[] add the command line parameter --use-generated-weather for ui testing. This replaces data from Tempest API with programm generated data for all sensors. Generate all 1000 points for all sensors if --use-history has been set, continue generating for live data. Ramdomly select a season and location, generate appropiate data for that season and location. Set status for Tempest Station to "Generated" and a line below labeled Generated Season/Loc with a clickable value of the generated location and season. Clickong on the value will regenerate all data.
+[x] add the command line parameter --use-generated-weather for ui testing. This replaces data from Tempest API with programm generated data for all sensors. Generate all 1000 points for all sensors if --use-history has been set, continue generating for live data. Ramdomly select a season and location, generate appropiate data for that season and location. Set status for Tempest Station to "Generated" and a line below labeled Generated Season/Loc with a clickable value of the generated location and season. Clickong on the value will regenerate all data.
 
+[] Review the Service Characteristics in requirements.md, these are out if sync with the current codebase. May check all of requirements.md to verify you could recreat this app from the file contents

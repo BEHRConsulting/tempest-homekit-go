@@ -66,25 +66,34 @@ func StartService(cfg *config.Config, version string) error {
 		logger.Info("Found station: %s (ID: %d)", station.Name, station.StationID)
 	}
 
-	// Setup HomeKit with sensor configuration
-	logger.Debug("Initializing HomeKit accessories with sensor config: %s", cfg.Sensors)
+	// Parse sensor configuration (needed for both HomeKit and web server)
 	sensorConfig := config.ParseSensorConfig(cfg.Sensors)
-	ws, setupErr := homekit.NewWeatherSystemModern(cfg.Pin, &sensorConfig, cfg.LogLevel)
-	if setupErr != nil {
-		return fmt.Errorf("failed to setup HomeKit: %v", setupErr)
-	}
 
-	// Start the HomeKit server
-	logger.Debug("Starting weather system server")
-	go func() {
-		if err := ws.Start(); err != nil {
-			logger.Error("HomeKit server error: %v", err)
+	// Conditionally setup HomeKit based on configuration
+	var ws *homekit.WeatherSystemModern
+	if cfg.DisableHomeKit {
+		logger.Info("HomeKit services disabled - running in web console only mode")
+	} else {
+		// Setup HomeKit with sensor configuration
+		logger.Debug("Initializing HomeKit accessories with sensor config: %s", cfg.Sensors)
+		var setupErr error
+		ws, setupErr = homekit.NewWeatherSystemModern(cfg.Pin, &sensorConfig, cfg.LogLevel)
+		if setupErr != nil {
+			return fmt.Errorf("failed to setup HomeKit: %v", setupErr)
 		}
-	}()
 
-	logger.Info("HomeKit server started successfully with PIN: %s", cfg.Pin)
-	logger.Debug("HomeKit - Bridge ready to accept connections")
-	logger.Debug("HomeKit - Listening for iOS/HomeKit client connections...")
+		// Start the HomeKit server
+		logger.Debug("Starting weather system server")
+		go func() {
+			if err := ws.Start(); err != nil {
+				logger.Error("HomeKit server error: %v", err)
+			}
+		}()
+
+		logger.Info("HomeKit server started successfully with PIN: %s", cfg.Pin)
+		logger.Debug("HomeKit - Bridge ready to accept connections")
+		logger.Debug("HomeKit - Listening for iOS/HomeKit client connections...")
+	}
 
 	// Setup web dashboard
 	var generatedWeatherInfo *web.GeneratedWeatherInfo
@@ -146,13 +155,27 @@ func StartService(cfg *config.Config, version string) error {
 		enabledSensors = append(enabledSensors, "Lightning")
 	}
 
-	homekitStatus := map[string]interface{}{
-		"bridge":         true,
-		"name":           "Tempest HomeKit Bridge",
-		"accessories":    len(enabledSensors),
-		"accessoryNames": enabledSensors,
-		"sensorConfig":   cfg.Sensors,
-		"pin":            cfg.Pin,
+	// Update HomeKit status in web server based on whether HomeKit is enabled
+	var homekitStatus map[string]interface{}
+	if cfg.DisableHomeKit {
+		homekitStatus = map[string]interface{}{
+			"bridge":         false,
+			"name":           "HomeKit Disabled",
+			"accessories":    0,
+			"accessoryNames": []string{},
+			"sensorConfig":   "Web Console Only",
+			"pin":            "N/A",
+			"status":         "Disabled by --disable-homekit flag",
+		}
+	} else {
+		homekitStatus = map[string]interface{}{
+			"bridge":         true,
+			"name":           "Tempest HomeKit Bridge",
+			"accessories":    len(enabledSensors),
+			"accessoryNames": enabledSensors,
+			"sensorConfig":   cfg.Sensors,
+			"pin":            cfg.Pin,
+		}
 	}
 	webServer.UpdateHomeKitStatus(homekitStatus)
 
@@ -312,17 +335,21 @@ func updateWeatherData(station *weather.Station, cfg *config.Config, ws *homekit
 	}
 
 	// Update all sensors in the Tempest Weather Station using the new UpdateSensor method:
-	ws.UpdateSensor("Wind Speed", obs.WindAvg)
-	ws.UpdateSensor("Wind Gust", obs.WindGust)
-	ws.UpdateSensor("Wind Direction", obs.WindDirection)
-	ws.UpdateSensor("Air Temperature", obs.AirTemperature)
-	ws.UpdateSensor("Relative Humidity", obs.RelativeHumidity)
-	ws.UpdateSensor("Ambient Light", obs.Illuminance)
-	ws.UpdateSensor("UV Index", float64(obs.UV))
-	ws.UpdateSensor("Rain Accumulation", obs.RainAccumulated)
-	ws.UpdateSensor("Precipitation Type", float64(obs.PrecipitationType))
-	ws.UpdateSensor("Lightning Count", float64(obs.LightningStrikeCount))
-	ws.UpdateSensor("Lightning Distance", obs.LightningStrikeAvg)
+	if ws != nil {
+		ws.UpdateSensor("Wind Speed", obs.WindAvg)
+		ws.UpdateSensor("Wind Gust", obs.WindGust)
+		ws.UpdateSensor("Wind Direction", obs.WindDirection)
+		ws.UpdateSensor("Air Temperature", obs.AirTemperature)
+		ws.UpdateSensor("Relative Humidity", obs.RelativeHumidity)
+		ws.UpdateSensor("Ambient Light", obs.Illuminance)
+		ws.UpdateSensor("UV Index", float64(obs.UV))
+		ws.UpdateSensor("Rain Accumulation", obs.RainAccumulated)
+		ws.UpdateSensor("Precipitation Type", float64(obs.PrecipitationType))
+		ws.UpdateSensor("Lightning Count", float64(obs.LightningStrikeCount))
+		ws.UpdateSensor("Lightning Distance", obs.LightningStrikeAvg)
+	} else {
+		logger.Debug("Skipping HomeKit sensor updates - HomeKit disabled")
+	}
 
 	if cfg.LogLevel == "debug" {
 		logger.Debug("HomeKit accessory updates completed - ULTRA-MINIMAL: Only temperature sensor active")
