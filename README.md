@@ -206,6 +206,8 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 - `--station`: Tempest station name (default: "Chino Hills")
 - `--station-url`: Custom station URL for weather data (e.g., `http://localhost:8080/api/generate-weather`). Overrides Tempest API
 - `--token`: WeatherFlow API access token (required)*
+- `--units`: Units system - imperial, metric, or sae (default: "imperial")
+- `--units-pressure`: Pressure units - inHg or mb (default: "inHg")
 - `--use-generated-weather`: Use simulated weather data for testing (automatically sets station-url)
 - `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome)
 - `--version`: Show version information and exit
@@ -217,8 +219,10 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 - `STATION_URL`: Custom station URL for weather data (overrides Tempest API)
 - `HOMEKIT_PIN`: HomeKit PIN
 - `LOG_LEVEL`: Logging level
-- `WEB_PORT`: Web dashboard port
 - `SENSORS`: Sensors to enable (default: "temp,lux,humidity")
+- `UNITS`: Units system - imperial, metric, or sae (default: "imperial")
+- `UNITS_PRESSURE`: Pressure units - inHg or mb (default: "inHg")
+- `WEB_PORT`: Web dashboard port
 
 ### Example with Full Configuration
 ```bash

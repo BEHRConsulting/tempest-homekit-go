@@ -35,6 +35,46 @@ let units = {
     pressure: localStorage.getItem('pressure-unit') || 'mb'
 };
 
+// Load units configuration from server
+async function loadUnitsConfig() {
+    try {
+        const response = await fetch('/api/units');
+        const serverUnits = await response.json();
+        
+        // Map server units to client units
+        if (serverUnits.units === 'imperial') {
+            units.temperature = 'fahrenheit';
+            units.wind = 'mph';
+            units.rain = 'inches';
+        } else if (serverUnits.units === 'metric') {
+            units.temperature = 'celsius';
+            units.wind = 'kmh';
+            units.rain = 'mm';
+        } else if (serverUnits.units === 'sae') {
+            units.temperature = 'fahrenheit';
+            units.wind = 'mph';
+            units.rain = 'inches';
+        }
+        
+        // Set pressure units
+        units.pressure = serverUnits.unitsPressure;
+        
+        debugLog(logLevels.DEBUG, 'Loaded units config from server', serverUnits);
+        debugLog(logLevels.DEBUG, 'Mapped client units', units);
+        
+        // Update localStorage for persistence
+        localStorage.setItem('temperature-unit', units.temperature);
+        localStorage.setItem('wind-unit', units.wind);
+        localStorage.setItem('rain-unit', units.rain);
+        localStorage.setItem('pressure-unit', units.pressure);
+        
+        return true;
+    } catch (error) {
+        debugLog(logLevels.ERROR, 'Failed to load units config from server, using defaults', error);
+        return false;
+    }
+}
+
 let weatherData = null;
 let forecastData = null; // Store current forecast data for unit conversions
 let statusData = null; // Store current status data for unit conversions
@@ -512,6 +552,9 @@ function updateUnits() {
     
     // Update elevation display with new units
     updateElevationDisplay();
+    
+    // Update chart labels with new units
+    updateChartLabels();
 }
 
 function toggleUnit(sensor) {
@@ -559,6 +602,57 @@ function toggleUnit(sensor) {
     recalculateAverages(sensor);
     console.log('🔄 toggleUnit() - recalculateAverages() completed');
     console.log('🔄 toggleUnit() - All functions completed');
+}
+
+function updateChartLabels() {
+    // Update temperature chart label
+    if (charts.temperature && charts.temperature.options && charts.temperature.options.scales) {
+        charts.temperature.options.scales.y.title = {
+            display: true,
+            text: units.temperature === 'fahrenheit' ? 'Temperature (°F)' : 'Temperature (°C)'
+        };
+    }
+    
+    // Update wind chart label
+    if (charts.wind && charts.wind.options && charts.wind.options.scales) {
+        let windUnit = 'm/s';
+        if (units.wind === 'mph') {
+            windUnit = 'mph';
+        } else if (units.wind === 'kmh') {
+            windUnit = 'km/h';
+        }
+        charts.wind.options.scales.y.title = {
+            display: true,
+            text: `Wind Speed (${windUnit})`
+        };
+    }
+    
+    // Update rain chart label
+    if (charts.rain && charts.rain.options && charts.rain.options.scales) {
+        const rainUnit = units.rain === 'inches' ? 'in' : 'mm';
+        charts.rain.options.scales.y.title = {
+            display: true,
+            text: `Rainfall (${rainUnit})`
+        };
+    }
+    
+    // Update pressure chart label
+    if (charts.pressure && charts.pressure.options && charts.pressure.options.scales) {
+        const pressureUnit = units.pressure === 'inHg' ? 'inHg' : 'mb';
+        charts.pressure.options.scales.y.title = {
+            display: true,
+            text: `Pressure (${pressureUnit})`
+        };
+    }
+    
+    // Update all charts
+    Object.values(charts).forEach(chart => {
+        if (chart && typeof chart.update === 'function') {
+            chart.update('none');
+        }
+    });
+    
+    debugLog(logLevels.DEBUG, 'Chart labels updated with new units', units);
 }
 
 function degreesToDirection(degrees) {
@@ -1244,14 +1338,10 @@ function updateDisplay() {
     debugLog(logLevels.DEBUG, 'Updating display with weather data', weatherData);
 
     // Temperature calculation and display
-    let temp = weatherData.temperature;
-    if (units.temperature === 'fahrenheit') {
-        temp = celsiusToFahrenheit(temp);
-    }
-    document.getElementById('temperature').textContent = temp.toFixed(1);
+    document.getElementById('temperature').textContent = formatTemperature(weatherData.temperature);
     debugLog(logLevels.DEBUG, 'Temperature updated', {
         original: weatherData.temperature,
-        converted: temp,
+        formatted: formatTemperature(weatherData.temperature),
         unit: units.temperature
     });
 
@@ -1261,36 +1351,25 @@ function updateDisplay() {
     
     // Calculate and display heat index
     const heatIndexC = calculateHeatIndex(weatherData.temperature, weatherData.humidity);
-    let heatIndexDisplay = heatIndexC;
-    if (units.temperature === 'fahrenheit') {
-        heatIndexDisplay = celsiusToFahrenheit(heatIndexC);
-    }
-    const tempUnit = units.temperature === 'celsius' ? '°C' : '°F';
     const heatIndexElement = document.getElementById('heat-index');
     if (heatIndexElement) {
-        heatIndexElement.textContent = heatIndexDisplay.toFixed(1) + tempUnit;
+        heatIndexElement.textContent = formatTemperature(heatIndexC);
     }
     debugLog(logLevels.DEBUG, 'Heat index calculated and displayed', {
         heatIndexC: heatIndexC,
-        heatIndexDisplay: heatIndexDisplay,
-        unit: tempUnit
+        formatted: formatTemperature(heatIndexC),
+        unit: units.temperature
     });
 
     // Wind data
-    let windSpeed = weatherData.windSpeed;
-    let windGust = weatherData.windGust;
-    if (units.wind === 'kph') {
-        windSpeed = mphToKph(windSpeed);
-        windGust = mphToKph(windGust);
-    }
-    document.getElementById('wind-speed').textContent = windSpeed.toFixed(1);
+    document.getElementById('wind-speed').textContent = formatWindSpeed(weatherData.windSpeed);
     
     // Wind gust information
     const windUnit = units.wind === 'kph' ? 'kph' : 'mph';
-    if (windGust > windSpeed) {
-        document.getElementById('wind-gust-info').textContent = `Winds gusting to ${windGust.toFixed(1)} ${windUnit}`;
-    } else if (windGust > 0) {
-        document.getElementById('wind-gust-info').textContent = `Gusts up to ${windGust.toFixed(1)} ${windUnit}`;
+    if (weatherData.windGust > weatherData.windSpeed) {
+        document.getElementById('wind-gust-info').textContent = `Winds gusting to ${formatWindSpeed(weatherData.windGust)}`;
+    } else if (weatherData.windGust > 0) {
+        document.getElementById('wind-gust-info').textContent = `Gusts up to ${formatWindSpeed(weatherData.windGust)}`;
     } else {
         document.getElementById('wind-gust-info').textContent = 'No gusts detected';
     }
@@ -1309,19 +1388,12 @@ function updateDisplay() {
     });
 
     // Rain data
-    let rain = weatherData.rainAccum;
-    let dailyRain = weatherData.rainDailyTotal || 0;
-    if (units.rain === 'mm') {
-        rain = inchesToMm(rain);
-        dailyRain = inchesToMm(dailyRain);
-    }
-    document.getElementById('rain').textContent = rain.toFixed(3);
+    document.getElementById('rain').textContent = formatRain(weatherData.rainAccum);
     
     // Display daily rain total
     const dailyRainElement = document.getElementById('daily-rain-total');
     if (dailyRainElement) {
-        const rainUnit = units.rain === 'inches' ? 'in' : 'mm';
-        dailyRainElement.textContent = dailyRain.toFixed(3) + ' ' + rainUnit;
+        dailyRainElement.textContent = formatRain(weatherData.rainDailyTotal || 0);
     }
     
     // Display rain description based on current accumulated rain
@@ -1379,7 +1451,7 @@ function updateDisplay() {
     if (units.pressure === 'inHg') {
         pressure = mbToInHg(pressure);
     }
-    document.getElementById('pressure').textContent = pressure.toFixed(1);
+    document.getElementById('pressure').textContent = formatPressure(weatherData.pressure);
     
     // Use server-provided pressure analysis - AGGRESSIVE DEBUGGING (v3.0)
     const apiCondition = weatherData.pressure_condition;
@@ -1743,6 +1815,44 @@ function recalculateAverages(changedSensor) {
     }
 }
 
+// Unit conversion functions
+function formatTemperature(celsius) {
+    if (units.temperature === 'fahrenheit') {
+        return `${(celsius * 9/5 + 32).toFixed(1)}°F`;
+    }
+    return `${celsius.toFixed(1)}°C`;
+}
+
+function formatPressure(mb) {
+    if (units.pressure === 'inHg') {
+        return `${(mb * 0.02953).toFixed(3)} inHg`;
+    }
+    return `${mb.toFixed(1)} mb`;
+}
+
+function formatWindSpeed(mps) {
+    if (units.wind === 'mph') {
+        return `${(mps * 2.23694).toFixed(1)} mph`;
+    } else if (units.wind === 'kmh') {
+        return `${(mps * 3.6).toFixed(1)} km/h`;
+    }
+    return `${mps.toFixed(1)} m/s`;
+}
+
+function formatRain(mm) {
+    if (units.rain === 'inches') {
+        return `${(mm * 0.0393701).toFixed(2)} in`;
+    }
+    return `${mm.toFixed(1)} mm`;
+}
+
+function formatRainRate(mmPerHour) {
+    if (units.rain === 'inches') {
+        return `${(mmPerHour * 0.0393701).toFixed(2)} in/hr`;
+    }
+    return `${mmPerHour.toFixed(1)} mm/hr`;
+}
+
 async function fetchWeather() {
     const startTime = performance.now();
     debugLog(logLevels.DEBUG, 'Starting weather API call');
@@ -1793,11 +1903,12 @@ async function fetchWeather() {
             }
             
             document.getElementById('status').textContent = 'Connected to Tempest station';
-            document.getElementById('status').style.background = 'rgba(40, 167, 69, 0.1)';
+            document.getElementById('status').style.background = 'rgba(40,  167, 69, 0.1)';
             
             console.log('🚀 DEBUG: fetchWeather completed, calling updateCharts');
             debugLog(logLevels.INFO, 'Weather fetch completed successfully', {
                 totalTime: (performance.now() - startTime).toFixed(2) + 'ms'
+           
             });
         } else {
             throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
@@ -1815,12 +1926,10 @@ async function fetchWeather() {
 
 async function fetchStatus() {
     const startTime = performance.now();
-    debugLog(logLevels.DEBUG, 'Starting status API call');
+    const responseTime = (performance.now() - startTime).toFixed(2);
     
     try {
         const response = await fetch('/api/status');
-        const responseTime = (performance.now() - startTime).toFixed(2);
-        
         if (response.ok) {
             const status = await response.json();
             debugLog(logLevels.DEBUG, 'Status API response received', {
@@ -2244,7 +2353,6 @@ function updateDailyForecast(dailyForecast) {
             <div class="forecast-day-icon">${getWeatherIcon(day.icon)}</div>
             <div class="forecast-day-conditions">${day.conditions}</div>
             <div class="forecast-day-temps">
-                <span class="forecast-day-high">${Math.round(highTemp)}${tempUnit}</span>
                 <span class="forecast-day-low">/${Math.round(lowTemp)}${tempUnit}</span>
             </div>
             <div class="forecast-day-precip">${day.precip_probability}%</div>
@@ -2676,7 +2784,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('🔍 DOM CHECK COMPLETE');
     
-    updateUnits();
+    // Load units configuration from server first, then update units
+    loadUnitsConfig().then(() => {
+        updateUnits();
+    });
     
     // Ensure pressure info icon has proper event listener attached initially
     const initialPressureInfoIcon = document.getElementById('pressure-info-icon');
@@ -2867,7 +2978,7 @@ window.diagnoseCharts = function() {
                 chart.update('none');
                 console.log("  ✅ Chart.update() succeeded");
             } catch (error) {
-                console.log("  ❌ Chart.update() failed:", error.message);
+                console.log("  ❌ Chart.update() failed:", error);
             }
         }
     });
@@ -3007,9 +3118,9 @@ window.debugChartScales = function() {
             
             // Check scales
             if (chart.scales) {
-                Object.keys(chart.scales).forEach(scaleId => {
-                    const scale = chart.scales[scaleId];
-                    console.log(`  Scale ${scaleId}:`);
+                Object.values(chart.scales).forEach(scale => {
+                    console.log(`  Scale ${scale.id}:`);
+                    console.log(`    Type: ${scale.type}`);
                     console.log(`    Min: ${scale.min}, Max: ${scale.max}`);
                     console.log(`    Range: ${scale.max - scale.min}`);
                 });

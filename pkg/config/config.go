@@ -24,7 +24,7 @@ type Config struct {
 	LogLevel            string
 	WebPort             string
 	ClearDB             bool
-	DisableHomeKit      bool    // Disable HomeKit services and run web console only
+	DisableHomeKit      bool // Disable HomeKit services and run web console only
 	Sensors             string
 	ReadHistory         bool
 	TestAPI             bool
@@ -32,6 +32,8 @@ type Config struct {
 	UseGeneratedWeather bool    // Use generated weather data for testing instead of Tempest API
 	StationURL          string  // Custom station URL for weather data (overrides Tempest API)
 	Elevation           float64 // elevation in meters
+	Units               string  // Units system: imperial, metric, or sae
+	UnitsPressure       string  // Pressure units: inHg or mb
 	Version             bool    // Show version and exit
 }
 
@@ -39,14 +41,16 @@ type Config struct {
 // environment variables, command-line flags, and sensible defaults.
 func LoadConfig() *Config {
 	cfg := &Config{
-		Token:       getEnvOrDefault("TEMPEST_TOKEN", "b88edc78-6261-414e-8042-86a4d4f9ba15"),
-		StationName: getEnvOrDefault("TEMPEST_STATION_NAME", "Chino Hills"),
-		Pin:         getEnvOrDefault("HOMEKIT_PIN", "00102003"),
-		LogLevel:    getEnvOrDefault("LOG_LEVEL", "error"),
-		WebPort:     getEnvOrDefault("WEB_PORT", "8080"),
-		Sensors:     getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
-		StationURL:  getEnvOrDefault("STATION_URL", ""),
-		Elevation:   275.2, // 903ft default elevation in meters
+		Token:         getEnvOrDefault("TEMPEST_TOKEN", "b88edc78-6261-414e-8042-86a4d4f9ba15"),
+		StationName:   getEnvOrDefault("TEMPEST_STATION_NAME", "Chino Hills"),
+		Pin:           getEnvOrDefault("HOMEKIT_PIN", "00102003"),
+		LogLevel:      getEnvOrDefault("LOG_LEVEL", "error"),
+		WebPort:       getEnvOrDefault("WEB_PORT", "8080"),
+		Sensors:       getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
+		StationURL:    getEnvOrDefault("STATION_URL", ""),
+		Elevation:     275.2, // 903ft default elevation in meters
+		Units:         getEnvOrDefault("UNITS", "imperial"),
+		UnitsPressure: getEnvOrDefault("UNITS_PRESSURE", "inHg"),
 	}
 
 	var elevationStr string
@@ -65,6 +69,8 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.UseWebStatus, "use-web-status", false, "Enable headless browser scraping of TempestWX status page every 15 minutes")
 	flag.StringVar(&cfg.StationURL, "station-url", cfg.StationURL, "Custom station URL for weather data (e.g., http://localhost:8080/api/generate-weather). Overrides Tempest API. Can also be set via STATION_URL environment variable")
 	flag.BoolVar(&cfg.UseGeneratedWeather, "use-generated-weather", false, "Use generated weather data for UI testing instead of Tempest API")
+	flag.StringVar(&cfg.Units, "units", cfg.Units, "Units system: imperial (default), metric, or sae. Can also be set via UNITS environment variable")
+	flag.StringVar(&cfg.UnitsPressure, "units-pressure", cfg.UnitsPressure, "Pressure units: inHg (default) or mb. Can also be set via UNITS_PRESSURE environment variable")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
 
 	// Parse flags but check if elevation was actually provided
@@ -192,6 +198,32 @@ func validateConfig(cfg *Config) error {
 	}
 	if cfg.StationName == "" {
 		return fmt.Errorf("station name is required. Set via --station flag or TEMPEST_STATION_NAME environment variable")
+	}
+
+	// Validate units
+	validUnits := []string{"imperial", "metric", "sae"}
+	validUnit := false
+	for _, unit := range validUnits {
+		if cfg.Units == unit {
+			validUnit = true
+			break
+		}
+	}
+	if !validUnit {
+		return fmt.Errorf("invalid units '%s'. Valid options: imperial, metric, sae", cfg.Units)
+	}
+
+	// Validate pressure units
+	validPressureUnits := []string{"inHg", "mb"}
+	validPressureUnit := false
+	for _, unit := range validPressureUnits {
+		if cfg.UnitsPressure == unit {
+			validPressureUnit = true
+			break
+		}
+	}
+	if !validPressureUnit {
+		return fmt.Errorf("invalid pressure units '%s'. Valid options: inHg, mb", cfg.UnitsPressure)
 	}
 
 	return nil

@@ -31,6 +31,8 @@ type WebServer struct {
 	stationURL             string  // station URL for weather data
 	stationID              int     // station ID for TempestWX status scraping
 	elevation              float64 // elevation in meters
+	units                  string  // units system: imperial, metric, or sae
+	unitsPressure          string  // pressure units: inHg or mb
 	logLevel               string  // log level for filtering debug messages
 	startTime              time.Time
 	historicalDataLoaded   bool
@@ -330,7 +332,7 @@ func getPressureWeatherForecast(pressure float64, trend string) string {
 	}
 }
 
-func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, stationURL string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface) *WebServer {
+func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, stationURL string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface, units string, unitsPressure string) *WebServer {
 	ws := &WebServer{
 		port:             port,
 		elevation:        elevation,
@@ -343,6 +345,8 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 		stationURL:       stationURL,
 		generatedWeather: generatedWeather,
 		weatherGenerator: weatherGenerator,
+		units:            units,
+		unitsPressure:    unitsPressure,
 		homekitStatus: map[string]interface{}{
 			"bridge":      false,
 			"accessories": 0,
@@ -359,6 +363,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 	mux.HandleFunc("/api/status", ws.handleStatusAPI)
 	mux.HandleFunc("/api/regenerate-weather", ws.handleRegenerateWeatherAPI)
 	mux.HandleFunc("/api/generate-weather", ws.handleGenerateWeatherAPI)
+	mux.HandleFunc("/api/units", ws.handleUnitsAPI)
 
 	ws.server = &http.Server{
 		Addr:    ":" + port,
@@ -645,14 +650,10 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	response.Forecast = ws.forecastData
 
 	// Add station name if available
-	if ws.stationName != "" {
-		response.StationName = ws.stationName
-	}
+	response.StationName = ws.stationName
 
 	// Add station URL if available
-	if ws.stationURL != "" {
-		response.StationURL = ws.stationURL
-	}
+	response.StationURL = ws.stationURL
 
 	// Add generated weather information if available
 	response.GeneratedWeather = ws.generatedWeather
@@ -704,6 +705,21 @@ func (ws *WebServer) handleRegenerateWeatherAPI(w http.ResponseWriter, r *http.R
 		"location":    ws.generatedWeather.Location,
 		"season":      ws.generatedWeather.Season,
 		"climateZone": ws.generatedWeather.ClimateZone,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+// handleUnitsAPI returns the current units configuration
+func (ws *WebServer) handleUnitsAPI(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	ws.logDebug("Units endpoint called from %s", r.RemoteAddr)
+
+	response := map[string]string{
+		"units":         ws.units,
+		"unitsPressure": ws.unitsPressure,
 	}
 
 	json.NewEncoder(w).Encode(response)
@@ -2053,7 +2069,7 @@ func (ws *WebServer) getDashboardHTML() string {
                             </thead>
                             <tbody>
                                 <tr style="background-color: rgba(255, 0, 0, 0.1);"><td>&lt; 980</td><td>&lt; 28.94</td><td><strong>Very Low</strong></td><td>Stormy weather likely</td></tr>
-                                <tr style="background-color: rgba(255, 165, 0, 0.1);"><td>980-1000</td><td>28.94-29.53</td><td><strong>Low</strong></td><td>Unsettled weather, possible storms</td></tr>
+                                <tr style="background-color: rgba(255, 165, 0.1);"><td>980-1000</td><td>28.94-29.53</td><td><strong>Low</strong></td><td>Unsettled weather, possible storms</td></tr>
                                 <tr style="background-color: rgba(255, 255, 0, 0.1);"><td>1000-1020</td><td>29.53-30.12</td><td><strong>Normal</strong></td><td>Fair weather conditions</td></tr>
                                 <tr style="background-color: rgba(0, 255, 0, 0.1);"><td>1020-1040</td><td>30.12-30.71</td><td><strong>High</strong></td><td>Generally clear and stable</td></tr>
                                 <tr style="background-color: rgba(0, 0, 255, 0.1);"><td>&gt; 1040</td><td>&gt; 30.71</td><td><strong>Very High</strong></td><td>Very stable, clear conditions</td></tr>
