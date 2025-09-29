@@ -1,0 +1,39 @@
+name: Headless UI Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  ui-headless:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Install Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser
+
+      - name: Install dependencies
+        run: |
+          go mod download
+
+      - name: Vendor Chart.js (if not present)
+        run: |
+          make vendor-chartjs || true
+
+      - name: Run headless UI test
+        run: |
+          # Run only the headless UI test to keep the job quick
+          go test ./pkg/web -run TestHeadlessDashboard -v

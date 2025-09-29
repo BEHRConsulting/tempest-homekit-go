@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -388,10 +389,44 @@ func (ws *WebServer) UpdateWeather(obs *weather.Observation) {
 
 	ws.weatherData = obs
 
-	// Add to history
-	ws.dataHistory = append(ws.dataHistory, *obs)
-	if len(ws.dataHistory) > ws.maxHistorySize {
-		ws.dataHistory = ws.dataHistory[1:]
+	// Insert observation into dataHistory while keeping it sorted by Timestamp (ascending).
+	// Use binary search to find insertion index. If a reading with the same timestamp exists,
+	// replace it. After insertion, trim the slice to retain the most recent maxHistorySize entries.
+	ts := obs.Timestamp
+	n := len(ws.dataHistory)
+
+	if n == 0 {
+		ws.dataHistory = append(ws.dataHistory, *obs)
+	} else {
+		lo, hi := 0, n
+		for lo < hi {
+			mid := (lo + hi) / 2
+			if ws.dataHistory[mid].Timestamp < ts {
+				lo = mid + 1
+			} else {
+				hi = mid
+			}
+		}
+
+		// lo is the insertion index
+		if lo > 0 && ws.dataHistory[lo-1].Timestamp == ts {
+			// Replace existing at lo-1
+			ws.dataHistory[lo-1] = *obs
+		} else if lo < n && ws.dataHistory[lo].Timestamp == ts {
+			// Replace existing at lo
+			ws.dataHistory[lo] = *obs
+		} else {
+			// Insert at position lo
+			ws.dataHistory = append(ws.dataHistory, weather.Observation{})
+			copy(ws.dataHistory[lo+1:], ws.dataHistory[lo:])
+			ws.dataHistory[lo] = *obs
+		}
+
+		// Trim to most recent maxHistorySize entries (keep the latest entries)
+		if len(ws.dataHistory) > ws.maxHistorySize {
+			start := len(ws.dataHistory) - ws.maxHistorySize
+			ws.dataHistory = ws.dataHistory[start:]
+		}
 	}
 }
 
@@ -534,7 +569,11 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	// Calculate incremental rain since last sample
 	var incrementalRain float64
 	if len(ws.dataHistory) > 0 {
-		lastReading := ws.dataHistory[len(ws.dataHistory)-1].RainAccumulated
+		// Use a sorted copy of history to ensure we get the chronologically latest reading
+		historyCopy := make([]weather.Observation, len(ws.dataHistory))
+		copy(historyCopy, ws.dataHistory)
+		sort.Slice(historyCopy, func(i, j int) bool { return historyCopy[i].Timestamp < historyCopy[j].Timestamp })
+		lastReading := historyCopy[len(historyCopy)-1].RainAccumulated
 		incrementalRain = math.Max(0, ws.weatherData.RainAccumulated-lastReading)
 	} else {
 		incrementalRain = 0 // No previous data
@@ -593,12 +632,18 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	uptimeStr := fmt.Sprintf("%dh%dm%ds", int(uptime.Hours()), int(uptime.Minutes())%60, int(uptime.Seconds())%60)
 
 	// Convert data history to response format with incremental rain calculation
-	history := make([]WeatherResponse, len(ws.dataHistory))
-	for i, obs := range ws.dataHistory {
+	history := make([]WeatherResponse, 0, len(ws.dataHistory))
+
+	// Work from a time-sorted copy to guarantee chronological ordering (oldest -> newest)
+	historyCopy := make([]weather.Observation, len(ws.dataHistory))
+	copy(historyCopy, ws.dataHistory)
+	sort.Slice(historyCopy, func(i, j int) bool { return historyCopy[i].Timestamp < historyCopy[j].Timestamp })
+
+	for i, obs := range historyCopy {
 		// Calculate incremental rain since last observation
 		var incrementalRain float64
 		if i > 0 {
-			incrementalRain = math.Max(0, obs.RainAccumulated-ws.dataHistory[i-1].RainAccumulated)
+			incrementalRain = math.Max(0, obs.RainAccumulated-historyCopy[i-1].RainAccumulated)
 		} else {
 			incrementalRain = 0 // First observation, no previous data
 		}
@@ -608,7 +653,7 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 		startOfDay := time.Date(obsTime.Year(), obsTime.Month(), obsTime.Day(), 0, 0, 0, 0, obsTime.Location())
 		dailyTotal := ws.calculateDailyRainForTime(obsTime, startOfDay)
 
-		history[i] = WeatherResponse{
+		history = append(history, WeatherResponse{
 			Temperature:          obs.AirTemperature,
 			Humidity:             obs.RelativeHumidity,
 			WindSpeed:            obs.WindAvg,
@@ -624,7 +669,7 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 			LightningStrikeAvg:   obs.LightningStrikeAvg,
 			LightningStrikeCount: obs.LightningStrikeCount,
 			LastUpdate:           time.Unix(obs.Timestamp, 0).Format(time.RFC3339),
-		}
+		})
 	}
 
 	response := StatusResponse{
@@ -2377,8 +2422,19 @@ func (ws *WebServer) getDashboardHTML() string {
             <p>Tempest HomeKit Service v` + ws.version + `</p>
         </div>
     <!-- External JavaScript Libraries -->
+    ` + func() string {
+		// If running under CI or explicit flag, prefer local static copies to avoid CDN/network flakiness
+		if os.Getenv("CI") != "" || os.Getenv("USE_LOCAL_CHARTJS") != "" {
+			return `
+    <script src="/pkg/web/static/chart.umd.js"></script>
+    <script src="/pkg/web/static/chartjs-adapter-date-fns.bundle.min.js"></script>
+    `
+		}
+		return `
     <script src="https://unpkg.com/chart.js@4.4.4/dist/chart.umd.js"></script>
     <script src="https://unpkg.com/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    `
+	}() + `
     
     <!-- Main Application Script -->
     <script src="pkg/web/static/script.js?v=` + fmt.Sprintf("%d", time.Now().UnixNano()) + `"></script>

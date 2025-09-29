@@ -59,11 +59,13 @@
 
 [x] In the readme.md file, show that this program is my test created using vibe programming technique. Define the Vibe coding. Note that the LLMs in use are "Claude Sonnet 4" and "Grok Code Fast 1 (preview)". using GitHub's Copilot and Visual Code on a Macintosh. Add the pop out graph function and also add to requirments.md. 
 
+[] In the web console, Tempest Station card, shorten the link lable to 15 characters to fit within the card. hover to show full url.
+
 [] Let's start from scratch on the /chart/* feature. When clicking on a chart in the web console, I want the /chart/<weather-type> to open a new window/tab that is a dedicated version of the dashboard graph that was clicked. The data units, data history, time format, color, and lines that were on the card graph should be on the dedicated graph page. 
 
 [] Create or update WORK_LOG.md file that shows what went into creation of this application both from myself and Copilot. Time spent, major design changes, the best and worst prompts. Anything else that makes since to be in a work log.
 
-[] Add another api like generated-weather, this time gather the weather informaiton direct from the tempest weather station via it's udp stream (see https://apidocs.tempestwx.com/reference/tempest-udp-broadcast), not the WeatherFlow website. Tempest station broadcasts UDP messages over port 50222 on the local network. Use the command line parameter --udp-stream or --station-url http://localhost:8080/api/udp-stream. Spawn a task to listen and collect weather informaiton for the history and update homekit and the web console as data is collected. Update web console Tempest Station with Data Source of udp-stream and it's IP address. If the udp stream is not detected, the station status should be No UDP Packets.
+[] Add another api like generated-weather, this time gather the weather informaiton direct from the tempest weather station via it's udp stream (see https://apidocs.tempestwx.com/reference/tempest-udp-broadcast), not the WeatherFlow website. Tempest station broadcasts UDP messages over port 50222 on the local network. Use the command line parameter --udp-stream or --station-url http://localhost:8080/api/udp-stream. Spawn a task to listen and collect weather informaiton for the history and update homekit and the web console as data is collected. Update web console Tempest Station with Data Source of udp-stream and it's IP address and total packet count collected. If the udp stream is not detected, the station status should be No UDP Packets. 
 
 [] command line parameter --token is only required for WeatherFlow API stations
 

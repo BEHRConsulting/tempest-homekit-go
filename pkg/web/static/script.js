@@ -79,7 +79,24 @@ let weatherData = null;
 let forecastData = null; // Store current forecast data for unit conversions
 let statusData = null; // Store current status data for unit conversions
 const charts = {};
+
+// Expose minimal debug hooks for automated tests / headless browsers.
+// These do not alter application behavior and simply return current in-memory state.
+window.getWeatherData = function() { return weatherData; };
+window.getCharts = function() { return charts; };
 const maxDataPoints = 1000; // As specified in requirements
+
+// Ensure a given dataset index exists on a chart. Creates a minimal dataset if missing.
+function ensureDataset(chart, index) {
+    if (!chart || !chart.data) return;
+    if (!chart.data.datasets) chart.data.datasets = [];
+    if (!chart.data.datasets[index]) {
+        // Create placeholder datasets up to the requested index
+        for (let i = chart.data.datasets.length; i <= index; i++) {
+            chart.data.datasets[i] = { data: [] };
+        }
+    }
+}
 
 function initCharts() {
     debugLog(logLevels.DEBUG, 'Initializing all charts with configuration');
@@ -427,6 +444,7 @@ function forceChartColors() {
     
     // Temperature: Red data → Green average
     if (charts.temperature) {
+        ensureDataset(charts.temperature, 1);
         charts.temperature.data.datasets[1].borderColor = '#00cc66';
         charts.temperature.data.datasets[1].backgroundColor = 'rgba(0, 204, 102, 0.2)';
         charts.temperature.update('none');
@@ -434,6 +452,7 @@ function forceChartColors() {
     
     // Humidity: Blue data → Orange average  
     if (charts.humidity) {
+        ensureDataset(charts.humidity, 1);
         charts.humidity.data.datasets[1].borderColor = '#ff8533';
         charts.humidity.data.datasets[1].backgroundColor = 'rgba(255, 133, 51, 0.2)';
         charts.humidity.update('none');
@@ -441,6 +460,7 @@ function forceChartColors() {
     
     // Wind: Teal data → Bright Red average (more visible)
     if (charts.wind) {
+        ensureDataset(charts.wind, 1);
         charts.wind.data.datasets[1].borderColor = '#FF0000';
         charts.wind.data.datasets[1].backgroundColor = 'rgba(255, 0, 0, 0.3)';
         charts.wind.data.datasets[1].borderWidth = 3;
@@ -455,6 +475,8 @@ function forceChartColors() {
     
     // Rain: Purple data → Yellow-green average → Orange 24h total
     if (charts.rain) {
+        ensureDataset(charts.rain, 1);
+        ensureDataset(charts.rain, 2);
         charts.rain.data.datasets[1].borderColor = '#66ff66';
         charts.rain.data.datasets[1].backgroundColor = 'rgba(102, 255, 102, 0.2)';
         charts.rain.data.datasets[2].borderColor = '#ff6b35';
@@ -464,6 +486,8 @@ function forceChartColors() {
     
     // Pressure: Orange data → Blue average
     if (charts.pressure) {
+        ensureDataset(charts.pressure, 1);
+        ensureDataset(charts.pressure, 2);
         charts.pressure.data.datasets[1].borderColor = '#4080ff';
         charts.pressure.data.datasets[1].backgroundColor = 'rgba(64, 128, 255, 0.2)';
         charts.pressure.update('none');
@@ -811,8 +835,59 @@ function calculateTrendLine(data) {
 }
 
 function updateAverageLine(chart, data) {
+    // Ensure the second dataset exists (used for moving average). Create a minimal
+    // placeholder if it's missing so assignments below won't throw.
+    if (!chart.data.datasets[1]) {
+        chart.data.datasets[1] = chart.data.datasets[1] || { data: [] };
+    }
+
     if (data.length === 0) {
         chart.data.datasets[1].data = [];
+        return;
+    }
+
+    // For the pressure chart we want a single, constant average line
+    // across the full time range (horizontal line). For all other
+    // charts use the moving average implementation.
+    // Treat these charts as summary charts where a single global average
+    // (horizontal line) is more appropriate than a moving average.
+    const constantAvgCharts = ['pressure', 'temperature', 'humidity', 'wind'];
+    const datasetLabel = (chart && chart.data && chart.data.datasets && chart.data.datasets[0] && String(chart.data.datasets[0].label).toLowerCase()) || '';
+    const chartNameFromLabel = constantAvgCharts.find(name => datasetLabel.includes(name));
+    const isConstantAvgChart = chartNameFromLabel || (chart === charts.pressure) || (chart === charts.temperature) || (chart === charts.humidity) || (chart === charts.wind);
+
+    if (isConstantAvgChart) {
+        // Compute simple average of all y values
+        let sum = 0;
+        let count = 0;
+        for (let i = 0; i < data.length; i++) {
+            if (data[i] && typeof data[i].y === 'number') {
+                sum += data[i].y;
+                count++;
+            }
+        }
+
+        if (count === 0) {
+            chart.data.datasets[1].data = [];
+            return;
+        }
+
+        const avg = sum / count;
+
+        // Create a horizontal line spanning start..end timestamps
+        const firstX = data[0].x;
+        const lastX = data[data.length - 1].x;
+
+        chart.data.datasets[1].data = [
+            { x: firstX, y: avg },
+            { x: lastX, y: avg }
+        ];
+
+        debugLog(logLevels.DEBUG, 'Constant average updated', {
+            chartLabel: chart.data.datasets[0].label || chartNameFromLabel || 'Chart',
+            dataPoints: data.length,
+            average: avg
+        });
         return;
     }
 
@@ -843,6 +918,7 @@ function updateAverageLine(chart, data) {
         }
     }
 
+    // Safely assign the moving average points to the second dataset
     chart.data.datasets[1].data = movingAverageData;
     
     debugLog(logLevels.DEBUG, 'Moving average updated', {
@@ -998,28 +1074,32 @@ function validateAndSortChartData(chart) {
     // Validate and sort data for the main dataset
     if (chart.data.datasets[0] && chart.data.datasets[0].data) {
         let data = chart.data.datasets[0].data;
-        
-        // Filter out invalid data points
-        data = data.filter(point => 
-            point && 
-            typeof point.x !== 'undefined' && 
-            typeof point.y === 'number' && 
-            !isNaN(point.y) &&
-            point.x instanceof Date || typeof point.x === 'number'
-        );
-        
-        // Sort by timestamp
-        data.sort((a, b) => new Date(a.x) - new Date(b.x));
-        
-        // DISABLE duplicate removal for generated weather data - allow all points to accumulate
-        const uniqueData = data; // Skip duplicate removal entirely
-        
-        chart.data.datasets[0].data = uniqueData;
-        
-        debugLog(logLevels.DEBUG, 'Chart data validated and sorted', {
-            originalPoints: data.length,
-            filteredPoints: uniqueData.length,
-            removed: data.length - uniqueData.length
+
+        // Filter out invalid data points and normalize timestamps
+        data = data.filter(point => {
+            if (!point) return false;
+            if (typeof point.y !== 'number' || isNaN(point.y)) return false;
+
+            // Accept Date objects, numeric timestamps, or ISO date strings that parse to valid times
+            if (point.x instanceof Date) return !isNaN(point.x.getTime());
+            if (typeof point.x === 'number') return Number.isFinite(point.x);
+            if (typeof point.x === 'string') return !isNaN(Date.parse(point.x));
+            return false;
+        }).map(point => {
+            // Normalize x to a Date object for consistent sorting/rendering
+            return { ...point, x: (point.x instanceof Date) ? point.x : new Date(point.x) };
+        });
+
+        // Sort by timestamp (ascending)
+        data.sort((a, b) => a.x.getTime() - b.x.getTime());
+
+        // Keep all points (no duplicate removal) but ensure chart receives fully-normalized data
+        chart.data.datasets[0].data = data;
+
+        debugLog(logLevels.DEBUG, 'Chart data validated, normalized and sorted', {
+            points: data.length,
+            first: data[0] || null,
+            last: data[data.length - 1] || null
         });
     }
 }
@@ -1363,7 +1443,15 @@ function updateDisplay() {
 
     // Wind data
     document.getElementById('wind-speed').textContent = formatWindSpeed(weatherData.windSpeed);
-    
+
+    // Define converted wind variables for logging and display consistency
+    let windSpeed = typeof weatherData.windSpeed === 'number' ? weatherData.windSpeed : 0;
+    let windGust = typeof weatherData.windGust === 'number' ? weatherData.windGust : 0;
+    if (units.wind === 'kph') {
+        windSpeed = mphToKph(windSpeed);
+        windGust = mphToKph(windGust);
+    }
+
     // Wind gust information
     const windUnit = units.wind === 'kph' ? 'kph' : 'mph';
     if (weatherData.windGust > weatherData.windSpeed) {
@@ -1373,7 +1461,7 @@ function updateDisplay() {
     } else {
         document.getElementById('wind-gust-info').textContent = 'No gusts detected';
     }
-    
+
     const direction = degreesToDirection(weatherData.windDirection);
     document.getElementById('wind-direction').textContent = direction + ' (' + weatherData.windDirection.toFixed(0) + '°)';
     document.getElementById('wind-arrow').textContent = updateArrow(direction);
@@ -1388,21 +1476,29 @@ function updateDisplay() {
     });
 
     // Rain data
-    document.getElementById('rain').textContent = formatRain(weatherData.rainAccum);
-    
+    // Prepare converted values for rain and wind to avoid referencing undefined variables
+    // Server provides rain values as inches (incremental). Convert to millimeters for
+    // description and formatting functions which expect mm input.
+    const rainInInches = typeof weatherData.rainAccum === 'number' ? weatherData.rainAccum : 0;
+    const rainMm = inchesToMm(rainInInches);
+
+    // Display current incremental rain (formatRain expects mm input)
+    document.getElementById('rain').textContent = formatRain(rainMm);
+
     // Display daily rain total
     const dailyRainElement = document.getElementById('daily-rain-total');
+    const dailyRainInInches = typeof weatherData.rainDailyTotal === 'number' ? weatherData.rainDailyTotal : 0;
+    const dailyRainMm = inchesToMm(dailyRainInInches);
     if (dailyRainElement) {
-        dailyRainElement.textContent = formatRain(weatherData.rainDailyTotal || 0);
+        dailyRainElement.textContent = formatRain(dailyRainMm || 0);
     }
-    
-    // Display rain description based on current accumulated rain
+
+    // Display rain description based on current accumulated rain (in mm)
     const rainDescElement = document.getElementById('rain-description');
     if (rainDescElement) {
-        // Convert to mm for description calculation (standard meteorological unit)
-        let rainMm = units.rain === 'inches' ? rain * 25.4 : rain;
         rainDescElement.textContent = getRainDescription(rainMm);
     }
+
     
     // Precipitation type data
     const precipitationTypeElement = document.getElementById('precipitation-type');
@@ -1438,11 +1534,11 @@ function updateDisplay() {
     
     debugLog(logLevels.DEBUG, 'Rain and lightning data updated', {
         originalRain: weatherData.rainAccum,
-        convertedRain: rain,
+        convertedRain: rainMm,
         originalDailyRain: weatherData.rainDailyTotal,
-        convertedDailyRain: dailyRain,
+        convertedDailyRain: dailyRainMm,
         rainUnit: units.rain,
-        rainDescription: getRainDescription(units.rain === 'inches' ? rain * 25.4 : rain),
+        rainDescription: getRainDescription(rainMm),
         lightningCount: weatherData.lightningStrikeCount,
         lightningDistance: weatherData.lightningStrikeAvg
     });
@@ -1566,149 +1662,102 @@ function updateCharts() {
         timeDiff: now.getTime() - new Date(weatherData.lastUpdate).getTime()
     });
 
-    // Temperature chart
-    let tempValue = weatherData.temperature;
+    // Temperature chart (defensive)
+    let tempValue = (typeof weatherData.temperature === 'number' && Number.isFinite(weatherData.temperature)) ? weatherData.temperature : 0;
     if (units.temperature === 'fahrenheit') {
         tempValue = celsiusToFahrenheit(tempValue);
     }
-    charts.temperature.data.datasets[0].data.push({ x: now, y: tempValue });
-    console.log('📈 TEMP CHART DATA AFTER PUSH:', {
-        totalPoints: charts.temperature.data.datasets[0].data.length,
-        latestPoint: charts.temperature.data.datasets[0].data[charts.temperature.data.datasets[0].data.length - 1],
-        allTimestamps: charts.temperature.data.datasets[0].data.map(d => d.x.toISOString())
-    });
-    
-    if (charts.temperature.data.datasets[0].data.length > maxDataPoints) {
-        charts.temperature.data.datasets[0].data.shift();
+    if (charts.temperature && charts.temperature.data && charts.temperature.data.datasets && charts.temperature.data.datasets[0]) {
+        charts.temperature.data.datasets[0].data.push({ x: now, y: tempValue });
+        if (charts.temperature.data.datasets[0].data.length > maxDataPoints) charts.temperature.data.datasets[0].data.shift();
+        const tempAvg = calculateAverage(charts.temperature.data.datasets[0].data);
+        validateAndSortChartData(charts.temperature);
+        updateAverageLine(charts.temperature, charts.temperature.data.datasets[0].data);
+        charts.temperature.options.scales.y.title = {
+            display: true,
+            text: units.temperature === 'celsius' ? '°C' : '°F'
+        };
+        try { charts.temperature.update(); } catch (e) { debugLog(logLevels.ERROR, 'Temperature chart update failed', { error: e.message }); }
+        debugLog(logLevels.DEBUG, 'Temperature chart updated', { dataPoints: charts.temperature.data.datasets[0].data.length, currentValue: tempValue, average: tempAvg });
     }
-    const tempAvg = calculateAverage(charts.temperature.data.datasets[0].data);
-    validateAndSortChartData(charts.temperature);
-    console.log('📈 TEMP CHART DATA AFTER VALIDATION:', {
-        totalPoints: charts.temperature.data.datasets[0].data.length,
-        removedPoints: charts.temperature.data.datasets[0].data.length,
-        latestPoint: charts.temperature.data.datasets[0].data[charts.temperature.data.datasets[0].data.length - 1]
-    });
-    updateAverageLine(charts.temperature, charts.temperature.data.datasets[0].data);
-    charts.temperature.options.scales.y.title = {
-        display: true,
-        text: units.temperature === 'celsius' ? '°C' : '°F'
-    };
-    charts.temperature.update();
-    
-    debugLog(logLevels.DEBUG, 'Temperature chart updated', {
-        dataPoints: charts.temperature.data.datasets[0].data.length,
-        currentValue: tempValue,
-        average: tempAvg
-    });
 
-    // Humidity chart
-    charts.humidity.data.datasets[0].data.push({ x: now, y: weatherData.humidity });
-    if (charts.humidity.data.datasets[0].data.length > maxDataPoints) {
-        charts.humidity.data.datasets[0].data.shift();
+    // Humidity chart (defensive)
+    const humidityValue = (typeof weatherData.humidity === 'number' && Number.isFinite(weatherData.humidity)) ? weatherData.humidity : 0;
+    if (charts.humidity && charts.humidity.data && charts.humidity.data.datasets && charts.humidity.data.datasets[0]) {
+        charts.humidity.data.datasets[0].data.push({ x: now, y: humidityValue });
+        if (charts.humidity.data.datasets[0].data.length > maxDataPoints) charts.humidity.data.datasets[0].data.shift();
+        const humidityAvg = calculateAverage(charts.humidity.data.datasets[0].data);
+        updateAverageLine(charts.humidity, charts.humidity.data.datasets[0].data);
+        charts.humidity.options.scales.y.title = { display: true, text: '%' };
+        try { charts.humidity.update(); } catch (e) { debugLog(logLevels.ERROR, 'Humidity chart update failed', { error: e.message }); }
     }
-    const humidityAvg = calculateAverage(charts.humidity.data.datasets[0].data);
-    updateAverageLine(charts.humidity, charts.humidity.data.datasets[0].data);
-    charts.humidity.options.scales.y.title = {
-        display: true,
-        text: '%'
-    };
-    charts.humidity.update();
 
-    // Wind chart
-    let windValue = weatherData.windSpeed;
-    if (units.wind === 'kph') {
-        windValue = mphToKph(windValue);
+    // Wind chart (defensive)
+    let windValue = (typeof weatherData.windSpeed === 'number' && Number.isFinite(weatherData.windSpeed)) ? weatherData.windSpeed : 0;
+    if (units.wind === 'kph') windValue = mphToKph(windValue);
+    if (charts.wind && charts.wind.data && charts.wind.data.datasets && charts.wind.data.datasets[0]) {
+        charts.wind.data.datasets[0].data.push({ x: now, y: windValue });
+        if (charts.wind.data.datasets[0].data.length > maxDataPoints) charts.wind.data.datasets[0].data.shift();
+        const windAvg = calculateAverage(charts.wind.data.datasets[0].data);
+        updateAverageLine(charts.wind, charts.wind.data.datasets[0].data);
+        charts.wind.options.scales.y.title = { display: true, text: units.wind === 'mph' ? 'mph' : 'kph' };
+        try { charts.wind.update(); } catch (e) { debugLog(logLevels.ERROR, 'Wind chart update failed', { error: e.message }); }
     }
-    charts.wind.data.datasets[0].data.push({ x: now, y: windValue });
-    if (charts.wind.data.datasets[0].data.length > maxDataPoints) {
-        charts.wind.data.datasets[0].data.shift();
-    }
-    const windAvg = calculateAverage(charts.wind.data.datasets[0].data);
-    updateAverageLine(charts.wind, charts.wind.data.datasets[0].data);
-    charts.wind.options.scales.y.title = {
-        display: true,
-        text: units.wind === 'mph' ? 'mph' : 'kph'
-    };
-    charts.wind.update();
 
-    // Rain chart
-    let rainValue = weatherData.rainAccum;
-    if (units.rain === 'mm') {
-        rainValue = inchesToMm(rainValue);
+    // Rain chart (defensive)
+    let rainValue = (typeof weatherData.rainAccum === 'number' && Number.isFinite(weatherData.rainAccum)) ? weatherData.rainAccum : 0;
+    if (units.rain === 'mm') rainValue = inchesToMm(rainValue);
+    if (charts.rain && charts.rain.data && charts.rain.data.datasets && charts.rain.data.datasets[0]) {
+        charts.rain.data.datasets[0].data.push({ x: now, y: rainValue });
+        if (charts.rain.data.datasets[0].data.length > maxDataPoints) charts.rain.data.datasets[0].data.shift();
+        const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
+        updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
+        try { update24HourAccumulationLine(charts.rain, weatherData.rainDailyTotal, units); } catch (e) { debugLog(logLevels.ERROR, 'update24HourAccumulationLine failed', { error: e.message }); }
+        charts.rain.options.scales.y.title = { display: true, text: units.rain === 'inches' ? 'in' : 'mm' };
+        try { charts.rain.update(); } catch (e) { debugLog(logLevels.ERROR, 'Rain chart update failed', { error: e.message }); }
     }
-    charts.rain.data.datasets[0].data.push({ x: now, y: rainValue });
-    if (charts.rain.data.datasets[0].data.length > maxDataPoints) {
-        charts.rain.data.datasets[0].data.shift();
-    }
-    const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
-    updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
-    update24HourAccumulationLine(charts.rain, weatherData.rainDailyTotal, units);
-    charts.rain.options.scales.y.title = {
-        display: true,
-        text: units.rain === 'inches' ? 'in' : 'mm'
-    };
-    charts.rain.update();
 
-    // Pressure chart
-    let pressureValue = weatherData.pressure;
-    if (units.pressure === 'inHg') {
-        pressureValue = mbToInHg(pressureValue);
+    // Pressure chart (defensive)
+    let pressureValue = (typeof weatherData.pressure === 'number' && Number.isFinite(weatherData.pressure)) ? weatherData.pressure : 0;
+    if (units.pressure === 'inHg') pressureValue = mbToInHg(pressureValue);
+    if (charts.pressure && charts.pressure.data && charts.pressure.data.datasets && charts.pressure.data.datasets[0]) {
+        charts.pressure.data.datasets[0].data.push({ x: now, y: pressureValue });
+        if (charts.pressure.data.datasets[0].data.length > maxDataPoints) charts.pressure.data.datasets[0].data.shift();
+        const pressureAvg = calculateAverage(charts.pressure.data.datasets[0].data);
+        updateAverageLine(charts.pressure, charts.pressure.data.datasets[0].data);
+        updateTrendLine(charts.pressure, charts.pressure.data.datasets[0].data);
+        charts.pressure.options.scales.y.title = { display: true, text: units.pressure === 'mb' ? 'mb' : 'inHg' };
+        try { charts.pressure.update(); } catch (e) { debugLog(logLevels.ERROR, 'Pressure chart update failed', { error: e.message }); }
     }
-    charts.pressure.data.datasets[0].data.push({ x: now, y: pressureValue });
-    if (charts.pressure.data.datasets[0].data.length > maxDataPoints) {
-        charts.pressure.data.datasets[0].data.shift();
-    }
-    const pressureAvg = calculateAverage(charts.pressure.data.datasets[0].data);
-    updateAverageLine(charts.pressure, charts.pressure.data.datasets[0].data);
-    updateTrendLine(charts.pressure, charts.pressure.data.datasets[0].data);
-    charts.pressure.options.scales.y.title = {
-        display: true,
-        text: units.pressure === 'mb' ? 'mb' : 'inHg'
-    };
-    charts.pressure.update();
 
-    // Light chart
-    charts.light.data.datasets[0].data.push({ x: now, y: weatherData.illuminance });
-    if (charts.light.data.datasets[0].data.length > maxDataPoints) {
-        charts.light.data.datasets[0].data.shift();
+    // Light chart (defensive)
+    const illuminanceValue = (typeof weatherData.illuminance === 'number' && Number.isFinite(weatherData.illuminance)) ? weatherData.illuminance : 0;
+    if (charts.light && charts.light.data && charts.light.data.datasets && charts.light.data.datasets[0]) {
+        charts.light.data.datasets[0].data.push({ x: now, y: illuminanceValue });
+        if (charts.light.data.datasets[0].data.length > maxDataPoints) charts.light.data.datasets[0].data.shift();
+        const lightAvg = calculateAverage(charts.light.data.datasets[0].data);
+        updateAverageLine(charts.light, charts.light.data.datasets[0].data);
+        charts.light.options.scales.y.title = { display: true, text: 'lux' };
+        try { if (charts.light) validateAndSortChartData(charts.light); } catch (e) { debugLog(logLevels.ERROR, 'Failed to validate/sort light chart data', { error: e.message }); }
+        try { charts.light.update(); } catch (e) { debugLog(logLevels.ERROR, 'Light chart update failed', { error: e.message }); }
+        debugLog(logLevels.DEBUG, 'Light chart updated', { dataPoints: charts.light.data.datasets[0].data.length, currentValue: illuminanceValue, average: lightAvg });
     }
-    const lightAvg = calculateAverage(charts.light.data.datasets[0].data);
-    updateAverageLine(charts.light, charts.light.data.datasets[0].data);
-    charts.light.options.scales.y.title = {
-        display: true,
-        text: 'lux'
-    };
-    charts.light.update();
-    
-    debugLog(logLevels.DEBUG, 'Light chart updated', {
-        dataPoints: charts.light.data.datasets[0].data.length,
-        currentValue: weatherData.illuminance,
-        average: lightAvg
-    });
 
     // UV chart - only update if it exists
-    if (charts.uv && charts.uv.data) {
-        charts.uv.data.datasets[0].data.push({ x: now, y: weatherData.uv });
-        if (charts.uv.data.datasets[0].data.length > maxDataPoints) {
-            charts.uv.data.datasets[0].data.shift();
-        }
+    if (charts.uv && charts.uv.data && charts.uv.data.datasets && charts.uv.data.datasets[0]) {
+        const uvValue = (typeof weatherData.uv === 'number' && Number.isFinite(weatherData.uv)) ? weatherData.uv : 0;
+        charts.uv.data.datasets[0].data.push({ x: now, y: uvValue });
+        if (charts.uv.data.datasets[0].data.length > maxDataPoints) charts.uv.data.datasets[0].data.shift();
         const uvAvg = calculateAverage(charts.uv.data.datasets[0].data);
         updateAverageLine(charts.uv, charts.uv.data.datasets[0].data);
-        charts.uv.options.scales.y.title = {
-            display: true,
-            text: 'UVI'
-        };
-        charts.uv.update();
-        
-        debugLog(logLevels.DEBUG, 'UV chart updated', {
-            dataPoints: charts.uv.data.datasets[0].data.length,
-            currentValue: weatherData.uv,
-            average: uvAvg
-        });
+        charts.uv.options.scales.y.title = { display: true, text: 'UVI' };
+        try { validateAndSortChartData(charts.uv); } catch (e) { debugLog(logLevels.ERROR, 'Failed to validate/sort UV chart data', { error: e.message }); }
+        try { charts.uv.update(); } catch (e) { debugLog(logLevels.ERROR, 'UV chart update failed', { error: e.message }); }
+        debugLog(logLevels.DEBUG, 'UV chart updated', { dataPoints: charts.uv.data.datasets[0].data.length, currentValue: uvValue, average: uvAvg });
     } else {
         debugLog(logLevels.DEBUG, 'UV chart not available, skipping UV update');
     }
-    
+
     debugLog(logLevels.INFO, 'All charts updated successfully');
 }
 
@@ -1889,8 +1938,14 @@ async function fetchWeather() {
                 lastUpdate: weatherData.lastUpdate
             });
             
-            updateDisplay();
-            
+            // Guard updateDisplay to prevent a single UI error from aborting the pipeline
+            try {
+                updateDisplay();
+            } catch (displayErr) {
+                console.error('❌ ERROR in updateDisplay:', displayErr);
+                debugLog(logLevels.ERROR, 'updateDisplay error', { error: displayErr.message, stack: displayErr.stack });
+            }
+
             // Explicit chart update with error handling
             try {
                 console.log('🚀 DEBUG: About to call updateCharts with weatherData:', weatherData);
@@ -2438,45 +2493,68 @@ function populateChartsWithHistoricalData(dataHistory) {
             rain: obs.rainAccum
         });
 
+        // Defensive normalization for historical observation fields
+        const safeNumber = (v, fallback = 0) => (typeof v === 'number' && Number.isFinite(v)) ? v : fallback;
+
         // Temperature
-        let tempValue = obs.temperature;
-        if (units.temperature === 'fahrenheit') {
-            tempValue = celsiusToFahrenheit(tempValue);
+        let tempValue = safeNumber(obs.temperature, 0);
+        try { if (units.temperature === 'fahrenheit') tempValue = celsiusToFahrenheit(tempValue); } catch (e) { debugLog(logLevels.ERROR, 'Temperature conversion failed for historical point', { error: e.message }); }
+        if (charts.temperature && charts.temperature.data && charts.temperature.data.datasets && charts.temperature.data.datasets[0]) {
+            charts.temperature.data.datasets[0].data.push({ x: timestamp, y: tempValue });
         }
-        charts.temperature.data.datasets[0].data.push({ x: timestamp, y: tempValue });
 
         // Humidity
-        charts.humidity.data.datasets[0].data.push({ x: timestamp, y: obs.humidity });
+        const humidityVal = safeNumber(obs.humidity, 0);
+        if (charts.humidity && charts.humidity.data && charts.humidity.data.datasets && charts.humidity.data.datasets[0]) {
+            charts.humidity.data.datasets[0].data.push({ x: timestamp, y: humidityVal });
+        }
 
         // Wind
-        let windValue = obs.windSpeed;
-        if (units.wind === 'kph') {
-            windValue = mphToKph(windValue);
+        let windValue = safeNumber(obs.windSpeed, 0);
+        try { if (units.wind === 'kph') windValue = mphToKph(windValue); } catch (e) { debugLog(logLevels.ERROR, 'Wind conversion failed for historical point', { error: e.message }); }
+        if (charts.wind && charts.wind.data && charts.wind.data.datasets && charts.wind.data.datasets[0]) {
+            charts.wind.data.datasets[0].data.push({ x: timestamp, y: windValue });
         }
-        charts.wind.data.datasets[0].data.push({ x: timestamp, y: windValue });
 
         // Rain
-        let rainValue = obs.rainAccum;
-        if (units.rain === 'mm') {
-            rainValue = inchesToMm(rainValue);
+        let rainValue = safeNumber(obs.rainAccum, 0);
+        try { if (units.rain === 'mm') rainValue = inchesToMm(rainValue); } catch (e) { debugLog(logLevels.ERROR, 'Rain conversion failed for historical point', { error: e.message }); }
+        if (charts.rain && charts.rain.data && charts.rain.data.datasets && charts.rain.data.datasets[0]) {
+            charts.rain.data.datasets[0].data.push({ x: timestamp, y: rainValue });
         }
-        charts.rain.data.datasets[0].data.push({ x: timestamp, y: rainValue });
 
         // Pressure
-        let pressureValue = obs.pressure;
-        if (units.pressure === 'inHg') {
-            pressureValue = mbToInHg(pressureValue);
+        let pressureValue = safeNumber(obs.pressure, 0);
+        try { if (units.pressure === 'inHg') pressureValue = mbToInHg(pressureValue); } catch (e) { debugLog(logLevels.ERROR, 'Pressure conversion failed for historical point', { error: e.message }); }
+        if (charts.pressure && charts.pressure.data && charts.pressure.data.datasets && charts.pressure.data.datasets[0]) {
+            charts.pressure.data.datasets[0].data.push({ x: timestamp, y: pressureValue });
         }
-        charts.pressure.data.datasets[0].data.push({ x: timestamp, y: pressureValue });
 
         // Light
-        charts.light.data.datasets[0].data.push({ x: timestamp, y: obs.illuminance });
+        const illumVal = safeNumber(obs.illuminance, 0);
+        if (charts.light && charts.light.data && charts.light.data.datasets && charts.light.data.datasets[0]) {
+            charts.light.data.datasets[0].data.push({ x: timestamp, y: illumVal });
+        }
 
         // UV (if chart exists)
-        if (charts.uv && charts.uv.data) {
-            charts.uv.data.datasets[0].data.push({ x: timestamp, y: obs.uv });
+        const uvVal = safeNumber(obs.uv, 0);
+        if (charts.uv && charts.uv.data && charts.uv.data.datasets && charts.uv.data.datasets[0]) {
+            charts.uv.data.datasets[0].data.push({ x: timestamp, y: uvVal });
         }
     }
+
+    // Ensure all datasets are validated and sorted after population
+    ['temperature','humidity','wind','rain','pressure','light','uv'].forEach(name => {
+        const chart = charts[name];
+        if (chart && chart.data && chart.data.datasets && chart.data.datasets[0]) {
+            validateAndSortChartData(chart);
+            // Update average/trend where applicable
+            if (chart === charts.temperature || chart === charts.humidity || chart === charts.wind || chart === charts.rain || chart === charts.pressure) {
+                updateAverageLine(chart, chart.data.datasets[0].data);
+                if (chart === charts.pressure) updateTrendLine(chart, chart.data.datasets[0].data);
+            }
+        }
+    });
 
     // Update averages and trend lines for all charts
     updateAverageAndTrendLines();

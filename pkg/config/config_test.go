@@ -6,6 +6,34 @@ import (
 	"testing"
 )
 
+// TestValidateConfigDefaults ensures that validateConfig applies default unit values
+// when cfg.Units or cfg.UnitsPressure are empty. This prevents regressions when
+// Config structs are constructed programmatically (e.g., in tests).
+func TestValidateConfigDefaults(t *testing.T) {
+	cfg := &Config{
+		Token:         "dummy-token",
+		StationName:   "TestStation",
+		Pin:           "12345678",
+		LogLevel:      "error",
+		WebPort:       "8080",
+		Sensors:       "temp",
+		Units:         "",
+		UnitsPressure: "",
+	}
+
+	if err := validateConfig(cfg); err != nil {
+		t.Fatalf("expected validateConfig to succeed, got error: %v", err)
+	}
+
+	if cfg.Units != "imperial" {
+		t.Fatalf("expected Units to default to 'imperial', got '%s'", cfg.Units)
+	}
+
+	if cfg.UnitsPressure != "inHg" {
+		t.Fatalf("expected UnitsPressure to default to 'inHg', got '%s'", cfg.UnitsPressure)
+	}
+}
+
 func TestLoadConfig(t *testing.T) {
 	// Set env vars
 	os.Setenv("TEMPEST_TOKEN", "testtoken")

@@ -127,6 +127,14 @@ func LoadConfig() *Config {
 
 // validateConfig validates command line arguments and returns an error if invalid
 func validateConfig(cfg *Config) error {
+	// Ensure sensible defaults for units when Config structs are created programmatically
+	// Some tests construct Config with empty Units and expect the default to be applied.
+	if strings.TrimSpace(cfg.Units) == "" {
+		cfg.Units = "imperial"
+	}
+	if strings.TrimSpace(cfg.UnitsPressure) == "" {
+		cfg.UnitsPressure = "inHg"
+	}
 	// Validate log level
 	validLogLevels := []string{"debug", "info", "error"}
 	validLevel := false

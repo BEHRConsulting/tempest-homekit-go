@@ -212,6 +212,37 @@ go test ./pkg/web/... -v
 go test ./pkg/web/... -cover
 ```
 
+### Headless UI Test (Chromedp)
+
+This repository includes a headless UI integration test that exercises the dashboard in a real browser (Chromium) using `chromedp`. The test is implemented in `pkg/web/ui_headless_test.go` and navigates the dashboard served by an `httptest` server, then verifies that the current-sensor cards (rain, pressure, illuminance, UV) populate correctly.
+
+Why we inject `script.js` in tests
+- In headless CI environments timing differences or CDN/network hiccups can cause the dashboard's external scripts (Chart.js, and the main `script.js`) to load later or fail. That can make the UI test flaky even though the server and APIs are correct.
+- To make the headless test deterministic and reduce flakiness, the test reads the local `pkg/web/static/script.js` from disk and injects its contents directly into the page context before triggering data fetches. This ensures the same script version used in development runs is executed and avoids network timing issues with CDN-hosted assets.
+- Chart.js is also optionally fetched and injected when needed by the test; if CI shows issues with Chart.js availability, consider serving a local copy from `pkg/web/static/` and updating the HTML template to reference it during CI runs.
+
+How to run locally
+- Ensure Chromium is available in PATH (or use chrome/chromium packages on your OS).
+- From the repository root run:
+
+```bash
+go test ./pkg/web -run TestHeadlessDashboard -v
+```
+
+CI
+- A GitHub Actions workflow `.github/workflows/headless-test.yml` is included and runs the headless test on push and pull requests to `main`. The workflow installs Chromium and runs just the headless UI test to keep the job fast and focused.
+
+Vendoring Chart.js for CI
+- For more accurate testing we recommend vendoring the official Chart.js distribution into `pkg/web/static/chart.umd.js`.
+- A `Makefile` target `vendor-chartjs` is provided. Run from the project root:
+
+```bash
+make vendor-chartjs
+```
+
+- The GitHub Actions workflow runs this target before tests; if the file is already present this step is a no-op. Vendoring removes dependency on the CDN during CI and produces deterministic test runs.
+
+
 ### HTTP Testing
 Tests use `httptest` package for comprehensive endpoint testing:
 - Mock HTTP requests and responses
