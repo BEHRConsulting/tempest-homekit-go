@@ -1,21 +1,21 @@
 
-web console is missing the homeKit and tempest information blocks below the sensors
+[x] web console is missing the homeKit and tempest information blocks below the sensors
 
-When clicking on the accessories row, expand the row to show all accessories just below the accessories row.
+[x] When clicking on the accessories row, expand the row to show all accessories just below the accessories row.
 
-in the web dashboard, Use the lux table at https://en.wikipedia.org/wiki/Lux showing "Illuminance (lux)" and "Surfaces illuminated by" to give the lux value some context
+[x] win the web dashboard, Use the lux table at https://en.wikipedia.org/wiki/Lux showing "Illuminance (lux)" and "Surfaces illuminated by" to give the lux value some context
 
-in the web dashboard, As with the light  box, use the table at xxx to give pressure value some context.
+[x] in the web dashboard, As with the light  box, use the table at xxx to give pressure value some context.
 
-in the web dashboard, As with the light sensor box, use the table at xxx to give humidity value some context. And add a "Feels like" temperature in the humidity box based on current temperature and humidity 
+[x] in the web dashboard, As with the light sensor box, use the table at xxx to give humidity value some context. And add a "Feels like" temperature in the humidity box based on current temperature and humidity 
 
-in the web dashboard, As with the light  box, use the table at xxx to give rain value some context.
+[x] in the web dashboard, As with the light  box, use the table at xxx to give rain value some context.
 
-in the web dashboard, add a box for UV Index sensor.
+[x] in the web dashboard, add a box for UV Index sensor.
 
-in the web dashboard, As with the light box, use the table at https://en.wikipedia.org/wiki/Ultraviolet_index Table column "UV Index" update with "media graphic color" and the text from column "Risk of harm from unprotected sun exposure, for the average adult" to give UV Index value some context.
+[x] in the web dashboard, As with the light box, use the table at https://en.wikipedia.org/wiki/Ultraviolet_index Table column "UV Index" update with "media graphic color" and the text from column "Risk of harm from unprotected sun exposure, for the average adult" to give UV Index value some context.
 
-in the web dashboard temperature box, add a line for average temp on this day over the last 5 years.
+[x] in the web dashboard temperature box, add a line for average temp on this day over the last 5 years.
 
 [x] Adjust pressure to sea level and show that it is adjusted. Click to toggle.
 
@@ -59,8 +59,13 @@ in the web dashboard temperature box, add a line for average temp on this day ov
 
 [x] In the readme.md file, show that this program is my test created using vibe programming technique. Define the Vibe coding. Note that the LLMs in use are "Claude Sonnet 4" and "Grok Code Fast 1 (preview)". using GitHub's Copilot and Visual Code on a Macintosh. Add the pop out graph function and also add to requirments.md. 
 
-[] Let's start from scratch on the /chart/* feature. When clicking on a chart in the web console, I want the /chart/<weather-type> to open a new window/tab that is a dedicated version of the dashboard graph that was clicked. The data units, color, and lines that were on the card graph should be on the dedicated graph page. 
+[] Let's start from scratch on the /chart/* feature. When clicking on a chart in the web console, I want the /chart/<weather-type> to open a new window/tab that is a dedicated version of the dashboard graph that was clicked. The data units, data history, time format, color, and lines that were on the card graph should be on the dedicated graph page. 
 
+[] Create or update WORK_LOG.md file that shows what went into creation of this application both from myself and Copilot. Time spent, major design changes, the best and worst prompts. Anything else that makes since to be in a work log.
+
+[] Add another api like generated-weather, this time gather the weather informaiton direct from the tempest weather station via it's udp stream (see https://apidocs.tempestwx.com/reference/tempest-udp-broadcast), not the WeatherFlow website. Tempest station broadcasts UDP messages over port 50222 on the local network. Use the command line parameter --udp-stream or --station-url http://localhost:8080/api/udp-stream. Spawn a task to listen and collect weather informaiton for the history and update homekit and the web console as data is collected. Update web console Tempest Station with Data Source of udp-stream and it's IP address. If the udp stream is not detected, the station status should be No UDP Packets.
+
+[] command line parameter --token is only required for WeatherFlow API stations
 
 [] Request this every 3-4 major changes or monthly:
 "Perform a comprehensive documentation audit comparing REQUIREMENTS.md, README.md, and CODE_REVIEW.md against the current codebase. 
