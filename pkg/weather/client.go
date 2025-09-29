@@ -521,6 +521,10 @@ func filterToOneMinuteIncrements(observations []*Observation, maxCount int) []*O
 	return filtered
 }
 
+// package-level no-op reference to avoid static analyzer warnings when the helper
+// function is currently unused. It is kept for future use by charting logic.
+var _ = filterToOneMinuteIncrements
+
 // GetForecast fetches forecast data from the WeatherFlow better_forecast endpoint
 func GetForecast(stationID int, token string) (*ForecastResponse, error) {
 	url := fmt.Sprintf("%s/better_forecast?station_id=%d&token=%s", BaseURL, stationID, token)

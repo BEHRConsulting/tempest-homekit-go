@@ -24,7 +24,7 @@ import (
 // captures console logs and asserts no runtime JS errors occur and key UI fields populate.
 func TestHeadlessDashboard(t *testing.T) {
 	// create server and inject synthetic data
-	ws := NewWebServer("0", 10.0, "debug", 0, false, "test", "", nil, nil, "metric", "mb")
+	ws := testNewWebServer(t)
 
 	now := time.Now()
 	obs := weather.Observation{
@@ -339,3 +339,9 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+// package-level no-op references to satisfy staticcheck/unused warnings for helper
+// functions that are useful for future tests/diagnostics but currently only used
+// dynamically from other test helpers.
+var _ = containsErrorKeyword
+var _ = min

@@ -242,6 +242,37 @@ make vendor-chartjs
 
 - The GitHub Actions workflow runs this target before tests; if the file is already present this step is a no-op. Vendoring removes dependency on the CDN during CI and produces deterministic test runs.
 
+### Test helpers: `testNewWebServer` and `fakeGenerator`
+
+The package exposes a small test helper `testNewWebServer(t *testing.T)` (see `pkg/web/test_helpers_test.go`) which returns a preconfigured `*WebServer` for use in unit and integration tests.
+
+- Purpose: centralize WebServer construction for tests so changes to the constructor only need to be updated in one place.
+- Usage: call `ws := testNewWebServer(t)` from any test in the `web` package instead of calling `NewWebServer(...)` directly.
+
+The helper also uses a configurable `fakeGenerator` that implements the `WeatherGeneratorInterface`. Tests that need deterministic generator behavior can either:
+
+1. Use the default `testNewWebServer(t)` which supplies a default `fakeGenerator` (no-op, deterministic), or
+2. Construct a `fakeGenerator` with desired behavior using the `fakeGeneratorConfig` and call `NewWebServer(...)` directly in the test when custom behavior is required.
+
+Example (simple):
+
+```go
+// basic usage in a test
+ws := testNewWebServer(t)
+// now update weather and exercise handlers
+```
+
+Example (custom generator):
+
+```go
+cfg := &fakeGeneratorConfig{DailyRainTotal: 1.23, LocationName: "TestLocation"}
+fg := newFakeGenerator(cfg)
+gw := &GeneratedWeatherInfo{Enabled: false}
+ws := NewWebServer("0", 10.0, "debug", 0, false, "test", "", gw, fg, "metric", "mb")
+```
+
+Using the helper keeps tests concise and resilient to future constructor changes.
+
 
 ### HTTP Testing
 Tests use `httptest` package for comprehensive endpoint testing:

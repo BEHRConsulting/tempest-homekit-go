@@ -11,13 +11,13 @@ import (
 )
 
 // createTestServer creates a WebServer with minimal configuration for testing
-func createTestServer() *WebServer {
-	ws := NewWebServer("0", 10.0, "debug", 0, false, "test", "", nil, nil, "metric", "mb")
-	return ws
+// Prefer the centralized test factory which accepts *testing.T so failures are reported correctly.
+func createTestServer(t *testing.T) *WebServer {
+	return testNewWebServer(t)
 }
 
 func TestWeatherAndStatusEndpoints(t *testing.T) {
-	ws := createTestServer()
+	ws := createTestServer(t)
 
 	// Inject synthetic weather observations in non-sorted order to ensure server sorts them
 	now := time.Now()
