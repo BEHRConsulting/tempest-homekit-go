@@ -55,4 +55,18 @@ in the web dashboard temperature box, add a line for average temp on this day ov
 
 [x] add the command line parameter --use-generated-weather for ui testing. This replaces data from Tempest API with programm generated data for all sensors. Generate all 1000 points for all sensors if --use-history has been set, continue generating for live data. Ramdomly select a season and location, generate appropiate data for that season and location. Set status for Tempest Station to "Generated" and a line below labeled Generated Season/Loc with a clickable value of the generated location and season. Clickong on the value will regenerate all data.
 
-[] Review the Service Characteristics in requirements.md, these are out if sync with the current codebase. May check all of requirements.md to verify you could recreat this app from the file contents
+[x] Review the Service Characteristics in requirements.md, these are out if sync with the current codebase. May check all of requirements.md to verify you could recreat this app from the file contents
+
+[x] In the readme.md file, show that this program is my test created using vibe programming technique. Define the Vibe coding. Note that the LLMs in use are "Claude Sonnet 4" and "Grok Code Fast 1 (preview)". using GitHub's Copilot and Visual Code on a Macintosh. Add the pop out graph function and also add to requirments.md. 
+
+[] Let's start from scratch on the /chart/* feature. When clicking on a chart in the web console, I want the /chart/<weather-type> to open a new window/tab that is a dedicated version of the dashboard graph that was clicked. The data units, color, and lines that were on the card graph should be on the dedicated graph page. 
+
+
+[] Request this every 3-4 major changes or monthly:
+"Perform a comprehensive documentation audit comparing REQUIREMENTS.md, README.md, and CODE_REVIEW.md against the current codebase. 
+
+1. **REQUIREMENTS.md**: Verify every section can be used to recreate the app
+2. **README.md**: Ensure all examples, flags, and features work as documented  
+3. **CODE_REVIEW.md**: Confirm architectural descriptions match actual implementation
+
+Create a detailed gap analysis with specific line numbers and provide corrected sections."

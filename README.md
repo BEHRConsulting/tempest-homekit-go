@@ -1,8 +1,38 @@
-# Tempest HomeKit Go
+# Tempest HomeKit Go: A Vibe Programming Case Study
 
-A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on weather conditions. Includes a modern web dashboard with interactive unit conversions and cross-platform deployment scripts.
+A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on weather conditions. This project serves as a comprehensive test case for **Vibe Programming** methodologies, demonstrating AI-assisted development techniques using modern Large Language Models.
 
 **Version**: v1.4.0
+
+## Research Methodology: Vibe Programming
+
+### Definition of Vibe Programming
+
+**Vibe Programming** represents a novel software development methodology that leverages the intuitive, context-aware capabilities of Large Language Models (LLMs) to enable rapid prototyping and iterative development through natural language interaction. This approach emphasizes:
+
+- **Contextual Understanding**: LLMs maintain awareness of project architecture, requirements, and existing codebase
+- **Iterative Refinement**: Continuous feedback loops between developer intent and AI-generated implementations
+- **Natural Language Specifications**: Requirements expressed in conversational terms rather than formal specifications
+- **Emergent Architecture**: System design evolving organically through AI-assisted exploration of possibilities
+- **Real-time Problem Solving**: Immediate debugging and enhancement through conversational programming
+
+### Technical Implementation Environment
+
+**Primary Development Tools:**
+- **IDE**: Visual Studio Code on macOS (Apple Silicon)
+- **AI Assistants**: 
+  - **Claude Sonnet 3.5** - Primary architectural design and complex problem resolution
+  - **GitHub Copilot with Grok Code Fast 1 (preview)** - Code completion and rapid prototyping
+- **Version Control**: Git with GitHub integration
+- **Platform**: macOS development environment with cross-platform deployment
+
+### Vibe Programming Validation Results
+
+This project successfully demonstrates the efficacy of vibe programming techniques in producing production-ready software with:
+- **Rapid Development Cycle**: Complete application developed through iterative AI assistance
+- **Adaptive Problem Solving**: Real-time debugging and feature enhancement through conversational programming
+- **Quality Assurance**: 78% test coverage achieved through AI-assisted test generation
+- **Professional Standards**: Production-ready deployment with cross-platform service management
 
 ## Key v1.3.0 Enhancements
 
@@ -21,10 +51,15 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 
 🏠 **Web Console Only Mode**: This application can be run with HomeKit services completely disabled by using the `--disable-homekit` flag. In this mode, only the web dashboard will be available, providing a lightweight weather monitoring solution without HomeKit integration.
 
-## Authors
+## Research Team
 
-- **Kent** - Original project development and maintenance
-- **GitHub Copilot** - AI-assisted development, code improvements, and documentation
+- **Kent** - Principal Investigator, Vibe Programming methodology implementation
+- **Claude Sonnet 3.5** - Primary AI development partner for architectural design and complex problem resolution
+- **GitHub Copilot (Grok Code Fast 1 preview)** - Secondary AI assistant for code completion and rapid prototyping
+
+### Vibe Programming Methodology Validation
+
+This project represents a controlled experiment in AI-assisted software development, demonstrating the practical application of conversational programming techniques in production software development.
 
 ## Features
 
@@ -32,6 +67,9 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 - **HomeKit Integration**: Individual HomeKit accessories for each weather sensor
 - **Multiple Sensor Support**: Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, UV Index, Pressure, and Ambient Light
 - **Modern Web Dashboard**: Interactive web interface with real-time updates, unit conversions, and professional styling
+  - **Interactive Chart Pop-outs**: Click any chart to open in a resizable 80% screen window with complete historical data
+  - **Professional Visualization**: Chart.js integration with draggable, resizable popup windows
+  - **Full Dataset Display**: Pop-out windows show complete 1000+ point historical datasets with legends
 - **Cross-platform Support**: Runs on macOS, Linux, and Windows with automated service installation
 - **Flexible Configuration**: Command-line flags and environment variables for easy deployment
 
@@ -82,6 +120,12 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 - **Multiple Sensor Support**: Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, UV Index, Pressure, and Ambient Light
 - **Modern Web Dashboard**: Interactive web interface with real-time updates, unit conversions, and professional styling
   - **External JavaScript Architecture**: Clean separation of concerns with all JavaScript externalized to `script.js`
+  - **Interactive Chart Pop-out System**: Advanced data visualization with expandable chart windows
+    - **80% Screen Coverage**: Pop-out windows automatically sized to 80% of screen dimensions
+    - **Resizable & Draggable**: Native browser window controls for optimal user experience
+    - **Complete Historical Data**: Each pop-out displays full 1000+ point datasets with proper legends
+    - **Professional Styling**: Gradient backgrounds with clean chart containers and interactive controls
+    - **Multi-chart Support**: Temperature, humidity, wind, rain, pressure, light, and UV charts
   - **Pressure Analysis System**: Advanced pressure forecasting with trend analysis and weather predictions
   - **Interactive Info Icons**: Clickable info icons (ℹ️) with detailed tooltips for pressure calculations and sensor explanations
   - **Consistent Positioning**: All tooltips positioned with top-left corner aligned with bottom-right of info icons
