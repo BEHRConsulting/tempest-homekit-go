@@ -23,6 +23,7 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 - **AI Assistants**: 
   - **Claude Sonnet 3.5** - Primary architectural design and complex problem resolution
   - **GitHub Copilot with Grok Code Fast 1 (preview)** - Code completion and rapid prototyping
+  - **GPT-5 mini** - Auxiliary AI assistant used for targeted code edits and documentation updates
 - **Version Control**: Git with GitHub integration
 - **Platform**: macOS development environment with cross-platform deployment
 
@@ -51,12 +52,9 @@ This project successfully demonstrates the efficacy of vibe programming techniqu
 
 🏠 **Web Console Only Mode**: This application can be run with HomeKit services completely disabled by using the `--disable-homekit` flag. In this mode, only the web dashboard will be available, providing a lightweight weather monitoring solution without HomeKit integration.
 
-## Research Team
+## Contributors
 
 - **Kent** - Principal Investigator, Vibe Programming methodology implementation
-- **Claude Sonnet 3.5** - Primary AI development partner for architectural design and complex problem resolution
- - **GitHub Copilot (Grok Code Fast 1 preview)** - Secondary AI assistant for code completion and rapid prototyping
- - **GPT-5 mini** - Auxiliary AI assistant used for targeted code edits and documentation updates
 
 ### Vibe Programming Methodology Validation
 
