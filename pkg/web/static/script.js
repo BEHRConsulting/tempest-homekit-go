@@ -2306,8 +2306,14 @@ function updateStatusDisplay(status) {
     if (tempestStationURL) {
         if (status.stationURL) {
             // Make the URL clickable and truncate if too long
-            const displayURL = status.stationURL.length > 50 ? status.stationURL.substring(0, 47) + '...' : status.stationURL;
-            tempestStationURL.innerHTML = `<a href="${status.stationURL}" target="_blank" style="color: #007bff; text-decoration: none;" title="${status.stationURL}">${displayURL}</a>`;
+            // Truncate display label to 15 characters for compact card layout, show full URL on hover
+            const maxLabelLen = 15;
+            let displayURL = status.stationURL;
+            if (displayURL.length > maxLabelLen) {
+                displayURL = displayURL.substring(0, maxLabelLen - 1) + '…';
+            }
+            // Provide full URL in title and aria-label for hover and accessibility
+            tempestStationURL.innerHTML = `<a href="${status.stationURL}" target="_blank" style="color: #007bff; text-decoration: none;" title="${status.stationURL}" aria-label="${status.stationURL}">${displayURL}</a>`;
         } else {
             tempestStationURL.textContent = '--';
         }
