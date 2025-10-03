@@ -1,7 +1,7 @@
 # Tempest HomeKit Go Service - Requirements & Features
 # Vibe Programming Research Implementation
 
-**Version**: v1.4.0
+**Version**: v1.4.1
 
 ## Research Methodology Overview
 
@@ -78,6 +78,7 @@ This document presents the technical requirements and implementation results for
   - **Complete Dataset Visualization**: Full 1000+ point historical data display in pop-out charts
   - **Professional Chart Styling**: Gradient backgrounds, clean containers, and interactive controls
   - **Multi-sensor Support**: Temperature, humidity, wind, rain, pressure, light, and UV index charts
+  - **Deterministic Pop-out Rendering**: Pop-outs now include per-dataset style metadata and explicit unit hints in the encoded config so popout visuals exactly match small-card charts and unit systems across sessions. This change improves visual parity and testability.
   - **Chart.js Integration**: Advanced charting library with responsive design and legend support
   - **Window Management**: Automatic centering, focus management, and cleanup handling
 - ✅ **Cache-Busting File Serving**: Static files served with timestamps to prevent browser caching
@@ -489,6 +490,7 @@ type Observation struct {
 - ✅ **config_validation_test.go**: Comprehensive validation testing
 - ✅ **config_edge_cases_test.go**: Edge case scenario testing
 - ✅ **config_elevation_validation_test.go**: Elevation range testing
+ - ✅ **popout_diagnostics_test.go**: Headless diagnostic test that opens small-card charts (temperature, wind, pressure, humidity, light, UV), injects vendored scripts to avoid CDN flakiness, and captures in-page popout errors and console logs for deterministic troubleshooting
 
 #### Test Architecture
 - ✅ **Table-Driven Tests**: Multiple scenarios covered per function

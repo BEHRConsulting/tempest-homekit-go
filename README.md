@@ -2,7 +2,7 @@
 
 A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on weather conditions. This project serves as a comprehensive test case for **Vibe Programming** methodologies, demonstrating AI-assisted development techniques using modern Large Language Models.
 
-**Version**: v1.4.0
+**Version**: v1.4.1
 
 ## Research Methodology: Vibe Programming
 
@@ -56,6 +56,7 @@ This project successfully demonstrates the efficacy of vibe programming techniqu
 - **Kent** - Principal Investigator, Vibe Programming methodology implementation
 - **Claude Sonnet 3.5** - Primary AI development partner for architectural design and complex problem resolution
 - **GitHub Copilot (Grok Code Fast 1 preview)** - Secondary AI assistant for code completion and rapid prototyping
+ - **GPT-5 mini** - Auxiliary AI assistant used for targeted code edits and documentation updates
 
 ### Vibe Programming Methodology Validation
 
@@ -69,6 +70,7 @@ This project represents a controlled experiment in AI-assisted software developm
 - **Modern Web Dashboard**: Interactive web interface with real-time updates, unit conversions, and professional styling
   - **Interactive Chart Pop-outs**: Click any chart to open in a resizable 80% screen window with complete historical data
   - **Professional Visualization**: Chart.js integration with draggable, resizable popup windows
+  - **Deterministic Pop-out Charts**: Popouts now include per-dataset style metadata and unit hints so they match the small-card visuals exactly across sessions and unit systems
   - **Full Dataset Display**: Pop-out windows show complete 1000+ point historical datasets with legends
 - **Cross-platform Support**: Runs on macOS, Linux, and Windows with automated service installation
 - **Flexible Configuration**: Command-line flags and environment variables for easy deployment
@@ -107,6 +109,7 @@ This project represents a controlled experiment in AI-assisted software developm
 - **Simplified Solar Charts**: Removed unnecessary average lines from light/UV charts
 - **Better Tooltips**: All datasets now display properly in hover interactions
 - **Data Accuracy**: Charts reflect actual weather data with proper timestamps
+ - **Headless Test Coverage for Pop-outs**: Added deterministic headless tests that open small-card charts, inject vendored scripts, and assert popout initialization, dataset style parity, and unit conversion behavior to reduce flakiness in CI
 
 ### 🔧 Technical Enhancements  
 - **Backwards Compatibility**: `--use-generated-weather` still works seamlessly

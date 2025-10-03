@@ -18,21 +18,14 @@
 
 ### 📊 **Chart Visualization Improvements** 
 **Enhanced**: Chart.js configurations for better data presentation
-- Removed unnecessary average lines from light/UV charts
-- Fixed dataset ordering issues causing JavaScript errors
-- Improved tooltip readability and visual hierarchy
+ - Deterministic Pop-out Charts: Popouts now serialize per-dataset styles and unit hints in their config payload, ensuring the popout rendering matches small-card visuals exactly and enabling reliable headless test assertions
 
 ### 🌤️ **Mock Tempest API Endpoint**
-**Added**: `/api/generate-weather` with perfect API compatibility
-- Returns realistic weather patterns using weather generator
-- Enables testing without WeatherFlow API access
-- Seamlessly integrates with unified data pipeline
-
-## Overview
+ - ✅ **Headless Popout Diagnostics**: Added `popout_diagnostics_test.go` which runs headless Chromium via chromedp, injects vendored Chart.js and local `script.js` to avoid CDN timing issues, opens small-card popouts (including humidity, light and UV), and captures `window.__popoutError` and console logs for deterministic diagnostics
 This code review evaluates the complete Go service application for monitoring WeatherFlow Tempest weather stations and updating Apple HomeKit accessories. The application includes real-time weather monitoring, comprehensive HomeKit integration, modern web dashboard, and cross-platform deployment capabilities.
 
 **Review Date**: September 2025
-**Codebase Version**: Production Ready v1.4.0 - Unified Data Pipeline & Architecture Enhancements
+**Codebase Version**: Production Ready v1.4.1 - Unified Data Pipeline & Architecture Enhancements
 **Go Version**: 1.24.2
 
 ## HomeKit Compliance Critical Update
