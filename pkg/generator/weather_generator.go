@@ -157,18 +157,19 @@ func (wg *WeatherGenerator) getSeasonalTemperature() float64 {
 	}
 
 	// Climate zone adjustments (more moderate)
-	switch wg.Location.ClimateZone {
-	case "Tropical":
+	switch {
+	case wg.Location.ClimateZone == "Tropical":
 		baseTemp += 5 // Reduced from 8
-	case "Desert":
-		if wg.Season == Summer {
+	case wg.Location.ClimateZone == "Desert":
+		switch wg.Season {
+		case Summer:
 			baseTemp += 8 // Reduced from 15
-		} else if wg.Season == Winter {
+		case Winter:
 			baseTemp += 2 // Reduced from 5
 		}
-	case "Subarctic":
+	case wg.Location.ClimateZone == "Subarctic":
 		baseTemp -= 15 // Reduced from 20
-	case "Mediterranean":
+	case wg.Location.ClimateZone == "Mediterranean":
 		baseTemp += 2 // Reduced from 3
 	}
 

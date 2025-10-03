@@ -19,3 +19,7 @@ ls- [x] Verify that the copilot-instructions.md file in the .github directory is
 - Work through each checklist item systematically.
 - Keep communication concise and focused.
 - Follow development best practices.
+
+- Use unified data source architecture (pkg/weather/datasource.go)
+- All data sources must implement DataSource interface
+- Factory pattern in pkg/service/datasource_factory.go

@@ -2,7 +2,7 @@
 
 A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on weather conditions. This project serves as a comprehensive test case for **Vibe Programming** methodologies, demonstrating AI-assisted development techniques using modern Large Language Models.
 
-**Version**: v1.4.1
+**Version**: v1.5.0
 
 ## Research Methodology: Vibe Programming
 
@@ -150,6 +150,14 @@ This project represents a controlled experiment in AI-assisted software developm
   - **Multiple Fallback Layers**: Headless browser → HTTP scraping → API fallback for reliability
   - **Data Source Transparency**: Clear indication of data source (web-scraped, http-scraped, api, fallback)
   - **Enable with `--use-web-status` flag**: Optional enhancement for users who want detailed device monitoring
+- **UDP Stream Feature** (Offline Mode):
+  - **Local Network Monitoring**: Listen for UDP broadcasts from Tempest hub on port 50222
+  - **Offline Operation**: Enables weather monitoring during internet outages without API access
+  - **Real-time Updates**: Process observation messages as they're broadcast every minute
+  - **No API Token Required**: Works entirely on local network without WeatherFlow cloud services
+  - **Multiple Message Types**: Supports obs_st (Tempest), obs_air, obs_sky, rapid_wind, device_status, hub_status
+  - **Enable with `--udp-stream` flag**: Monitor Tempest station locally without internet connectivity
+  - **Full Offline Mode with `--no-internet`**: Disables all internet access for complete offline operation
 - **Flexible Configuration**: Command-line flags and environment variables for easy deployment
 - **Enhanced Debug Logging**: Multi-level logging with emoji indicators, calculated values, API calls/responses, and comprehensive DOM debugging
 
@@ -237,8 +245,17 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 ## Usage
 
 ### Basic Usage
+If you are using the WeatherFlow Tempest API (default behavior), provide your API token with `--token` or the `TEMPEST_TOKEN` environment variable. If you instead use a custom station URL via `--station-url` or enable generated weather with `--use-generated-weather`, a WeatherFlow API token is not required.
+
 ```bash
+# WeatherFlow API (requires token)
 ./tempest-homekit-go --token "your-weatherflow-token"
+
+# Custom station URL (no WeatherFlow token required)
+./tempest-homekit-go --station-url http://localhost:8080/api/generate-weather
+
+# Generated weather (no WeatherFlow token required)
+./tempest-homekit-go --use-generated-weather
 ```
 
 ### Configuration Options
@@ -256,10 +273,12 @@ sudo ./scripts/install-service.sh --token "your-api-token"
   - **Other sensors**: `humidity`, `wind`, `rain`, `pressure`, `lightning`
   - (default: "temp,lux,humidity")
 - `--station`: Tempest station name (default: "Chino Hills")
-- `--station-url`: Custom station URL for weather data (e.g., `http://localhost:8080/api/generate-weather`). Overrides Tempest API
-- `--token`: WeatherFlow API access token (required)*
+-- `--station-url`: Custom station URL for weather data (e.g., `http://localhost:8080/api/generate-weather`). Overrides Tempest API
+-- `--token`: WeatherFlow API access token (required when using the WeatherFlow API as the data source)
 - `--units`: Units system - imperial, metric, or sae (default: "imperial")
 - `--units-pressure`: Pressure units - inHg or mb (default: "inHg")
+- `--udp-stream`: Enable UDP broadcast listener for local station monitoring (port 50222)
+- `--no-internet`: Disable all internet access - requires `--udp-stream` (enables offline mode)
 - `--use-generated-weather`: Use simulated weather data for testing (automatically sets station-url)
 - `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome)
 - `--version`: Show version information and exit
@@ -269,6 +288,8 @@ sudo ./scripts/install-service.sh --token "your-api-token"
 - `TEMPEST_TOKEN`: WeatherFlow API token
 - `TEMPEST_STATION_NAME`: Station name
 - `STATION_URL`: Custom station URL for weather data (overrides Tempest API)
+- `UDP_STREAM`: Enable UDP broadcast listener (true/false)
+- `NO_INTERNET`: Disable all internet access (true/false, requires UDP_STREAM=true)
 - `HOMEKIT_PIN`: HomeKit PIN
 - `LOG_LEVEL`: Logging level
 - `SENSORS`: Sensors to enable (default: "temp,lux,humidity")
@@ -396,6 +417,59 @@ Basic status with API-only data:
 3. **Data Extraction**: Parses the loaded content to extract device information
 4. **15-Minute Updates**: Automatically refreshes data every 15 minutes
 5. **Graceful Fallbacks**: Falls back to HTTP scraping, then API-only if issues occur
+
+### UDP Stream (Offline Mode)
+
+The UDP stream feature enables local monitoring of your Tempest station without requiring internet connectivity. This is particularly useful during internet outages when you still need weather data for HomeKit automations.
+
+**Use Case: Internet Outage Resilience**
+
+When your internet connection goes down, the WeatherFlow API becomes unavailable. With UDP streaming enabled, your Tempest hub broadcasts weather observations on your local network, allowing continuous monitoring without cloud access.
+
+```bash
+# Enable UDP stream (still allows API token for forecasts when internet is available)
+./tempest-homekit-go --udp-stream --token "your-token"
+
+# Full offline mode (no internet access at all)
+./tempest-homekit-go --udp-stream --no-internet
+
+# UDP mode with custom sensors and logging
+./tempest-homekit-go --udp-stream --no-internet --sensors "temp,humidity,lux,wind" --loglevel debug
+```
+
+**Requirements:**
+- Tempest hub and monitoring device must be on the same local network
+- UDP port 50222 must be accessible (no firewall blocking)
+- Hub broadcasts observations every 60 seconds
+
+**What it provides:**
+- **Real-time Observations**: Temperature, humidity, wind, pressure, UV, rain, lightning data
+- **Device Status**: Battery voltage, RSSI, sensor status
+- **Hub Status**: Firmware version, uptime, reset flags
+- **No Internet Required**: Complete offline operation with `--no-internet` flag
+
+**Network Requirements:**
+- Both devices on same subnet (hub broadcasts to 255.255.255.255)
+- No special router configuration needed for standard LAN setups
+
+**Status API Response with UDP Stream:**
+```json
+{
+  "udpStatus": {
+    "enabled": true,
+    "receivingData": true,
+    "packetCount": 147,
+    "stationIP": "192.168.1.50",
+    "serialNumber": "ST-00163375",
+    "lastPacketTime": "2025-01-20T15:30:45Z"
+  }
+}
+```
+
+**Limitations:**
+- No forecast data in full offline mode (`--no-internet`)
+- Historical data limited to observations received since startup
+- Requires hub on local network (won't work remotely)
 
 ## HomeKit Setup
 

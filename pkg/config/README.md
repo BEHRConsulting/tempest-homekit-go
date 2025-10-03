@@ -82,7 +82,7 @@ fmt.Printf("Elevation: %.2f meters\n", elevation) // Output: 300.00 meters
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--token` | string | "" | WeatherFlow API access token (required) |
+| `--token` | string | "" | WeatherFlow API access token (required when using the WeatherFlow API as the data source) |
 | `--station` | string | "Chino Hills" | Tempest station name |
 | `--pin` | string | "00102003" | HomeKit pairing PIN |
 | `--web-port` | string | "8080" | Web dashboard port |

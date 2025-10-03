@@ -270,7 +270,6 @@ func TestLoadConfigEdgeCases(t *testing.T) {
 		LogLevel:    getEnvOrDefault("LOG_LEVEL", "error"),
 		WebPort:     getEnvOrDefault("WEB_PORT", "8080"),
 		Sensors:     getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
-		Elevation:   275.2,
 	}
 
 	// Test expected defaults

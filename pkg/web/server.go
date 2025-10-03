@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"tempest-homekit-go/pkg/generator"
+	"tempest-homekit-go/pkg/udp"
 	"tempest-homekit-go/pkg/weather"
 )
 
@@ -46,9 +47,11 @@ type WebServer struct {
 		totalSteps  int
 		description string
 	}
-	statusManager *weather.StatusManager // Manages periodic status scraping
-	version       string                 // application version
-	mu            sync.RWMutex
+	statusManager    *weather.StatusManager    // Manages periodic status scraping
+	version          string                    // application version
+	udpListener      *udp.UDPListener          // UDP listener for local station monitoring
+	dataSourceStatus *weather.DataSourceStatus // Unified data source status
+	mu               sync.RWMutex
 }
 
 // logDebug prints debug messages only if log level is debug
@@ -128,7 +131,19 @@ type StatusResponse struct {
 	Forecast         *weather.ForecastResponse `json:"forecast,omitempty"`
 	StationStatus    *weather.StationStatus    `json:"stationStatus,omitempty"`
 	GeneratedWeather *GeneratedWeatherInfo     `json:"generatedWeather,omitempty"`
+	UDPStatus        *UDPStatusInfo            `json:"udpStatus,omitempty"`
+	DataSource       *weather.DataSourceStatus `json:"dataSource,omitempty"` // Unified data source status
 	UnitHints        map[string]string         `json:"unitHints,omitempty"`
+}
+
+// UDPStatusInfo contains information about UDP stream status
+type UDPStatusInfo struct {
+	Enabled        bool   `json:"enabled"`
+	ReceivingData  bool   `json:"receivingData"`
+	PacketCount    int64  `json:"packetCount"`
+	StationIP      string `json:"stationIP,omitempty"`
+	SerialNumber   string `json:"serialNumber,omitempty"`
+	LastPacketTime string `json:"lastPacketTime,omitempty"`
 }
 
 // GeneratedWeatherInfo contains information about generated weather data
@@ -491,6 +506,22 @@ func (ws *WebServer) SetHistoryLoadingComplete() {
 	ws.historyLoadingProgress.description = ""
 }
 
+// SetUDPListener sets the UDP listener for local station monitoring
+func (ws *WebServer) SetUDPListener(listener *udp.UDPListener) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	ws.udpListener = listener
+}
+
+// UpdateDataSourceStatus updates the unified data source status
+func (ws *WebServer) UpdateDataSourceStatus(status weather.DataSourceStatus) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	ws.dataSourceStatus = &status
+	ws.logDebug("Data source status updated: type=%s, active=%v, observations=%d",
+		status.Type, status.Active, status.ObservationCount)
+}
+
 func (ws *WebServer) UpdateForecast(forecast *weather.ForecastResponse) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
@@ -750,6 +781,31 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 
 	// Add generated weather information if available
 	response.GeneratedWeather = ws.generatedWeather
+
+	// Add UDP status if UDP listener is active
+	if ws.udpListener != nil {
+		packetCount, lastPacket, stationIP, serialNumber := ws.udpListener.GetStats()
+		udpInfo := &UDPStatusInfo{
+			Enabled:       true,
+			ReceivingData: ws.udpListener.IsReceivingData(),
+			PacketCount:   packetCount,
+			StationIP:     stationIP,
+			SerialNumber:  serialNumber,
+		}
+		if !lastPacket.IsZero() {
+			udpInfo.LastPacketTime = lastPacket.Format(time.RFC3339)
+		}
+		response.UDPStatus = udpInfo
+		ws.logDebug("UDP Status - Enabled: %t, Receiving: %t, Packets: %d, IP: %s, Serial: %s",
+			udpInfo.Enabled, udpInfo.ReceivingData, udpInfo.PacketCount, udpInfo.StationIP, udpInfo.SerialNumber)
+	}
+
+	// Add unified data source status if available
+	if ws.dataSourceStatus != nil {
+		response.DataSource = ws.dataSourceStatus
+		ws.logDebug("Data Source Status - Type: %s, Active: %t, Observations: %d",
+			ws.dataSourceStatus.Type, ws.dataSourceStatus.Active, ws.dataSourceStatus.ObservationCount)
+	}
 
 	// Fetch station status from TempestWX (async, don't block on errors)
 	// Get station status from status manager (handles both scraping and fallback)

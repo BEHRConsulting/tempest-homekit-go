@@ -30,6 +30,8 @@ type Config struct {
 	TestAPI             bool
 	UseWebStatus        bool    // Enable headless browser scraping of TempestWX status
 	UseGeneratedWeather bool    // Use generated weather data for testing instead of Tempest API
+	UDPStream           bool    // Listen for UDP broadcasts from local Tempest station
+	NoInternet          bool    // Disable all internet access (no API, no status scraping)
 	StationURL          string  // Custom station URL for weather data (overrides Tempest API)
 	Elevation           float64 // elevation in meters
 	Units               string  // Units system: imperial, metric, or sae
@@ -48,6 +50,8 @@ func LoadConfig() *Config {
 		WebPort:       getEnvOrDefault("WEB_PORT", "8080"),
 		Sensors:       getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
 		StationURL:    getEnvOrDefault("STATION_URL", ""),
+		UDPStream:     getEnvOrDefault("UDP_STREAM", "") == "true",
+		NoInternet:    getEnvOrDefault("NO_INTERNET", "") == "true",
 		Elevation:     275.2, // 903ft default elevation in meters
 		Units:         getEnvOrDefault("UNITS", "imperial"),
 		UnitsPressure: getEnvOrDefault("UNITS_PRESSURE", "inHg"),
@@ -69,6 +73,8 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.UseWebStatus, "use-web-status", false, "Enable headless browser scraping of TempestWX status page every 15 minutes")
 	flag.StringVar(&cfg.StationURL, "station-url", cfg.StationURL, "Custom station URL for weather data (e.g., http://localhost:8080/api/generate-weather). Overrides Tempest API. Can also be set via STATION_URL environment variable")
 	flag.BoolVar(&cfg.UseGeneratedWeather, "use-generated-weather", false, "Use generated weather data for UI testing instead of Tempest API")
+	flag.BoolVar(&cfg.UDPStream, "udp-stream", cfg.UDPStream, "Listen for UDP broadcasts from local Tempest station (port 50222) for offline operation. Can also be set via UDP_STREAM environment variable")
+	flag.BoolVar(&cfg.NoInternet, "no-internet", cfg.NoInternet, "Disable all internet access (no WeatherFlow API calls, no status scraping). Requires --udp-stream. Can also be set via NO_INTERNET environment variable")
 	flag.StringVar(&cfg.Units, "units", cfg.Units, "Units system: imperial (default), metric, or sae. Can also be set via UNITS environment variable")
 	flag.StringVar(&cfg.UnitsPressure, "units-pressure", cfg.UnitsPressure, "Pressure units: inHg (default) or mb. Can also be set via UNITS_PRESSURE environment variable")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
@@ -201,9 +207,25 @@ func validateConfig(cfg *Config) error {
 	}
 
 	// Validate required fields
-	if cfg.Token == "" {
-		return fmt.Errorf("WeatherFlow API token is required. Set via --token flag or TEMPEST_TOKEN environment variable")
+	// The WeatherFlow API token is required only when using the WeatherFlow API as the
+	// data source. If a custom station URL is provided via --station-url, the
+	// --use-generated-weather flag is set, or --udp-stream is enabled, a WeatherFlow token is not necessary.
+	if cfg.StationURL == "" && !cfg.UseGeneratedWeather && !cfg.UDPStream {
+		if cfg.Token == "" {
+			return fmt.Errorf("WeatherFlow API token is required when using the WeatherFlow API as the data source. Set via --token flag or TEMPEST_TOKEN environment variable, or use --station-url/--use-generated-weather/--udp-stream for token-less modes")
+		}
 	}
+
+	// Validate NoInternet mode requires UDPStream
+	if cfg.NoInternet && !cfg.UDPStream {
+		return fmt.Errorf("--no-internet mode requires --udp-stream to be enabled (need a local data source)")
+	}
+
+	// In NoInternet mode, disable web status scraping
+	if cfg.NoInternet {
+		cfg.UseWebStatus = false
+	}
+
 	if cfg.StationName == "" {
 		return fmt.Errorf("station name is required. Set via --station flag or TEMPEST_STATION_NAME environment variable")
 	}

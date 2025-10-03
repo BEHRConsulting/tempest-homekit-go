@@ -1,7 +1,7 @@
 # Tempest HomeKit Go Service - Requirements & Features
 # Vibe Programming Research Implementation
 
-**Version**: v1.4.1
+**Version**: v1.5.0
 
 ## Research Methodology Overview
 
@@ -127,7 +127,7 @@ This document presents the technical requirements and implementation results for
 ### Configuration Management
 
 #### Command-Line Flags (v1.3.0 Enhanced)
-- ✅ `--token`: WeatherFlow API personal access token (required)
+- ✅ `--token`: WeatherFlow API personal access token (required when using the WeatherFlow API as the data source; optional when using `--station-url` or `--use-generated-weather`)
 - ✅ `--station`: Tempest station name (default: "Chino Hills")
 - ✅ `--pin`: HomeKit pairing PIN (default: "00102003")
 - ✅ `--loglevel`: Logging verbosity - debug, info, error (default: "error")
@@ -139,6 +139,8 @@ This document presents the technical requirements and implementation results for
   - **Preset Options**: `all` (all sensors), `min` (temp,humidity,lux)
   - **Custom Lists**: Comma-delimited combinations using aliases or traditional names
 - ✅ `--disable-homekit`: Disable HomeKit services (web console only mode)
+- ✅ `--udp-stream`: Enable UDP broadcast listener for local station monitoring (NEW in v1.5.0)
+- ✅ `--no-internet`: Disable all internet access - requires `--udp-stream` (NEW in v1.5.0)
 - ✅ `--units`: Units system - imperial, metric, or sae (default: "imperial")
 - ✅ `--units-pressure`: Pressure units - inHg or mb (default: "inHg")
 - ✅ `--use-web-status`: Enable TempestWX status scraping with Chrome automation
@@ -189,6 +191,57 @@ This document presents the technical requirements and implementation results for
 - ✅ **API Compatibility**: Custom endpoints must return Tempest API-compatible JSON format
 - ✅ **Generated Weather Mode**: Built-in weather simulation with realistic patterns
 - ✅ **Backwards Compatibility**: `--use-generated-weather` flag still supported
+
+#### UDP Stream (Offline Mode) - NEW in v1.5.0
+- ✅ **Local Network Monitoring**: Listen for UDP broadcasts from Tempest hub on port 50222
+- ✅ **Offline Operation**: Monitor weather during internet outages without API access
+- ✅ **Real-time Updates**: Process observation messages broadcast every 60 seconds
+- ✅ **No API Token Required**: Complete local operation without WeatherFlow cloud services
+- ✅ **Message Types Supported**:
+  - `obs_st`: Tempest device observations (18 fields: timestamp, wind, pressure, temp, humidity, lux, UV, rain, lightning, battery)
+  - `obs_air`: AIR device observations (8 fields)
+  - `obs_sky`: SKY device observations (14 fields)
+  - `rapid_wind`: High-frequency wind updates
+  - `device_status`: Battery, RSSI, sensor status
+  - `hub_status`: Firmware, uptime, reset flags
+- ✅ **Configuration Flags**:
+  - `--udp-stream`: Enable UDP broadcast listener
+  - `--no-internet`: Disable all internet access (requires `--udp-stream`)
+- ✅ **Network Requirements**: Same LAN subnet, UDP port 50222 accessible
+- ✅ **Circular Buffer**: 1000 observation history with thread-safe access
+- ✅ **Web Dashboard Integration**: UDP status display with packet count, station IP, serial number
+- ✅ **Use Case**: Internet outage resilience - monitor weather when internet connectivity is unavailable
+
+**UDP Message Format Example (obs_st):**
+```json
+{
+  "serial_number": "ST-00163375",
+  "type": "obs_st",
+  "hub_sn": "HB-00168934",
+  "obs": [[
+    1757045053,    // timestamp
+    0.3,           // wind_lull
+    0.3,           // wind_avg
+    0.5,           // wind_gust
+    241,           // wind_direction
+    979.7,         // station_pressure
+    24.4,          // air_temperature
+    66,            // relative_humidity
+    45000,         // illuminance
+    2.5,           // uv
+    0.0,           // solar_radiation
+    0.0,           // rain_accumulated
+    0,             // precipitation_type
+    0,             // lightning_strike_avg_distance
+    0,             // lightning_strike_count
+    2.69,          // battery
+    0,             // report_interval
+    null,          // local_day_rain_accumulation
+    null           // nc_rain
+  ]],
+  "firmware_revision": 179
+}
+```
 
 #### TempestWX Status Page Scraping
 - ✅ **Status Page**: `https://tempestwx.com/settings/station/{station_id}/status`
