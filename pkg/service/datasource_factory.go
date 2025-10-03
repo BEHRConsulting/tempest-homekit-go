@@ -25,7 +25,7 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 			return nil, fmt.Errorf("UDP listener required for UDP stream mode")
 		}
 
-		logger.Info("Creating UDP data source (offline mode: %v)", cfg.NoInternet)
+		logger.Info("Creating UDP data source (offline mode: %v)", cfg.DisableInternet)
 
 		// Create UDP data source wrapper
 		var stationID int
@@ -33,7 +33,7 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 		if station != nil {
 			stationID = station.StationID
 		}
-		if !cfg.NoInternet {
+		if !cfg.DisableInternet {
 			token = cfg.Token
 		}
 
@@ -43,7 +43,7 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 			return nil, fmt.Errorf("invalid UDP listener type")
 		}
 
-		dataSource := weather.NewUDPDataSource(listener, cfg.NoInternet, stationID, token)
+		dataSource := weather.NewUDPDataSource(listener, cfg.DisableInternet, stationID, token)
 		logger.Info("✓ UDP data source created (port 50222)")
 		return dataSource, nil
 	}

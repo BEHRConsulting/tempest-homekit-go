@@ -36,8 +36,8 @@ func StartService(cfg *config.Config, version string) error {
 			Name:        cfg.StationName,
 			StationName: cfg.StationName,
 		}
-		if cfg.NoInternet {
-			logger.Info("Running in offline mode (--no-internet) - all internet access disabled")
+		if cfg.DisableInternet {
+			logger.Info("Running in offline mode (--disable-internet) - all internet access disabled")
 		}
 	} else if cfg.UseGeneratedWeather {
 		// Use generated weather data for testing
@@ -126,19 +126,25 @@ func StartService(cfg *config.Config, version string) error {
 		effectiveStationURL = fmt.Sprintf("https://swd.weatherflow.com/swd/rest/observations/station/%d?token=%s", station.StationID, cfg.Token)
 	}
 
-	webServer := web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, effectiveStationURL, generatedWeatherInfo, weatherGen, cfg.Units, cfg.UnitsPressure)
-	webServer.SetStationName(station.Name)
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logger.Error("Web server panic recovered: %v", r)
+	// Create web server only if not disabled
+	var webServer *web.WebServer
+	if !cfg.DisableWebConsole {
+		webServer = web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, effectiveStationURL, generatedWeatherInfo, weatherGen, cfg.Units, cfg.UnitsPressure)
+		webServer.SetStationName(station.Name)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Error("Web server panic recovered: %v", r)
+				}
+			}()
+			logger.Info("Starting web dashboard on port %s", cfg.WebPort)
+			if err := webServer.Start(); err != nil {
+				logger.Error("Web server error: %v", err)
 			}
 		}()
-		logger.Info("Starting web dashboard on port %s", cfg.WebPort)
-		if err := webServer.Start(); err != nil {
-			logger.Error("Web server error: %v", err)
-		}
-	}()
+	} else {
+		logger.Info("Web console disabled (--disable-webconsole)")
+	}
 
 	// Update HomeKit status in web server
 	var enabledSensors []string
@@ -189,7 +195,9 @@ func StartService(cfg *config.Config, version string) error {
 			"pin":            cfg.Pin,
 		}
 	}
-	webServer.UpdateHomeKitStatus(homekitStatus)
+	if webServer != nil {
+		webServer.UpdateHomeKitStatus(homekitStatus)
+	}
 
 	// Preload historical data if requested
 	if cfg.ReadHistory {
@@ -199,7 +207,9 @@ func StartService(cfg *config.Config, version string) error {
 
 		// Create a progress callback function
 		progressCallback := func(currentStep, totalSteps int, description string) {
-			webServer.SetHistoryLoadingProgress(currentStep, totalSteps, description)
+			if webServer != nil {
+				webServer.SetHistoryLoadingProgress(currentStep, totalSteps, description)
+			}
 		}
 
 		var historicalObs []*weather.Observation
@@ -215,13 +225,15 @@ func StartService(cfg *config.Config, version string) error {
 			historicalObs, err = weather.GetHistoricalObservationsWithProgress(station.StationID, cfg.Token, cfg.LogLevel, progressCallback)
 			if err != nil {
 				logger.Error("Failed to fetch historical data: %v", err)
-				webServer.SetHistoryLoadingComplete()
+				if webServer != nil {
+					webServer.SetHistoryLoadingComplete()
+				}
 			} else {
 				logger.Debug("Successfully fetched %d historical observations", len(historicalObs))
 			}
 		}
 
-		if err == nil {
+		if err == nil && webServer != nil {
 			webServer.SetHistoryLoadingProgress(2, 3, "Processing historical data...")
 
 			// Send historical data to web server for charts
@@ -233,7 +245,6 @@ func StartService(cfg *config.Config, version string) error {
 			// Complete the loading process
 			webServer.SetHistoryLoadingComplete()
 
-			// Update historical data status in web server
 			webServer.SetHistoricalDataStatus(len(historicalObs))
 
 			if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
@@ -265,6 +276,13 @@ func StartService(cfg *config.Config, version string) error {
 		return fmt.Errorf("failed to start data source: %v", err)
 	}
 
+	// Set initial data source status in web server (before any observations arrive)
+	if webServer != nil {
+		initialStatus := dataSource.GetStatus()
+		webServer.UpdateDataSourceStatus(initialStatus)
+		logger.Debug("Initial data source status set: type=%s", initialStatus.Type)
+	}
+
 	// Main observation processing loop - unified for all data sources!
 	logger.Info("Starting unified observation processing loop")
 	for obs := range obsChan {
@@ -287,19 +305,21 @@ func StartService(cfg *config.Config, version string) error {
 		}
 
 		// Update web server
-		webServer.UpdateWeather(&obs)
-		logger.Debug("Web server updated")
+		if webServer != nil {
+			webServer.UpdateWeather(&obs)
+			logger.Debug("Web server updated")
 
-		// Update forecast from data source (if available)
-		if forecast := dataSource.GetForecast(); forecast != nil {
-			webServer.UpdateForecast(forecast)
-			logger.Debug("Forecast updated")
+			// Update forecast from data source (if available)
+			if forecast := dataSource.GetForecast(); forecast != nil {
+				webServer.UpdateForecast(forecast)
+				logger.Debug("Forecast updated")
+			}
+
+			// Update data source status in web server
+			status := dataSource.GetStatus()
+			webServer.UpdateDataSourceStatus(status)
+			logger.Debug("Data source status updated")
 		}
-
-		// Update data source status in web server
-		status := dataSource.GetStatus()
-		webServer.UpdateDataSourceStatus(status)
-		logger.Debug("Data source status updated")
 
 		// Log observation details
 		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {

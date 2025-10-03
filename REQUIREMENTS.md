@@ -140,10 +140,10 @@ This document presents the technical requirements and implementation results for
   - **Custom Lists**: Comma-delimited combinations using aliases or traditional names
 - ✅ `--disable-homekit`: Disable HomeKit services (web console only mode)
 - ✅ `--udp-stream`: Enable UDP broadcast listener for local station monitoring (NEW in v1.5.0)
-- ✅ `--no-internet`: Disable all internet access - requires `--udp-stream` (NEW in v1.5.0)
+- ✅ `--no-internet`: Disable all internet access - requires `--udp-stream` or `--use-generated-weather`, incompatible with `--use-web-status` and `--read-history` (NEW in v1.5.0)
 - ✅ `--units`: Units system - imperial, metric, or sae (default: "imperial")
 - ✅ `--units-pressure`: Pressure units - inHg or mb (default: "inHg")
-- ✅ `--use-web-status`: Enable TempestWX status scraping with Chrome automation
+- ✅ `--use-web-status`: Enable TempestWX status scraping with Chrome automation (incompatible with `--no-internet`)
 - ✅ `--version`: Display version information and exit
 
 #### Comprehensive Validation (v1.3.0)
@@ -206,7 +206,7 @@ This document presents the technical requirements and implementation results for
   - `hub_status`: Firmware, uptime, reset flags
 - ✅ **Configuration Flags**:
   - `--udp-stream`: Enable UDP broadcast listener
-  - `--no-internet`: Disable all internet access (requires `--udp-stream`)
+  - `--no-internet`: Disable all internet access (requires `--udp-stream` or `--use-generated-weather`, incompatible with `--use-web-status` and `--read-history`)
 - ✅ **Network Requirements**: Same LAN subnet, UDP port 50222 accessible
 - ✅ **Circular Buffer**: 1000 observation history with thread-safe access
 - ✅ **Web Dashboard Integration**: UDP status display with packet count, station IP, serial number

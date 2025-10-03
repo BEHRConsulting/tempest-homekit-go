@@ -195,13 +195,16 @@ func (l *UDPListener) listen() {
 
 // processMessage parses and processes a UDP message
 func (l *UDPListener) processMessage(data []byte) {
+	// Log raw packet data when debug logging is enabled
+	logger.Debug("UDP Packet received (%d bytes): %s", len(data), string(data))
+
 	var msg UDPMessage
 	if err := json.Unmarshal(data, &msg); err != nil {
 		logger.Debug("Failed to parse UDP message: %v", err)
 		return
 	}
 
-	logger.Debug("Received UDP message type: %s from %s", msg.Type, msg.SerialNumber)
+	logger.Debug("Parsed UDP message - Type: %s, Serial: %s, Hub: %s", msg.Type, msg.SerialNumber, msg.HubSN)
 
 	// Update serial number if not set
 	if l.serialNumber == "" && msg.SerialNumber != "" {
@@ -225,12 +228,14 @@ func (l *UDPListener) processMessage(data []byte) {
 	case TypeHubStatus:
 		l.processHubStatus(msg)
 	case TypeRainStart:
-		logger.Debug("Rain start event detected at %v", time.Unix(int64(msg.Evt[0].(float64)), 0))
+		timestamp := int64(msg.Evt[0].(float64))
+		logger.Debug("UDP evt_precip - Rain start event at timestamp=%d (%v)", timestamp, time.Unix(timestamp, 0))
 	case TypeLightning:
 		if len(msg.Evt) >= 3 {
+			timestamp := int64(msg.Evt[0].(float64))
 			distance := msg.Evt[1].(float64)
 			energy := msg.Evt[2].(float64)
-			logger.Debug("Lightning strike detected: %.1f km away, energy: %.0f", distance, energy)
+			logger.Debug("UDP evt_strike - Lightning strike at timestamp=%d, distance=%.1fkm, energy=%.0f", timestamp, distance, energy)
 		}
 	default:
 		logger.Debug("Unknown UDP message type: %s", msg.Type)
@@ -272,9 +277,11 @@ func (l *UDPListener) processObservationST(msg UDPMessage) {
 		ReportInterval:       int(obs[17].(float64)),
 	}
 
-	logger.Debug("Tempest observation: Temp=%.1f°C, Humidity=%.0f%%, Pressure=%.1fmb, Wind=%.1fm/s, Lux=%.0f",
-		observation.AirTemperature, observation.RelativeHumidity, observation.StationPressure,
-		observation.WindAvg, observation.Illuminance)
+	logger.Debug("UDP obs_st - Timestamp=%d, Temp=%.1f°C, Humidity=%.0f%%, Pressure=%.1fmb, Wind=%.1f/%.1f/%.1fm/s@%.0f°, Lux=%.0f, UV=%d, Rain=%.2fmm, Lightning=%d@%.0fkm, Battery=%.2fV",
+		observation.Timestamp, observation.AirTemperature, observation.RelativeHumidity, observation.StationPressure,
+		observation.WindLull, observation.WindAvg, observation.WindGust, observation.WindDirection,
+		observation.Illuminance, observation.UV, observation.RainAccumulated,
+		observation.LightningStrikeCount, observation.LightningStrikeAvg, observation.Battery)
 
 	l.addObservation(observation)
 }
@@ -299,6 +306,10 @@ func (l *UDPListener) processObservationAir(msg UDPMessage) {
 		Battery:              obs[6].(float64),
 		ReportInterval:       int(obs[7].(float64)),
 	}
+
+	logger.Debug("UDP obs_air - Timestamp=%d, Temp=%.1f°C, Humidity=%.0f%%, Pressure=%.1fmb, Lightning=%d@%.0fkm, Battery=%.2fV",
+		observation.Timestamp, observation.AirTemperature, observation.RelativeHumidity,
+		observation.StationPressure, observation.LightningStrikeCount, observation.LightningStrikeAvg, observation.Battery)
 
 	l.addObservation(observation)
 }
@@ -329,6 +340,10 @@ func (l *UDPListener) processObservationSky(msg UDPMessage) {
 		PrecipitationType: int(obs[12].(float64)),
 	}
 
+	logger.Debug("UDP obs_sky - Timestamp=%d, Wind=%.1f/%.1f/%.1fm/s@%.0f°, Lux=%.0f, UV=%d, Solar=%.0fW/m², Rain=%.2fmm, Battery=%.2fV",
+		observation.Timestamp, observation.WindLull, observation.WindAvg, observation.WindGust, observation.WindDirection,
+		observation.Illuminance, observation.UV, observation.SolarRadiation, observation.RainAccumulated, observation.Battery)
+
 	l.addObservation(observation)
 }
 
@@ -339,7 +354,10 @@ func (l *UDPListener) processRapidWind(msg UDPMessage) {
 	}
 
 	// Rapid wind: [0]=timestamp, [1]=wind_speed, [2]=wind_direction
-	logger.Debug("Rapid wind: %.1f m/s from %d°", msg.Ob[1].(float64), int(msg.Ob[2].(float64)))
+	timestamp := int64(msg.Ob[0].(float64))
+	windSpeed := msg.Ob[1].(float64)
+	windDir := int(msg.Ob[2].(float64))
+	logger.Debug("UDP rapid_wind - Timestamp=%d, Speed=%.1fm/s, Direction=%d°", timestamp, windSpeed, windDir)
 
 	// We could update wind in real-time here, but for now just log it
 	// The full observation will be processed when obs_st arrives
@@ -361,7 +379,8 @@ func (l *UDPListener) processDeviceStatus(msg UDPMessage) {
 	l.deviceStatus = status
 	l.mu.Unlock()
 
-	logger.Debug("Device status: Battery=%.2fV, Uptime=%ds, RSSI=%d", status.Voltage, status.Uptime, status.RSSI)
+	logger.Debug("UDP device_status - Serial=%s, Timestamp=%d, Battery=%.2fV, Uptime=%ds, RSSI=%ddBm, Hub RSSI=%ddBm, Sensor Status=0x%X",
+		msg.SerialNumber, msg.Timestamp, status.Voltage, status.Uptime, status.RSSI, status.HubRSSI, status.SensorStatus)
 }
 
 // processHubStatus processes hub status messages
@@ -379,7 +398,8 @@ func (l *UDPListener) processHubStatus(msg UDPMessage) {
 	l.hubStatus = status
 	l.mu.Unlock()
 
-	logger.Debug("Hub status: Uptime=%ds, RSSI=%d, Firmware=%s", status.Uptime, status.RSSI, status.FirmwareRev)
+	logger.Debug("UDP hub_status - Serial=%s, Timestamp=%d, Firmware=%s, Uptime=%ds, RSSI=%ddBm, ResetFlags=%s, Seq=%d",
+		msg.SerialNumber, msg.Timestamp, status.FirmwareRev, status.Uptime, status.RSSI, status.ResetFlags, status.Seq)
 }
 
 // addObservation adds an observation to the history and notifies observers

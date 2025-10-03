@@ -28,6 +28,9 @@ function debugLog(level, message, data = null) {
     }
 }
 
+// Global variable to track data source type for better error messaging
+let currentDataSourceType = null;
+
 let units = {
     temperature: localStorage.getItem('temperature-unit') || 'celsius',
     wind: localStorage.getItem('wind-unit') || 'mph',
@@ -2212,8 +2215,19 @@ async function fetchWeather() {
             stack: error.stack
         });
         
-        document.getElementById('status').textContent = 'Disconnected from weather station';
-        document.getElementById('status').style.background = 'rgba(220, 53, 69, 0.1)';
+        // Check if we're in UDP mode - show appropriate waiting message
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+            if (currentDataSourceType === 'udp') {
+                // UDP mode - show waiting message instead of error
+                statusEl.textContent = 'Waiting for UDP stream from Tempest station';
+                statusEl.style.background = 'rgba(255, 193, 7, 0.1)'; // Yellow background
+            } else if (!statusEl.textContent.includes('Waiting')) {
+                // Non-UDP mode - show disconnected
+                statusEl.textContent = 'Disconnected from weather station';
+                statusEl.style.background = 'rgba(220, 53, 69, 0.1)';
+            }
+        }
     }
 }
 
@@ -2238,6 +2252,11 @@ async function fetchStatus() {
                 uptime: status.uptime,
                 homekitStatus: status.homekit
             });
+            
+            // Store data source type globally for better error messaging
+            if (status.dataSource) {
+                currentDataSourceType = status.dataSource.type;
+            }
             
             updateStatusDisplay(status);
             updateForecastDisplay(status);
@@ -2286,6 +2305,16 @@ function updateStatusDisplay(status) {
             if (status.generatedWeather && status.generatedWeather.enabled) {
                 tempestStatus.textContent = 'Generated';
                 tempestStatus.style.color = '#17a2b8'; // Info blue for generated
+            } else if (!status.connected && status.dataSource && status.dataSource.type === 'udp') {
+                // UDP mode but not connected yet - show waiting message
+                tempestStatus.textContent = 'Waiting for UDP Stream';
+                tempestStatus.style.color = '#ffc107'; // Yellow/warning color
+                // Also update the main header status
+                const mainStatus = document.getElementById('status');
+                if (mainStatus) {
+                    mainStatus.textContent = 'Waiting for UDP stream from Tempest station';
+                    mainStatus.style.background = 'rgba(255, 193, 7, 0.1)'; // Yellow background
+                }
             } else {
                 tempestStatus.textContent = status.connected ? 'Connected' : 'Disconnected';
                 tempestStatus.style.color = status.connected ? '#28a745' : '#dc3545';
@@ -2302,9 +2331,23 @@ function updateStatusDisplay(status) {
         }
     }
     
-    // Update station URL
-    if (tempestStationURL) {
-        if (status.stationURL) {
+    // Update station URL or UDP info
+    const tempestStationURLLabel = document.getElementById('tempest-station-url-label');
+    if (tempestStationURL && tempestStationURLLabel) {
+        // Check if we're in UDP mode
+        if (status.dataSource && status.dataSource.type === 'udp') {
+            // UDP mode: Change label and show packet count + IP
+            tempestStationURLLabel.textContent = 'Station UDP:';
+            const packets = status.dataSource.packetCount || 0;
+            const ip = status.dataSource.stationIP || '';
+            if (ip) {
+                tempestStationURL.textContent = `${packets} packets, ${ip}`;
+            } else {
+                tempestStationURL.textContent = `${packets} packets`;
+            }
+        } else if (status.stationURL) {
+            // Non-UDP mode: Show station URL as before
+            tempestStationURLLabel.textContent = 'Station URL:';
             // Make the URL clickable and truncate if too long
             // Truncate display label to 15 characters for compact card layout, show full URL on hover
             const maxLabelLen = 15;
@@ -2315,6 +2358,8 @@ function updateStatusDisplay(status) {
             // Provide full URL in title and aria-label for hover and accessibility
             tempestStationURL.innerHTML = `<a href="${status.stationURL}" target="_blank" style="color: #007bff; text-decoration: none;" title="${status.stationURL}" aria-label="${status.stationURL}">${displayURL}</a>`;
         } else {
+            // No URL available
+            tempestStationURLLabel.textContent = 'Station URL:';
             tempestStationURL.textContent = '--';
         }
     }
@@ -2388,7 +2433,7 @@ function updateStatusDisplay(status) {
     }
 
     // Update detailed station status from stationStatus data
-    updateDetailedStationStatus(status.stationStatus);
+    updateDetailedStationStatus(status);
 
     // Update HomeKit status
     const homekitStatus = document.getElementById('homekit-status');
@@ -2415,8 +2460,89 @@ function updateStatusDisplay(status) {
     });
 }
 
-function updateDetailedStationStatus(stationStatus) {
-    debugLog(logLevels.DEBUG, 'updateDetailedStationStatus called', stationStatus);
+/**
+ * Updates the data source display based on the unified data source status.
+ * Shows all active data sources (observations, forecast, web-status, etc.)
+ */
+function updateDataSourceDisplay(status, dataSourceElement) {
+    if (!dataSourceElement) return;
+    
+    // Debug: Log the entire status object structure
+    debugLog(logLevels.DEBUG, '📡 updateDataSourceDisplay called with:', {
+        hasDataSource: !!status.dataSource,
+        dataSourceType: status.dataSource?.type,
+        packetCount: status.dataSource?.packetCount,
+        stationIP: status.dataSource?.stationIP,
+        hasStationName: !!status.stationName,
+        hasStationURL: !!status.stationURL,
+        hasForecast: !!status.forecast,
+        hasStationStatus: !!status.stationStatus,
+        statusDataSource: status.stationStatus?.dataSource
+    });
+    
+    const sources = [];
+    
+    // Primary observation source (what's feeding real-time data)
+    if (status.dataSource) {
+        const dsType = status.dataSource.type;
+        if (dsType === 'udp') {
+            // UDP Stream - details moved to Station UDP row
+            sources.push('UDP Stream');
+        } else if (dsType === 'generated') {
+            sources.push('Generated');
+        } else if (dsType === 'custom-url') {
+            sources.push('Custom URL');
+        } else if (dsType === 'api') {
+            sources.push('WeatherFlow API');
+        }
+    }
+    
+    // API usage for forecast/history (when using UDP for observations)
+    if (status.dataSource && status.dataSource.type === 'udp') {
+        // Check if forecast data is actually available (indicates API is accessible)
+        if (status.forecast && status.forecast.forecast) {
+            sources.push('API (forecast, history)');
+        }
+    }
+    
+    // Forecast source (for non-UDP modes that have separate forecast)
+    if (status.forecast && status.dataSource) {
+        // Only add if not already API or UDP (which already mentions API)
+        if (status.dataSource.type !== 'api' && status.dataSource.type !== 'udp') {
+            sources.push('API Forecast');
+        }
+    }
+    
+    // Web-Status scraping (if available)
+    if (status.stationStatus) {
+        const statusSource = status.stationStatus.dataSource || '';
+        if (statusSource.includes('web status page') || statusSource === 'web-scrape') {
+            sources.push('Web-Status');
+        } else if (status.stationStatus.scrapingEnabled && statusSource.includes('api')) {
+            // Scraping is enabled but using API fallback
+            sources.push('Web-Status (API fallback)');
+        }
+    }
+    
+    // If no sources detected, show fallback
+    if (sources.length === 0) {
+        if (status.generatedWeather && status.generatedWeather.enabled) {
+            sources.push('Generated');
+        } else {
+            sources.push('API');
+        }
+    }
+    
+    // Join sources with commas
+    dataSourceElement.textContent = sources.join(', ');
+    
+    debugLog(logLevels.DEBUG, '📡 Data Sources:', sources.join(', '));
+}
+
+function updateDetailedStationStatus(status) {
+    debugLog(logLevels.DEBUG, 'updateDetailedStationStatus called', status);
+    
+    const stationStatus = status.stationStatus;
     
     // Device Status Fields
     const deviceUptime = document.getElementById('tempest-device-uptime');
@@ -2449,9 +2575,10 @@ function updateDetailedStationStatus(stationStatus) {
         'hubFirmware exists': !!hubFirmware
     });
 
+    // Update Data Source field from unified data source status
+    updateDataSourceDisplay(status, dataSource);
+
     if (stationStatus && stationStatus.batteryVoltage) {
-        // Update Data Source field
-        if (dataSource) dataSource.textContent = stationStatus.dataSource || 'api';
         
         // Update Device Status fields from actual station status
         if (deviceUptime) deviceUptime.textContent = stationStatus.deviceUptime || '--';
@@ -2473,9 +2600,6 @@ function updateDetailedStationStatus(stationStatus) {
 
         debugLog(logLevels.DEBUG, 'Detailed station status updated from stationStatus data');
     } else {
-        // Update Data Source field for fallback case
-        if (dataSource) dataSource.textContent = 'api';
-        
         // Use "--" for all fields when station status is not available
         const allStatusFields = [
             deviceUptime, deviceNetwork, deviceSignal, deviceLastObs, deviceSerial, deviceFirmware,
@@ -3269,11 +3393,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     debugLog(logLevels.DEBUG, 'All event listeners attached');
 
-    // Start data fetching
+    // Start data fetching - fetch status first to determine data source type
     debugLog(logLevels.INFO, 'Starting periodic data fetching (10-second intervals)');
     console.log('🚀 DEBUG: Starting initial data fetch');
-    fetchWeather();
-    fetchStatus();
+    // Fetch status first to set currentDataSourceType before weather fetch attempts
+    fetchStatus().then(() => fetchWeather());
     
     setInterval(() => {
         console.log('🚀 DEBUG: Periodic data fetch triggered');

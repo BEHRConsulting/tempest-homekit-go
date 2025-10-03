@@ -22,6 +22,10 @@ func main() {
 
 	// Set up logging first (before any other operations that might log)
 	logger.SetLogLevel(cfg.LogLevel)
+	if cfg.LogFilter != "" {
+		logger.SetLogFilter(cfg.LogFilter)
+		logger.Info("Log filter enabled: only messages containing '%s' will be shown", cfg.LogFilter)
+	}
 
 	// Note: For generated weather, elevation will be logged by the service once location is selected
 

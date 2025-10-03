@@ -338,3 +338,131 @@ func TestValidateConfigSensorsWithSpaces(t *testing.T) {
 		})
 	}
 }
+
+// TestValidateConfigDisableInternetRequiresUDPStream tests that --disable-internet requires a local data source
+func TestValidateConfigDisableInternetRequiresUDPStream(t *testing.T) {
+	cfg := &Config{
+		Token:               "valid-token",
+		StationName:         "Test Station",
+		Pin:                 "12345678",
+		LogLevel:            "debug",
+		WebPort:             "8080",
+		Sensors:             "temp",
+		DisableInternet:     true,
+		UDPStream:           false,
+		UseGeneratedWeather: false,
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("Expected --disable-internet without data source to fail validation")
+	}
+	if !strings.Contains(err.Error(), "--disable-internet mode requires") {
+		t.Errorf("Expected data source requirement error, got: %v", err)
+	}
+}
+
+// TestValidateConfigDisableInternetWithUseWebStatus tests that --disable-internet rejects --use-web-status
+func TestValidateConfigDisableInternetWithUseWebStatus(t *testing.T) {
+	cfg := &Config{
+		Token:           "valid-token",
+		StationName:     "Test Station",
+		Pin:             "12345678",
+		LogLevel:        "debug",
+		WebPort:         "8080",
+		Sensors:         "temp",
+		DisableInternet: true,
+		UDPStream:       true,
+		UseWebStatus:    true,
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("Expected --disable-internet with --use-web-status to fail validation")
+	}
+	if !strings.Contains(err.Error(), "--use-web-status cannot be used with --disable-internet") {
+		t.Errorf("Expected web status conflict error, got: %v", err)
+	}
+}
+
+// TestValidateConfigDisableInternetWithReadHistory tests that --disable-internet rejects --read-history
+func TestValidateConfigDisableInternetWithReadHistory(t *testing.T) {
+	cfg := &Config{
+		Token:           "valid-token",
+		StationName:     "Test Station",
+		Pin:             "12345678",
+		LogLevel:        "debug",
+		WebPort:         "8080",
+		Sensors:         "temp",
+		DisableInternet: true,
+		UDPStream:       true,
+		ReadHistory:     true,
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("Expected --disable-internet with --read-history to fail validation")
+	}
+	if !strings.Contains(err.Error(), "--read-history cannot be used with --disable-internet") {
+		t.Errorf("Expected read history conflict error, got: %v", err)
+	}
+}
+
+// TestValidateConfigDisableInternetValid tests that --disable-internet with --udp-stream is valid
+func TestValidateConfigDisableInternetValid(t *testing.T) {
+	cfg := &Config{
+		Token:           "valid-token",
+		StationName:     "Test Station",
+		Pin:             "12345678",
+		LogLevel:        "debug",
+		WebPort:         "8080",
+		Sensors:         "temp",
+		DisableInternet: true,
+		UDPStream:       true,
+	}
+
+	if err := validateConfig(cfg); err != nil {
+		t.Errorf("Expected valid --disable-internet config to pass, got error: %v", err)
+	}
+}
+
+// TestValidateConfigDisableInternetWithGeneratedWeather tests that --disable-internet with --use-generated-weather is valid
+func TestValidateConfigDisableInternetWithGeneratedWeather(t *testing.T) {
+	cfg := &Config{
+		Token:               "valid-token",
+		StationName:         "Test Station",
+		Pin:                 "12345678",
+		LogLevel:            "debug",
+		WebPort:             "8080",
+		Sensors:             "temp",
+		DisableInternet:     true,
+		UseGeneratedWeather: true,
+	}
+
+	if err := validateConfig(cfg); err != nil {
+		t.Errorf("Expected valid --disable-internet with --use-generated-weather config to pass, got error: %v", err)
+	}
+}
+
+// TestValidateConfigDisableInternetRequiresDataSource tests that --disable-internet requires either UDP or generated weather
+func TestValidateConfigDisableInternetRequiresDataSource(t *testing.T) {
+	cfg := &Config{
+		Token:               "valid-token",
+		StationName:         "Test Station",
+		Pin:                 "12345678",
+		LogLevel:            "debug",
+		WebPort:             "8080",
+		Sensors:             "temp",
+		DisableInternet:     true,
+		UDPStream:           false,
+		UseGeneratedWeather: false,
+	}
+
+	err := validateConfig(cfg)
+	if err == nil {
+		t.Error("Expected --disable-internet without data source to fail validation")
+	}
+	if !strings.Contains(err.Error(), "requires --udp-stream or --use-generated-weather") {
+		t.Errorf("Expected data source requirement error, got: %v", err)
+	}
+}

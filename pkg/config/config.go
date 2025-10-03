@@ -22,16 +22,18 @@ type Config struct {
 	StationName         string
 	Pin                 string
 	LogLevel            string
+	LogFilter           string // Filter log messages to only show those containing this string
 	WebPort             string
 	ClearDB             bool
 	DisableHomeKit      bool // Disable HomeKit services and run web console only
+	DisableWebConsole   bool // Disable web server (HomeKit only mode)
 	Sensors             string
 	ReadHistory         bool
 	TestAPI             bool
 	UseWebStatus        bool    // Enable headless browser scraping of TempestWX status
 	UseGeneratedWeather bool    // Use generated weather data for testing instead of Tempest API
 	UDPStream           bool    // Listen for UDP broadcasts from local Tempest station
-	NoInternet          bool    // Disable all internet access (no API, no status scraping)
+	DisableInternet     bool    // Disable all internet access (no API, no status scraping)
 	StationURL          string  // Custom station URL for weather data (overrides Tempest API)
 	Elevation           float64 // elevation in meters
 	Units               string  // Units system: imperial, metric, or sae
@@ -39,23 +41,124 @@ type Config struct {
 	Version             bool    // Show version and exit
 }
 
+// customUsage prints a well-formatted help message with grouped flags and examples
+func customUsage() {
+	fmt.Fprintf(os.Stderr, `Tempest HomeKit Bridge - HomeKit integration for WeatherFlow Tempest weather stations
+
+USAGE:
+  tempest-homekit-go [OPTIONS]
+
+DATA SOURCE OPTIONS:
+  --token <string>              WeatherFlow API token (required for API mode)
+                                Env: TEMPEST_TOKEN
+  --station <string>            Tempest station name (default: "Chino Hills")
+                                Env: TEMPEST_STATION_NAME
+  --udp-stream                  Listen for UDP broadcasts from local station (port 50222)
+                                Enables offline operation during internet outages
+                                Env: UDP_STREAM=true
+  --use-generated-weather       Use simulated weather data for testing
+                                Automatically sets --station-url to local generator
+  --station-url <url>           Custom station URL (e.g., http://localhost:8080/api/generate-weather)
+                                Overrides Tempest API, enables custom data sources
+                                Env: STATION_URL
+  --read-history                Preload last 24 hours of weather data from Tempest API
+  --disable-internet            Disable all internet access (offline mode)
+                                Requires: --udp-stream or --use-generated-weather
+                                Incompatible with: --use-web-status, --read-history
+                                Env: DISABLE_INTERNET=true or NO_INTERNET=true
+                                Alias: --no-internet (backward compatibility)
+
+HOMEKIT OPTIONS:
+  --pin <string>                HomeKit PIN for device pairing (default: "00102003")
+                                Env: HOMEKIT_PIN
+  --sensors <list>              Sensors to enable (default: "temp,lux,humidity,uv")
+                                Options: all, min, or custom list
+                                Available: temp/temperature, humidity, lux/light, wind,
+                                          rain, pressure, uv/uvi, lightning
+                                Env: SENSORS
+  --disable-homekit             Run web console only (no HomeKit services)
+  --cleardb                     Clear HomeKit database and reset device pairing
+
+WEB CONSOLE OPTIONS:
+  --web-port <port>             Web dashboard port (default: "8080")
+                                Env: WEB_PORT
+  --disable-webconsole          Disable web server (HomeKit only mode)
+  --use-web-status              Enable Chrome-based scraping of TempestWX status page
+                                Updates every 15 minutes, incompatible with --disable-internet
+
+CONFIGURATION OPTIONS:
+  --elevation <value>           Station elevation (e.g., 903ft, 275m)
+                                Auto-detected from station coordinates if not provided
+  --units <system>              Units system: imperial (default), metric, or sae
+                                Env: UNITS
+  --units-pressure <unit>       Pressure units: inHg (default) or mb
+                                Env: UNITS_PRESSURE
+
+LOGGING & DEBUG OPTIONS:
+  --loglevel <level>            Log level: error (default), info, debug
+                                Env: LOG_LEVEL
+  --logfilter <string>          Filter log messages (case-insensitive substring match)
+                                Env: LOG_FILTER
+  --test-api                    Test WeatherFlow API endpoints and exit
+
+OTHER OPTIONS:
+  --version                     Show version information and exit
+  --help                        Show this help message
+
+EXAMPLES:
+  # Basic HomeKit bridge with API
+  tempest-homekit-go --token "your-token" --station "My Station"
+
+  # Offline mode with UDP stream (survives internet outages)
+  tempest-homekit-go --token "your-token" --udp-stream --disable-internet
+
+  # Testing with simulated weather data
+  tempest-homekit-go --use-generated-weather
+
+  # Hybrid mode: UDP for real-time + API for forecast
+  tempest-homekit-go --token "your-token" --udp-stream --read-history
+
+  # Web console only (no HomeKit)
+  tempest-homekit-go --token "your-token" --disable-homekit
+
+  # HomeKit only (no web console)
+  tempest-homekit-go --token "your-token" --disable-webconsole
+
+  # Custom sensors with debug logging
+  tempest-homekit-go --token "your-token" --sensors "temp,humidity,pressure" --loglevel debug
+
+  # Filter logs for UDP messages only
+  tempest-homekit-go --token "your-token" --udp-stream --loglevel debug --logfilter "UDP"
+
+ENVIRONMENT VARIABLES:
+  All flags can also be set via environment variables (see individual flag descriptions above).
+  Command-line flags take precedence over environment variables.
+
+For more information, visit: https://github.com/BEHRConsulting/tempest-homekit-go
+`)
+}
+
 // LoadConfig initializes and returns a new Config struct with values from
 // environment variables, command-line flags, and sensible defaults.
 func LoadConfig() *Config {
 	cfg := &Config{
-		Token:         getEnvOrDefault("TEMPEST_TOKEN", "b88edc78-6261-414e-8042-86a4d4f9ba15"),
-		StationName:   getEnvOrDefault("TEMPEST_STATION_NAME", "Chino Hills"),
-		Pin:           getEnvOrDefault("HOMEKIT_PIN", "00102003"),
-		LogLevel:      getEnvOrDefault("LOG_LEVEL", "error"),
-		WebPort:       getEnvOrDefault("WEB_PORT", "8080"),
-		Sensors:       getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
-		StationURL:    getEnvOrDefault("STATION_URL", ""),
-		UDPStream:     getEnvOrDefault("UDP_STREAM", "") == "true",
-		NoInternet:    getEnvOrDefault("NO_INTERNET", "") == "true",
-		Elevation:     275.2, // 903ft default elevation in meters
-		Units:         getEnvOrDefault("UNITS", "imperial"),
-		UnitsPressure: getEnvOrDefault("UNITS_PRESSURE", "inHg"),
+		Token:           getEnvOrDefault("TEMPEST_TOKEN", "b88edc78-6261-414e-8042-86a4d4f9ba15"),
+		StationName:     getEnvOrDefault("TEMPEST_STATION_NAME", "Chino Hills"),
+		Pin:             getEnvOrDefault("HOMEKIT_PIN", "00102003"),
+		LogLevel:        getEnvOrDefault("LOG_LEVEL", "error"),
+		LogFilter:       getEnvOrDefault("LOG_FILTER", ""),
+		WebPort:         getEnvOrDefault("WEB_PORT", "8080"),
+		Sensors:         getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
+		StationURL:      getEnvOrDefault("STATION_URL", ""),
+		UDPStream:       getEnvOrDefault("UDP_STREAM", "") == "true",
+		DisableInternet: getEnvOrDefault("DISABLE_INTERNET", getEnvOrDefault("NO_INTERNET", "")) == "true",
+		Elevation:       275.2, // 903ft default elevation in meters
+		Units:           getEnvOrDefault("UNITS", "imperial"),
+		UnitsPressure:   getEnvOrDefault("UNITS_PRESSURE", "inHg"),
 	}
+
+	// Set custom usage function
+	flag.Usage = customUsage
 
 	var elevationStr string
 	var elevationProvided bool
@@ -63,6 +166,7 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.StationName, "station", cfg.StationName, "Tempest station name")
 	flag.StringVar(&cfg.Pin, "pin", cfg.Pin, "HomeKit PIN")
 	flag.StringVar(&cfg.LogLevel, "loglevel", cfg.LogLevel, "Log level (debug, info, error)")
+	flag.StringVar(&cfg.LogFilter, "logfilter", cfg.LogFilter, "Filter log messages to only show those containing this string (case-insensitive)")
 	flag.StringVar(&cfg.WebPort, "web-port", cfg.WebPort, "Web dashboard port")
 	flag.StringVar(&cfg.Sensors, "sensors", cfg.Sensors, "Sensors to enable: 'all', 'min' (temp,humidity,lux), or comma-delimited list (temp/temperature,humidity,lux/light,wind,rain,pressure,uv/uvi,lightning)")
 	flag.StringVar(&elevationStr, "elevation", "", "Station elevation (e.g., 903ft, 275m). If not provided, elevation will be auto-detected from coordinates")
@@ -74,7 +178,9 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.StationURL, "station-url", cfg.StationURL, "Custom station URL for weather data (e.g., http://localhost:8080/api/generate-weather). Overrides Tempest API. Can also be set via STATION_URL environment variable")
 	flag.BoolVar(&cfg.UseGeneratedWeather, "use-generated-weather", false, "Use generated weather data for UI testing instead of Tempest API")
 	flag.BoolVar(&cfg.UDPStream, "udp-stream", cfg.UDPStream, "Listen for UDP broadcasts from local Tempest station (port 50222) for offline operation. Can also be set via UDP_STREAM environment variable")
-	flag.BoolVar(&cfg.NoInternet, "no-internet", cfg.NoInternet, "Disable all internet access (no WeatherFlow API calls, no status scraping). Requires --udp-stream. Can also be set via NO_INTERNET environment variable")
+	flag.BoolVar(&cfg.DisableInternet, "disable-internet", cfg.DisableInternet, "Disable all internet access (no WeatherFlow API calls, no status scraping). Requires --udp-stream or --use-generated-weather. Can also be set via DISABLE_INTERNET or NO_INTERNET environment variable")
+	flag.BoolVar(&cfg.DisableInternet, "no-internet", cfg.DisableInternet, "(alias for --disable-internet)")
+	flag.BoolVar(&cfg.DisableWebConsole, "disable-webconsole", false, "Disable web server (HomeKit only mode)")
 	flag.StringVar(&cfg.Units, "units", cfg.Units, "Units system: imperial (default), metric, or sae. Can also be set via UNITS environment variable")
 	flag.StringVar(&cfg.UnitsPressure, "units-pressure", cfg.UnitsPressure, "Pressure units: inHg (default) or mb. Can also be set via UNITS_PRESSURE environment variable")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
@@ -216,14 +322,24 @@ func validateConfig(cfg *Config) error {
 		}
 	}
 
-	// Validate NoInternet mode requires UDPStream
-	if cfg.NoInternet && !cfg.UDPStream {
-		return fmt.Errorf("--no-internet mode requires --udp-stream to be enabled (need a local data source)")
+	// Validate DisableInternet mode requires a local data source (UDP or Generated Weather)
+	if cfg.DisableInternet && !cfg.UDPStream && !cfg.UseGeneratedWeather {
+		return fmt.Errorf("--disable-internet mode requires --udp-stream or --use-generated-weather (need a local data source)")
 	}
 
-	// In NoInternet mode, disable web status scraping
-	if cfg.NoInternet {
-		cfg.UseWebStatus = false
+	// Validate DisableInternet mode is incompatible with internet-dependent features
+	if cfg.DisableInternet {
+		if cfg.UseWebStatus {
+			return fmt.Errorf("--use-web-status cannot be used with --disable-internet (requires internet access)")
+		}
+		if cfg.ReadHistory {
+			return fmt.Errorf("--read-history cannot be used with --disable-internet (requires WeatherFlow API access)")
+		}
+	}
+
+	// Validate DisableHomeKit and DisableWebConsole are mutually exclusive
+	if cfg.DisableHomeKit && cfg.DisableWebConsole {
+		return fmt.Errorf("--disable-homekit and --disable-webconsole cannot be used together (would disable everything)")
 	}
 
 	if cfg.StationName == "" {

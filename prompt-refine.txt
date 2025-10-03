@@ -67,7 +67,12 @@
 
 [x] Add another api like generated-weather, this time gather the weather informaiton direct from the tempest weather station via it's udp stream (see https://apidocs.tempestwx.com/reference/tempest-udp-broadcast), not the WeatherFlow website. Tempest station broadcasts UDP messages over port 50222 on the local network. Use the command line parameter --udp-stream or --station-url http://localhost:8080/api/udp-stream. Spawn a task to listen and collect weather informaiton for the history and update homekit and the web console as data is collected. Update web console Tempest Station with Data Source of udp-stream and it's IP address and total packet count collected. If the udp stream is not detected, the station status should be No UDP Packets. the main reason I would like to implment this feature to to allow weather information to be gatherd when the internet is down. Lets remember to note the reason for this option in readme.md and requirements.md. we also may want to add a command line optionenv variable --no-internet (when set, do not try to use weatherflow API or read the status page) and status update. This should also cause a version update when complete.
 
-[] when --loglevel debug is set, log each udp packet as it is precessed
+[x] when --loglevel debug is set, log each udp packet as it is precessed
+
+[x] Let add a logging message filter --logfilter <string>. oly output the logging messages the include the <string>. This will help in targeted debugging
+
+[] add command line/env variable to history points (--history <value>)/env, currently it is statically set to 1000 points, lets make that the default, but allow for a min of 10 points. Attempt to allocate the space for the array, and report the array was too large on failure. To go with this, let's add the --chart-history <value>)/env to limit the data being graphed on the web console cards and popout charts. Default the value to the last 24 hours of data if available.
+
 
 [x] update readme.md and usage sh show command line parameter --token is only required for WeatherFlow API stations
 

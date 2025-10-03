@@ -4,7 +4,7 @@ package weather
 
 import (
 	"fmt"
-	"log"
+	"tempest-homekit-go/pkg/logger"
 	"sync"
 	"time"
 )
@@ -39,13 +39,13 @@ func NewStatusManager(stationID int, logLevel string, useWebScraping bool) *Stat
 func (sm *StatusManager) Start() {
 	if !sm.useWebScraping {
 		if sm.logLevel == "debug" {
-			log.Printf("DEBUG: Web status scraping disabled, using API fallback only")
+			logger.Debug("Web status scraping disabled, using API fallback only")
 		}
 		return
 	}
 
 	if sm.logLevel == "debug" {
-		log.Printf("DEBUG: Starting status manager with 15-minute web scraping interval")
+		logger.Debug("Starting status manager with 15-minute web scraping interval")
 	}
 
 	sm.scrapingActive = true
@@ -63,7 +63,7 @@ func (sm *StatusManager) Stop() {
 		sm.stopChan <- true
 		sm.scrapingActive = false
 		if sm.logLevel == "debug" {
-			log.Printf("DEBUG: Status manager stopped")
+			logger.Debug("Status manager stopped")
 		}
 	}
 }
@@ -96,7 +96,7 @@ func (sm *StatusManager) periodicScraping() {
 // performScrape attempts to scrape status data
 func (sm *StatusManager) performScrape() {
 	if sm.logLevel == "debug" {
-		log.Printf("DEBUG: Performing status scrape for station %d", sm.stationID)
+		logger.Debug("Performing status scrape for station %d", sm.stationID)
 	}
 
 	var status *StationStatus
@@ -107,7 +107,7 @@ func (sm *StatusManager) performScrape() {
 		status, err = GetStationStatusWithBrowser(sm.stationID, sm.logLevel)
 		if err != nil {
 			if sm.logLevel == "debug" {
-				log.Printf("DEBUG: Browser scraping failed: %v", err)
+				logger.Debug("Browser scraping failed: %v", err)
 			}
 			// Fall back to regular HTTP scraping
 			status, err = GetStationStatus(sm.stationID, sm.logLevel)
@@ -116,11 +116,11 @@ func (sm *StatusManager) performScrape() {
 				status.LastScraped = time.Now().UTC().Format(time.RFC3339)
 				status.ScrapingEnabled = true
 				if sm.logLevel == "debug" {
-					log.Printf("DEBUG: HTTP scraping succeeded with useful data")
+					logger.Debug("HTTP scraping succeeded with useful data")
 				}
 			} else if err == nil && !sm.hasUsefulData(status) {
 				if sm.logLevel == "debug" {
-					log.Printf("DEBUG: HTTP scraping succeeded but no useful data found")
+					logger.Debug("HTTP scraping succeeded but no useful data found")
 				}
 			}
 		} else if sm.hasUsefulData(status) {
@@ -129,11 +129,11 @@ func (sm *StatusManager) performScrape() {
 			status.LastScraped = time.Now().UTC().Format(time.RFC3339)
 			status.ScrapingEnabled = true
 			if sm.logLevel == "debug" {
-				log.Printf("DEBUG: Browser scraping succeeded with useful data")
+				logger.Debug("Browser scraping succeeded with useful data")
 			}
 		} else if status != nil && !sm.hasUsefulData(status) {
 			if sm.logLevel == "debug" {
-				log.Printf("DEBUG: Browser scraping succeeded but no useful data found - Battery: %s, DeviceUptime: %s, HubUptime: %s",
+				logger.Debug("Browser scraping succeeded but no useful data found - Battery: %s, DeviceUptime: %s, HubUptime: %s",
 					status.BatteryVoltage, status.DeviceUptime, status.HubUptime)
 			}
 		}
@@ -143,7 +143,7 @@ func (sm *StatusManager) performScrape() {
 	if status == nil || err != nil || !sm.hasUsefulData(status) {
 		status = sm.createFallbackStatus()
 		if sm.logLevel == "debug" {
-			log.Printf("DEBUG: Using fallback status (scraping failed or no useful data)")
+			logger.Debug("Using fallback status (scraping failed or no useful data)")
 		}
 	}
 
@@ -153,7 +153,7 @@ func (sm *StatusManager) performScrape() {
 	sm.mutex.Unlock()
 
 	if sm.logLevel == "debug" {
-		log.Printf("DEBUG: Status updated - Source: %s, Battery: %s, DeviceUptime: %s, LastScraped: %s",
+		logger.Debug("Status updated - Source: %s, Battery: %s, DeviceUptime: %s, LastScraped: %s",
 			status.DataSource, status.BatteryVoltage, status.DeviceUptime, status.LastScraped)
 	}
 }
@@ -174,7 +174,7 @@ func (sm *StatusManager) hasUsefulData(status *StationStatus) bool {
 		(status.HubSerialNumber != "" && status.HubSerialNumber != "--")
 
 	if sm.logLevel == "debug" {
-		log.Printf("DEBUG: hasUsefulData check - Battery: '%s', DeviceUptime: '%s', HubUptime: '%s', DeviceNetwork: '%s', HubNetwork: '%s', DeviceSerial: '%s', HubSerial: '%s' -> %t",
+		logger.Debug("hasUsefulData check - Battery: '%s', DeviceUptime: '%s', HubUptime: '%s', DeviceNetwork: '%s', HubNetwork: '%s', DeviceSerial: '%s', HubSerial: '%s' -> %t",
 			status.BatteryVoltage, status.DeviceUptime, status.HubUptime,
 			status.DeviceNetworkStatus, status.HubNetworkStatus,
 			status.DeviceSerialNumber, status.HubSerialNumber, hasData)
@@ -230,7 +230,7 @@ func (sm *StatusManager) UpdateBatteryFromObservation(obs *Observation) {
 			sm.cachedStatus.BatteryVoltage = fmt.Sprintf("%.1fV", obs.Battery)
 			sm.cachedStatus.BatteryStatus = "Good" // Assume good status if we have battery data
 			if sm.logLevel == "debug" {
-				log.Printf("DEBUG: Updated battery data from observation: %s", sm.cachedStatus.BatteryVoltage)
+				logger.Debug("Updated battery data from observation: %s", sm.cachedStatus.BatteryVoltage)
 			}
 		}
 	}

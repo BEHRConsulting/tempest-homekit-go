@@ -157,7 +157,7 @@ This project represents a controlled experiment in AI-assisted software developm
   - **No API Token Required**: Works entirely on local network without WeatherFlow cloud services
   - **Multiple Message Types**: Supports obs_st (Tempest), obs_air, obs_sky, rapid_wind, device_status, hub_status
   - **Enable with `--udp-stream` flag**: Monitor Tempest station locally without internet connectivity
-  - **Full Offline Mode with `--no-internet`**: Disables all internet access for complete offline operation
+  - **Full Offline Mode with `--disable-internet`**: Disables all internet access for complete offline operation (alias: `--no-internet`)
 - **Flexible Configuration**: Command-line flags and environment variables for easy deployment
 - **Enhanced Debug Logging**: Multi-level logging with emoji indicators, calculated values, API calls/responses, and comprehensive DOM debugging
 
@@ -265,6 +265,7 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `--disable-homekit`: Disable HomeKit services and run web console only
 - `--elevation`: Station elevation in meters (default: auto-detect, valid range: -430m to 8848m)
 - `--loglevel`: Logging level - debug, info, error (default: "error")
+- `--logfilter`: Filter log messages to only show those containing this string (case-insensitive) - useful for targeted debugging
 - `--pin`: HomeKit pairing PIN (default: "00102003")  
 - `--sensors`: Sensors to enable - 'all', 'min' (temp,lux,humidity), or comma-delimited list with aliases supported:
   - **Temperature**: `temp` or `temperature`
@@ -278,9 +279,17 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `--units`: Units system - imperial, metric, or sae (default: "imperial")
 - `--units-pressure`: Pressure units - inHg or mb (default: "inHg")
 - `--udp-stream`: Enable UDP broadcast listener for local station monitoring (port 50222)
-- `--no-internet`: Disable all internet access - requires `--udp-stream` (enables offline mode)
+- `--disable-internet`: **Offline Mode** - Disables all internet connectivity for complete offline operation
+  - **Alias**: `--no-internet` (backward compatibility)
+  - **Requires**: `--udp-stream` or `--use-generated-weather` (must have a local data source)
+  - **Incompatible with**: `--use-web-status`, `--read-history` (both require internet access)
+  - **Use Case**: Internet outages, air-gapped systems, privacy-focused deployments, testing without network
+  - **Limitations**: No forecast data, no historical preloading, no web scraping
+- `--disable-webconsole`: **HomeKit Only Mode** - Disables the web dashboard server
+  - **Incompatible with**: `--disable-homekit` (cannot disable both HomeKit and web console)
+  - **Use Case**: Minimal resource usage, HomeKit-only deployments, reduced attack surface
 - `--use-generated-weather`: Use simulated weather data for testing (automatically sets station-url)
-- `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome)
+- `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome, incompatible with `--disable-internet`)
 - `--version`: Show version information and exit
 - `--web-port`: Web dashboard port (default: "8080")
 
@@ -289,7 +298,8 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `TEMPEST_STATION_NAME`: Station name
 - `STATION_URL`: Custom station URL for weather data (overrides Tempest API)
 - `UDP_STREAM`: Enable UDP broadcast listener (true/false)
-- `NO_INTERNET`: Disable all internet access (true/false, requires UDP_STREAM=true)
+- `DISABLE_INTERNET` / `NO_INTERNET`: Disable all internet access (true/false, requires UDP_STREAM=true or USE_GENERATED_WEATHER=true)
+- `DISABLE_WEBCONSOLE`: Disable web dashboard server (true/false)
 - `HOMEKIT_PIN`: HomeKit PIN
 - `LOG_LEVEL`: Logging level
 - `SENSORS`: Sensors to enable (default: "temp,lux,humidity")
@@ -326,6 +336,43 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 
 # Minimal sensor set
 ./tempest-homekit-go --token "your-token" --sensors "min"
+```
+
+### Offline Mode Examples
+```bash
+# Valid: Full offline mode with UDP stream (real station)
+./tempest-homekit-go --token "your-token" --udp-stream --disable-internet
+
+# Valid: Full offline mode with generated weather (testing/simulation)
+./tempest-homekit-go --disable-internet --use-generated-weather
+
+# Valid: Offline with custom sensors (--no-internet also works as alias)
+./tempest-homekit-go --token "your-token" --udp-stream --no-internet --sensors "temp,humidity,pressure"
+
+# Invalid: Missing data source
+./tempest-homekit-go --token "your-token" --disable-internet
+# ERROR: --disable-internet mode requires --udp-stream or --use-generated-weather (need a local data source)
+
+# Invalid: Can't use web scraping in offline mode
+./tempest-homekit-go --token "your-token" --udp-stream --disable-internet --use-web-status
+# ERROR: --use-web-status cannot be used with --disable-internet (requires internet access)
+
+# Invalid: Can't preload history in offline mode
+./tempest-homekit-go --token "your-token" --udp-stream --disable-internet --read-history
+# ERROR: --read-history cannot be used with --disable-internet (requires WeatherFlow API access)
+```
+
+### HomeKit Only Mode Examples
+```bash
+# Valid: HomeKit only, no web console
+./tempest-homekit-go --token "your-token" --disable-webconsole
+
+# Valid: Offline HomeKit with UDP stream, no web console
+./tempest-homekit-go --token "your-token" --udp-stream --disable-internet --disable-webconsole
+
+# Invalid: Can't disable both HomeKit and web console
+./tempest-homekit-go --token "your-token" --disable-homekit --disable-webconsole
+# ERROR: cannot disable both HomeKit (--disable-homekit) and web console (--disable-webconsole) - at least one service must be enabled
 ```
 
 ### Validation Examples
@@ -426,18 +473,76 @@ The UDP stream feature enables local monitoring of your Tempest station without 
 
 When your internet connection goes down, the WeatherFlow API becomes unavailable. With UDP streaming enabled, your Tempest hub broadcasts weather observations on your local network, allowing continuous monitoring without cloud access.
 
+#### Operation Modes
+
+**1. Hybrid Mode (UDP + Internet)**
 ```bash
-# Enable UDP stream (still allows API token for forecasts when internet is available)
+# UDP for real-time observations, API for forecast/history (recommended for most users)
 ./tempest-homekit-go --udp-stream --token "your-token"
 
-# Full offline mode (no internet access at all)
-./tempest-homekit-go --udp-stream --no-internet
+# Add historical data preloading from API
+./tempest-homekit-go --udp-stream --read-history --token "your-token"
 
-# UDP mode with custom sensors and logging
+# Include web scraping for detailed device status
+./tempest-homekit-go --udp-stream --use-web-status --token "your-token"
+```
+- ✅ Real-time UDP observations every 60 seconds
+- ✅ Forecast data from WeatherFlow API
+- ✅ Historical data preloading available
+- ✅ Optional web scraping for battery/RSSI status
+
+**2. Full Offline Mode (UDP Only)**
+```bash
+# Complete offline operation - no internet access at all
+./tempest-homekit-go --udp-stream --disable-internet
+
+# Offline mode with custom sensors and debug logging (--no-internet alias also works)
 ./tempest-homekit-go --udp-stream --no-internet --sensors "temp,humidity,lux,wind" --loglevel debug
 ```
+- ✅ Real-time UDP observations only
+- ❌ No forecast data
+- ❌ No historical data preloading (`--read-history` not allowed)
+- ❌ No web scraping (`--use-web-status` not allowed)
+- ✅ Zero internet dependency - works during complete outages
+- ℹ️ API token (`--token`) still required but not used for network calls
 
-**Requirements:**
+**3. HomeKit Only Mode (No Web Console)**
+```bash
+# HomeKit accessories only, disable web dashboard
+./tempest-homekit-go --token "your-token" --disable-webconsole
+
+# HomeKit only with offline mode
+./tempest-homekit-go --token "your-token" --udp-stream --disable-internet --disable-webconsole
+```
+- ✅ HomeKit accessories enabled
+- ❌ Web dashboard disabled (port not opened)
+- ✅ Reduced resource usage
+- ✅ Minimal attack surface
+
+#### Configuration Validation
+
+The `--disable-internet` flag enforces strict validation to prevent conflicting configurations:
+
+| Configuration | Result | Reason |
+|--------------|--------|--------|
+| `--disable-internet` alone | ❌ **ERROR** | Requires local data source |
+| `--disable-internet --udp-stream` | ✅ **Valid** | Pure offline mode with real station |
+| `--disable-internet --use-generated-weather` | ✅ **Valid** | Pure offline mode with simulated data |
+| `--disable-internet --use-web-status` | ❌ **ERROR** | Web scraping requires internet access |
+| `--disable-internet --read-history` | ❌ **ERROR** | Historical data requires WeatherFlow API |
+| `--disable-internet --udp-stream --read-history` | ❌ **ERROR** | History requires API calls |
+| `--disable-homekit --disable-webconsole` | ❌ **ERROR** | At least one service must be enabled |
+
+**Error Messages:**
+```
+ERROR: --no-internet mode requires --udp-stream or --use-generated-weather (need a local data source)
+ERROR: --use-web-status cannot be used with --no-internet (requires internet access)
+ERROR: --read-history cannot be used with --no-internet (requires WeatherFlow API access)
+```
+
+#### Network Requirements
+
+**Hardware:**
 - Tempest hub and monitoring device must be on the same local network
 - UDP port 50222 must be accessible (no firewall blocking)
 - Hub broadcasts observations every 60 seconds
@@ -448,7 +553,7 @@ When your internet connection goes down, the WeatherFlow API becomes unavailable
 - **Hub Status**: Firmware version, uptime, reset flags
 - **No Internet Required**: Complete offline operation with `--no-internet` flag
 
-**Network Requirements:**
+**Network Topology:**
 - Both devices on same subnet (hub broadcasts to 255.255.255.255)
 - No special router configuration needed for standard LAN setups
 
@@ -778,6 +883,18 @@ rm -f ./db/accessories.json
 Enable detailed logging for troubleshooting:
 ```bash
 ./tempest-homekit-go --loglevel debug --token "your-token"
+```
+
+Filter logs to show only specific messages (case-insensitive):
+```bash
+# Show only UDP-related messages
+./tempest-homekit-go --loglevel debug --logfilter "udp" --udp-stream
+
+# Show only forecast-related messages
+./tempest-homekit-go --loglevel info --logfilter "forecast" --token "your-token"
+
+# Show only observation parsing messages
+./tempest-homekit-go --loglevel debug --logfilter "parsed" --udp-stream
 ```
 
 ### Service Issues

@@ -5,13 +5,13 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"os"
 	"sort"
 	"strings"
 	"sync"
+	"tempest-homekit-go/pkg/logger"
 	"time"
 
 	"tempest-homekit-go/pkg/generator"
@@ -57,21 +57,21 @@ type WebServer struct {
 // logDebug prints debug messages only if log level is debug
 func (ws *WebServer) logDebug(format string, v ...interface{}) {
 	if ws.logLevel == "debug" {
-		log.Printf("DEBUG: "+format, v...)
+		logger.Debug(format, v...)
 	}
 }
 
 // logInfo prints info and debug messages only if log level is debug or info
 func (ws *WebServer) logInfo(format string, v ...interface{}) {
 	if ws.logLevel == "debug" || ws.logLevel == "info" {
-		log.Printf("INFO: "+format, v...)
+		logger.Info(format, v...)
 	}
 }
 
 // logError always prints error messages
 // nolint:deadcode,unused // intentionally kept for future use and referenced via no-op assignments
 func (ws *WebServer) logError(format string, v ...interface{}) {
-	log.Printf("ERROR: "+format, v...)
+	logger.Error(format, v...)
 }
 
 // Reference logError at package scope so staticcheck/gopls don't report it as unused.
@@ -2419,8 +2419,8 @@ func (ws *WebServer) getDashboardHTML() string {
                         <span class="info-label">Station:</span>
                         <span class="info-value" id="tempest-station">--</span>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Station URL:</span>
+                    <div class="info-row" id="tempest-station-url-row">
+                        <span class="info-label" id="tempest-station-url-label">Station URL:</span>
                         <span class="info-value" id="tempest-station-url">--</span>
                     </div>
                     <div class="info-row">
