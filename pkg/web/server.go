@@ -68,7 +68,7 @@ func (ws *WebServer) logInfo(format string, v ...interface{}) {
 // logError always prints error messages
 // nolint:deadcode,unused // intentionally kept for future use and referenced via no-op assignments
 func (ws *WebServer) logError(format string, v ...interface{}) {
-    log.Printf("ERROR: "+format, v...)
+	log.Printf("ERROR: "+format, v...)
 }
 
 // Reference logError at package scope so staticcheck/gopls don't report it as unused.
@@ -78,32 +78,33 @@ var _ = (*WebServer).logError
 
 // Extra no-op closure to ensure static analyzers treat logError as referenced.
 var _ = func() interface{} {
-    var ws *WebServer
-    // take method value; safe even with nil receiver
-    _ = ws.logError
-    return nil
+	var ws *WebServer
+	// take method value; safe even with nil receiver
+	_ = ws.logError
+	return nil
 }()
 
 type WeatherResponse struct {
-	Temperature          float64 `json:"temperature"`
-	Humidity             float64 `json:"humidity"`
-	WindSpeed            float64 `json:"windSpeed"`
-	WindGust             float64 `json:"windGust"`
-	WindDirection        float64 `json:"windDirection"`
-	RainAccum            float64 `json:"rainAccum"`
-	RainDailyTotal       float64 `json:"rainDailyTotal"`
-	PrecipitationType    int     `json:"precipitationType"`
-	Pressure             float64 `json:"pressure"`
-	SeaLevelPressure     float64 `json:"seaLevelPressure"`
-	PressureCondition    string  `json:"pressure_condition"`
-	PressureTrend        string  `json:"pressure_trend"`
-	WeatherForecast      string  `json:"weather_forecast"`
-	Illuminance          float64 `json:"illuminance"`
-	UV                   int     `json:"uv"`
-	Battery              float64 `json:"battery"`
-	LightningStrikeAvg   float64 `json:"lightningStrikeAvg"`
-	LightningStrikeCount int     `json:"lightningStrikeCount"`
-	LastUpdate           string  `json:"lastUpdate"`
+	Temperature          float64           `json:"temperature"`
+	Humidity             float64           `json:"humidity"`
+	WindSpeed            float64           `json:"windSpeed"`
+	WindGust             float64           `json:"windGust"`
+	WindDirection        float64           `json:"windDirection"`
+	RainAccum            float64           `json:"rainAccum"`
+	RainDailyTotal       float64           `json:"rainDailyTotal"`
+	PrecipitationType    int               `json:"precipitationType"`
+	Pressure             float64           `json:"pressure"`
+	SeaLevelPressure     float64           `json:"seaLevelPressure"`
+	PressureCondition    string            `json:"pressure_condition"`
+	PressureTrend        string            `json:"pressure_trend"`
+	WeatherForecast      string            `json:"weather_forecast"`
+	Illuminance          float64           `json:"illuminance"`
+	UV                   int               `json:"uv"`
+	Battery              float64           `json:"battery"`
+	LightningStrikeAvg   float64           `json:"lightningStrikeAvg"`
+	LightningStrikeCount int               `json:"lightningStrikeCount"`
+	LastUpdate           string            `json:"lastUpdate"`
+	UnitHints            map[string]string `json:"unitHints,omitempty"`
 }
 
 type StatusResponse struct {
@@ -127,6 +128,7 @@ type StatusResponse struct {
 	Forecast         *weather.ForecastResponse `json:"forecast,omitempty"`
 	StationStatus    *weather.StationStatus    `json:"stationStatus,omitempty"`
 	GeneratedWeather *GeneratedWeatherInfo     `json:"generatedWeather,omitempty"`
+	UnitHints        map[string]string         `json:"unitHints,omitempty"`
 }
 
 // GeneratedWeatherInfo contains information about generated weather data
@@ -376,6 +378,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 	mux.HandleFunc("/", ws.handleDashboard)
 	mux.HandleFunc("/api/weather", ws.handleWeatherAPI)
 	mux.HandleFunc("/api/status", ws.handleStatusAPI)
+	mux.HandleFunc("/chart/", ws.handleChartPage)
 	mux.HandleFunc("/api/regenerate-weather", ws.handleRegenerateWeatherAPI)
 	mux.HandleFunc("/api/generate-weather", ws.handleGenerateWeatherAPI)
 	mux.HandleFunc("/api/units", ws.handleUnitsAPI)
@@ -385,9 +388,9 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 		Handler: mux,
 	}
 
-    // ensure logError is considered used by analyzers: take method value here
-    // (this is a no-op assignment and safe with the current ws instance)
-    _ = ws.logError
+	// ensure logError is considered used by analyzers: take method value here
+	// (this is a no-op assignment and safe with the current ws instance)
+	_ = ws.logError
 
 	return ws
 }
@@ -623,10 +626,27 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		LastUpdate:           time.Unix(ws.weatherData.Timestamp, 0).Format(time.RFC3339),
 	}
 
+	// Provide explicit unit hints for the client. These describe the units used in the numeric
+	// fields returned by this API so clients (like the popout) can perform deterministic
+	// conversions when necessary. These are the units used internally by the server/data.
+	response.UnitHints = map[string]string{
+		"temperature": "celsius",
+		"pressure":    "mb",
+		"wind":        "mph",
+		"rain":        "inches",
+	}
+
 	ws.logDebug("Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %d, Illuminance: %.0f lux",
 		response.Temperature, response.Humidity, response.UV, response.Illuminance)
 
-	json.NewEncoder(w).Encode(response)
+	// Marshal to JSON first so we can log the exact payload sent to clients
+	if b, err := json.Marshal(response); err == nil {
+		ws.logDebug("Weather API JSON payload: %s", string(b))
+		_, _ = w.Write(b)
+		return
+	}
+	// Fallback to encoder if marshalling unexpectedly fails
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
@@ -703,6 +723,16 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 		GeneratedWeather:     ws.generatedWeather,
 	}
 
+	// Provide explicit unit hints for the client to indicate the units used in the
+	// DataHistory entries and other numeric fields. This helps the popout determine
+	// whether a conversion is required when the user requests a different display unit.
+	response.UnitHints = map[string]string{
+		"temperature": "celsius",
+		"pressure":    "mb",
+		"wind":        "mph",
+		"rain":        "inches",
+	}
+
 	// Add progress information
 	response.HistoryLoadingProgress.IsLoading = ws.historyLoadingProgress.isLoading
 	response.HistoryLoadingProgress.CurrentStep = ws.historyLoadingProgress.currentStep
@@ -730,7 +760,30 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	ws.logDebug("Station status retrieved - Source: %s, Battery: %s, LastScraped: %s",
 		stationStatus.DataSource, stationStatus.BatteryVoltage, stationStatus.LastScraped)
 
-	json.NewEncoder(w).Encode(response)
+	// Marshal to JSON first so tests can inspect the exact payload and to provide
+	// clearer debugging output when headless tests observe unexpected/missing fields.
+	if b, err := json.Marshal(response); err == nil {
+		ws.logDebug("Status API JSON payload: %s", string(b))
+		_, _ = w.Write(b)
+		return
+	}
+	// Fallback
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+// handleChartPage serves a dedicated chart page for a given weather type.
+// URL format: /chart/<type>?config=<urlencoded-json>
+func (ws *WebServer) handleChartPage(w http.ResponseWriter, r *http.Request) {
+	// Expected path: /chart/<type>
+	ws.logDebug("Chart page requested: %s", r.URL.Path)
+
+	// Serve the static chart.html template (script will read query params)
+	if strings.HasPrefix(r.URL.Path, "/chart/") {
+		http.ServeFile(w, r, "./pkg/web/static/chart.html")
+		return
+	}
+
+	http.NotFound(w, r)
 }
 
 // handleRegenerateWeatherAPI handles requests to regenerate weather data for testing

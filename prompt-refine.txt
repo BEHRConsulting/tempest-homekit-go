@@ -61,7 +61,7 @@
 
 [] In the web console, Tempest Station card, shorten the link lable to 15 characters to fit within the card. hover to show full url.
 
-[] Let's start from scratch on the /chart/* feature. When clicking on a chart in the web console, I want the /chart/<weather-type> to open a new window/tab that is a dedicated version of the dashboard graph that was clicked. The data units, data history, time format, color, and lines that were on the card graph should be on the dedicated graph page. 
+[] Let's start on the /chart/<weather-type> feature. When clicking on a chart in the web console, I want the /chart/<weather-type> to open a new window/tab that is a dedicated version of the dashboard graph that was clicked. The data units, data history, time format, color, and lines that were on the card graph should be on the dedicated graph page. 
 
 [] Create or update WORK_LOG.md file that shows what went into creation of this application both from myself and Copilot. Time spent, major design changes, the best and worst prompts. Anything else that makes since to be in a work log.
 

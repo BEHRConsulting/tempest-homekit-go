@@ -35,6 +35,21 @@ let units = {
     pressure: localStorage.getItem('pressure-unit') || 'mb'
 };
 
+// Friendly unit label helper (keeps formatting consistent with chart.html)
+function prettyUnitLabel(key, val) {
+    const map = {
+        temperature: { celsius: '°C', fahrenheit: '°F' },
+        temp: { celsius: '°C', fahrenheit: '°F' },
+        wind: { mph: 'mph', kmh: 'km/h', kph: 'km/h', mps: 'm/s' },
+        rain: { inches: 'in', mm: 'mm' },
+        pressure: { inHg: 'inHg', mb: 'mb', hpa: 'hPa' },
+        uv: { uv: 'UV' },
+        illuminance: { lux: 'lux' }
+    };
+    const km = map[key] || map[key.toLowerCase()] || {};
+    return (km[val] || val || '').toString();
+}
+
 // Load units configuration from server
 async function loadUnitsConfig() {
     try {
@@ -80,6 +95,45 @@ let forecastData = null; // Store current forecast data for unit conversions
 let statusData = null; // Store current status data for unit conversions
 const charts = {};
 
+// Provide a global openChartPopout so click handlers can call it even if
+// forceChartColors() or other initialization hasn't finished. This mirrors
+// the per-dataset metadata encoding used by the internal helper.
+window.openChartPopout = window.openChartPopout || function(type, field, title, color) {
+    try {
+        const chartObj = charts[type];
+        const datasetsMeta = [];
+        if (chartObj && chartObj.data && Array.isArray(chartObj.data.datasets)) {
+            chartObj.data.datasets.forEach(ds => {
+                const meta = {};
+                if (ds.label) meta.label = ds.label;
+                if (ds.borderColor) meta.borderColor = ds.borderColor;
+                if (ds.backgroundColor) meta.backgroundColor = ds.backgroundColor;
+                if (ds.borderDash) meta.borderDash = ds.borderDash;
+                if (ds.borderWidth !== undefined) meta.borderWidth = ds.borderWidth;
+                if (ds.fill !== undefined) meta.fill = ds.fill;
+                if (ds.pointRadius !== undefined) meta.pointRadius = ds.pointRadius;
+                if (ds.tension !== undefined) meta.tension = ds.tension;
+                if (ds.pointStyle !== undefined) meta.pointStyle = ds.pointStyle;
+                if (ds.showLine !== undefined) meta.showLine = ds.showLine;
+                if (ds.stepped !== undefined) meta.stepped = ds.stepped;
+                if (ds.order !== undefined) meta.order = ds.order;
+                if (ds.spanGaps !== undefined) meta.spanGaps = ds.spanGaps;
+                if (String(ds.label).toLowerCase().includes('average')) meta.role = 'average';
+                if (String(ds.label).toLowerCase().includes('trend')) meta.role = 'trend';
+                if (String(ds.label).toLowerCase().includes('today') || String(ds.label).toLowerCase().includes('total')) meta.role = 'total';
+                datasetsMeta.push(meta);
+            });
+        }
+
+        const cfg = { type: type, field: field, title: title, color: color, units: units, datasets: datasetsMeta };
+        const encoded = encodeURIComponent(JSON.stringify(cfg));
+        const url = '/chart/' + type + '?config=' + encoded;
+        window.open(url, '_blank');
+    } catch (e) {
+        debugLog(logLevels.ERROR, 'Global openChartPopout failed', e);
+    }
+};
+
 // Expose minimal debug hooks for automated tests / headless browsers.
 // These do not alter application behavior and simply return current in-memory state.
 window.getWeatherData = function() { return weatherData; };
@@ -87,6 +141,86 @@ window.getCharts = function() { return charts; };
 const maxDataPoints = 1000; // As specified in requirements
 
 // Ensure a given dataset index exists on a chart. Creates a minimal dataset if missing.
+// Guard counter to avoid infinite retry loops when initializing charts fails repeatedly
+let __chartInitAttempts = 0;
+// Flag to indicate charts have been successfully initialized
+let __chartsInitialized = false;
+// Flag to indicate vendor Chart.js is currently being loaded
+let __chartVendorLoading = false;
+// Whether we've attempted a global Chart.destroy() sweep already
+let __didGlobalChartDestroy = false;
+// Flags to indicate initial data fetch completion
+let __weatherFetched = false;
+let __statusFetched = false;
+// Public readiness flag for tests to wait on
+window.__dashboardReady = window.__dashboardReady || false;
+
+function trySetDashboardReady() {
+    try {
+            if (window.__dashboardReady) return;
+            try {
+                // require charts initialized, first fetches done, and temperature chart has >=2 data points
+                const tempHasData = charts && charts.temperature && charts.temperature.data && charts.temperature.data.datasets && charts.temperature.data.datasets[0] && charts.temperature.data.datasets[0].data && charts.temperature.data.datasets[0].data.length >= 2;
+
+                if (__chartsInitialized && __weatherFetched && __statusFetched && tempHasData) {
+                    window.__dashboardReady = true;
+                    debugLog(logLevels.INFO, 'Dashboard ready - window.__dashboardReady set to true (includes temperature dataset length check)');
+                }
+            } catch (e) {
+                // safe fallback: don't block if charts object is malformed
+                console.warn('trySetDashboardReady: error checking dataset lengths', e);
+                if (__chartsInitialized && __weatherFetched && __statusFetched) {
+                    window.__dashboardReady = true;
+                    debugLog(logLevels.INFO, 'Dashboard ready - window.__dashboardReady set to true (fallback)');
+                }
+        }
+    } catch (e) {
+        debugLog(logLevels.WARN, 'trySetDashboardReady encountered error', e);
+    }
+}
+
+function destroyAllCharts() {
+    try {
+        if (typeof Chart === 'undefined') return;
+
+        // Destroy any chart instances tracked by Chart.js itself
+        try {
+            // Chart.instances may be an object or Map-like; handle both
+            const instances = Chart.instances ? Object.values(Chart.instances) : [];
+            instances.forEach(inst => {
+                try {
+                    if (inst && typeof inst.destroy === 'function') {
+                        inst.destroy();
+                    }
+                } catch (e) {
+                    debugLog(logLevels.WARN, 'Failed to destroy Chart instance during global sweep', e);
+                }
+            });
+        } catch (e) {
+            debugLog(logLevels.WARN, 'Error enumerating Chart.instances', e);
+        }
+
+        // Also try Chart.getChart on known canvases as a fallback
+        const canvasIds = ['temperature-chart','humidity-chart','wind-chart','rain-chart','pressure-chart','light-chart','uv-chart'];
+        canvasIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            try {
+                const existing = (typeof Chart.getChart === 'function') ? Chart.getChart(el) : null;
+                if (existing && typeof existing.destroy === 'function') existing.destroy();
+            } catch (e) {
+                debugLog(logLevels.WARN, `Error destroying chart via getChart for ${id}`, e);
+            }
+        });
+
+        // Clear our charts map
+        Object.keys(charts).forEach(k => delete charts[k]);
+        __didGlobalChartDestroy = true;
+        debugLog(logLevels.INFO, 'Global Chart.js sweep completed - destroyed existing charts');
+    } catch (e) {
+        debugLog(logLevels.WARN, 'destroyAllCharts encountered an error', e);
+    }
+}
 function ensureDataset(chart, index) {
     if (!chart || !chart.data) return;
     if (!chart.data.datasets) chart.data.datasets = [];
@@ -101,6 +235,47 @@ function ensureDataset(chart, index) {
 function initCharts() {
     debugLog(logLevels.DEBUG, 'Initializing all charts with configuration');
     
+    // If Chart.js has already created Chart instances on these canvases,
+    // destroy them first to avoid "Canvas is already in use" errors when
+    // re-initializing (headless tests or dynamic reload scenarios).
+    try {
+        if (typeof Chart !== 'undefined' && Chart.getChart) {
+            // Map canvas IDs to chart keys so we can null out the charts object
+            const mapping = {
+                'temperature-chart': 'temperature',
+                'humidity-chart': 'humidity',
+                'wind-chart': 'wind',
+                'rain-chart': 'rain',
+                'pressure-chart': 'pressure',
+                'light-chart': 'light',
+                'uv-chart': 'uv'
+            };
+
+            Object.keys(mapping).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    try {
+                        const existing = Chart.getChart(el);
+                        if (existing && typeof existing.destroy === 'function') {
+                            debugLog(logLevels.DEBUG, `Destroying existing Chart instance for canvas: ${id}`);
+                            existing.destroy();
+                        }
+                    } catch (e) {
+                        debugLog(logLevels.WARN, `Failed to destroy existing Chart for ${id}`, e);
+                    }
+
+                    // Ensure we remove any lingering reference in the charts map
+                    const key = mapping[id];
+                    if (charts[key]) {
+                        try { delete charts[key]; } catch(_) { charts[key] = null; }
+                    }
+                }
+            });
+        }
+    } catch (e) {
+        debugLog(logLevels.WARN, 'Error while cleaning up existing Chart instances', e);
+    }
+
     // Set Chart.js default locale to ensure 24-hour format
     Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     
@@ -121,18 +296,15 @@ function initCharts() {
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    backgroundColor: 'rgba(20,20,20,0.9)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    padding: 8,
+                    cornerRadius: 6,
                     callbacks: {
                         title: function(context) {
-                            // Force 24-hour format for tooltip titles
                             const date = new Date(context[0].parsed.x);
-                            return date.toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: '2-digit' 
-                            }) + ', ' + date.toLocaleTimeString('en-GB', { 
-                                hour: '2-digit', 
-                                minute: '2-digit',
-                                hour12: false 
-                            });
+                            return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
                         }
                     }
                 }
@@ -142,79 +314,33 @@ function initCharts() {
                     display: true,
                     type: 'time',
                     time: {
-                        displayFormats: {
-                            minute: 'HH:mm',
-                            hour: 'HH:mm',
-                            day: 'MMM dd'
-                        },
+                        displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'MMM dd' },
                         tooltipFormat: 'MMM dd, HH:mm'
                     },
-                    grid: {
-                        display: true,
-                        color: 'rgba(0,0,0,0.1)'
-                    },
-                    ticks: {
-                        maxTicksLimit: 6,
-                        color: '#666',
-                        font: {
-                            size: 10
-                        },
-                        callback: function(value, index, values) {
-                            // Force 24-hour format for tick labels
-                            return new Date(value).toLocaleTimeString('en-GB', { 
-                                hour: '2-digit', 
-                                minute: '2-digit',
-                                hour12: false 
-                            });
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Time',
-                        color: '#666',
-                        font: {
-                            size: 12
-                        }
-                    }
+                    grid: { display: true, color: 'rgba(0,0,0,0.06)' },
+                    ticks: { maxTicksLimit: 6, color: '#666', font: { size: 11 }, callback: function(value){ return new Date(value).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }); } },
+                    title: { display: false }
                 },
                 y: {
                     display: true,
-                    grid: {
-                        display: true,
-                        color: 'rgba(0,0,0,0.1)'
-                    },
-                    ticks: {
-                        maxTicksLimit: 5,
-                        color: '#666',
-                        font: {
-                            size: 10
-                        },
-                        callback: function(value) {
-                            return value.toFixed(1);
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Value',
-                        color: '#666',
-                        font: {
-                            size: 12
-                        }
-                    }
+                    grid: { display: true, color: 'rgba(0,0,0,0.06)' },
+                    ticks: { maxTicksLimit: 5, color: '#444', font: { size: 12 }, callback: function(value){ return value.toFixed(1); } },
+                    title: { display: true, text: 'Value', color: '#444', font: { size: 12, weight: '600' } }
                 }
             },
             elements: {
-                point: { radius: 0 },
-                line: { borderWidth: 2 }
+                point: { radius: 3, hoverRadius: 5, backgroundColor: '#fff', borderWidth: 1 },
+                line: { borderWidth: 2.5, borderJoinStyle: 'round', tension: 0.35 }
             },
-            interaction: {
-                intersect: false,
-                mode: 'index'
-            }
+            interaction: { intersect: false, mode: 'index' }
         }
     };
 
-    charts.temperature = new Chart(ctxTemp, {
+    // If a chart already exists in memory, do not recreate it (prevents reuse errors)
+    if (charts.temperature && typeof charts.temperature.update === 'function') {
+        debugLog(logLevels.INFO, 'Temperature chart already exists in memory; skipping creation');
+    } else {
+        charts.temperature = new Chart(ctxTemp, {
         ...chartConfig,
         data: {
             datasets: [{
@@ -238,6 +364,11 @@ function initCharts() {
             }]
         }
     });
+        // clicking on a chart should open a pop-out detailed chart page
+        document.getElementById('temperature-chart').addEventListener('click', function(){
+            openChartPopout('temperature', 'temperature', 'Temperature', charts.temperature.data.datasets[0].borderColor);
+        });
+    }
     
     // Force the colors after creation
     charts.temperature.data.datasets[1].borderColor = '#00cc66';
@@ -248,7 +379,10 @@ function initCharts() {
         avgColor: charts.temperature.data.datasets[1].borderColor
     });
 
-    charts.humidity = new Chart(ctxHumidity, {
+    if (charts.humidity && typeof charts.humidity.update === 'function') {
+        debugLog(logLevels.INFO, 'Humidity chart already exists in memory; skipping creation');
+    } else {
+        charts.humidity = new Chart(ctxHumidity, {
         ...chartConfig,
         data: {
             datasets: [{
@@ -272,6 +406,10 @@ function initCharts() {
             }]
         }
     });
+        document.getElementById('humidity-chart').addEventListener('click', function(){
+            openChartPopout('humidity', 'humidity', 'Humidity', charts.humidity.data.datasets[0].borderColor);
+        });
+    }
     
     // Force the colors after creation
     charts.humidity.data.datasets[1].borderColor = '#ff8533';
@@ -282,7 +420,10 @@ function initCharts() {
         avgColor: charts.humidity.data.datasets[1].borderColor
     });
 
-    charts.wind = new Chart(ctxWind, {
+    if (charts.wind && typeof charts.wind.update === 'function') {
+        debugLog(logLevels.INFO, 'Wind chart already exists in memory; skipping creation');
+    } else {
+        charts.wind = new Chart(ctxWind, {
         ...chartConfig,
         data: {
             datasets: [{
@@ -306,8 +447,15 @@ function initCharts() {
             }]
         }
     });
+        document.getElementById('wind-chart').addEventListener('click', function(){
+            openChartPopout('wind', 'windSpeed', 'Wind Speed', charts.wind.data.datasets[0].borderColor);
+        });
+    }
 
-    charts.rain = new Chart(ctxRain, {
+    if (charts.rain && typeof charts.rain.update === 'function') {
+        debugLog(logLevels.INFO, 'Rain chart already exists in memory; skipping creation');
+    } else {
+        charts.rain = new Chart(ctxRain, {
         ...chartConfig,
         data: {
             datasets: [{
@@ -363,8 +511,15 @@ function initCharts() {
             }
         }
     });
+        document.getElementById('rain-chart').addEventListener('click', function(){
+            openChartPopout('rain', 'rainAccum', 'Rain', charts.rain.data.datasets[0].borderColor);
+        });
+    }
 
-    charts.pressure = new Chart(ctxPressure, {
+    if (charts.pressure && typeof charts.pressure.update === 'function') {
+        debugLog(logLevels.INFO, 'Pressure chart already exists in memory; skipping creation');
+    } else {
+        charts.pressure = new Chart(ctxPressure, {
         ...chartConfig,
         data: {
             datasets: [{
@@ -398,8 +553,15 @@ function initCharts() {
             }]
         }
     });
+        document.getElementById('pressure-chart').addEventListener('click', function(){
+            openChartPopout('pressure', 'pressure', 'Pressure', charts.pressure.data.datasets[0].borderColor);
+        });
+    }
 
-    charts.light = new Chart(ctxLight, {
+    if (charts.light && typeof charts.light.update === 'function') {
+        debugLog(logLevels.INFO, 'Light chart already exists in memory; skipping creation');
+    } else {
+        charts.light = new Chart(ctxLight, {
         ...chartConfig,
         data: {
             datasets: [{
@@ -413,10 +575,17 @@ function initCharts() {
             }]
         }
     });
+        document.getElementById('light-chart').addEventListener('click', function(){
+            openChartPopout('light', 'illuminance', 'Illuminance', charts.light.data.datasets[0].borderColor);
+        });
+    }
 
     // Check if UV chart element exists before creating chart
     if (ctxUV) {
-        charts.uv = new Chart(ctxUV, {
+        if (charts.uv && typeof charts.uv.update === 'function') {
+            debugLog(logLevels.INFO, 'UV chart already exists in memory; skipping creation');
+        } else {
+            charts.uv = new Chart(ctxUV, {
             ...chartConfig,
             data: {
                 datasets: [{
@@ -430,7 +599,8 @@ function initCharts() {
                 }]
             }
         });
-        debugLog(logLevels.DEBUG, 'UV chart created successfully');
+            debugLog(logLevels.DEBUG, 'UV chart created successfully');
+        }
     } else {
         debugLog(logLevels.DEBUG, 'UV chart element not found, skipping UV chart creation');
     }
@@ -471,6 +641,69 @@ function forceChartColors() {
             avgColor: charts.wind.data.datasets[1].borderColor,
             avgDataPoints: charts.wind.data.datasets[1].data.length
         });
+        // Attach UV chart click handler if the uv canvas exists
+        const uvCanvasEl = document.getElementById('uv-chart');
+        if (uvCanvasEl) {
+            uvCanvasEl.addEventListener('click', function(){
+                openChartPopout('uv', 'uv', 'UV Index', charts.uv.data.datasets[0].borderColor);
+            });
+        }
+    }
+
+    // helper to open popout chart page with encoded configuration
+    function openChartPopout(type, field, title, color) {
+        try {
+            // Build a compact per-dataset metadata payload so the popout can mirror
+            // the small-card chart visuals exactly (colors, dashes, widths, fill, etc).
+            const chartObj = charts[type];
+            const datasetsMeta = [];
+            if (chartObj && chartObj.data && Array.isArray(chartObj.data.datasets)) {
+                chartObj.data.datasets.forEach(ds => {
+                    const meta = {};
+                    if (ds.label) meta.label = ds.label;
+                    if (ds.borderColor) meta.borderColor = ds.borderColor;
+                    if (ds.backgroundColor) meta.backgroundColor = ds.backgroundColor;
+                    if (ds.borderDash) meta.borderDash = ds.borderDash;
+                    if (ds.borderWidth !== undefined) meta.borderWidth = ds.borderWidth;
+                    if (ds.fill !== undefined) meta.fill = ds.fill;
+                    if (ds.pointRadius !== undefined) meta.pointRadius = ds.pointRadius;
+                    if (ds.tension !== undefined) meta.tension = ds.tension;
+                    if (ds.pointStyle !== undefined) meta.pointStyle = ds.pointStyle;
+                    if (ds.showLine !== undefined) meta.showLine = ds.showLine;
+                    if (ds.stepped !== undefined) meta.stepped = ds.stepped;
+                    if (ds.order !== undefined) meta.order = ds.order;
+                    if (ds.spanGaps !== undefined) meta.spanGaps = ds.spanGaps;
+                    // mark a simple role hint for common lines (Average/Trend/Today Total)
+                    if (String(ds.label).toLowerCase().includes('average')) meta.role = 'average';
+                    if (String(ds.label).toLowerCase().includes('trend')) meta.role = 'trend';
+                    if (String(ds.label).toLowerCase().includes('today') || String(ds.label).toLowerCase().includes('total')) meta.role = 'total';
+                    datasetsMeta.push(meta);
+                });
+            }
+
+            // Build an incomingUnits hint to inform the popout about the units the server/raw data used.
+            // Best-effort: if statusData or weatherData expose unit hints, prefer those; otherwise fall back to current `units` (safe default).
+            let incomingUnits = null;
+            try {
+                if (statusData && statusData.unitHints) {
+                    incomingUnits = statusData.unitHints;
+                } else if (weatherData && weatherData.unitHints) {
+                    incomingUnits = weatherData.unitHints;
+                } else {
+                    // fallback: assume incoming units match the current UI units
+                    incomingUnits = Object.assign({}, units);
+                }
+            } catch (e) {
+                incomingUnits = Object.assign({}, units);
+            }
+
+            const cfg = { type: type, field: field, title: title, color: color, units: units, incomingUnits: incomingUnits, datasets: datasetsMeta };
+            const encoded = encodeURIComponent(JSON.stringify(cfg));
+            const url = '/chart/' + type + '?config=' + encoded;
+            window.open(url, '_blank');
+        } catch(e) {
+            debugLog(logLevels.ERROR, 'Failed to open chart popout', e);
+        }
     }
     
     // Rain: Purple data → Yellow-green average → Orange 24h total
@@ -521,8 +754,11 @@ function updateElevationDisplay() {
 }
 
 function updateUnits() {
-    document.getElementById('temperature-unit').textContent = units.temperature === 'celsius' ? '°C' : '°F';
-    document.getElementById('wind-unit').textContent = units.wind === 'mph' ? 'mph' : 'kph';
+    // Use prettyUnitLabel to ensure consistency with popout formatting
+    const tempEl = document.getElementById('temperature-unit');
+    if (tempEl) tempEl.textContent = prettyUnitLabel('temperature', units.temperature);
+    const windEl = document.getElementById('wind-unit');
+    if (windEl) windEl.textContent = prettyUnitLabel('wind', units.wind);
     
     // Special handling for rain-unit to preserve the info icon
     const rainUnitElement = document.getElementById('rain-unit');
@@ -629,11 +865,11 @@ function toggleUnit(sensor) {
 }
 
 function updateChartLabels() {
-    // Update temperature chart label
+    // Update temperature chart label (use prettyUnitLabel for consistent formatting)
     if (charts.temperature && charts.temperature.options && charts.temperature.options.scales) {
         charts.temperature.options.scales.y.title = {
             display: true,
-            text: units.temperature === 'fahrenheit' ? 'Temperature (°F)' : 'Temperature (°C)'
+            text: `Temperature (${prettyUnitLabel('temperature', units.temperature)})`
         };
     }
     
@@ -647,7 +883,7 @@ function updateChartLabels() {
         }
         charts.wind.options.scales.y.title = {
             display: true,
-            text: `Wind Speed (${windUnit})`
+            text: `Wind Speed (${prettyUnitLabel('wind', units.wind)})`
         };
     }
     
@@ -656,7 +892,7 @@ function updateChartLabels() {
         const rainUnit = units.rain === 'inches' ? 'in' : 'mm';
         charts.rain.options.scales.y.title = {
             display: true,
-            text: `Rainfall (${rainUnit})`
+            text: `Rainfall (${prettyUnitLabel('rain', units.rain)})`
         };
     }
     
@@ -665,7 +901,7 @@ function updateChartLabels() {
         const pressureUnit = units.pressure === 'inHg' ? 'inHg' : 'mb';
         charts.pressure.options.scales.y.title = {
             display: true,
-            text: `Pressure (${pressureUnit})`
+            text: `Pressure (${prettyUnitLabel('pressure', units.pressure)})`
         };
     }
     
@@ -1963,8 +2199,10 @@ async function fetchWeather() {
             console.log('🚀 DEBUG: fetchWeather completed, calling updateCharts');
             debugLog(logLevels.INFO, 'Weather fetch completed successfully', {
                 totalTime: (performance.now() - startTime).toFixed(2) + 'ms'
-           
             });
+            // mark initial weather fetch completed for readiness gating
+            __weatherFetched = true;
+            trySetDashboardReady();
         } else {
             throw new Error(`Weather API error: ${response.status} ${response.statusText}`);
         }
@@ -1987,6 +2225,12 @@ async function fetchStatus() {
         const response = await fetch('/api/status');
         if (response.ok) {
             const status = await response.json();
+            // expose raw status JSON string for headless tests to inspect exact payload
+            try {
+                window.__lastStatusRaw = JSON.stringify(status);
+            } catch(e) {
+                // ignore
+            }
             debugLog(logLevels.DEBUG, 'Status API response received', {
                 responseTime: responseTime + 'ms',
                 connected: status.connected,
@@ -1997,6 +2241,9 @@ async function fetchStatus() {
             
             updateStatusDisplay(status);
             updateForecastDisplay(status);
+            // mark initial status fetch completed for readiness gating
+            __statusFetched = true;
+            trySetDashboardReady();
         } else {
             throw new Error(`Status API error: ${response.status}`);
         }
@@ -2866,6 +3113,18 @@ document.addEventListener('DOMContentLoaded', function() {
     loadUnitsConfig().then(() => {
         updateUnits();
     });
+
+    // Start data fetching immediately so the status UI updates even if Chart.js
+    // is unavailable or takes time to load. This prevents a ReferenceError in
+    // initCharts (when Chart is undefined) from blocking network calls and
+    // leaving the page stuck on "Connecting to weather station...".
+    try {
+        console.log('🚀 DEBUG: Starting initial data fetch (before charts)');
+        fetchWeather();
+        fetchStatus();
+    } catch (e) {
+        debugLog(logLevels.ERROR, 'Error triggering initial fetches', e);
+    }
     
     // Ensure pressure info icon has proper event listener attached initially
     const initialPressureInfoIcon = document.getElementById('pressure-info-icon');
@@ -2877,11 +3136,90 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('🔧 Initial setup - Attached click event listener to pressure info icon');
     }
     
-    console.log('🚀 DEBUG: Starting chart initialization');
-    initCharts();
-    console.log('🚀 DEBUG: Charts initialized:', Object.keys(charts));
-    console.log('🚀 DEBUG: Temperature chart exists:', !!charts.temperature);
-    console.log('🚀 DEBUG: Rain chart exists:', !!charts.rain);
+    // Initialize charts, but be resilient if Chart.js is not yet loaded.
+    // If Chart is undefined, attempt to load the local vendored copy and
+    // initialize charts when it finishes loading. Meanwhile, data fetches
+    // are already running so the UI won't be blocked.
+    (function initChartsResilient() {
+        if (__chartsInitialized) return; // already initialized successfully
+
+        __chartInitAttempts++;
+        if (__chartInitAttempts > 8) {
+            debugLog(logLevels.ERROR, 'Aborting chart initialization after multiple failed attempts', { attempts: __chartInitAttempts });
+            return;
+        }
+        console.log('🚀 DEBUG: Attempting chart initialization (resilient) attempt=' + __chartInitAttempts);
+        if (typeof Chart !== 'undefined' && !__chartsInitialized) {
+            try {
+                initCharts();
+                    console.log('🚀 DEBUG: Charts initialized:', Object.keys(charts));
+                    console.log('🚀 DEBUG: Temperature chart exists:', !!charts.temperature);
+                    console.log('🚀 DEBUG: Rain chart exists:', !!charts.rain);
+                    __chartsInitialized = true;
+                    trySetDashboardReady();
+                return;
+            } catch (e) {
+                debugLog(logLevels.ERROR, 'Error during initCharts()', e);
+                // If we detect the canvas-in-use problem, attempt a single global destroy sweep
+                if (String(e).toLowerCase().includes('canvas is already in use') && !__didGlobalChartDestroy) {
+                    debugLog(logLevels.WARN, 'Detected canvas-in-use error; performing one-time destroyAllCharts sweep before retry');
+                    destroyAllCharts();
+                    // Try once more
+                    try {
+                        initCharts();
+                        __chartsInitialized = true;
+                        debugLog(logLevels.INFO, 'Charts initialized after global destroy');
+                        return;
+                    } catch (e2) {
+                        debugLog(logLevels.ERROR, 'Second attempt to initCharts failed after destroyAllCharts', e2);
+                    }
+                }
+            }
+        }
+
+        // If Chart is missing, dynamically load local vendored Chart.js and adapter
+        if (typeof Chart === 'undefined' && !__chartVendorLoading) {
+            debugLog(logLevels.WARN, 'Chart.js not found - dynamically loading local vendored copy');
+
+            __chartVendorLoading = true;
+
+            const vendorScript = document.createElement('script');
+            vendorScript.src = '/pkg/web/static/chart.umd.js';
+            vendorScript.async = false;
+            vendorScript.onload = function() {
+                debugLog(logLevels.INFO, 'Local Chart.js loaded, attempting to initialize charts');
+                // Try to load adapter as well (if present)
+                const adapter = document.createElement('script');
+                adapter.src = '/pkg/web/static/chartjs-adapter-date-fns.bundle.min.js';
+                adapter.async = false;
+                adapter.onload = function() {
+                    try {
+                        initCharts();
+                        __chartsInitialized = true;
+                        trySetDashboardReady();
+                        console.log('🚀 DEBUG: Charts initialized after loading local Chart.js');
+                    } catch (e) {
+                        debugLog(logLevels.ERROR, 'initCharts failed after loading vendor scripts', e);
+                    }
+                };
+                adapter.onerror = function(err) {
+                    debugLog(logLevels.ERROR, 'Failed to load local Chart adapter', err || {});
+                    // Still try to initCharts in case adapter isn't required
+                    try { initCharts(); } catch (e) { debugLog(logLevels.ERROR, 'initCharts fallback failed', e); }
+                };
+                document.head.appendChild(adapter);
+            };
+            vendorScript.onerror = function(err) {
+                debugLog(logLevels.ERROR, 'Failed to load local Chart.js vendor script', err || {});
+                __chartVendorLoading = false;
+            };
+            document.head.appendChild(vendorScript);
+            return;
+        }
+
+        // As a final fallback, try again shortly
+        setTimeout(initChartsResilient, 500);
+    })();
 
     // Attach event listeners with debug logging
     debugLog(logLevels.DEBUG, 'Starting to attach event listeners');
@@ -2991,82 +3329,88 @@ async function regenerateWeather() {
 }
 
 // Debug function to test chart functionality
-window.testCharts = function() {
-    console.log('🔧 Testing charts functionality');
-    console.log('Charts object:', charts);
-    console.log('Chart.js available:', typeof Chart !== 'undefined');
-    console.log('Temperature chart exists:', !!charts.temperature);
-    console.log('Rain chart exists:', !!charts.rain);
-    
-    if (charts.temperature) {
-        console.log('Temperature chart data length:', charts.temperature.data.datasets[0].data.length);
-    }
-    
-    if (charts.rain) {
-        console.log('Rain chart data length:', charts.rain.data.datasets[0].data.length);
-        console.log('Rain chart datasets:', charts.rain.data.datasets.length);
-    }
-    
-    console.log('weatherData:', weatherData);
-    
-    // Try to add a test point
-    if (weatherData && charts.temperature) {
-        try {
-            const testPoint = { x: new Date(), y: 25 };
-            charts.temperature.data.datasets[0].data.push(testPoint);
-            charts.temperature.update();
-            console.log('✅ Successfully added test point to temperature chart');
-        } catch (error) {
-            console.error('❌ Failed to add test point:', error);
-        }
-    }
-};
-
-// Deep chart diagnosis function
-window.diagnoseCharts = function() {
-    console.log("🔬 DEEP CHART DIAGNOSIS:");
-    
-    Object.keys(charts).forEach(chartName => {
-        const chart = charts[chartName];
-        const canvas = document.getElementById(`${chartName}-chart`);
+if (DEBUG_MODE) {
+    window.testCharts = function() {
+        console.log('🔧 Testing charts functionality');
+        console.log('Charts object:', charts);
+        console.log('Chart.js available:', typeof Chart !== 'undefined');
+        console.log('Temperature chart exists:', !!charts.temperature);
+        console.log('Rain chart exists:', !!charts.rain);
         
-        console.log(`\n📊 ${chartName.toUpperCase()} CHART:`);
-        console.log("  Chart Object:", !!chart);
-        console.log("  Canvas Element:", !!canvas);
-        console.log("  Canvas Visible:", canvas ? (canvas.offsetWidth > 0 && canvas.offsetHeight > 0) : false);
-        console.log("  Canvas Dimensions:", canvas ? `${canvas.width}x${canvas.height}` : 'N/A');
-        
-        if (chart) {
-            console.log("  Chart Data:");
-            console.log("    Datasets:", chart.data?.datasets?.length || 0);
-            console.log("    Labels:", chart.data?.labels?.length || 0);
-            
-            chart.data?.datasets?.forEach((dataset, idx) => {
-                console.log(`    Dataset ${idx}:`, {
-                    label: dataset.label,
-                    dataPoints: dataset.data?.length || 0,
-                    lastPoint: dataset.data?.[dataset.data.length - 1],
-                    borderColor: dataset.borderColor,
-                    backgroundColor: dataset.backgroundColor
-                });
-            });
-            
-            // Try to force update
+        if (charts.temperature) {
             try {
-                chart.update('none');
-                console.log("  ✅ Chart.update() succeeded");
+                console.log('Temperature chart data length:', charts.temperature.data.datasets[0].data.length);
+            } catch (e) { console.log('Temperature chart data not available yet'); }
+        }
+        
+        if (charts.rain) {
+            try {
+                console.log('Rain chart data length:', charts.rain.data.datasets[0].data.length);
+                console.log('Rain chart datasets:', charts.rain.data.datasets.length);
+            } catch (e) { console.log('Rain chart data not available yet'); }
+        }
+        
+        console.log('weatherData:', weatherData);
+        
+        // Try to add a test point
+        if (weatherData && charts.temperature) {
+            try {
+                const testPoint = { x: new Date(), y: 25 };
+                charts.temperature.data.datasets[0].data.push(testPoint);
+                charts.temperature.update();
+                console.log('✅ Successfully added test point to temperature chart');
             } catch (error) {
-                console.log("  ❌ Chart.update() failed:", error);
+                console.error('❌ Failed to add test point:', error);
             }
         }
-    });
-    
-    // Also test Chart.js availability
-    console.log("\n🔧 CHART.JS STATUS:");
-    console.log("  Chart.js loaded:", typeof Chart !== 'undefined');
-    console.log("  Chart version:", Chart?.version || 'Unknown');
-    console.log("  Chart instances:", Chart?.instances?.length || 0);
-};
+    };
+
+    // Deep chart diagnosis function
+    window.diagnoseCharts = function() {
+        console.log("🔬 DEEP CHART DIAGNOSIS:");
+        
+        Object.keys(charts).forEach(chartName => {
+            const chart = charts[chartName];
+            const canvas = document.getElementById(`${chartName}-chart`);
+            
+            console.log(`\n📊 ${chartName.toUpperCase()} CHART:`);
+            console.log("  Chart Object:", !!chart);
+            console.log("  Canvas Element:", !!canvas);
+            console.log("  Canvas Visible:", canvas ? (canvas.offsetWidth > 0 && canvas.offsetHeight > 0) : false);
+            console.log("  Canvas Dimensions:", canvas ? `${canvas.width}x${canvas.height}` : 'N/A');
+            
+            if (chart) {
+                console.log("  Chart Data:");
+                console.log("    Datasets:", chart.data?.datasets?.length || 0);
+                console.log("    Labels:", chart.data?.labels?.length || 0);
+                
+                chart.data?.datasets?.forEach((dataset, idx) => {
+                    console.log(`    Dataset ${idx}:`, {
+                        label: dataset.label,
+                        dataPoints: dataset.data?.length || 0,
+                        lastPoint: dataset.data?.[dataset.data.length - 1],
+                        borderColor: dataset.borderColor,
+                        backgroundColor: dataset.backgroundColor
+                    });
+                });
+                
+                // Try to force update
+                try {
+                    chart.update('none');
+                    console.log("  ✅ Chart.update() succeeded");
+                } catch (error) {
+                    console.log("  ❌ Chart.update() failed:", error);
+                }
+            }
+        });
+        
+        // Also test Chart.js availability
+        console.log("\n🔧 CHART.JS STATUS:");
+        console.log("  Chart.js loaded:", typeof Chart !== 'undefined');
+        console.log("  Chart version:", Chart?.version || 'Unknown');
+        console.log("  Chart instances:", Chart?.instances?.length || 0);
+    };
+}
 
 // Canvas inspection function
 window.inspectCanvas = function() {
