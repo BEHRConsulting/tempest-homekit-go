@@ -28,6 +28,13 @@ This code review evaluates the complete Go service application for monitoring We
 **Codebase Version**: Production Ready v1.4.1 - Unified Data Pipeline & Architecture Enhancements
 **Go Version**: 1.24.2
 
+## Acknowledgments
+
+We acknowledge the human contributors and AI assistants who supported this project:
+
+- Human contributors: Kent
+- AI assistants: Claude Sonnet 3.5, GitHub Copilot (Grok Code Fast 1 preview), GPT-5 mini
+
 ## HomeKit Compliance Critical Update
 
 ### ⚠️ **Key Implementation Change: Standard Light Sensor Services**

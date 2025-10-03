@@ -739,3 +739,10 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 - ✅ **Security**: No hardcoded secrets, secure token handling
 
 This requirements document has been updated to reflect the **COMPLETE** implementation of the Tempest HomeKit Go service, including all originally planned features plus additional enhancements like cross-platform deployment scripts and enhanced logging capabilities.
+
+## Acknowledgments
+
+We acknowledge the human contributors and AI assistants who supported this project:
+
+- Human contributors: Kent
+- AI assistants: Claude Sonnet 3.5, GitHub Copilot (Grok Code Fast 1 preview), GPT-5 mini

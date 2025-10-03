@@ -56,6 +56,13 @@ This project successfully demonstrates the efficacy of vibe programming techniqu
 
 - **Kent** - Principal Investigator, Vibe Programming methodology implementation
 
+## Acknowledgments
+
+We acknowledge the human contributors and AI assistants who supported this project:
+
+- Human contributors: Kent
+- AI assistants: Claude Sonnet 3.5, GitHub Copilot (Grok Code Fast 1 preview), GPT-5 mini
+
 ### Vibe Programming Methodology Validation
 
 This project represents a controlled experiment in AI-assisted software development, demonstrating the practical application of conversational programming techniques in production software development.
