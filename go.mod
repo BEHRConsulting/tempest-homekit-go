@@ -6,6 +6,7 @@ require (
 	github.com/brutella/hap v0.0.32
 	github.com/chromedp/cdproto v0.0.0-20250724212937-08a3db8b4327
 	github.com/chromedp/chromedp v0.14.1
+	github.com/joho/godotenv v1.5.1
 )
 
 require (

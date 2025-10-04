@@ -73,6 +73,7 @@
 
 [x] add command line/env variable to history points (--history <value>)/env, currently it is statically set to 1000 points, lets make that the default, but allow for a min of 10 points. Attempt to allocate the space for the array, and report the array was too large on failure. To go with this, let's add the --chart-history <value>)/env to limit the data being graphed on the web console cards and popout charts. Default the value to the last 24 hours of data if available.
 
+[x] set up usage of .env and .env.example
 
 [x] update readme.md and usage sh show command line parameter --token is only required for WeatherFlow API stations
 

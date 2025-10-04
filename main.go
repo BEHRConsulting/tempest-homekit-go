@@ -15,9 +15,14 @@ import (
 	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/service"
 	"tempest-homekit-go/pkg/weather"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file if it exists (silently ignore if not present)
+	_ = godotenv.Load()
+
 	cfg := config.LoadConfig()
 
 	// Set up logging first (before any other operations that might log)

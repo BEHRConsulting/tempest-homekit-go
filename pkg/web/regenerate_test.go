@@ -27,7 +27,7 @@ func TestRegenerateWeatherEndpoint(t *testing.T) {
 	// Create generated weather info enabled so handler will operate
 	gw := &GeneratedWeatherInfo{Enabled: true, Location: "", Season: "", ClimateZone: ""}
 
-	ws := NewWebServer("0", 10.0, "debug", 0, false, "test", "", gw, fg, "metric", "mb")
+	ws := NewWebServer("0", 10.0, "debug", 0, false, "test", "", gw, fg, "metric", "mb", 1000, 24)
 
 	// Build request and recorder
 	req := httptest.NewRequest("POST", "/api/regenerate-weather", strings.NewReader(""))

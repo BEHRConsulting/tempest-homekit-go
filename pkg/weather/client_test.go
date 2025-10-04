@@ -8,44 +8,6 @@ import (
 	"time"
 )
 
-// mockObservationResponse creates a mock WeatherFlow API response for observations
-func mockObservationResponse() *HistoricalResponse {
-	now := time.Now().Unix()
-	return &HistoricalResponse{
-		Status: map[string]interface{}{
-			"status_code":    float64(0),
-			"status_message": "SUCCESS",
-		},
-		StationID: 12345,
-		Obs: [][]interface{}{
-			{
-				float64(now),     // timestamp
-				float64(1.5),     // wind_lull
-				float64(2.5),     // wind_avg
-				float64(4.0),     // wind_gust
-				float64(180.0),   // wind_direction
-				float64(60),      // wind_sample_interval
-				float64(1013.25), // station_pressure
-				float64(22.5),    // air_temperature
-				float64(65.0),    // relative_humidity
-				float64(5000.0),  // illuminance
-				float64(3.0),     // uv
-				float64(150.0),   // solar_radiation
-				float64(0.0),     // rain_accumulated
-				float64(0.0),     // precipitation_type
-				float64(0.0),     // lightning_strike_avg_distance
-				float64(0.0),     // lightning_strike_count
-				float64(2.65),    // battery
-				float64(60),      // report_interval
-				nil,              // local_day_rain_accumulation
-				nil,              // rain_accumulated_final
-				nil,              // local_day_rain_accumulation_final
-				float64(0.0),     // precipitation_analysis_type
-			},
-		},
-	}
-}
-
 // mockStationsResponse creates a mock WeatherFlow API response for stations
 func mockStationsResponse() map[string]interface{} {
 	return map[string]interface{}{
@@ -276,15 +238,57 @@ func TestObservation_DataTypes(t *testing.T) {
 		ReportInterval:       60,
 	}
 
-	// Verify some key fields
+	// Verify all fields are correctly stored
 	if obs.Timestamp != now {
-		t.Error("Timestamp field incorrect")
+		t.Errorf("Expected Timestamp %d, got %d", now, obs.Timestamp)
+	}
+	if obs.WindLull != 1.5 {
+		t.Errorf("Expected WindLull 1.5, got %.1f", obs.WindLull)
+	}
+	if obs.WindAvg != 2.5 {
+		t.Errorf("Expected WindAvg 2.5, got %.1f", obs.WindAvg)
+	}
+	if obs.WindGust != 4.0 {
+		t.Errorf("Expected WindGust 4.0, got %.1f", obs.WindGust)
+	}
+	if obs.WindDirection != 180.0 {
+		t.Errorf("Expected WindDirection 180.0, got %.1f", obs.WindDirection)
+	}
+	if obs.StationPressure != 1013.25 {
+		t.Errorf("Expected StationPressure 1013.25, got %.2f", obs.StationPressure)
 	}
 	if obs.AirTemperature != 22.5 {
-		t.Error("AirTemperature field incorrect")
+		t.Errorf("Expected AirTemperature 22.5, got %.1f", obs.AirTemperature)
+	}
+	if obs.RelativeHumidity != 65.0 {
+		t.Errorf("Expected RelativeHumidity 65.0, got %.1f", obs.RelativeHumidity)
+	}
+	if obs.Illuminance != 5000.0 {
+		t.Errorf("Expected Illuminance 5000.0, got %.1f", obs.Illuminance)
 	}
 	if obs.UV != 3 {
-		t.Error("UV field incorrect (should be int)")
+		t.Errorf("Expected UV 3, got %d", obs.UV)
+	}
+	if obs.SolarRadiation != 150.0 {
+		t.Errorf("Expected SolarRadiation 150.0, got %.1f", obs.SolarRadiation)
+	}
+	if obs.RainAccumulated != 0.5 {
+		t.Errorf("Expected RainAccumulated 0.5, got %.1f", obs.RainAccumulated)
+	}
+	if obs.PrecipitationType != 1 {
+		t.Errorf("Expected PrecipitationType 1, got %d", obs.PrecipitationType)
+	}
+	if obs.LightningStrikeAvg != 5.0 {
+		t.Errorf("Expected LightningStrikeAvg 5.0, got %.1f", obs.LightningStrikeAvg)
+	}
+	if obs.LightningStrikeCount != 2 {
+		t.Errorf("Expected LightningStrikeCount 2, got %d", obs.LightningStrikeCount)
+	}
+	if obs.Battery != 2.65 {
+		t.Errorf("Expected Battery 2.65, got %.2f", obs.Battery)
+	}
+	if obs.ReportInterval != 60 {
+		t.Errorf("Expected ReportInterval 60, got %d", obs.ReportInterval)
 	}
 }
 

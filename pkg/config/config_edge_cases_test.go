@@ -264,20 +264,20 @@ func TestLoadConfigEdgeCases(t *testing.T) {
 	// Note: This test focuses on the config struct creation,
 	// not the full LoadConfig which includes flag parsing and validation
 	cfg := &Config{
-		Token:       getEnvOrDefault("TEMPEST_TOKEN", "b88edc78-6261-414e-8042-86a4d4f9ba15"),
-		StationName: getEnvOrDefault("TEMPEST_STATION_NAME", "Chino Hills"),
+		Token:       getEnvOrDefault("TEMPEST_TOKEN", ""),
+		StationName: getEnvOrDefault("TEMPEST_STATION_NAME", ""),
 		Pin:         getEnvOrDefault("HOMEKIT_PIN", "00102003"),
 		LogLevel:    getEnvOrDefault("LOG_LEVEL", "error"),
 		WebPort:     getEnvOrDefault("WEB_PORT", "8080"),
 		Sensors:     getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
 	}
 
-	// Test expected defaults
-	if cfg.Token != "b88edc78-6261-414e-8042-86a4d4f9ba15" {
-		t.Errorf("Expected default token, got %s", cfg.Token)
+	// Test expected defaults (Token and StationName now empty by default)
+	if cfg.Token != "" {
+		t.Errorf("Expected empty default token, got %s", cfg.Token)
 	}
-	if cfg.StationName != "Chino Hills" {
-		t.Errorf("Expected default station name, got %s", cfg.StationName)
+	if cfg.StationName != "" {
+		t.Errorf("Expected empty default station name, got %s", cfg.StationName)
 	}
 	if cfg.Pin != "00102003" {
 		t.Errorf("Expected default PIN, got %s", cfg.Pin)

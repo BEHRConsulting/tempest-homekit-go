@@ -53,7 +53,7 @@ USAGE:
 DATA SOURCE OPTIONS:
   --token <string>              WeatherFlow API token (required for API mode)
                                 Env: TEMPEST_TOKEN
-  --station <string>            Tempest station name (default: "Chino Hills")
+  --station <string>            Tempest station name (required for API mode)
                                 Env: TEMPEST_STATION_NAME
   --udp-stream                  Listen for UDP broadcasts from local station (port 50222)
                                 Enables offline operation during internet outages
@@ -67,8 +67,7 @@ DATA SOURCE OPTIONS:
   --disable-internet            Disable all internet access (offline mode)
                                 Requires: --udp-stream or --use-generated-weather
                                 Incompatible with: --use-web-status, --read-history
-                                Env: DISABLE_INTERNET=true or NO_INTERNET=true
-                                Alias: --no-internet (backward compatibility)
+                                Env: DISABLE_INTERNET=true
 
 HOMEKIT OPTIONS:
   --pin <string>                HomeKit PIN for device pairing (default: "00102003")
@@ -148,8 +147,8 @@ For more information, visit: https://github.com/BEHRConsulting/tempest-homekit-g
 // environment variables, command-line flags, and sensible defaults.
 func LoadConfig() *Config {
 	cfg := &Config{
-		Token:             getEnvOrDefault("TEMPEST_TOKEN", "b88edc78-6261-414e-8042-86a4d4f9ba15"),
-		StationName:       getEnvOrDefault("TEMPEST_STATION_NAME", "Chino Hills"),
+		Token:             getEnvOrDefault("TEMPEST_TOKEN", ""),
+		StationName:       getEnvOrDefault("TEMPEST_STATION_NAME", ""),
 		Pin:               getEnvOrDefault("HOMEKIT_PIN", "00102003"),
 		LogLevel:          getEnvOrDefault("LOG_LEVEL", "error"),
 		LogFilter:         getEnvOrDefault("LOG_FILTER", ""),
@@ -157,7 +156,7 @@ func LoadConfig() *Config {
 		Sensors:           getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
 		StationURL:        getEnvOrDefault("STATION_URL", ""),
 		UDPStream:         getEnvOrDefault("UDP_STREAM", "") == "true",
-		DisableInternet:   getEnvOrDefault("DISABLE_INTERNET", getEnvOrDefault("NO_INTERNET", "")) == "true",
+		DisableInternet:   getEnvOrDefault("DISABLE_INTERNET", "") == "true",
 		Elevation:         275.2, // 903ft default elevation in meters
 		Units:             getEnvOrDefault("UNITS", "imperial"),
 		UnitsPressure:     getEnvOrDefault("UNITS_PRESSURE", "inHg"),
@@ -186,8 +185,7 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.StationURL, "station-url", cfg.StationURL, "Custom station URL for weather data (e.g., http://localhost:8080/api/generate-weather). Overrides Tempest API. Can also be set via STATION_URL environment variable")
 	flag.BoolVar(&cfg.UseGeneratedWeather, "use-generated-weather", false, "Use generated weather data for UI testing instead of Tempest API")
 	flag.BoolVar(&cfg.UDPStream, "udp-stream", cfg.UDPStream, "Listen for UDP broadcasts from local Tempest station (port 50222) for offline operation. Can also be set via UDP_STREAM environment variable")
-	flag.BoolVar(&cfg.DisableInternet, "disable-internet", cfg.DisableInternet, "Disable all internet access (no WeatherFlow API calls, no status scraping). Requires --udp-stream or --use-generated-weather. Can also be set via DISABLE_INTERNET or NO_INTERNET environment variable")
-	flag.BoolVar(&cfg.DisableInternet, "no-internet", cfg.DisableInternet, "(alias for --disable-internet)")
+	flag.BoolVar(&cfg.DisableInternet, "disable-internet", cfg.DisableInternet, "Disable all internet access (no WeatherFlow API calls, no status scraping). Requires --udp-stream or --use-generated-weather. Can also be set via DISABLE_INTERNET environment variable")
 	flag.BoolVar(&cfg.DisableWebConsole, "disable-webconsole", false, "Disable web server (HomeKit only mode)")
 	flag.StringVar(&cfg.Units, "units", cfg.Units, "Units system: imperial (default), metric, or sae. Can also be set via UNITS environment variable")
 	flag.StringVar(&cfg.UnitsPressure, "units-pressure", cfg.UnitsPressure, "Pressure units: inHg (default) or mb. Can also be set via UNITS_PRESSURE environment variable")

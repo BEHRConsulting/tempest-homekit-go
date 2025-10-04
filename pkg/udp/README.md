@@ -117,7 +117,7 @@ The UDP listener is activated through command-line flags:
 ./tempest-homekit-go --station-url http://localhost:8080/api/udp-stream
 
 # Disable all internet access (no API calls, no status scraping)
-./tempest-homekit-go --udp-stream --no-internet
+./tempest-homekit-go --udp-stream --disable-internet
 ```
 
 ## Network Requirements

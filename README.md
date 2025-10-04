@@ -157,7 +157,7 @@ This project represents a controlled experiment in AI-assisted software developm
   - **No API Token Required**: Works entirely on local network without WeatherFlow cloud services
   - **Multiple Message Types**: Supports obs_st (Tempest), obs_air, obs_sky, rapid_wind, device_status, hub_status
   - **Enable with `--udp-stream` flag**: Monitor Tempest station locally without internet connectivity
-  - **Full Offline Mode with `--disable-internet`**: Disables all internet access for complete offline operation (alias: `--no-internet`)
+  - **Full Offline Mode with `--disable-internet`**: Disables all internet access for complete offline operation
 - **Flexible Configuration**: Command-line flags and environment variables for easy deployment
 - **Enhanced Debug Logging**: Multi-level logging with emoji indicators, calculated values, API calls/responses, and comprehensive DOM debugging
 
@@ -298,7 +298,7 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `TEMPEST_STATION_NAME`: Station name
 - `STATION_URL`: Custom station URL for weather data (overrides Tempest API)
 - `UDP_STREAM`: Enable UDP broadcast listener (true/false)
-- `DISABLE_INTERNET` / `NO_INTERNET`: Disable all internet access (true/false, requires UDP_STREAM=true or USE_GENERATED_WEATHER=true)
+- `DISABLE_INTERNET`: Disable all internet access (true/false, requires UDP_STREAM=true or USE_GENERATED_WEATHER=true)
 - `DISABLE_WEBCONSOLE`: Disable web dashboard server (true/false)
 - `HOMEKIT_PIN`: HomeKit PIN
 - `LOG_LEVEL`: Logging level
@@ -346,8 +346,8 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 # Valid: Full offline mode with generated weather (testing/simulation)
 ./tempest-homekit-go --disable-internet --use-generated-weather
 
-# Valid: Offline with custom sensors (--no-internet also works as alias)
-./tempest-homekit-go --token "your-token" --udp-stream --no-internet --sensors "temp,humidity,pressure"
+# Valid: Offline with custom sensors
+./tempest-homekit-go --token "your-token" --udp-stream --disable-internet --sensors "temp,humidity,pressure"
 
 # Invalid: Missing data source
 ./tempest-homekit-go --token "your-token" --disable-internet
@@ -496,8 +496,8 @@ When your internet connection goes down, the WeatherFlow API becomes unavailable
 # Complete offline operation - no internet access at all
 ./tempest-homekit-go --udp-stream --disable-internet
 
-# Offline mode with custom sensors and debug logging (--no-internet alias also works)
-./tempest-homekit-go --udp-stream --no-internet --sensors "temp,humidity,lux,wind" --loglevel debug
+# Offline mode with custom sensors and debug logging
+./tempest-homekit-go --udp-stream --disable-internet --sensors "temp,humidity,lux,wind" --loglevel debug
 ```
 - ✅ Real-time UDP observations only
 - ❌ No forecast data
@@ -535,9 +535,9 @@ The `--disable-internet` flag enforces strict validation to prevent conflicting 
 
 **Error Messages:**
 ```
-ERROR: --no-internet mode requires --udp-stream or --use-generated-weather (need a local data source)
-ERROR: --use-web-status cannot be used with --no-internet (requires internet access)
-ERROR: --read-history cannot be used with --no-internet (requires WeatherFlow API access)
+ERROR: --disable-internet mode requires --udp-stream or --use-generated-weather (need a local data source)
+ERROR: --use-web-status cannot be used with --disable-internet (requires internet access)
+ERROR: --read-history cannot be used with --disable-internet (requires WeatherFlow API access)
 ```
 
 #### Network Requirements
@@ -551,7 +551,7 @@ ERROR: --read-history cannot be used with --no-internet (requires WeatherFlow AP
 - **Real-time Observations**: Temperature, humidity, wind, pressure, UV, rain, lightning data
 - **Device Status**: Battery voltage, RSSI, sensor status
 - **Hub Status**: Firmware version, uptime, reset flags
-- **No Internet Required**: Complete offline operation with `--no-internet` flag
+- **No Internet Required**: Complete offline operation with `--disable-internet` flag
 
 **Network Topology:**
 - Both devices on same subnet (hub broadcasts to 255.255.255.255)
@@ -572,7 +572,7 @@ ERROR: --read-history cannot be used with --no-internet (requires WeatherFlow AP
 ```
 
 **Limitations:**
-- No forecast data in full offline mode (`--no-internet`)
+- No forecast data in full offline mode (`--disable-internet`)
 - Historical data limited to observations received since startup
 - Requires hub on local network (won't work remotely)
 
@@ -774,6 +774,76 @@ sc query tempest-homekit-go
 ```
 
 ## Configuration
+
+### Environment Variables (.env File)
+
+The application supports configuration via environment variables, which can be stored in a `.env` file for convenience. This is particularly useful for persistent configuration without specifying command-line flags every time.
+
+#### Quick Setup
+
+1. **Copy the example file:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Edit `.env` with your values:**
+   ```bash
+   nano .env  # or use your preferred editor
+   ```
+
+3. **Run without flags:**
+   ```bash
+   ./tempest-homekit-go  # Will automatically load .env settings
+   ```
+
+#### Available Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TEMPEST_TOKEN` | *(see below)* | WeatherFlow API token |
+| `TEMPEST_STATION_NAME` | *(required)* | Your station name from WeatherFlow |
+| `HOMEKIT_PIN` | `00102003` | HomeKit pairing PIN |
+| `SENSORS` | `temp,lux,humidity,uv` | Enabled sensors |
+| `WEB_PORT` | `8080` | Web console port |
+| `UNITS` | `imperial` | Unit system (imperial/metric/sae) |
+| `UNITS_PRESSURE` | `inHg` | Pressure units (inHg/mb/hpa) |
+| `HISTORY_POINTS` | `1000` | Data points to store (min 10) |
+| `CHART_HISTORY_HOURS` | `24` | Hours to display in charts (0=all) |
+| `UDP_STREAM` | `false` | Enable UDP mode (true/false) |
+| `DISABLE_INTERNET` | `false` | Offline mode (true/false) |
+| `LOG_LEVEL` | `error` | Logging level (error/info/debug) |
+| `LOG_FILTER` | *(empty)* | Filter log messages |
+
+**Note:** Command-line flags always override environment variables.
+
+#### Example .env Configurations
+
+**API Mode (Cloud Data):**
+```bash
+# Get your token from: https://tempestwx.com/settings/tokens
+TEMPEST_TOKEN=your-actual-token-here
+TEMPEST_STATION_NAME=My Station Name
+SENSORS=temp,humidity,pressure,wind
+LOG_LEVEL=info
+```
+
+⚠️ **Security Note**: Never commit your `.env` file with real credentials! See [SECURITY.md](SECURITY.md) for details.
+
+**UDP Mode (Local Offline):**
+```bash
+UDP_STREAM=true
+DISABLE_INTERNET=true
+HISTORY_POINTS=500
+CHART_HISTORY_HOURS=12
+LOG_LEVEL=debug
+```
+
+**Minimal Memory:**
+```bash
+HISTORY_POINTS=100
+CHART_HISTORY_HOURS=6
+SENSORS=temp,humidity
+```
 
 ### WeatherFlow API Token
 1. Visit [tempestwx.com](https://tempestwx.com)
