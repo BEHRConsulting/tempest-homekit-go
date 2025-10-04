@@ -29,25 +29,37 @@ func StartService(cfg *config.Config, version string) error {
 	var weatherGen *generator.WeatherGenerator
 
 	if cfg.UDPStream {
-		// UDP mode - but if --read-history is set, we need real station details
-		if cfg.ReadHistory && !cfg.DisableInternet {
-			logger.Info("UDP stream mode with --read-history - fetching station details for historical data")
+		// UDP mode - fetch station details if internet is available and we have credentials
+		if !cfg.DisableInternet && cfg.Token != "" && cfg.StationName != "" {
+			logger.Info("UDP stream mode - fetching station details for forecast and metadata")
 			stations, err := weather.GetStations(cfg.Token)
 			if err != nil {
-				return fmt.Errorf("failed to get stations for --read-history: %v", err)
-			}
-
-			station = weather.FindStationByName(stations, cfg.StationName)
-			if station == nil {
-				logger.Info("Available stations:")
-				for _, s := range stations {
-					logger.Info("  - ID: %d, Name: '%s', StationName: '%s'", s.StationID, s.Name, s.StationName)
+				logger.Info("Failed to fetch station details: %v (continuing with placeholder)", err)
+				// Continue with placeholder station
+				station = &weather.Station{
+					StationID:   0,
+					Name:        cfg.StationName,
+					StationName: cfg.StationName,
 				}
-				return fmt.Errorf("station '%s' not found - needed for --read-history", cfg.StationName)
+			} else {
+				station = weather.FindStationByName(stations, cfg.StationName)
+				if station == nil {
+					logger.Info("Available stations:")
+					for _, s := range stations {
+						logger.Info("  - ID: %d, Name: '%s', StationName: '%s'", s.StationID, s.Name, s.StationName)
+					}
+					logger.Info("Station '%s' not found - using placeholder (forecast disabled)", cfg.StationName)
+					station = &weather.Station{
+						StationID:   0,
+						Name:        cfg.StationName,
+						StationName: cfg.StationName,
+					}
+				} else {
+					logger.Info("Found station: %s (ID: %d) - forecast enabled", station.Name, station.StationID)
+				}
 			}
-			logger.Info("Found station for history: %s (ID: %d)", station.Name, station.StationID)
 		} else {
-			// Pure UDP mode without history - create placeholder station
+			// Offline mode or missing credentials - create placeholder station
 			logger.Info("UDP stream mode - will create UDP data source later")
 			station = &weather.Station{
 				StationID:   0,

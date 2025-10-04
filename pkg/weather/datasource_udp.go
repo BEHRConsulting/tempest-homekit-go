@@ -213,8 +213,8 @@ func (u *UDPDataSource) forecastLoop() {
 
 // fetchForecast retrieves forecast data from the API
 func (u *UDPDataSource) fetchForecast() {
-	if u.noInternet || u.token == "" {
-		logger.Debug("Skipping forecast fetch (offline mode or no token)")
+	if u.noInternet || u.token == "" || u.stationID == 0 {
+		logger.Debug("Skipping forecast fetch (offline mode, no token, or no station ID)")
 		return
 	}
 
