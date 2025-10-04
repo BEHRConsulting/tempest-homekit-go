@@ -268,11 +268,11 @@ type ProgressCallback func(currentStep, totalSteps int, description string)
 
 // GetHistoricalObservations fetches historical weather data using the device-based endpoint with day_offset
 func GetHistoricalObservations(stationID int, token string, logLevel string) ([]*Observation, error) {
-	return GetHistoricalObservationsWithProgress(stationID, token, logLevel, nil)
+	return GetHistoricalObservationsWithProgress(stationID, token, logLevel, nil, 1000)
 }
 
 // GetHistoricalObservationsWithProgress fetches historical weather data with progress reporting
-func GetHistoricalObservationsWithProgress(stationID int, token string, logLevel string, progressCallback ProgressCallback) ([]*Observation, error) {
+func GetHistoricalObservationsWithProgress(stationID int, token string, logLevel string, progressCallback ProgressCallback, maxPoints int) ([]*Observation, error) {
 	// First get station details to find the Tempest device ID
 	stationDetails, err := GetStationDetails(stationID, token)
 	if err != nil {
@@ -394,9 +394,9 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, logLevel
 		}
 	}
 
-	// Limit to 1000 points maximum for web dashboard
-	if len(uniqueObs) > 1000 {
-		uniqueObs = uniqueObs[:1000]
+	// Limit to configured maximum points
+	if maxPoints > 0 && len(uniqueObs) > maxPoints {
+		uniqueObs = uniqueObs[:maxPoints]
 	}
 
 	// Calculate actual time span

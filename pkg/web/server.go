@@ -29,6 +29,7 @@ type WebServer struct {
 	homekitStatus          map[string]interface{}
 	dataHistory            []weather.Observation
 	maxHistorySize         int
+	chartHistoryHours      int // hours of data to show in charts (0 = all)
 	stationName            string
 	stationURL             string  // station URL for weather data
 	stationID              int     // station ID for TempestWX status scraping
@@ -128,12 +129,13 @@ type StatusResponse struct {
 		TotalSteps  int    `json:"totalSteps"`
 		Description string `json:"description"`
 	} `json:"historyLoadingProgress"`
-	Forecast         *weather.ForecastResponse `json:"forecast,omitempty"`
-	StationStatus    *weather.StationStatus    `json:"stationStatus,omitempty"`
-	GeneratedWeather *GeneratedWeatherInfo     `json:"generatedWeather,omitempty"`
-	UDPStatus        *UDPStatusInfo            `json:"udpStatus,omitempty"`
-	DataSource       *weather.DataSourceStatus `json:"dataSource,omitempty"` // Unified data source status
-	UnitHints        map[string]string         `json:"unitHints,omitempty"`
+	Forecast          *weather.ForecastResponse `json:"forecast,omitempty"`
+	StationStatus     *weather.StationStatus    `json:"stationStatus,omitempty"`
+	GeneratedWeather  *GeneratedWeatherInfo     `json:"generatedWeather,omitempty"`
+	UDPStatus         *UDPStatusInfo            `json:"udpStatus,omitempty"`
+	DataSource        *weather.DataSourceStatus `json:"dataSource,omitempty"` // Unified data source status
+	UnitHints         map[string]string         `json:"unitHints,omitempty"`
+	ChartHistoryHours int                       `json:"chartHistoryHours"` // Hours of data to display in charts (0=all)
 }
 
 // UDPStatusInfo contains information about UDP stream status
@@ -364,21 +366,29 @@ func getPressureWeatherForecast(pressure float64, trend string) string {
 	}
 }
 
-func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, stationURL string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface, units string, unitsPressure string) *WebServer {
+func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, stationURL string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface, units string, unitsPressure string, historyPoints int, chartHistoryHours int) *WebServer {
+	// Attempt to allocate the history array with error recovery
+	defer func() {
+		if r := recover(); r != nil {
+			panic(fmt.Sprintf("Failed to allocate web server history array of size %d: %v. Try reducing --history value.", historyPoints, r))
+		}
+	}()
+
 	ws := &WebServer{
-		port:             port,
-		elevation:        elevation,
-		logLevel:         logLevel,
-		stationID:        stationID,
-		maxHistorySize:   1000,
-		dataHistory:      make([]weather.Observation, 0, 1000),
-		startTime:        time.Now(),
-		version:          version,
-		stationURL:       stationURL,
-		generatedWeather: generatedWeather,
-		weatherGenerator: weatherGenerator,
-		units:            units,
-		unitsPressure:    unitsPressure,
+		port:              port,
+		elevation:         elevation,
+		logLevel:          logLevel,
+		stationID:         stationID,
+		maxHistorySize:    historyPoints,
+		chartHistoryHours: chartHistoryHours,
+		dataHistory:       make([]weather.Observation, 0, historyPoints),
+		startTime:         time.Now(),
+		version:           version,
+		stationURL:        stationURL,
+		generatedWeather:  generatedWeather,
+		weatherGenerator:  weatherGenerator,
+		units:             units,
+		unitsPressure:     unitsPressure,
 		homekitStatus: map[string]interface{}{
 			"bridge":      false,
 			"accessories": 0,
@@ -806,6 +816,9 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 		ws.logDebug("Data Source Status - Type: %s, Active: %t, Observations: %d",
 			ws.dataSourceStatus.Type, ws.dataSourceStatus.Active, ws.dataSourceStatus.ObservationCount)
 	}
+
+	// Add chart history hours configuration
+	response.ChartHistoryHours = ws.chartHistoryHours
 
 	// Fetch station status from TempestWX (async, don't block on errors)
 	// Get station status from status manager (handles both scraping and fallback)

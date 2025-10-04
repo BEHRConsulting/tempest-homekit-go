@@ -38,6 +38,8 @@ type Config struct {
 	Elevation           float64 // elevation in meters
 	Units               string  // Units system: imperial, metric, or sae
 	UnitsPressure       string  // Pressure units: inHg or mb
+	HistoryPoints       int     // Number of data points to store in history (default: 1000, min: 10)
+	ChartHistoryHours   int     // Number of hours of history to display in charts (default: 24, 0 = all)
 	Version             bool    // Show version and exit
 }
 
@@ -93,6 +95,10 @@ CONFIGURATION OPTIONS:
                                 Env: UNITS
   --units-pressure <unit>       Pressure units: inHg (default) or mb
                                 Env: UNITS_PRESSURE
+  --history <points>            Number of data points to store in history (default: 1000, min: 10)
+                                Env: HISTORY_POINTS
+  --chart-history <hours>       Hours of data to display in charts (default: 24, 0=all)
+                                Env: CHART_HISTORY_HOURS
 
 LOGGING & DEBUG OPTIONS:
   --loglevel <level>            Log level: error (default), info, debug
@@ -142,19 +148,21 @@ For more information, visit: https://github.com/BEHRConsulting/tempest-homekit-g
 // environment variables, command-line flags, and sensible defaults.
 func LoadConfig() *Config {
 	cfg := &Config{
-		Token:           getEnvOrDefault("TEMPEST_TOKEN", "b88edc78-6261-414e-8042-86a4d4f9ba15"),
-		StationName:     getEnvOrDefault("TEMPEST_STATION_NAME", "Chino Hills"),
-		Pin:             getEnvOrDefault("HOMEKIT_PIN", "00102003"),
-		LogLevel:        getEnvOrDefault("LOG_LEVEL", "error"),
-		LogFilter:       getEnvOrDefault("LOG_FILTER", ""),
-		WebPort:         getEnvOrDefault("WEB_PORT", "8080"),
-		Sensors:         getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
-		StationURL:      getEnvOrDefault("STATION_URL", ""),
-		UDPStream:       getEnvOrDefault("UDP_STREAM", "") == "true",
-		DisableInternet: getEnvOrDefault("DISABLE_INTERNET", getEnvOrDefault("NO_INTERNET", "")) == "true",
-		Elevation:       275.2, // 903ft default elevation in meters
-		Units:           getEnvOrDefault("UNITS", "imperial"),
-		UnitsPressure:   getEnvOrDefault("UNITS_PRESSURE", "inHg"),
+		Token:             getEnvOrDefault("TEMPEST_TOKEN", "b88edc78-6261-414e-8042-86a4d4f9ba15"),
+		StationName:       getEnvOrDefault("TEMPEST_STATION_NAME", "Chino Hills"),
+		Pin:               getEnvOrDefault("HOMEKIT_PIN", "00102003"),
+		LogLevel:          getEnvOrDefault("LOG_LEVEL", "error"),
+		LogFilter:         getEnvOrDefault("LOG_FILTER", ""),
+		WebPort:           getEnvOrDefault("WEB_PORT", "8080"),
+		Sensors:           getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
+		StationURL:        getEnvOrDefault("STATION_URL", ""),
+		UDPStream:         getEnvOrDefault("UDP_STREAM", "") == "true",
+		DisableInternet:   getEnvOrDefault("DISABLE_INTERNET", getEnvOrDefault("NO_INTERNET", "")) == "true",
+		Elevation:         275.2, // 903ft default elevation in meters
+		Units:             getEnvOrDefault("UNITS", "imperial"),
+		UnitsPressure:     getEnvOrDefault("UNITS_PRESSURE", "inHg"),
+		HistoryPoints:     parseIntEnv("HISTORY_POINTS", 1000),
+		ChartHistoryHours: parseIntEnv("CHART_HISTORY_HOURS", 24),
 	}
 
 	// Set custom usage function
@@ -183,6 +191,8 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.DisableWebConsole, "disable-webconsole", false, "Disable web server (HomeKit only mode)")
 	flag.StringVar(&cfg.Units, "units", cfg.Units, "Units system: imperial (default), metric, or sae. Can also be set via UNITS environment variable")
 	flag.StringVar(&cfg.UnitsPressure, "units-pressure", cfg.UnitsPressure, "Pressure units: inHg (default) or mb. Can also be set via UNITS_PRESSURE environment variable")
+	flag.IntVar(&cfg.HistoryPoints, "history", cfg.HistoryPoints, "Number of data points to store in history (default: 1000, min: 10). Can also be set via HISTORY_POINTS environment variable")
+	flag.IntVar(&cfg.ChartHistoryHours, "chart-history", cfg.ChartHistoryHours, "Number of hours of data to display in charts (default: 24, 0=all). Can also be set via CHART_HISTORY_HOURS environment variable")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
 
 	// Parse flags but check if elevation was actually provided
@@ -370,6 +380,15 @@ func validateConfig(cfg *Config) error {
 	}
 	if !validPressureUnit {
 		return fmt.Errorf("invalid pressure units '%s'. Valid options: inHg, mb", cfg.UnitsPressure)
+	}
+
+	// Validate history points
+	if cfg.HistoryPoints < 10 {
+		return fmt.Errorf("history points must be at least 10 (got %d)", cfg.HistoryPoints)
+	}
+	// Validate chart history hours (0 means all, so only check if positive)
+	if cfg.ChartHistoryHours < 0 {
+		return fmt.Errorf("chart history hours must be 0 (all data) or positive (got %d)", cfg.ChartHistoryHours)
 	}
 
 	return nil
@@ -647,6 +666,16 @@ func parseElevation(elevationStr string) (float64, error) {
 func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
+	}
+	return defaultValue
+}
+
+// parseIntEnv parses an integer from environment variable or returns default
+func parseIntEnv(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intVal, err := strconv.Atoi(value); err == nil {
+			return intVal
+		}
 	}
 	return defaultValue
 }

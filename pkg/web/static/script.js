@@ -2817,6 +2817,24 @@ function populateChartsWithHistoricalData(dataHistory) {
         dataPoints: dataHistory.length
     });
 
+    // Apply chart history filtering if configured
+    let filteredHistory = dataHistory;
+    if (statusData && statusData.chartHistoryHours > 0) {
+        const hoursMs = statusData.chartHistoryHours * 60 * 60 * 1000;
+        const cutoffTime = Date.now() - hoursMs;
+        filteredHistory = dataHistory.filter(obs => {
+            if (!obs.lastUpdate) return true; // Keep data without timestamps (generated weather)
+            const obsTime = new Date(obs.lastUpdate).getTime();
+            return obsTime >= cutoffTime;
+        });
+        debugLog(logLevels.INFO, `Chart history filter applied: ${statusData.chartHistoryHours} hours`, {
+            originalPoints: dataHistory.length,
+            filteredPoints: filteredHistory.length,
+            cutoffTime: new Date(cutoffTime).toISOString()
+        });
+        dataHistory = filteredHistory; // Replace with filtered data
+    }
+
     // Check if we have any historical data with actual timestamps
     const hasActualTimestamps = dataHistory.some(obs => obs.lastUpdate);
     const currentDataLength = charts.temperature.data.datasets[0].data.length;

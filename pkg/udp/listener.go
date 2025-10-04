@@ -16,8 +16,6 @@ import (
 const (
 	// UDPPort is the port that Tempest hubs broadcast on
 	UDPPort = 50222
-	// MaxHistorySize is the maximum number of observations to keep in memory
-	MaxHistorySize = 1000
 )
 
 // MessageType represents the type of UDP broadcast message
@@ -62,6 +60,7 @@ type UDPMessage struct {
 type UDPListener struct {
 	conn            *net.UDPConn
 	observations    []weather.Observation
+	maxHistorySize  int
 	latestObs       *weather.Observation
 	mu              sync.RWMutex
 	packetCount     int64
@@ -97,9 +96,21 @@ type HubStatus struct {
 }
 
 // NewUDPListener creates a new UDP listener
-func NewUDPListener() *UDPListener {
+func NewUDPListener(maxHistorySize int) *UDPListener {
+	if maxHistorySize < 10 {
+		maxHistorySize = 1000 // default if invalid
+	}
+
+	// Attempt to allocate the history array with error recovery
+	defer func() {
+		if r := recover(); r != nil {
+			panic(fmt.Sprintf("Failed to allocate history array of size %d: %v. Try reducing --history value.", maxHistorySize, r))
+		}
+	}()
+
 	return &UDPListener{
-		observations:    make([]weather.Observation, 0, MaxHistorySize),
+		observations:    make([]weather.Observation, 0, maxHistorySize),
+		maxHistorySize:  maxHistorySize,
 		observationChan: make(chan weather.Observation, 100),
 		stopChan:        make(chan struct{}),
 	}
@@ -408,7 +419,7 @@ func (l *UDPListener) addObservation(obs weather.Observation) {
 	defer l.mu.Unlock()
 
 	// Add to history (circular buffer)
-	if len(l.observations) >= MaxHistorySize {
+	if len(l.observations) >= l.maxHistorySize {
 		// Remove oldest observation
 		l.observations = l.observations[1:]
 	}

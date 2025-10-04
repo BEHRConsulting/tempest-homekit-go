@@ -29,15 +29,34 @@ func StartService(cfg *config.Config, version string) error {
 	var weatherGen *generator.WeatherGenerator
 
 	if cfg.UDPStream {
-		// UDP mode - create placeholder station
-		logger.Info("UDP stream mode - will create UDP data source later")
-		station = &weather.Station{
-			StationID:   0,
-			Name:        cfg.StationName,
-			StationName: cfg.StationName,
-		}
-		if cfg.DisableInternet {
-			logger.Info("Running in offline mode (--disable-internet) - all internet access disabled")
+		// UDP mode - but if --read-history is set, we need real station details
+		if cfg.ReadHistory && !cfg.DisableInternet {
+			logger.Info("UDP stream mode with --read-history - fetching station details for historical data")
+			stations, err := weather.GetStations(cfg.Token)
+			if err != nil {
+				return fmt.Errorf("failed to get stations for --read-history: %v", err)
+			}
+
+			station = weather.FindStationByName(stations, cfg.StationName)
+			if station == nil {
+				logger.Info("Available stations:")
+				for _, s := range stations {
+					logger.Info("  - ID: %d, Name: '%s', StationName: '%s'", s.StationID, s.Name, s.StationName)
+				}
+				return fmt.Errorf("station '%s' not found - needed for --read-history", cfg.StationName)
+			}
+			logger.Info("Found station for history: %s (ID: %d)", station.Name, station.StationID)
+		} else {
+			// Pure UDP mode without history - create placeholder station
+			logger.Info("UDP stream mode - will create UDP data source later")
+			station = &weather.Station{
+				StationID:   0,
+				Name:        cfg.StationName,
+				StationName: cfg.StationName,
+			}
+			if cfg.DisableInternet {
+				logger.Info("Running in offline mode (--disable-internet) - all internet access disabled")
+			}
 		}
 	} else if cfg.UseGeneratedWeather {
 		// Use generated weather data for testing
@@ -129,7 +148,7 @@ func StartService(cfg *config.Config, version string) error {
 	// Create web server only if not disabled
 	var webServer *web.WebServer
 	if !cfg.DisableWebConsole {
-		webServer = web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, effectiveStationURL, generatedWeatherInfo, weatherGen, cfg.Units, cfg.UnitsPressure)
+		webServer = web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, effectiveStationURL, generatedWeatherInfo, weatherGen, cfg.Units, cfg.UnitsPressure, cfg.HistoryPoints, cfg.ChartHistoryHours)
 		webServer.SetStationName(station.Name)
 		go func() {
 			defer func() {
@@ -217,12 +236,12 @@ func StartService(cfg *config.Config, version string) error {
 
 		if cfg.UseGeneratedWeather && weatherGen != nil {
 			// Generate historical data
-			logger.Info("Generating 1000 historical weather data points...")
-			historicalObs = weatherGen.GenerateHistoricalData(1000)
+			logger.Info("Generating %d historical weather data points...", cfg.HistoryPoints)
+			historicalObs = weatherGen.GenerateHistoricalData(cfg.HistoryPoints)
 			logger.Debug("Successfully generated %d historical observations", len(historicalObs))
 		} else {
 			// Use real historical data from API
-			historicalObs, err = weather.GetHistoricalObservationsWithProgress(station.StationID, cfg.Token, cfg.LogLevel, progressCallback)
+			historicalObs, err = weather.GetHistoricalObservationsWithProgress(station.StationID, cfg.Token, cfg.LogLevel, progressCallback, cfg.HistoryPoints)
 			if err != nil {
 				logger.Error("Failed to fetch historical data: %v", err)
 				if webServer != nil {
@@ -258,7 +277,7 @@ func StartService(cfg *config.Config, version string) error {
 	var udpListener *udp.UDPListener
 	if cfg.UDPStream {
 		logger.Info("Creating UDP listener for UDP stream mode")
-		udpListener = udp.NewUDPListener()
+		udpListener = udp.NewUDPListener(cfg.HistoryPoints)
 	}
 
 	// Create appropriate data source using factory pattern
