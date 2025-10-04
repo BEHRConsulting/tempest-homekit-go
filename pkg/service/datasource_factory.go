@@ -75,7 +75,7 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 			stationName = station.StationName
 		}
 
-		generatedURL := "http://localhost:8080/api/generate-weather"
+		generatedURL := fmt.Sprintf("http://localhost:%s/api/generate-weather", cfg.WebPort)
 		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, generatedURL)
 		logger.Info("✓ Generated weather data source created")
 		return dataSource, nil

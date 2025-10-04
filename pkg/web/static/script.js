@@ -1505,6 +1505,12 @@ function togglePressureTooltip(event) {
     }
     
     const tooltip = document.getElementById('pressure-tooltip');
+    
+    // Move tooltip to body to escape card stacking context
+    if (!tooltip.classList.contains('show')) {
+        document.body.appendChild(tooltip);
+    }
+    
     tooltip.classList.toggle('show');
 }
 
@@ -1529,6 +1535,12 @@ function handlePressureTooltipClickOutside(event) {
 // Tooltip management functions
 function toggleLuxTooltip() {
     const tooltip = document.getElementById('lux-tooltip');
+    
+    // Move tooltip to body to escape card stacking context
+    if (!tooltip.classList.contains('show')) {
+        document.body.appendChild(tooltip);
+    }
+    
     tooltip.classList.toggle('show');
     debugLog(logLevels.DEBUG, 'Lux tooltip toggled', { visible: tooltip.classList.contains('show') });
 }
@@ -1556,6 +1568,17 @@ function toggleRainTooltip(event) {
         event.stopPropagation();
     }
     const tooltip = document.getElementById('rain-tooltip');
+    
+    if (!tooltip) {
+        console.error('Rain tooltip element not found!');
+        return;
+    }
+    
+    // Move tooltip to body to escape card stacking context
+    if (!tooltip.classList.contains('show')) {
+        document.body.appendChild(tooltip);
+    }
+    
     tooltip.classList.toggle('show');
     debugLog(logLevels.DEBUG, 'Rain tooltip toggled', { visible: tooltip.classList.contains('show') });
 }
@@ -1582,6 +1605,12 @@ function toggleHumidityTooltip(event) {
         event.stopPropagation();
     }
     const tooltip = document.getElementById('humidity-tooltip');
+    
+    // Move tooltip to body to escape card stacking context
+    if (!tooltip.classList.contains('show')) {
+        document.body.appendChild(tooltip);
+    }
+    
     tooltip.classList.toggle('show');
     debugLog(logLevels.DEBUG, 'Humidity tooltip toggled', { visible: tooltip.classList.contains('show') });
 }
@@ -1604,6 +1633,12 @@ function handleHumidityTooltipClickOutside(event) {
 
 function toggleHeatIndexTooltip() {
     const tooltip = document.getElementById('heat-index-tooltip');
+    
+    // Move tooltip to body to escape card stacking context
+    if (!tooltip.classList.contains('show')) {
+        document.body.appendChild(tooltip);
+    }
+    
     tooltip.classList.toggle('show');
     debugLog(logLevels.DEBUG, 'Heat index tooltip toggled', { visible: tooltip.classList.contains('show') });
 }
@@ -1627,6 +1662,12 @@ function handleHeatIndexTooltipClickOutside(event) {
 
 function toggleUVTooltip() {
     const tooltip = document.getElementById('uv-tooltip');
+    
+    // Move tooltip to body to escape card stacking context
+    if (!tooltip.classList.contains('show')) {
+        document.body.appendChild(tooltip);
+    }
+    
     tooltip.classList.toggle('show');
     debugLog(logLevels.DEBUG, 'UV tooltip toggled', { visible: tooltip.classList.contains('show') });
 }
@@ -3760,3 +3801,77 @@ window.fixChartTimestamps = function() {
     
     console.log("🎯 All chart timestamps fixed! Charts should now be visible.");
 };
+
+// ============================================
+// Theme Switching System
+// ============================================
+
+// Load saved theme on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const savedTheme = localStorage.getItem('selected-theme') || 'default';
+    applyTheme(savedTheme);
+    
+    const themeSelect = document.getElementById('theme-select');
+    if (themeSelect) {
+        themeSelect.value = savedTheme;
+        
+        // Listen for theme changes
+        themeSelect.addEventListener('change', function() {
+            const newTheme = this.value;
+            applyTheme(newTheme);
+            localStorage.setItem('selected-theme', newTheme);
+            debugLog(logLevels.INFO, `Theme changed to: ${newTheme}`);
+        });
+    }
+});
+
+// Apply theme to document
+function applyTheme(themeName) {
+    const body = document.body;
+    
+    // Remove existing theme
+    body.removeAttribute('data-theme');
+    
+    // Apply new theme (except for default)
+    if (themeName !== 'default') {
+        body.setAttribute('data-theme', themeName);
+    }
+    
+    debugLog(logLevels.DEBUG, `Applied theme: ${themeName}`);
+    
+    // Update chart colors for dark themes
+    if (themeName === 'midnight') {
+        updateChartsForDarkMode(true);
+    } else {
+        updateChartsForDarkMode(false);
+    }
+}
+
+// Update chart grid colors for dark mode
+function updateChartsForDarkMode(isDark) {
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDark ? '#e0e0e0' : '#666';
+    
+    Object.keys(charts).forEach(chartName => {
+        const chart = charts[chartName];
+        if (chart && chart.options) {
+            // Update grid colors
+            if (chart.options.scales && chart.options.scales.x && chart.options.scales.x.grid) {
+                chart.options.scales.x.grid.color = gridColor;
+            }
+            if (chart.options.scales && chart.options.scales.y && chart.options.scales.y.grid) {
+                chart.options.scales.y.grid.color = gridColor;
+            }
+            
+            // Update tick colors
+            if (chart.options.scales && chart.options.scales.x && chart.options.scales.x.ticks) {
+                chart.options.scales.x.ticks.color = textColor;
+            }
+            if (chart.options.scales && chart.options.scales.y && chart.options.scales.y.ticks) {
+                chart.options.scales.y.ticks.color = textColor;
+            }
+            
+            chart.update('none');
+        }
+    });
+}

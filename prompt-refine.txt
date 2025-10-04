@@ -77,6 +77,8 @@
 
 [x] update readme.md and usage sh show command line parameter --token is only required for WeatherFlow API stations
 
+[x] I'd like to offer the user a dropdown list of styles that can be applied to the web console. We have aread moved all the styles to styles.css, call this the default style. Please come up with a few neat stles. Place the style dwopdown in the footer. Ideas?
+
 [] Request this every 3-4 major changes or monthly:
 "Perform a comprehensive documentation audit comparing REQUIREMENTS.md, README.md, and CODE_REVIEW.md against the current codebase. 
 

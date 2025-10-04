@@ -202,7 +202,7 @@ func LoadConfig() *Config {
 		cfg.UseGeneratedWeather = true
 	} else if cfg.UseGeneratedWeather {
 		// If use-generated-weather is set but no custom URL, use default local endpoint
-		cfg.StationURL = "http://localhost:8080/api/generate-weather"
+		cfg.StationURL = fmt.Sprintf("http://localhost:%s/api/generate-weather", cfg.WebPort)
 	}
 
 	// Validate command line arguments

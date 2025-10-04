@@ -920,6 +920,1066 @@ func (ws *WebServer) getDashboardHTML() string {
     <link rel="stylesheet" href="pkg/web/static/styles.css">
     <link rel="stylesheet" href="pkg/web/static/themes.css">
 
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Container responsive adjustments for larger screens */
+        @media (min-width: 1200px) {
+            .container {
+                max-width: 1300px;
+            }
+        }
+
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1500px;
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .container {
+                max-width: 1700px;
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .container {
+                max-width: 1900px;
+            }
+        }
+
+        @media (min-width: 2000px) {
+            .container {
+                max-width: 2100px;
+            }
+        }
+
+        @media (min-width: 2200px) {
+            .container {
+                max-width: none;
+                padding: 20px 40px;
+            }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .status {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* Responsive grid layouts for larger screens */
+        @media (min-width: 1024px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                max-width: none;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            }
+        }
+
+        @media (min-width: 1400px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            }
+        }
+
+        @media (min-width: 2000px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            }
+        }
+
+        @media (min-width: 2200px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+        }
+
+        /* Force more cards for ultra-wide screens like 2290px */
+        @media (min-width: 2250px) {
+            .grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 15px;
+            }
+            .container {
+                max-width: none;
+                padding: 20px 30px;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-right: 10px;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .card-unit {
+            font-size: 1rem;
+            color: #666;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .card-unit:hover {
+            color: #007bff;
+        }
+
+        .lightning-info {
+            margin: 10px 0;
+            padding: 8px;
+            background-color: rgba(255, 193, 7, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #ffc107;
+        }
+        
+        .precipitation-type {
+            margin: 5px 0;
+            padding: 6px 8px;
+            background-color: rgba(54, 162, 235, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #36a2eb;
+            font-size: 0.85rem;
+        }
+        
+        .precipitation-info {
+            display: flex;
+            align-items: center;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .lightning-strikes, .lightning-distance {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .lightning-strikes:last-child, .lightning-distance:last-child {
+            margin-bottom: 0;
+        }
+
+        .lightning-strikes span, .lightning-distance span {
+            margin-left: 5px;
+            font-weight: 600;
+        }
+
+        .wind-direction {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .direction-arrow {
+            font-size: 1.5rem;
+            margin-right: 5px;
+        }
+
+        .chart-container {
+            height: 150px;
+            margin-top: 15px;
+        }
+
+        .card-content {
+            padding-top: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 4px 0;
+        }
+
+        .info-row.clickable {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .info-row.clickable:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .accessories-expanded {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: rgba(0, 123, 255, 0.05);
+            border-radius: 6px;
+            border-left: 3px solid #007bff;
+        }
+
+        .accessory-item {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 0.85rem;
+        }
+
+        .accessory-item.disabled {
+            opacity: 0.5;
+        }
+
+        .accessory-icon {
+            margin-right: 8px;
+            font-size: 1rem;
+        }
+
+        .accessory-name {
+            color: #555;
+            font-weight: 500;
+        }
+
+        .accessory-name.disabled {
+            color: #999;
+        }
+
+        .accessory-status {
+            margin-left: auto;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
+        .accessory-status.enabled {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+
+        .accessory-status.disabled {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .expand-icon {
+            margin-left: auto;
+            font-size: 0.8rem;
+            color: #666;
+            transition: transform 0.2s;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            font-size: 0.9rem;
+        }
+
+        .lux-context {
+            position: relative;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .rain-context {
+            position: relative;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .humidity-context {
+            position: relative;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .lux-tooltip {
+            visibility: hidden;
+            width: 300px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .lux-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .lux-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .lux-tooltip-close {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #ccc;
+            user-select: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        .lux-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .lux-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .lux-table th, .lux-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        .lux-table th {
+            background-color: #333;
+            font-weight: bold;
+        }
+
+        .lux-table td:first-child {
+            text-align: right;
+            font-family: monospace;
+        }
+
+        .info-icon {
+            cursor: pointer;
+            user-select: none;
+            margin-left: 5px;
+        }
+
+        .humidity-tooltip {
+            visibility: hidden;
+            width: 380px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .humidity-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .humidity-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .humidity-tooltip-close {
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ccc;
+        }
+
+        .humidity-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .humidity-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .humidity-table th, .humidity-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        .humidity-table th {
+            background-color: #333;
+            font-weight: bold;
+        }
+
+        .humidity-table td:first-child {
+            text-align: center;
+            font-family: monospace;
+        }
+
+        .rain-tooltip {
+            visibility: hidden;
+            width: 320px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .rain-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .rain-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .rain-tooltip-close {
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ccc;
+        }
+
+        .rain-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .rain-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .rain-table th, .rain-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        .rain-table th {
+            background-color: #333;
+            font-weight: bold;
+        }
+
+        .rain-table td:first-child, .rain-table td:nth-child(2) {
+            text-align: right;
+            font-family: monospace;
+        }
+
+        .lux-description {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .humidity-description {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .heat-index-context {
+            position: relative;
+            display: inline-block;
+        }
+
+        .heat-index-tooltip {
+            visibility: hidden;
+            width: 350px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 12px;
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .heat-index-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .heat-index-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .heat-index-tooltip-close {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #ccc;
+            user-select: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        .heat-index-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .heat-index-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+        }
+
+        .heat-index-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+            font-size: 0.8rem;
+        }
+
+        .heat-index-table td:first-child {
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .uv-context {
+            position: relative;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .uv-tooltip {
+            visibility: hidden;
+            width: 400px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            top: 0;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .uv-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .uv-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .uv-tooltip-close {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #ccc;
+            user-select: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        .uv-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .uv-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .uv-table th, .uv-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        .uv-table th {
+            background-color: #333;
+            font-weight: bold;
+        }
+
+        .uv-table td:first-child {
+            text-align: center;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .uv-description {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .pressure-context {
+            position: relative;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .pressure-tooltip {
+            visibility: hidden;
+            width: 450px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            top: 100%;
+            left: 100%;
+            margin-top: 2px;
+            margin-left: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .pressure-tooltip.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .pressure-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .pressure-tooltip-close {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #ccc;
+            user-select: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        .pressure-tooltip-close:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .pressure-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .pressure-table th, .pressure-table td {
+            border: 1px solid #555;
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        .pressure-table th {
+            background-color: #333;
+            font-weight: bold;
+        }
+
+        .pressure-table td:first-child, .pressure-table td:nth-child(2) {
+            text-align: center;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .pressure-description {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* Forecast Card Styles */
+        .forecast-current {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .forecast-current-main {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .forecast-icon {
+            font-size: 2.5rem;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .forecast-temp-container {
+            flex: 1;
+        }
+
+        .forecast-temp {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .forecast-feels-like {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .forecast-conditions {
+            font-size: 1.1rem;
+            color: #555;
+            font-weight: 500;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .forecast-current-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .forecast-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .forecast-label {
+            color: #666;
+        }
+
+        .forecast-value {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .forecast-daily {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .forecast-day {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .forecast-day-name {
+            font-weight: 500;
+            min-width: 60px;
+            color: #333;
+        }
+
+        .forecast-day-icon {
+            font-size: 1.2rem;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .forecast-day-conditions {
+            flex: 1;
+            text-align: center;
+            color: #555;
+            font-size: 0.8rem;
+            padding: 0 10px;
+        }
+
+        .forecast-day-temps {
+            display: flex;
+            gap: 5px;
+            min-width: 70px;
+            justify-content: flex-end;
+        }
+
+        .forecast-day-high {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .forecast-day-low {
+            color: #666;
+        }
+
+        .forecast-day-precip {
+            font-size: 0.8rem;
+            color: #4a90e2;
+            min-width: 30px;
+            text-align: right;
+        }
+
+        /* Mobile and narrow screen responsive styles for forecast card */
+        @media (max-width: 768px) {
+            .forecast-current-main {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .forecast-icon {
+                font-size: 2rem;
+                min-width: auto;
+            }
+            
+            .forecast-temp {
+                font-size: 1.8rem;
+            }
+            
+            .forecast-conditions {
+                min-width: auto;
+                margin-top: 5px;
+            }
+            
+            .forecast-current-details {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            
+            .forecast-day {
+                flex-wrap: wrap;
+                gap: 5px;
+                padding: 6px;
+            }
+            
+            .forecast-day-name {
+                min-width: 50px;
+            }
+            
+            .forecast-day-conditions {
+                font-size: 0.75rem;
+                padding: 0 5px;
+            }
+            
+            .forecast-day-temps {
+                min-width: 60px;
+            }
+            
+            .forecast-day-precip {
+                min-width: 25px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .forecast-current-main {
+                gap: 8px;
+            }
+            
+            .forecast-icon {
+                font-size: 1.8rem;
+            }
+            
+            .forecast-temp {
+                font-size: 1.6rem;
+            }
+            
+            .forecast-feels-like {
+                font-size: 0.8rem;
+            }
+            
+            .forecast-day {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            
+            .forecast-day-name,
+            .forecast-day-icon,
+            .forecast-day-conditions,
+            .forecast-day-temps,
+            .forecast-day-precip {
+                width: 100%;
+                min-width: auto;
+                text-align: left;
+            }
+            
+            .forecast-day-temps {
+                justify-content: flex-start;
+            }
+            
+            .forecast-day-precip {
+                text-align: left;
+            }
+        }
+
+        /* Status Section Styles */
+        .status-section {
+            margin-top: 20px;
+            border-top: 1px solid rgba(0, 123, 255, 0.2);
+            padding-top: 15px;
+        }
+
+        .section-header {
+            font-weight: bold;
+            color: #007bff;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-section .info-row {
+            margin-bottom: 6px;
+            padding: 3px 0;
+        }
+
+        .status-section .info-label {
+            font-size: 0.85rem;
+        }
+
+        .status-section .info-value {
+            font-size: 0.85rem;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -976,10 +2036,10 @@ func (ws *WebServer) getDashboardHTML() string {
                         </table>
                     </div>
                 </div>
-                <div class="feels-like-info">
-                    <div class="flex-row">
+                <div class="feels-like-info" style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
                         <span>Heat Index (feels like):</span>
-                        <span id="heat-index" class="heat-index-value">--</span>
+                        <span id="heat-index" style="font-weight: 600; color: #333;">--</span>
                         <span class="info-icon" id="heat-index-info-icon" title="Click for heat index information">ℹ️</span>
                     </div>
                     <div class="heat-index-context" id="heat-index-context">
@@ -988,7 +2048,7 @@ func (ws *WebServer) getDashboardHTML() string {
                                 <strong>Heat Index Calculation:</strong>
                                 <span class="heat-index-tooltip-close" id="heat-index-tooltip-close" title="Close">×</span>
                             </div>
-                            <div class="heat-index-details">
+                            <div style="margin-top: 8px; font-size: 0.85rem; line-height: 1.4;">
                                 <p><strong>What is Heat Index?</strong><br>
                                 The heat index combines air temperature and relative humidity to determine the human-perceived equivalent temperature.</p>
                                 
@@ -1003,7 +2063,7 @@ func (ws *WebServer) getDashboardHTML() string {
                                     <tr><td>130°F+ (54°C+)</td><td>Extreme danger - Heat stroke imminent</td></tr>
                                 </table>
                                 
-                                <p class="heat-index-note">
+                                <p style="margin-top: 8px; font-style: italic; font-size: 0.8rem;">
                                 Note: If conditions don't meet the threshold, actual temperature is displayed.
                                 </p>
                             </div>
@@ -1026,7 +2086,7 @@ func (ws *WebServer) getDashboardHTML() string {
                     <span class="direction-arrow" id="wind-arrow">↑</span>
                     <span id="wind-direction">--</span>
                 </div>
-                <div class="wind-gust">
+                <div class="wind-gust" style="margin-top: 8px; font-size: 0.9rem; color: #666;">
                     <span id="wind-gust-info">--</span>
                 </div>
                 <div class="chart-container">
@@ -1040,7 +2100,7 @@ func (ws *WebServer) getDashboardHTML() string {
                     <span class="card-title">Rain & Lightning</span>
                 </div>
                 <div class="card-value" id="rain">--</div>
-                <div class="card-unit" id="rain-unit" onclick="toggleUnit('rain')">in <span class="info-icon" id="rain-info-icon" title="Click for rain intensity reference table">ℹ️</span></div>
+                <div class="card-unit" id="rain-unit" onclick="toggleUnit('rain')">in <span class="info-icon" id="rain-info-icon" title="Click for rain intensity reference table" onclick="event.stopPropagation(); toggleRainTooltip(event);">ℹ️</span></div>
                 <div class="rain-context" id="rain-context">
                     <div class="rain-tooltip" id="rain-tooltip">
                         <div class="rain-tooltip-header">
@@ -1068,13 +2128,40 @@ func (ws *WebServer) getDashboardHTML() string {
                         </table>
                     </div>
                 </div>
-                <div class="rain-description">
+                <div class="rain-context" id="rain-context">
+                    <div class="rain-tooltip" id="rain-tooltip">
+                        <div class="rain-tooltip-header">
+                            <strong>Rain Intensity Reference Table:</strong>
+                            <span class="rain-tooltip-close" id="rain-tooltip-close" title="Close">×</span>
+                        </div>
+                        <table class="rain-table">
+                            <thead>
+                                <tr>
+                                    <th>Amount (mm)</th>
+                                    <th>Amount (in)</th>
+                                    <th>Description</th>
+                                    <th>Intensity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>0.0 - 0.25</td><td>0.00 - 0.01</td><td>No rain to very light drizzle</td><td>None/Trace</td></tr>
+                                <tr><td>0.25 - 1.0</td><td>0.01 - 0.04</td><td>Light drizzle</td><td>Very Light</td></tr>
+                                <tr><td>1.0 - 2.5</td><td>0.04 - 0.10</td><td>Light rain</td><td>Light</td></tr>
+                                <tr><td>2.5 - 7.5</td><td>0.10 - 0.30</td><td>Moderate rain</td><td>Moderate</td></tr>
+                                <tr><td>7.5 - 20</td><td>0.30 - 0.79</td><td>Heavy rain</td><td>Heavy</td></tr>
+                                <tr><td>20 - 50</td><td>0.79 - 1.97</td><td>Very heavy rain</td><td>Very Heavy</td></tr>
+                                <tr><td>50+</td><td>1.97+</td><td>Extreme rainfall</td><td>Extreme</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="rain-description" style="margin-top: 4px; font-size: 0.8rem; color: #555; text-align: left;">
                     <span id="rain-description">--</span>
                 </div>
-                <div class="daily-rain-info">
-                    <div class="daily-rain-content">
-                        <span class="daily-rain-label">Today Total:</span>
-                        <span id="daily-rain-total" class="daily-rain-value">--</span>
+                <div class="daily-rain-info" style="margin-top: 8px; padding: 6px 8px; background-color: rgba(54, 162, 235, 0.1); border-radius: 6px; border-left: 3px solid #36a2eb;">
+                    <div class="daily-rain-content" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
+                        <span style="color: #666; font-weight: 500;">Today Total:</span>
+                        <span id="daily-rain-total" style="color: #333; font-weight: 600;">--</span>
                     </div>
                 </div>
                 <div class="precipitation-type">
@@ -1087,6 +2174,32 @@ func (ws *WebServer) getDashboardHTML() string {
                 <div class="chart-container">
                     <canvas id="rain-chart"></canvas>
                 </div>
+                <div class="rain-tooltip" id="rain-tooltip">
+                    <div class="rain-tooltip-header">
+                        <strong>Rain Intensity Reference Table:</strong>
+                        <span class="rain-tooltip-close" id="rain-tooltip-close" title="Close">×</span>
+                    </div>
+                    <table class="rain-table">
+                        <thead>
+                            <tr>
+                                <th>Amount (mm)</th>
+                                <th>Amount (inches)</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>0</td><td>0</td><td>No precipitation ☀️</td></tr>
+                            <tr><td>≤0.1</td><td>≤0.004</td><td>Trace - Barely measurable 🌫️</td></tr>
+                            <tr><td>≤0.5</td><td>≤0.02</td><td>Very light - Gentle mist 💧</td></tr>
+                            <tr><td>≤2</td><td>≤0.08</td><td>Light - Soft drizzle 🌦️</td></tr>
+                            <tr><td>≤5</td><td>≤0.2</td><td>Moderate - Steady shower 🌧️</td></tr>
+                            <tr><td>≤15</td><td>≤0.6</td><td>Heavy - Strong downpour ⛈️</td></tr>
+                            <tr><td>≤30</td><td>≤1.2</td><td>Very heavy - Intense deluge 🌩️</td></tr>
+                            <tr><td>≤75</td><td>≤3.0</td><td>Extreme - Torrential rain ⛈️💦</td></tr>
+                            <tr><td>>75</td><td>>3.0</td><td>Cats and dogs - Epic deluge! 🐱🐶💧</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div class="card" id="pressure-card">
@@ -1096,22 +2209,22 @@ func (ws *WebServer) getDashboardHTML() string {
                 </div>
                 <div class="card-value" id="pressure">--</div>
                 <div class="card-unit" id="pressure-unit" onclick="toggleUnit('pressure')">mb <span class="info-icon" id="pressure-info-icon" title="Click for pressure interpretation table">ℹ️</span></div>
-                <div class="pressure-info-box">
-                    <div class="pressure-info-row">
-                        <span class="pressure-label">Condition:</span>
-                        <span id="pressure-condition" class="pressure-value">--</span>
+                <div style="margin-top: 10px; padding: 8px; background-color: rgba(0, 123, 255, 0.05); border-radius: 6px; border-left: 3px solid #007bff;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                        <span style="color: #666; font-weight: 500;">Condition:</span>
+                        <span id="pressure-condition" style="color: #333; font-weight: 600;">--</span>
                     </div>
-                    <div class="pressure-info-row-spaced">
-                        <span class="pressure-label">Trend:</span>
-                        <span id="pressure-trend" class="pressure-value">--</span>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 4px;">
+                        <span style="color: #666; font-weight: 500;">Trend:</span>
+                        <span id="pressure-trend" style="color: #333; font-weight: 600;">--</span>
                     </div>
-                    <div class="pressure-info-row-spaced">
-                        <span class="pressure-label">Forecast:</span>
-                        <span id="pressure-forecast" class="pressure-value">--</span>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 4px;">
+                        <span style="color: #666; font-weight: 500;">Forecast:</span>
+                        <span id="pressure-forecast" style="color: #333; font-weight: 600;">--</span>
                     </div>
-                    <div class="pressure-info-row-spaced">
-                        <span class="pressure-label">Sea Level:</span>
-                        <span id="pressure-sea-level" class="pressure-value">--</span>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 4px;">
+                        <span style="color: #666; font-weight: 500;">Sea Level:</span>
+                        <span id="pressure-sea-level" style="color: #333; font-weight: 600;">--</span>
                     </div>
                 </div>
                 <div class="pressure-context" id="pressure-context">
@@ -1130,27 +2243,27 @@ func (ws *WebServer) getDashboardHTML() string {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="pressure-row-very-low"><td>&lt; 980</td><td>&lt; 28.94</td><td><strong>Very Low</strong></td><td>Stormy weather likely</td></tr>
-                                <tr class="pressure-row-low"><td>980-1000</td><td>28.94-29.53</td><td><strong>Low</strong></td><td>Unsettled weather, possible storms</td></tr>
-                                <tr class="pressure-row-normal"><td>1000-1020</td><td>29.53-30.12</td><td><strong>Normal</strong></td><td>Fair weather conditions</td></tr>
-                                <tr class="pressure-row-high"><td>1020-1040</td><td>30.12-30.71</td><td><strong>High</strong></td><td>Generally clear and stable</td></tr>
-                                <tr class="pressure-row-very-high"><td>&gt; 1040</td><td>&gt; 30.71</td><td><strong>Very High</strong></td><td>Very stable, clear conditions</td></tr>
+                                <tr style="background-color: rgba(255, 0, 0, 0.1);"><td>&lt; 980</td><td>&lt; 28.94</td><td><strong>Very Low</strong></td><td>Stormy weather likely</td></tr>
+                                <tr style="background-color: rgba(255, 165, 0.1);"><td>980-1000</td><td>28.94-29.53</td><td><strong>Low</strong></td><td>Unsettled weather, possible storms</td></tr>
+                                <tr style="background-color: rgba(255, 255, 0, 0.1);"><td>1000-1020</td><td>29.53-30.12</td><td><strong>Normal</strong></td><td>Fair weather conditions</td></tr>
+                                <tr style="background-color: rgba(0, 255, 0, 0.1);"><td>1020-1040</td><td>30.12-30.71</td><td><strong>High</strong></td><td>Generally clear and stable</td></tr>
+                                <tr style="background-color: rgba(0, 0, 255, 0.1);"><td>&gt; 1040</td><td>&gt; 30.71</td><td><strong>Very High</strong></td><td>Very stable, clear conditions</td></tr>
                             </tbody>
                         </table>
-                        <div class="pressure-trends-box">
+                        <div style="margin-top: 12px; padding: 8px; background-color: rgba(0, 123, 255, 0.1); border-radius: 4px;">
                             <strong>Pressure Trend Analysis & Weather Forecast:</strong>
-                            <ul class="pressure-trends-list">
+                            <ul style="margin: 4px 0; padding-left: 16px; font-size: 0.85rem;">
                                 <li><strong>Rising Rapidly:</strong> Quick improvement, clearing skies</li>
                                 <li><strong>Rising:</strong> Improving weather, fair conditions ahead</li>
                                 <li><strong>Steady:</strong> Current weather conditions will continue</li>
                                 <li><strong>Falling:</strong> Weather deteriorating, clouds/rain possible</li>
                                 <li><strong>Falling Rapidly:</strong> Storm approaching quickly, take precautions</li>
                             </ul>
-                            <div class="pressure-wind-note-text">
+                            <div style="margin-top: 8px; font-size: 0.8rem; font-style: italic;">
                                 <strong>Combined Forecast:</strong> The condition shown combines current pressure with trend analysis for more accurate weather prediction.
                             </div>
                         </div>
-                        <p class="pressure-note">
+                        <p style="margin-top: 8px; font-style: italic; font-size: 0.8rem;">
                         Note: Weather predictions based on pressure require considering local conditions and trends over time.
                         </p>
                     </div>
@@ -1229,14 +2342,14 @@ func (ws *WebServer) getDashboardHTML() string {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="uv-row-low"><td>0–2</td><td><strong>Low</strong></td><td>Low danger from the sun's UV rays for the average person.</td></tr>
-                                <tr class="uv-row-moderate"><td>3–5</td><td><strong>Moderate</strong></td><td>Moderate risk of harm from unprotected sun exposure.</td></tr>
-                                <tr class="uv-row-high"><td>6–7</td><td><strong>High</strong></td><td>High risk of harm from unprotected sun exposure. Protection against skin and eye damage is needed.</td></tr>
-                                <tr class="uv-row-very-high"><td>8–10</td><td><strong>Very High</strong></td><td>Very high risk of harm from unprotected sun exposure. Take extra precautions because unprotected skin and eyes will be damaged and can burn quickly.</td></tr>
-                                <tr class="uv-row-extreme"><td>11+</td><td><strong>Extreme</strong></td><td>Extreme risk of harm from unprotected sun exposure. Take all precautions because unprotected skin and eyes can burn in minutes.</td></tr>
+                                <tr style="background-color: rgba(0, 255, 0, 0.1);"><td>0–2</td><td><strong>Low</strong></td><td>Low danger from the sun's UV rays for the average person.</td></tr>
+                                <tr style="background-color: rgba(255, 255, 0, 0.1);"><td>3–5</td><td><strong>Moderate</strong></td><td>Moderate risk of harm from unprotected sun exposure.</td></tr>
+                                <tr style="background-color: rgba(255, 165, 0, 0.1);"><td>6–7</td><td><strong>High</strong></td><td>High risk of harm from unprotected sun exposure. Protection against skin and eye damage is needed.</td></tr>
+                                <tr style="background-color: rgba(255, 0, 0, 0.1);"><td>8–10</td><td><strong>Very High</strong></td><td>Very high risk of harm from unprotected sun exposure. Take extra precautions because unprotected skin and eyes will be damaged and can burn quickly.</td></tr>
+                                <tr style="background-color: rgba(128, 0, 128, 0.1);"><td>11+</td><td><strong>Extreme</strong></td><td>Extreme risk of harm from unprotected sun exposure. Take all precautions because unprotected skin and eyes can burn in minutes.</td></tr>
                             </tbody>
                         </table>
-                        <p class="uv-note">
+                        <p style="margin-top: 8px; font-style: italic; font-size: 0.8rem;">
                         Source: U.S. Environmental Protection Agency UV Index scale
                         </p>
                     </div>
@@ -1325,7 +2438,7 @@ func (ws *WebServer) getDashboardHTML() string {
                         <span class="info-label">Data Points:</span>
                         <span class="info-value" id="tempest-data-count">--</span>
                     </div>
-                    <div class="info-row hidden" id="tempest-historical-row">
+                    <div class="info-row" id="tempest-historical-row" style="display: none;">
                         <span class="info-label">Historical:</span>
                         <span class="info-value" id="tempest-historical-count">--</span>
                     </div>
@@ -1417,7 +2530,7 @@ func (ws *WebServer) getDashboardHTML() string {
                         <span class="info-value" id="homekit-accessories">--</span>
                         <span class="expand-icon" id="accessories-expand-icon">▶</span>
                     </div>
-                    <div class="accessories-expanded hidden" id="accessories-expanded">
+                    <div class="accessories-expanded" id="accessories-expanded" style="display: none;">
                         <div id="accessories-list">
                             <!-- Accessories will be populated here -->
                         </div>
