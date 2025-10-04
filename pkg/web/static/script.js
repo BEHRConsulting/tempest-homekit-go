@@ -2542,7 +2542,12 @@ function updateDataSourceDisplay(status, dataSourceElement) {
     if (status.dataSource && status.dataSource.type === 'udp') {
         // Check if forecast data is actually available (indicates API is accessible)
         if (status.forecast && status.forecast.forecast) {
-            sources.push('API (forecast, history)');
+            // Show history only if historical data was actually loaded
+            if (status.historicalDataLoaded) {
+                sources.push('API (forecast, history)');
+            } else {
+                sources.push('API (forecast)');
+            }
         }
     }
     
