@@ -349,3 +349,29 @@ func TestDataSourceInterfaces(t *testing.T) {
 		t.Errorf("Failed to stop data source: %v", err)
 	}
 }
+
+// TestCreateDataSource_StationURLConstruction ensures CreateDataSource constructs
+// the generated StationURL the same way LoadConfig would (http://localhost:<port><path>). 
+func TestCreateDataSource_StationURLConstruction(t *testing.T) {
+	cfg := &config.Config{
+		UseGeneratedWeather: true,
+		WebPort:             "12345",
+		GeneratedWeatherPath: "/api/custom-generate",
+		StationName:         "Test Station",
+		Token:               "test-token",
+	}
+
+	station := mockStation()
+
+	ds, err := CreateDataSource(cfg, station, nil)
+	if err != nil {
+		t.Fatalf("CreateDataSource failed: %v", err)
+	}
+
+	status := ds.GetStatus()
+
+	expected := "http://localhost:12345/api/custom-generate"
+	if status.CustomURL != expected {
+		t.Fatalf("expected StationURL %s, got %s", expected, status.CustomURL)
+	}
+}

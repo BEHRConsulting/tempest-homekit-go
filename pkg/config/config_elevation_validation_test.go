@@ -8,9 +8,9 @@ import (
 // TestParseElevationValidation tests elevation range validation with proper error messages
 func TestParseElevationValidation(t *testing.T) {
 	tests := []struct {
-		name        string
-		input       string
-		shouldError bool
+		name          string
+		input         string
+		shouldError   bool
 		errorContains string
 	}{
 		{
@@ -52,7 +52,7 @@ func TestParseElevationValidation(t *testing.T) {
 			errorContains: "below Earth's lowest point",
 		},
 		{
-			name:          "Way too high in feet", 
+			name:          "Way too high in feet",
 			input:         "35000ft",
 			shouldError:   true,
 			errorContains: "above Earth's highest point",
@@ -74,13 +74,13 @@ func TestParseElevationValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := parseElevation(tt.input)
-			
+
 			if tt.shouldError {
 				if err == nil {
 					t.Errorf("Expected error for elevation '%s', but got none", tt.input)
 				}
 				if tt.errorContains != "" && !strings.Contains(err.Error(), tt.errorContains) {
-					t.Errorf("Expected error containing '%s' for elevation '%s', got: %v", 
+					t.Errorf("Expected error containing '%s' for elevation '%s', got: %v",
 						tt.errorContains, tt.input, err)
 				}
 				// Result should be 0 for errors
@@ -122,13 +122,13 @@ func TestElevationRealWorldExamples(t *testing.T) {
 	for _, example := range realWorldElevations {
 		t.Run(example.name, func(t *testing.T) {
 			_, err := parseElevation(example.input)
-			
+
 			if example.valid && err != nil {
-				t.Errorf("Expected %s elevation '%s' to be valid, but got error: %v", 
+				t.Errorf("Expected %s elevation '%s' to be valid, but got error: %v",
 					example.name, example.input, err)
 			}
 			if !example.valid && err == nil {
-				t.Errorf("Expected %s elevation '%s' to be invalid, but got no error", 
+				t.Errorf("Expected %s elevation '%s' to be invalid, but got no error",
 					example.name, example.input)
 			}
 		})

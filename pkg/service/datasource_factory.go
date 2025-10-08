@@ -59,7 +59,7 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 			stationName = station.StationName
 		}
 
-		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, cfg.StationURL)
+		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, weather.APIDataSourceOptions{CustomURL: cfg.StationURL, GeneratedPath: cfg.GeneratedWeatherPath})
 		logger.Info("✓ API data source created with custom URL")
 		return dataSource, nil
 	}
@@ -75,8 +75,20 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 			stationName = station.StationName
 		}
 
-		generatedURL := fmt.Sprintf("http://localhost:%s/api/generate-weather", cfg.WebPort)
-		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, generatedURL)
+		// Ensure we construct the generated URL using the configured path.
+		// Tests sometimes construct a Config manually and may leave WebPort or
+		// GeneratedWeatherPath empty; default to historical defaults so behavior
+		// remains predictable in those cases.
+		port := cfg.WebPort
+		if port == "" {
+			port = "8080"
+		}
+		path := cfg.GeneratedWeatherPath
+		if path == "" {
+			path = "/api/generate-weather"
+		}
+		generatedURL := fmt.Sprintf("http://localhost:%s%s", port, path)
+		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, weather.APIDataSourceOptions{CustomURL: generatedURL, GeneratedPath: cfg.GeneratedWeatherPath})
 		logger.Info("✓ Generated weather data source created")
 		return dataSource, nil
 	}
@@ -87,7 +99,7 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 	}
 
 	logger.Info("Creating API data source for station: %s (ID: %d)", station.StationName, station.StationID)
-	dataSource := weather.NewAPIDataSource(station.StationID, cfg.Token, station.StationName, "")
+	dataSource := weather.NewAPIDataSource(station.StationID, cfg.Token, station.StationName, weather.APIDataSourceOptions{CustomURL: "", GeneratedPath: cfg.GeneratedWeatherPath})
 	logger.Info("✓ WeatherFlow API data source created")
 	return dataSource, nil
 }

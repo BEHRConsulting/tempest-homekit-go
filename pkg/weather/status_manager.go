@@ -4,8 +4,8 @@ package weather
 
 import (
 	"fmt"
-	"tempest-homekit-go/pkg/logger"
 	"sync"
+	"tempest-homekit-go/pkg/logger"
 	"time"
 )
 

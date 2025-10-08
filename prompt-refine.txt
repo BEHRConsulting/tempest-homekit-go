@@ -79,6 +79,19 @@
 
 [x] I'd like to offer the user a dropdown list of styles that can be applied to the web console. We have aread moved all the styles to styles.css, call this the default style. Please come up with a few neat stles. Place the style dwopdown in the footer. Ideas?
 
+[] perform a full unit test coverage test and update readme.md with updated information and flags as needed.
+
+[] review code base and documentation for GitHub public release. Make appropriate changes need to read as a professional vibe research project. Need to verify keyword for vibe, macOS, HomeKit,tempest,a and weather fill fine this repository. Also the public should know this is a work in project but cueenrly stable in it current features. 
+
+[x] update and clean up readme.md, requirements.md, and code_review.md and usage sh show command line parameter --token and --station are required for WeatherFlow API stations
+
+[x] I'd like to offer the user a dropdown list of styles that can be applied to the web console. We have aread moved all the styles to styles.css, call this the default style. Please come up with a few neat stles. Place the style dwopdown in the footer. Ideas?
+
+[] add unit tests as needed in the order you select. I would like to see coverage above 70%. Do not stop to confirm until over 70%. Then update documentation on test coverage in the readme.md and it's flags.
+
+[] add Alarms feature. Use command line flag --alarms "json-string" or @filename.json . This will be the alarm module. This will allow notifacations via console log, email, sms, syslog, or event log when triggered on weather events. Design a json format that is clean and allows for global email, email template, sms alerts and sms templets, an array of alarms based on crossing temperature, humidity, pressure, lighting count, lightning strike counts, lux, uvi, and rain values, should have customized text template to allow values and times replaced. Trigger examples: (1) Temputure > 85F, (2) Lightning < 2m, (3) Temputure > 35C && Humidity > 80%, (4) Raining == true, (5) 10000 < lux < 50000. Each alarm needs a unique name, one or more tags, and can have one or more alert types (console,email,sms,syslog,eventlog). If console,syslog or eventlog, a templete string is needed. If email, from,to,cc,bc,subject, and template body are needed. if sms, sms-number, and template message are needed.  console, syslog, and eventlog messages should include "Tempest-Alarm" as a flag at the begining of the message. Add an standalone interactive web tool For editing the alarm file, command parameter --alarms-edit @filename.json and --alarms-edit-port <port> can be used to specify the port this editor is on. If --alarms-edit, then no other part of this application will run. The editor should be able to filter by a part of the name, or one or more tags. Include a tag editor for consistant tag usage. If the application has --alarms @filename.json definied, then it will re-read the edited file to update the alarm configuration if it detects the file has changed. This change detection needs to work on mac, windows, and linux. Lets use https://github.com/casdoor/go-sms-sender for setting up SMS messages. I can test Twilio and Amazon SNS currently, so lets make sure their required parameters are in the .env files. Let's support email to Microsoft 365 exchange server and a generic POP server. The .env and .env.example file should be extended to include to support our email and sms provider requirerments. New program version needed for this Alarm feature. Update version as needed in .go and .md files.
+
+
 [] Request this every 3-4 major changes or monthly:
 "Perform a comprehensive documentation audit comparing REQUIREMENTS.md, README.md, and CODE_REVIEW.md against the current codebase. 
 

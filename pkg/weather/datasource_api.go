@@ -2,6 +2,7 @@
 package weather
 
 import (
+	"net/url"
 	"sync"
 	"time"
 
@@ -10,10 +11,12 @@ import (
 
 // APIDataSource implements DataSource for WeatherFlow API polling
 type APIDataSource struct {
-	stationID   int
-	token       string
-	stationName string
-	customURL   string // For custom station URLs (generated weather, etc.)
+	stationID     int
+	token         string
+	stationName   string
+	customURL     string // For custom station URLs (generated weather, etc.)
+	generated     bool   // true when this API data source is using generated weather endpoint
+	generatedPath string // configured path used to identify generated weather endpoint
 
 	mu                sync.RWMutex
 	latestObservation *Observation
@@ -25,16 +28,40 @@ type APIDataSource struct {
 	running           bool
 }
 
-// NewAPIDataSource creates a new API-based data source
-func NewAPIDataSource(stationID int, token, stationName, customURL string) *APIDataSource {
-	return &APIDataSource{
+// APIDataSourceOptions holds optional parameters for creating APIDataSource
+type APIDataSourceOptions struct {
+	CustomURL     string
+	GeneratedPath string
+}
+
+// NewAPIDataSource creates a new API-based data source with options.
+func NewAPIDataSource(stationID int, token, stationName string, opts APIDataSourceOptions) *APIDataSource {
+	a := &APIDataSource{
 		stationID:       stationID,
 		token:           token,
 		stationName:     stationName,
-		customURL:       customURL,
+		customURL:       opts.CustomURL,
+		generatedPath:   opts.GeneratedPath,
 		observationChan: make(chan Observation, 100),
 		stopChan:        make(chan struct{}),
 	}
+
+	// Default generatedPath when empty
+	if a.generatedPath == "" {
+		a.generatedPath = "/api/generate-weather"
+	}
+
+	// Determine if this data source points to the generated weather endpoint by
+	// parsing the URL and comparing the path exactly to the configured generatedPath.
+	if a.customURL != "" {
+		if u, err := url.Parse(a.customURL); err == nil {
+			if u.Path == a.generatedPath {
+				a.generated = true
+			}
+		}
+	}
+
+	return a
 }
 
 // Start begins polling the API for weather data
@@ -91,7 +118,7 @@ func (a *APIDataSource) GetStatus() DataSourceStatus {
 
 	sourceType := DataSourceAPI
 	if a.customURL != "" {
-		if a.customURL == "http://localhost:8080/api/generate-weather" {
+		if a.generated {
 			sourceType = DataSourceGenerated
 		} else {
 			sourceType = DataSourceCustomURL
@@ -111,7 +138,7 @@ func (a *APIDataSource) GetStatus() DataSourceStatus {
 // GetType returns the data source type
 func (a *APIDataSource) GetType() DataSourceType {
 	if a.customURL != "" {
-		if a.customURL == "http://localhost:8080/api/generate-weather" {
+		if a.generated {
 			return DataSourceGenerated
 		}
 		return DataSourceCustomURL
@@ -196,7 +223,7 @@ func (a *APIDataSource) fetchObservation() {
 // fetchForecast retrieves forecast data from the API
 func (a *APIDataSource) fetchForecast() {
 	// Skip forecast for generated weather
-	if a.customURL == "http://localhost:8080/api/generate-weather" {
+	if a.generated {
 		logger.Debug("Skipping forecast fetch for generated weather")
 		return
 	}

@@ -41,6 +41,10 @@ type Config struct {
 	HistoryPoints       int     // Number of data points to store in history (default: 1000, min: 10)
 	ChartHistoryHours   int     // Number of hours of history to display in charts (default: 24, 0 = all)
 	Version             bool    // Show version and exit
+	// GeneratedWeatherPath is the URL path portion used for the built-in generated
+	// weather endpoint. Default: "/api/generate-weather". This can be overridden
+	// via the GENERATE_WEATHER_PATH environment variable or the --generate-path flag.
+	GeneratedWeatherPath string
 }
 
 // customUsage prints a well-formatted help message with grouped flags and examples
@@ -147,21 +151,22 @@ For more information, visit: https://github.com/BEHRConsulting/tempest-homekit-g
 // environment variables, command-line flags, and sensible defaults.
 func LoadConfig() *Config {
 	cfg := &Config{
-		Token:             getEnvOrDefault("TEMPEST_TOKEN", ""),
-		StationName:       getEnvOrDefault("TEMPEST_STATION_NAME", ""),
-		Pin:               getEnvOrDefault("HOMEKIT_PIN", "00102003"),
-		LogLevel:          getEnvOrDefault("LOG_LEVEL", "error"),
-		LogFilter:         getEnvOrDefault("LOG_FILTER", ""),
-		WebPort:           getEnvOrDefault("WEB_PORT", "8080"),
-		Sensors:           getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
-		StationURL:        getEnvOrDefault("STATION_URL", ""),
-		UDPStream:         getEnvOrDefault("UDP_STREAM", "") == "true",
-		DisableInternet:   getEnvOrDefault("DISABLE_INTERNET", "") == "true",
-		Elevation:         275.2, // 903ft default elevation in meters
-		Units:             getEnvOrDefault("UNITS", "imperial"),
-		UnitsPressure:     getEnvOrDefault("UNITS_PRESSURE", "inHg"),
-		HistoryPoints:     parseIntEnv("HISTORY_POINTS", 1000),
-		ChartHistoryHours: parseIntEnv("CHART_HISTORY_HOURS", 24),
+		Token:                getEnvOrDefault("TEMPEST_TOKEN", ""),
+		StationName:          getEnvOrDefault("TEMPEST_STATION_NAME", ""),
+		Pin:                  getEnvOrDefault("HOMEKIT_PIN", "00102003"),
+		LogLevel:             getEnvOrDefault("LOG_LEVEL", "error"),
+		LogFilter:            getEnvOrDefault("LOG_FILTER", ""),
+		WebPort:              getEnvOrDefault("WEB_PORT", "8080"),
+		Sensors:              getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
+		StationURL:           getEnvOrDefault("STATION_URL", ""),
+		UDPStream:            getEnvOrDefault("UDP_STREAM", "") == "true",
+		DisableInternet:      getEnvOrDefault("DISABLE_INTERNET", "") == "true",
+		Elevation:            275.2, // 903ft default elevation in meters
+		Units:                getEnvOrDefault("UNITS", "imperial"),
+		UnitsPressure:        getEnvOrDefault("UNITS_PRESSURE", "inHg"),
+		HistoryPoints:        parseIntEnv("HISTORY_POINTS", 1000),
+		ChartHistoryHours:    parseIntEnv("CHART_HISTORY_HOURS", 24),
+		GeneratedWeatherPath: getEnvOrDefault("GENERATE_WEATHER_PATH", "/api/generate-weather"),
 	}
 
 	// Set custom usage function
@@ -191,6 +196,7 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.UnitsPressure, "units-pressure", cfg.UnitsPressure, "Pressure units: inHg (default) or mb. Can also be set via UNITS_PRESSURE environment variable")
 	flag.IntVar(&cfg.HistoryPoints, "history", cfg.HistoryPoints, "Number of data points to store in history (default: 1000, min: 10). Can also be set via HISTORY_POINTS environment variable")
 	flag.IntVar(&cfg.ChartHistoryHours, "chart-history", cfg.ChartHistoryHours, "Number of hours of data to display in charts (default: 24, 0=all). Can also be set via CHART_HISTORY_HOURS environment variable")
+	flag.StringVar(&cfg.GeneratedWeatherPath, "generate-path", cfg.GeneratedWeatherPath, "Path for generated weather endpoint (default: /api/generate-weather). Can also be set via GENERATE_WEATHER_PATH environment variable")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
 
 	// Parse flags but check if elevation was actually provided
@@ -202,7 +208,7 @@ func LoadConfig() *Config {
 		cfg.UseGeneratedWeather = true
 	} else if cfg.UseGeneratedWeather {
 		// If use-generated-weather is set but no custom URL, use default local endpoint
-		cfg.StationURL = fmt.Sprintf("http://localhost:%s/api/generate-weather", cfg.WebPort)
+		cfg.StationURL = fmt.Sprintf("http://localhost:%s%s", cfg.WebPort, cfg.GeneratedWeatherPath)
 	}
 
 	// Validate command line arguments
@@ -247,13 +253,20 @@ func LoadConfig() *Config {
 
 // validateConfig validates command line arguments and returns an error if invalid
 func validateConfig(cfg *Config) error {
-	// Ensure sensible defaults for units when Config structs are created programmatically
-	// Some tests construct Config with empty Units and expect the default to be applied.
+	// Ensure sensible defaults for fields when Config structs are created programmatically
+	// Some tests construct Config with empty values and expect sensible defaults to be applied.
 	if strings.TrimSpace(cfg.Units) == "" {
 		cfg.Units = "imperial"
 	}
 	if strings.TrimSpace(cfg.UnitsPressure) == "" {
 		cfg.UnitsPressure = "inHg"
+	}
+	// Default history/chart values when zero-valued Config is used in tests or programmatically
+	if cfg.HistoryPoints == 0 {
+		cfg.HistoryPoints = 1000
+	}
+	if cfg.ChartHistoryHours == 0 {
+		cfg.ChartHistoryHours = 24
 	}
 	// Validate log level
 	validLogLevels := []string{"debug", "info", "error"}
