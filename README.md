@@ -105,6 +105,43 @@ For a concise history of versions and notable changes, see `VERSIONS.md`.
 - **Flexible Configuration**: Command-line flags and environment variables for easy deployment
 - **Enhanced Debug Logging**: Multi-level logging with emoji indicators, calculated values, API calls/responses, and comprehensive DOM debugging
 
+## Roadmap
+
+Planned enhancements and strategic priorities for upcoming releases. Items are grouped by priority and include brief implementation notes and suggested CLI/environment configuration where relevant.
+
+High priority
+- Alarms and Notifications
+  - Description: Rule-based alerting system that triggers notifications when weather conditions meet configured criteria (thresholds, combinations, or event patterns).
+  - Channels: Console logging, Syslog, Email, SMS, and an internal EventManager (webhook/HTTP). Support templated messages with runtime value interpolation.
+  - CLI/Env: `--alarms @alarms.json` or `--alarms '{...json...}'`. File-watcher to auto-reload alarm configuration.
+  - Notes: Provide a secure secrets mechanism for SMTP/SMS credentials (use `.env` or platform secrets). Include an interactive web-based alarm editor behind `--alarms-edit` for ease of configuration.
+
+- Multi-station Monitoring
+  - Description: Allow monitoring of multiple Tempest stations from a single instance. Each station has its own data source, history buffer, and HomeKit grouping.
+  - CLI/Env: `--stations config.json` or multiple `--station-url` entries. Provide station tagging and per-station sensor enable/disable.
+  - Notes: Architect with per-station goroutines, scoped caches, and aggregated UI views.
+
+Medium priority
+- Container & Serverless Deployment
+  - Docker: Provide a lightweight Docker image with recommended environment variables and a `Dockerfile` producing a small, reproducible artifact.
+  - AWS Lambda (Serverless): Provide a design for a Lambda-friendly mode (stateless handler + external storage for history); `--lambda-mode` for event-driven execution. Note: HomeKit functionality is not supported in serverless mode — this mode targets data ingestion, web dashboard, and notifications.
+  - Notes: Include example `docker-compose.yml` for local multi-container setups (web + optional SMTP/SMS mock) and CI build steps for publishing images.
+
+- Notification Integrations
+  - Email: SMTP with optional OAUTH2 support for providers like Microsoft 365 / Google Workspace.
+  - SMS: Pluggable providers (Twilio, Amazon SNS); supply a provider interface and sample provider configs in `.env.example`.
+  - Syslog & EventManager: Local syslog emission and webhook-based event forwarding for enterprise integrations.
+
+Longer-term / stretch goals
+- Alarm editor: Interactive web UI to author and validate alarms with templates and live preview.
+- Advanced rules engine: Support for boolean logic, time windows, and rate-limiting to prevent notification storms.
+- Multi-tenant UI: Role-based access controls and per-tenant station configuration for managed deployments.
+
+Contributing / Implementation notes
+- Priorities: Focus test coverage and robust unit tests for `pkg/service` (multi-station orchestration) and `pkg/weather` (data parsing & UDP ingestion) before adding large integration features.
+- CLI flags and env variables should be documented in `REQUIREMENTS.md` and `README.md` as features are implemented. Use `.env.example` for credential scaffolding.
+- Backward compatibility: Add feature flags (`--enable-alarms`, `--multi-station`) to avoid surprising default behavior.
+
 ## Quick Start
 
 ### Prerequisites
