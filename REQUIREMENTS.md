@@ -793,6 +793,13 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 This requirements document has been updated to reflect the **COMPLETE** implementation of the Tempest HomeKit Go service, including all originally planned features plus additional enhancements like cross-platform deployment scripts and enhanced logging capabilities.
 
+## Public release & discovery
+
+This repository is targeted for public release as a research project demonstrating the "Vibe Programming" methodology. To aid discovery on GitHub, this project includes keywords and documentation references for: `vibe`, `macOS`, `HomeKit`, `tempest`, `TempestWX`, `WeatherFlow`, and `weather`.
+
+- Status: Work in progress (stable). The core features are implemented and tested; additional polish, documentation, and tests continue to be added.
+- Authors: Kent (principal) and AI-assisted tooling used during development. See README for contributor credits and methodology notes.
+
 ## Acknowledgments
 
 We acknowledge the human contributors and AI assistants who supported this project:

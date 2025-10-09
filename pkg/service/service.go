@@ -292,9 +292,10 @@ func StartService(cfg *config.Config, version string) error {
 		udpListener = udp.NewUDPListener(cfg.HistoryPoints)
 	}
 
-	// Create appropriate data source using factory pattern
+	// Create appropriate data source using factory pattern. Use the
+	// injectable DataSourceFactory so tests can override behavior.
 	logger.Info("Creating data source...")
-	dataSource, err := CreateDataSource(cfg, station, udpListener)
+	dataSource, err := DataSourceFactory(cfg, station, udpListener)
 	if err != nil {
 		return fmt.Errorf("failed to create data source: %v", err)
 	}

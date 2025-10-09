@@ -351,14 +351,14 @@ func TestDataSourceInterfaces(t *testing.T) {
 }
 
 // TestCreateDataSource_StationURLConstruction ensures CreateDataSource constructs
-// the generated StationURL the same way LoadConfig would (http://localhost:<port><path>). 
+// the generated StationURL the same way LoadConfig would (http://localhost:<port><path>).
 func TestCreateDataSource_StationURLConstruction(t *testing.T) {
 	cfg := &config.Config{
-		UseGeneratedWeather: true,
-		WebPort:             "12345",
+		UseGeneratedWeather:  true,
+		WebPort:              "12345",
 		GeneratedWeatherPath: "/api/custom-generate",
-		StationName:         "Test Station",
-		Token:               "test-token",
+		StationName:          "Test Station",
+		Token:                "test-token",
 	}
 
 	station := mockStation()
@@ -373,5 +373,52 @@ func TestCreateDataSource_StationURLConstruction(t *testing.T) {
 	expected := "http://localhost:12345/api/custom-generate"
 	if status.CustomURL != expected {
 		t.Fatalf("expected StationURL %s, got %s", expected, status.CustomURL)
+	}
+}
+
+func TestCreateDataSource_GeneratedDefaults(t *testing.T) {
+	// When WebPort and GeneratedWeatherPath are empty, defaults should be used
+	cfg := &config.Config{
+		UseGeneratedWeather:  true,
+		WebPort:              "",
+		GeneratedWeatherPath: "",
+		StationName:          "Test Station",
+		Token:                "test-token",
+	}
+
+	station := mockStation()
+
+	ds, err := CreateDataSource(cfg, station, nil)
+	if err != nil {
+		t.Fatalf("CreateDataSource failed: %v", err)
+	}
+
+	status := ds.GetStatus()
+
+	expected := "http://localhost:8080/api/generate-weather"
+	if status.CustomURL != expected {
+		t.Fatalf("expected default StationURL %s, got %s", expected, status.CustomURL)
+	}
+}
+
+func TestCreateDataSource_CustomURLWithNilStation(t *testing.T) {
+	// Ensure that providing StationURL does not require a station pointer
+	cfg := &config.Config{
+		StationURL: "http://example.local/weather",
+		Token:      "test-token",
+	}
+
+	ds, err := CreateDataSource(cfg, nil, nil)
+	if err != nil {
+		t.Fatalf("CreateDataSource failed when station nil with custom URL: %v", err)
+	}
+
+	if ds.GetType() != weather.DataSourceCustomURL {
+		t.Fatalf("expected CustomURL type, got %s", ds.GetType())
+	}
+
+	status := ds.GetStatus()
+	if status.CustomURL != "http://example.local/weather" {
+		t.Fatalf("expected custom URL in status, got %s", status.CustomURL)
 	}
 }

@@ -6,6 +6,107 @@ import (
 	"time"
 )
 
+func TestNewWeatherGeneratorWithParamsAndGenerateObservation(t *testing.T) {
+	loc := Location{Name: "TestLand", Latitude: 34.0, Longitude: -118.0, Elevation: 100.0, ClimateZone: "Mediterranean"}
+	wg := NewWeatherGeneratorWithParams(loc, Summer)
+
+	if wg.GetLocation().Name != "TestLand" {
+		t.Fatalf("expected location name TestLand, got %s", wg.GetLocation().Name)
+	}
+	if wg.GetSeason() != Summer {
+		t.Fatalf("expected season Summer, got %v", wg.GetSeason())
+	}
+
+	obs := wg.GenerateObservation()
+	if obs == nil {
+		t.Fatal("GenerateObservation returned nil")
+	}
+
+	// Basic sanity checks on generated observation fields
+	if obs.AirTemperature < -50 || obs.AirTemperature > 60 {
+		t.Fatalf("temperature out of reasonable range: %v", obs.AirTemperature)
+	}
+	if obs.RelativeHumidity < 0 || obs.RelativeHumidity > 100 {
+		t.Fatalf("humidity out of range: %v", obs.RelativeHumidity)
+	}
+	if obs.UV < 0 {
+		t.Fatalf("uv negative: %d", obs.UV)
+	}
+	if obs.ReportInterval <= 0 {
+		t.Fatalf("invalid report interval: %d", obs.ReportInterval)
+	}
+}
+
+func TestGenerateHistoricalDataAndDailyTotals(t *testing.T) {
+	loc := Locations[0]
+	wg := NewWeatherGeneratorWithParams(loc, Spring)
+
+	// Save original daily totals
+	beforeDaily := wg.GetDailyRainTotal()
+
+	count := 20
+	hist := wg.GenerateHistoricalData(count)
+	if len(hist) != count {
+		t.Fatalf("expected %d historical observations, got %d", count, len(hist))
+	}
+
+	// Ensure daily totals were restored after generation
+	afterDaily := wg.GetDailyRainTotal()
+	if beforeDaily != afterDaily {
+		// It's acceptable that they differ slightly due to floating point, allow small delta
+		// but they should be reasonably close
+		delta := beforeDaily - afterDaily
+		if delta < 0 {
+			delta = -delta
+		}
+		if delta > 1.0 {
+			t.Fatalf("daily totals changed unexpectedly by %v", delta)
+		}
+	}
+}
+
+func TestRegenerateAndGenerateNewSeason(t *testing.T) {
+	wg := NewWeatherGenerator()
+	oldLoc := wg.GetLocation()
+	oldSeason := wg.GetSeason()
+
+	wg.Regenerate()
+
+	// After regenerate, location or season should likely change (entropy may pick same values rarely)
+	newLoc := wg.GetLocation()
+	newSeason := wg.GetSeason()
+	if oldLoc.Name == newLoc.Name && oldSeason == newSeason {
+		// If identical, try GenerateNewSeason to force change
+		wg.GenerateNewSeason()
+		newLoc = wg.GetLocation()
+		newSeason = wg.GetSeason()
+	}
+
+	if oldLoc.Name == newLoc.Name && oldSeason == newSeason {
+		t.Log("Regenerate did not change location or season (possible but unlikely)")
+	}
+
+	// Calling GenerateObservation after regenerate should produce an observation
+	obs := wg.GenerateObservation()
+	if obs == nil {
+		t.Fatal("GenerateObservation returned nil after regenerate")
+	}
+}
+
+func TestGenerateObservationConsistentTimestamp(t *testing.T) {
+	wg := NewWeatherGenerator()
+	// Ensure CurrentTime zero yields now-based timestamp
+	wg.CurrentTime = time.Time{}
+	obs := wg.GenerateObservation()
+	if obs == nil {
+		t.Fatal("GenerateObservation returned nil")
+	}
+	if obs.Timestamp <= 0 {
+		t.Fatalf("invalid timestamp: %d", obs.Timestamp)
+	}
+}
+
+// Additional tests from earlier file
 // TestGeneratePrecipitationType verifies precipitation type selection by temperature and rain
 func TestGeneratePrecipitationType(t *testing.T) {
 	wg := &WeatherGenerator{}

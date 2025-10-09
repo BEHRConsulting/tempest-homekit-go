@@ -9,6 +9,15 @@ import (
 	"tempest-homekit-go/pkg/weather"
 )
 
+// DataSourceFactoryFunc is the signature used to create a DataSource. Tests can
+// override the package-level DataSourceFactory variable to inject fake data
+// sources without changing production code.
+type DataSourceFactoryFunc func(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error)
+
+// DataSourceFactory is the default factory used by StartService. It points to
+// CreateDataSource but can be replaced in tests.
+var DataSourceFactory DataSourceFactoryFunc = CreateDataSource
+
 // CreateDataSource examines config flags and returns the appropriate DataSource implementation.
 // This is the only place in the codebase that needs to know about different data source types.
 // For UDP mode, the udpListener parameter must be provided as interface{} (pass nil for other modes).

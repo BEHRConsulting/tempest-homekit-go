@@ -35,6 +35,13 @@ We acknowledge the human contributors and AI assistants who supported this proje
 - Human contributors: Kent
 - AI assistants: Claude Sonnet 3.5, GitHub Copilot (Grok Code Fast 1 preview), GPT-5 mini
 
+## Public release notes
+
+This codebase is prepared for public release as a Vibe Programming research project. Keywords present to assist discovery: `vibe`, `macOS`, `HomeKit`, `tempest`, `TempestWX`, `WeatherFlow`, and `weather`.
+
+- Status: Work in progress (stable). The code is feature-complete for the documented scope and under ongoing test and documentation improvements.
+- Authors: Kent (lead) and contributors listed above. The project was developed with AI-assisted tools—see README and REQUIREMENTS for methodology and acknowledgments.
+
 ## HomeKit Compliance Critical Update
 
 ### ⚠️ **Key Implementation Change: Standard Light Sensor Services**

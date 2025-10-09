@@ -2,7 +2,7 @@
 
 A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on weather conditions. This project serves as a comprehensive test case for **Vibe Programming** methodologies, demonstrating AI-assisted development techniques using modern Large Language Models.
 
-**Version**: v1.5.0
+<!-- Version history moved to VERSIONS.md -->
 
 ## Research Methodology: Vibe Programming
 
@@ -35,17 +35,6 @@ This project successfully demonstrates the efficacy of vibe programming techniqu
 - **Quality Assurance**: 78% test coverage achieved through AI-assisted test generation
 - **Professional Standards**: Production-ready deployment with cross-platform service management
 
-## Key v1.3.0 Enhancements
-
-🚀 **Enhanced User Experience**:
-- ✅ **Comprehensive Command Line Validation**: Detailed error messages with usage information for invalid arguments
-- ✅ **Sensor Name Aliases**: Support for common sensor names (`temp`/`temperature`, `lux`/`light`, `uv`/`uvi`)
-- ✅ **Earth-Realistic Elevation Validation**: Range validation (-430m to 8848m) with helpful geographic references
-- ✅ **Complete Logging Compliance**: All log messages include proper level prefixes (DEBUG:, INFO:, WARNING:, ERROR:)
-- ✅ **UV Value Precision**: UV sensor values now rounded to integers before HomeKit transmission
-- ✅ **Improved Sensor Configuration**: Fixed "min" preset (temp,humidity,lux) and removed invalid "temp-only" preset
-- ✅ **78% Test Coverage**: Comprehensive unit tests for command line validation and configuration parsing
-
 ## Important Sensor Notes
 
 ⚠️ **HomeKit Sensor Compliance**: Due to HomeKit's limited native sensor types, the **Pressure** and **UV Index** sensors use the standard HomeKit **Light Sensor** service for compliance. In the Home app, these will appear as "Light Sensor" with units showing as "lux" - **please ignore the "lux" unit** for these sensors as they represent atmospheric pressure (mb) and UV index values respectively. This is a HomeKit limitation, not an application issue.
@@ -55,6 +44,15 @@ This project successfully demonstrates the efficacy of vibe programming techniqu
 ## Contributors
 
 - **Kent** - Principal Investigator, Vibe Programming methodology implementation
+
+## Public release notes
+
+This repository is prepared for public GitHub release as a Vibe Programming research project. Key discovery keywords included in this repository are: `vibe`, `macOS`, `HomeKit`, `tempest`, `weather`, `TempestWX`, and `WeatherFlow` to improve discoverability.
+
+- Project status: Work in progress (stable) — feature-complete for the core functionality described in this README, actively maintained and under continued test/coverage improvements.
+- Authors: Kent and contributors listed above. This project was developed using Vibe Programming techniques with AI-assisted development tools.
+
+If you use or contribute to this project, please follow the contributing guidelines and include references to the Vibe Programming methodology in PR descriptions when changes are research-related.
 
 ## Acknowledgments
 
@@ -67,61 +65,7 @@ We acknowledge the human contributors and AI assistants who supported this proje
 
 This project represents a controlled experiment in AI-assisted software development, demonstrating the practical application of conversational programming techniques in production software development.
 
-## Features
-
-- **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest station data every 60 seconds
-- **HomeKit Integration**: Individual HomeKit accessories for each weather sensor
-- **Multiple Sensor Support**: Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, UV Index, Pressure, and Ambient Light
-- **Modern Web Dashboard**: Interactive web interface with real-time updates, unit conversions, and professional styling
-  - **Interactive Chart Pop-outs**: Click any chart to open in a resizable 80% screen window with complete historical data
-  - **Professional Visualization**: Chart.js integration with draggable, resizable popup windows
-  - **Deterministic Pop-out Charts**: Popouts now include per-dataset style metadata and unit hints so they match the small-card visuals exactly across sessions and unit systems
-  - **Full Dataset Display**: Pop-out windows show complete 1000+ point historical datasets with legends
-- **Cross-platform Support**: Runs on macOS, Linux, and Windows with automated service installation
-- **Flexible Configuration**: Command-line flags and environment variables for easy deployment
-
-**Status**: ✅ **COMPLETE** - All planned features implemented and tested
-- ✅ Weather monitoring with 11 HomeKit sensors (Temperature + 10 custom weather sensors)
-- ✅ Complete HomeKit integration with compliance optimization
-- ✅ Modern web dashboard with external JavaScript architecture
-- ✅ TempestWX Device Status Scraping with `--use-web-status` flag:
-  - ✅ Headless browser automation using Chrome/Chromium
-  - ✅ 15-minute periodic updates with caching and fallback strategies
-  - ✅ 12+ device status fields including battery voltage, uptimes, signal strength
-  - ✅ Data source transparency with metadata and timestamps
-  - ✅ Graceful fallback chain: Browser → HTTP → API → Fallback
-- ✅ UV Index monitoring with NCBI reference data and EPA color coding
-- ✅ Information tooltips system with standardized positioning
-- ✅ HomeKit accessories status monitoring with enabled/disabled indicators
-- ✅ Interactive unit conversions with localStorage persistence
-- ✅ Cross-platform build and deployment with automated service management
-- ✅ Professional styling and enhanced user experience
-- ✅ Comprehensive logging and error handling
-- ✅ Database management with --cleardb command
-- ✅ Production-ready with graceful error recovery
-
-## Recent Major Improvements (September 2025)
-
-### 🚀 Unified Data Architecture
-- **Rain Totals Fixed**: Proper daily accumulation calculation (resolved 0.0 rain total bug)
-- **Single Data Pipeline**: Eliminated complex branching between real and generated weather
-- **Flexible Station URLs**: Support for custom weather endpoints with `--station-url`
-- **Mock Tempest API**: Perfect API compatibility at `/api/generate-weather` endpoint
-- **Clean Architecture**: Removed scattered special case handling throughout codebase
-
-### 📊 Enhanced Visualization
-- **Chart Improvements**: Fixed dataset rendering order for proper line visibility
-- **Simplified Solar Charts**: Removed unnecessary average lines from light/UV charts
-- **Better Tooltips**: All datasets now display properly in hover interactions
-- **Data Accuracy**: Charts reflect actual weather data with proper timestamps
- - **Headless Test Coverage for Pop-outs**: Added deterministic headless tests that open small-card charts, inject vendored scripts, and assert popout initialization, dataset style parity, and unit conversion behavior to reduce flakiness in CI
-
-### 🔧 Technical Enhancements  
-- **Backwards Compatibility**: `--use-generated-weather` still works seamlessly
-- **Code Quality**: Single unified weather processing pipeline
-- **Maintainability**: Much cleaner architecture without dual data paths
-
-## Features
+For a concise history of versions and notable changes, see `VERSIONS.md`.
 
 - **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest station data every 60 seconds
 - **HomeKit Integration**: Individual HomeKit accessories for each weather sensor
@@ -977,58 +921,6 @@ Filter logs to show only specific messages (case-insensitive):
 ./scripts/install-service.sh --token "your-token"
 ```
 
-## Recent Enhancements
-
-### Tooltip Positioning & User Experience Improvements (Latest)
-- **Consistent Tooltip Positioning**: All information tooltips now open with their top-left corner aligned with the bottom-right of their respective info icons
-- **Rain Info Icon Resolution**: Fixed JavaScript issue where `updateUnits()` function was removing the rain info icon during unit conversions
-- **Enhanced Event Handling**: Implemented proper event propagation control with `stopPropagation()` to prevent interference between info icon clicks and unit toggles
-- **Humidity Description Addition**: Added visible humidity comfort level descriptions below units, matching the lux card pattern
-- **Context Container Architecture**: Added proper `position: relative` containers for all tooltips to ensure consistent positioning behavior
-
-### JavaScript Architecture Modernization
-- **Complete Separation of Concerns**: Moved all ~800+ lines of JavaScript from HTML template to external `script.js`
-- **Cache-Busting File Serving**: Static files served with timestamps to prevent browser caching issues
-- **Enhanced Event Management**: MutationObserver-based event listener attachment with retry mechanisms
-- **Comprehensive DOM Debugging**: Advanced element detection and interaction logging
-- **Improved Maintainability**: Clean HTML templates with external asset references
-
-### Pressure Analysis System
-- **Advanced Forecasting**: Server-side pressure trend analysis with weather predictions
-- **Interactive Info Icons**: Clickable ℹ️ icons with detailed calculation explanations
-- **Event Propagation Control**: Proper handling of nested click events to prevent unit toggle interference
-- **Real-time Calculations**: Live pressure condition assessment (Normal, High, Low) with trend indicators
-
-### Enhanced Debug Logging
-- **Multi-Level System**: DEBUG, INFO, WARN, ERROR levels with emoji indicators (🐛, ℹ️, ⚠️, ❌)
-- **Structured Data Output**: API calls/responses, calculated values, and sensor updates
-- **DOM Inspection Tools**: Comprehensive element detection and HTML content analysis
-- **Event Listener Monitoring**: Detailed tracking of event attachment and retry attempts
-
-### UV Index Monitoring
-- **Complete UV Exposure Assessment**: Professional UV Index display with NCBI reference categories
-- **EPA Color Coding**: Visual risk indicators from green (minimal) to violet (extreme)
-- **Real-time Updates**: Live UV Index monitoring with automatic risk category assessment
-- **Educational Information**: Tooltip with detailed exposure risk information
-
-### Information Tooltips System
-- **Standardized Positioning**: All information tooltips consistently aligned for optimal visibility
-- **Rich Content**: Detailed sensor information including measurement ranges and units
-- **Professional Design**: Clean tooltip styling with proper contrast and readability
-- **Event Handling**: Proper click event management with stopPropagation for nested elements
-
-### HomeKit Accessories Status
-- **Real-time Status Monitoring**: Live display of enabled/disabled sensor status in web dashboard
-- **Priority Sorting**: Active sensors automatically sorted to the top of the accessories list
-- **Clear Visual Indicators**: Distinct styling for enabled vs disabled accessories
-- **Configuration Transparency**: Shows exactly which sensors are currently being provided to HomeKit
-
-### Enhanced User Experience
-- **Consistent Design Language**: Unified styling across all dashboard components
-- **Improved Accessibility**: Better contrast ratios and screen reader support  
-- **Responsive Layout**: Enhanced mobile experience with optimized touch targets
-- **Performance Optimizations**: Faster dashboard loading and more efficient updates
-
 ## Development
 
 ### GoDoc Server
@@ -1068,18 +960,29 @@ go test ./pkg/web/...
 go test ./pkg/service/...
 ```
 
-### Test Coverage Overview
-- **pkg/config**: 66.4% coverage - Configuration management, elevation parsing, database operations
-- **pkg/weather**: 16.2% coverage - WeatherFlow API client, data parsing utilities, station discovery
-- **pkg/web**: 50.5% coverage - HTTP server, pressure analysis, status endpoints
-- **pkg/service**: 3.6% coverage - Service orchestration, logging, environmental detection
+# Test Coverage Overview
+- coverage report saved at `./coverage.out` (generated by the most recent coverage run)
+- Current per-package snapshot from the latest test runs:
+  - pkg/config: 79.9%
+  - pkg/generator: ~86%
+  - pkg/homekit: 84.5%
+  - pkg/logger: 91.3%
+  - pkg/service: 49.1%  (highest-leverage area to add tests)
+  - pkg/udp: 51.3%
+  - pkg/weather: 60.8%
+  - pkg/web: 70.6%
+
+- Aggregate coverage printed by the coverage tool on the last run: 4.0% (see `./coverage.out`). Note: per-package numbers above were collected from individual `go test` outputs during iterative runs; the aggregated percentage may vary depending on how coverage was collected. The current project goal is to raise overall coverage to >= 70% by adding targeted tests (priority: `pkg/service`, then `pkg/weather`).
+ - Aggregate coverage printed by the coverage tool on the last run: 4.3% (see `./coverage.out`). Note: per-package numbers above were collected from individual `go test` outputs during iterative runs; these can be higher because they are per-package runs. The aggregate coverage uses a single `coverage.out` collected with `go test -coverprofile=coverage.out ./...` and is the authoritative project-wide percentage. The current project goal is to raise overall coverage to >= 70% by adding targeted tests (priority: `pkg/service`, then `pkg/weather`).
 
 ### Testing Architecture
-The project includes comprehensive unit tests covering:
-- **Configuration Management**: Flag parsing, environment variables, elevation parsing (feet/meters)
-- **Weather Client**: Station discovery, device ID extraction, JSON parsing helpers, time filtering
-- **Web Server**: HTTP endpoints, pressure trend analysis, history loading progress
-- **Service Functions**: Log level management, night time detection based on illuminance
+The project includes unit tests and integration-style tests that use small, isolated test doubles and local httptest servers where appropriate. Test patterns used across the repo:
+- Table-driven tests for parsing and validation logic
+- Fake implementations for interface dependencies (e.g., `weather.DataSource`, UDP listeners)
+- `httptest` servers for HTTP client/server interactions
+- Package-level injection points (for example, a `DataSourceFactory` variable in `pkg/service`) to make orchestration testable without starting long-lived goroutines
+
+When running coverage locally, use `go test -coverprofile=coverage.out ./...` and then `go tool cover -func=coverage.out` to inspect the aggregate and per-file percentages.
 
 ### Building for Development
 ```bash
