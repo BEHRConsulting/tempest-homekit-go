@@ -12,6 +12,7 @@ require (
 require (
 	github.com/brutella/dnssd v1.2.10 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-chi/chi v1.5.4 // indirect
 	github.com/go-json-experiment/json v0.0.0-20250725192818-e39067aee2d2 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect

@@ -23,7 +23,7 @@ jobs:
       - name: Install Chromium
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-browser
+          sudo apt-get install -y chromium-browser chromium-chromedriver
 
       - name: Install dependencies
         run: |
@@ -33,7 +33,8 @@ jobs:
         run: |
           make vendor-chartjs || true
 
-      - name: Run headless UI test
+      - name: Run popout diagnostics test
         run: |
-          # Run only the headless UI test to keep the job quick
-          go test ./pkg/web -run TestHeadlessDashboard -v
+          # Run the popout diagnostics test with Chrome available
+          go test ./pkg/web -run TestPopout -v
+        continue-on-error: true

@@ -1,3 +1,6 @@
+//go:build !no_browser
+// +build !no_browser
+
 package web
 
 import (
@@ -17,11 +20,35 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+// chromedpAvailable checks if Chrome/Chromium is available for headless testing
+func chromedpAvailable() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, chromedp.Headless, chromedp.DisableGPU, chromedp.NoFirstRun, chromedp.NoSandbox)
+	defer allocCancel()
+
+	browserCtx, browserCancel := chromedp.NewContext(allocCtx)
+	defer browserCancel()
+
+	// Try to run a simple task
+	err := chromedp.Run(browserCtx, chromedp.Tasks{
+		chromedp.Navigate("about:blank"),
+	})
+
+	return err == nil
+}
+
 // TestPopoutDiagnostics navigates to the dashboard, clicks temperature, wind and pressure
 // small-card charts, and captures any window.__popoutError and console logs emitted
 // during popout initialization. This test is diagnostic-only and never fails; it
 // reports findings via t.Log so maintainers can inspect issues.
 func TestPopoutDiagnostics(t *testing.T) {
+	// Skip if Chrome/Chromium not available (common in CI environments)
+	if !chromedpAvailable() {
+		t.Skip("Skipping popout diagnostics test: Chrome/Chromium not available (required for headless browser testing)")
+	}
+
 	t.Helper()
 	ws := testNewWebServer(t)
 

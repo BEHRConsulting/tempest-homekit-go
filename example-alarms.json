@@ -1,0 +1,78 @@
+{
+  "alarms": [
+    {
+      "name": "high-temperature",
+      "description": "Alert when temperature exceeds 85°F",
+      "condition": "temperature > 29.4",
+      "tags": ["temperature", "heat", "summer"],
+      "enabled": true,
+      "cooldown": 1800,
+      "channels": [
+        {
+          "type": "console",
+          "template": "🌡️ HIGH TEMPERATURE ALERT: {{temperature}}°C at {{station}} - Condition: {{condition}}"
+        }
+      ]
+    },
+    {
+      "name": "heavy-rain",
+      "description": "Alert when rain rate is significant",
+      "condition": "rain_rate > 5",
+      "tags": ["rain", "precipitation"],
+      "enabled": true,
+      "cooldown": 600,
+      "channels": [
+        {
+          "type": "console",
+          "template": "🌧️ HEAVY RAIN: {{rain_rate}} mm/hr at {{station}}"
+        },
+        {
+          "type": "syslog",
+          "template": "Heavy rain detected: {{rain_rate}} mm/hr"
+        }
+      ]
+    },
+    {
+      "name": "high-wind",
+      "description": "Alert for dangerous wind conditions",
+      "condition": "wind_gust > 20",
+      "tags": ["wind", "safety"],
+      "enabled": true,
+      "cooldown": 900,
+      "channels": [
+        {
+          "type": "console",
+          "template": "💨 HIGH WIND ALERT: Gust {{wind_gust}} m/s from {{wind_direction}}° at {{station}}"
+        }
+      ]
+    },
+    {
+      "name": "heat-and-humidity",
+      "description": "Combined heat and humidity warning",
+      "condition": "temperature > 30 && humidity > 70",
+      "tags": ["temperature", "humidity", "comfort"],
+      "enabled": true,
+      "cooldown": 3600,
+      "channels": [
+        {
+          "type": "console",
+          "template": "🥵 HEAT & HUMIDITY WARNING: {{temperature}}°C / {{humidity}}% at {{station}} - Stay hydrated!"
+        }
+      ]
+    },
+    {
+      "name": "uv-warning",
+      "description": "High UV index warning",
+      "condition": "uv > 8",
+      "tags": ["uv", "safety", "health"],
+      "enabled": true,
+      "cooldown": 7200,
+      "channels": [
+        {
+          "type": "console",
+          "template": "☀️ HIGH UV INDEX: {{uv}} at {{station}} - Sun protection recommended"
+        }
+      ]
+    }
+  ]
+}

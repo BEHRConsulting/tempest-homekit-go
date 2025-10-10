@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"tempest-homekit-go/pkg/alarm/editor"
 	"tempest-homekit-go/pkg/config"
 	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/service"
@@ -36,10 +37,23 @@ func main() {
 
 	// Handle version flag
 	if cfg.Version {
-		fmt.Println("tempest-homekit-go v1.5.0")
+		fmt.Println("tempest-homekit-go v1.6.0")
 		fmt.Println("Built with Go 1.24.2")
 		fmt.Println("HomeKit integration for WeatherFlow Tempest weather stations")
 		os.Exit(0)
+	}
+
+	// Handle alarm editor mode
+	if cfg.AlarmsEdit != "" {
+		logger.Info("Alarm editor mode detected, starting alarm editor...")
+		editorServer, err := editor.NewServer(cfg.AlarmsEdit, cfg.AlarmsEditPort)
+		if err != nil {
+			log.Fatalf("Failed to create alarm editor: %v", err)
+		}
+		if err := editorServer.Start(); err != nil {
+			log.Fatalf("Failed to start alarm editor: %v", err)
+		}
+		return
 	}
 
 	// Handle API testing if requested
@@ -60,7 +74,7 @@ func main() {
 	}
 
 	logger.Info("Starting service with config: WebPort=%s, LogLevel=%s", cfg.WebPort, cfg.LogLevel)
-	err := service.StartService(cfg, "1.5.0")
+	err := service.StartService(cfg, "1.6.0")
 	if err != nil {
 		log.Fatalf("Service failed: %v", err)
 	}

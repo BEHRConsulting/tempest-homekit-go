@@ -1,0 +1,42 @@
+{
+  "alarms": [
+    {
+      "name": "Hot outside",
+      "description": "Set when temp is > 85F",
+      "tags": [
+        "hot"
+      ],
+      "enabled": true,
+      "condition": "temp > 85",
+      "cooldown": 1800,
+      "channels": [
+        {
+          "type": "console",
+          "template": "🚨 ALARM: Hot outside\nCondition: {{.Condition}}\nValue: {{.Value}}\nTime: {{.Time}}"
+        },
+        {
+          "type": "syslog",
+          "template": "🚨 ALARM: Hot outside\nCondition: {{.Condition}}\nValue: {{.Value}}\nTime: {{.Time}}"
+        }
+      ]
+    },
+    {
+      "name": "Lightning Nearby",
+      "description": "Let me know when lightning strikes nearby",
+      "enabled": true,
+      "condition": "*lightning_count",
+      "cooldown": 1800,
+      "channels": [
+        {
+          "type": "console",
+          "template": "🚨 ALARM: Lightning Nearby\nCondition: {{.Condition}}\nValue: {{.Value}}\nTime: {{.Time}}"
+        },
+        {
+          "type": "syslog",
+          "template": "🚨 ALARM: Lightning Nearby\nCondition: {{.Condition}}\nValue: {{.Value}}\nTime: {{.Time}}"
+        }
+      ]
+    }
+  ],
+  "_comment": "test"
+}

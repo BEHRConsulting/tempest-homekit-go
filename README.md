@@ -142,6 +142,93 @@ Contributing / Implementation notes
 - CLI flags and env variables should be documented in `REQUIREMENTS.md` and `README.md` as features are implemented. Use `.env.example` for credential scaffolding.
 - Backward compatibility: Add feature flags (`--enable-alarms`, `--multi-station`) to avoid surprising default behavior.
 
+## Alarms and Notifications
+
+The alarm system enables rule-based weather alerting with multiple notification channels. Configure alarms to trigger when weather conditions meet specific criteria (temperature thresholds, lightning proximity, rain events, etc.).
+
+**Supported Notification Channels:**
+- **Console**: Log messages to stdout
+- **Syslog**: Local or remote syslog server
+- **Email**: SMTP or Microsoft 365 OAuth2
+- **SMS**: Twilio or AWS SNS
+- **EventLog**: System event log (Windows) or syslog (Unix)
+
+**Features:**
+- Flexible condition syntax: `temperature > 85`, `humidity > 80 && temperature > 35`, `lux > 10000 && lux < 50000`
+- **Change detection operators**: `*field` (any change), `>field` (increase), `<field` (decrease)
+  - Example: `*lightning_count` triggers on any lightning strike
+  - Example: `>rain_rate` triggers when rain intensifies
+  - Example: `<lightning_distance` triggers when lightning gets closer
+- Template-based messages with runtime value interpolation (`{{temperature}}`, `{{timestamp}}`, etc.)
+- Cooldown periods to prevent notification storms
+- Cross-platform file watching for live configuration reloads
+- Per-alarm tags for easy filtering and organization
+- **Web console alarm status card**: View alarm status, last triggered times, and configuration directly in the dashboard
+
+**Quick Start:**
+```bash
+# Run with alarm configuration
+./tempest-homekit-go --token "your-token" --alarms @alarms.json
+
+# Edit alarm configuration (standalone editor mode)
+./tempest-homekit-go --alarms-edit @alarms.json --alarms-edit-port 8081
+```
+
+See `alarms.example.json` for a complete configuration example with all supported alarm types and notification channels. Configure SMTP/SMS credentials in `.env` file or via environment variables (see `.env.example`).
+
+### Using the Alarm Editor
+
+The alarm editor provides a modern web interface for managing alarm configurations:
+
+1. **Start the editor:**
+   ```bash
+   ./tempest-homekit-go --alarms-edit @alarms.json
+   ```
+
+2. **Open your browser to** `http://localhost:8081` (or custom port with `--alarms-edit-port`)
+
+3. **Editor features:**
+   - **Search & filter**: Find alarms by name or tag
+   - **Create alarms**: Click "New Alarm" button to add alarms
+   - **Edit alarms**: Click "Edit" on any alarm card
+   - **Delete alarms**: Click "Delete" on any alarm card
+   - **Visual status**: Green dot = enabled, red dot = disabled
+   - **Live validation**: Conditions are validated before saving
+   - **Auto-save**: Changes saved immediately to JSON file
+
+4. **Alarm form fields:**
+   - **Name**: Unique identifier (required)
+   - **Description**: Optional description
+   - **Condition**: Expression like `temperature > 85` or `humidity > 80 && temperature > 35` (required)
+   - **Tags**: Comma-separated tags for organization
+   - **Cooldown**: Seconds before alarm can fire again (default: 1800)
+   - **Enabled**: Toggle alarm on/off
+
+The editor operates independently from the main service and saves changes directly to your alarm configuration file. If the main service is running with `--alarms`, it will automatically detect and reload the configuration when changes are saved.
+
+### Web Console Alarm Status
+
+When running the main service with alarms enabled, the web dashboard (`http://localhost:8080`) automatically displays an **Alarm Status** card showing:
+
+- **System Status**: Active/Not Configured indicator
+- **Configuration File**: Name of the alarm configuration file being monitored
+- **Last Read**: Timestamp when the configuration was last loaded (updates only on file changes)
+- **Alarm Counts**: Number of enabled alarms vs total alarms
+- **Active Alarms List**: Details for each enabled alarm:
+  - Alarm name and condition
+  - Last triggered timestamp (or "Never")
+  - Delivery channels (console, syslog, email, SMS, eventlog)
+
+The alarm status refreshes automatically every 10 seconds, providing real-time visibility into your alarm system without needing to open the alarm editor or check log files.
+
+**Example:**
+```bash
+# Start service with alarms - web console will show alarm status card
+./tempest-homekit-go --token "your-token" --alarms @tempest-alarms.json
+
+# Open http://localhost:8080 to view dashboard with alarm status
+```
+
 ## Quick Start
 
 ### Prerequisites
@@ -242,6 +329,9 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 ### Configuration Options
 
 #### Command-Line Flags (alphabetical order)
+- `--alarms`: Alarm configuration: @filename.json or inline JSON string (default: none). Env: ALARMS
+- `--alarms-edit`: Run alarm editor for specified config file: @filename.json (default: none)
+- `--alarms-edit-port`: Port for alarm editor web UI (default: 8081). Env: ALARMS_EDIT_PORT
 - `--cleardb`: Clear HomeKit database and reset device pairing
 - `--disable-homekit`: Disable HomeKit services and run web console only
 - `--elevation`: Station elevation in meters (default: auto-detect, valid range: -430m to 8848m)
@@ -1110,6 +1200,26 @@ This project was developed using various technologies, libraries, and tools. Bel
 - **Error Handling** - Comprehensive error management
 - **Logging** - Multi-level logging system
 - **Configuration Management** - Flexible configuration via flags and environment variables
+
+## Additional Documentation
+
+### Alarm System Documentation
+- **[CHANGE_DETECTION_OPERATORS.md](CHANGE_DETECTION_OPERATORS.md)** - Complete technical reference for change detection operators (*field, >field, <field)
+- **[CHANGE_DETECTION_QUICKREF.md](CHANGE_DETECTION_QUICKREF.md)** - Quick reference guide with examples
+- **[CHANGE_DETECTION_VISUAL.md](CHANGE_DETECTION_VISUAL.md)** - Visual diagrams and state transition timelines
+- **[CHANGE_DETECTION_SUMMARY.md](CHANGE_DETECTION_SUMMARY.md)** - Implementation summary and architecture
+- **[ALARM_EDITOR_CHANNEL_FIX.md](ALARM_EDITOR_CHANNEL_FIX.md)** - Documentation of alarm channel save fix
+- **[WEB_ALARM_STATUS_CARD.md](WEB_ALARM_STATUS_CARD.md)** - Web console alarm status card implementation
+- **[examples/alarms-with-change-detection.json](examples/alarms-with-change-detection.json)** - Ready-to-use alarm configurations
+
+### Package Documentation
+Each package includes detailed README files:
+- **[pkg/alarm/README.md](pkg/alarm/README.md)** - Alarm package documentation
+- **[pkg/alarm/editor/README.md](pkg/alarm/editor/README.md)** - Alarm editor documentation
+- **[pkg/config/README.md](pkg/config/README.md)** - Configuration package documentation
+- **[pkg/weather/README.md](pkg/weather/README.md)** - Weather data source documentation
+- **[pkg/web/README.md](pkg/web/README.md)** - Web dashboard documentation
+- **[pkg/service/README.md](pkg/service/README.md)** - Service orchestration documentation
 
 ---
 

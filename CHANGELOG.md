@@ -5,8 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
 ## [Unreleased]
-- Public release preparation and documentation updates
 - Ongoing test and coverage improvements
+
+## [1.6.0] - 2025-10-08
+### Added
+- **Alarm System**: Rule-based weather alerting with multiple notification channels
+  - Console logging, Syslog, Email (SMTP/Microsoft 365), SMS (Twilio, AWS SNS)
+  - Configurable alarm conditions with operators (>, <, >=, <=, ==, !=, &&, ||)
+  - Template-based messages with runtime value interpolation
+  - Cross-platform file watching for live configuration reloads
+  - Alarm cooldown periods to prevent notification storms
+  - CLI flags: `--alarms @filename.json`, `--alarms-edit @filename.json`, `--alarms-edit-port`
+- **Alarm Editor**: Interactive web UI for managing alarm configurations
+  - Modern, responsive interface with search and filter capabilities
+  - Create, edit, delete alarms with live validation
+  - Tag-based organization and filtering
+  - Visual status indicators for enabled/disabled alarms
+  - Auto-save to JSON configuration file
+  - Standalone mode accessible at `http://localhost:8081`
+- Example alarm configuration: `alarms.example.json`
+- Environment variables for SMTP, SMS providers (Twilio, AWS SNS), and Syslog
+
+### Changed
+- Version bumped to 1.6.0
+- Updated `.env.example` with alarm provider credentials
 
 ## [1.5.0] - YYYY-MM-DD
 ### Added

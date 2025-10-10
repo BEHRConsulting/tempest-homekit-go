@@ -2,7 +2,17 @@
 
 This file tracks released versions and the notable changes implemented in each release. Its purpose is to keep the README concise and centralize the version-by-version changelog.
 
-## v1.5.0 (current)
+## v1.6.0 (current)
+- Alarm system with rule-based weather alerting
+- Multiple notification channels (console, email, SMS, syslog, eventlog)
+- Template-based messages with runtime value interpolation
+- Cross-platform file watching for live alarm config reloads
+- Interactive web-based alarm editor with search, filter, and live validation
+- CLI flags: --alarms, --alarms-edit, --alarms-edit-port
+- Example configuration: alarms.example.json
+- Full test suite for alarm editor (6 tests, 100% pass rate)
+
+## v1.5.0
 - Public release preparation and documentation updates
 - UDP stream support for local Tempest hub (offline mode)
 - Web dashboard and HomeKit integration improvements

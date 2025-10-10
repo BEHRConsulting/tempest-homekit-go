@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"tempest-homekit-go/pkg/alarm"
 	"tempest-homekit-go/pkg/config"
 	"tempest-homekit-go/pkg/generator"
 	"tempest-homekit-go/pkg/homekit"
@@ -315,6 +316,28 @@ func StartService(cfg *config.Config, version string) error {
 		logger.Debug("Initial data source status set: type=%s", initialStatus.Type)
 	}
 
+	// Initialize alarm manager if alarms are configured
+	var alarmManager *alarm.Manager
+	if cfg.Alarms != "" {
+		logger.Info("Initializing alarm manager with config: %s", cfg.Alarms)
+		var err error
+		alarmManager, err = alarm.NewManager(cfg.Alarms, station.StationName)
+		if err != nil {
+			logger.Error("Failed to initialize alarm manager: %v", err)
+			logger.Error("Continuing without alarms - fix configuration to enable alarm notifications")
+		} else {
+			logger.Info("Alarm manager initialized with %d alarms (%d enabled)",
+				alarmManager.GetAlarmCount(), alarmManager.GetEnabledAlarmCount())
+			// Connect alarm manager to web server for status display
+			if webServer != nil {
+				webServer.SetAlarmManager(alarmManager)
+			}
+		}
+	}
+	if alarmManager != nil {
+		defer alarmManager.Stop()
+	}
+
 	// Main observation processing loop - unified for all data sources!
 	logger.Info("Starting unified observation processing loop")
 	for obs := range obsChan {
@@ -351,6 +374,11 @@ func StartService(cfg *config.Config, version string) error {
 			status := dataSource.GetStatus()
 			webServer.UpdateDataSourceStatus(status)
 			logger.Debug("Data source status updated")
+		}
+
+		// Process alarms if alarm manager is initialized
+		if alarmManager != nil {
+			alarmManager.ProcessObservation(&obs)
 		}
 
 		// Log observation details

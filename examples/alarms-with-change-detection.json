@@ -1,0 +1,144 @@
+{
+  "alarms": [
+    {
+      "name": "Lightning Detection",
+      "description": "Alert on any lightning strike detected",
+      "enabled": true,
+      "condition": "*lightning_count",
+      "cooldown": 60,
+      "tags": ["lightning", "safety", "storm"],
+      "channels": [
+        {
+          "type": "console",
+          "template": "⚡ LIGHTNING DETECTED! Strike count: {{lightning_count}}, Distance: {{lightning_distance}}km at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "Rain Intensifying",
+      "description": "Alert when rain rate increases",
+      "enabled": true,
+      "condition": ">rain_rate",
+      "cooldown": 300,
+      "tags": ["rain", "precipitation"],
+      "channels": [
+        {
+          "type": "console",
+          "template": "🌧️ Rain increasing! Current rate: {{rain_rate}}mm/hr at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "Lightning Approaching",
+      "description": "Alert when lightning gets closer (distance decreasing)",
+      "enabled": true,
+      "condition": "<lightning_distance && lightning_distance < 20",
+      "cooldown": 120,
+      "tags": ["lightning", "safety", "approaching"],
+      "channels": [
+        {
+          "type": "console",
+          "template": "⚠️ LIGHTNING APPROACHING! Distance now {{lightning_distance}}km (decreasing) at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "Storm Intensifying",
+      "description": "Alert when rain OR wind increases",
+      "enabled": true,
+      "condition": ">rain_rate || >wind_gust",
+      "cooldown": 180,
+      "tags": ["storm", "wind", "rain"],
+      "channels": [
+        {
+          "type": "console",
+          "template": "🌪️ Storm intensifying! Rain: {{rain_rate}}mm/hr, Wind gusts: {{wind_gust}}m/s at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "Pressure Dropping",
+      "description": "Alert when barometric pressure falls (storm approaching)",
+      "enabled": true,
+      "condition": "<pressure && pressure < 1010",
+      "cooldown": 300,
+      "tags": ["pressure", "storm", "weather-change"],
+      "channels": [
+        {
+          "type": "console",
+          "template": "📉 Pressure dropping! Current: {{pressure}}mb (falling) - Storm may be approaching at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "Severe Weather Conditions",
+      "description": "Complex storm detection with multiple change indicators",
+      "enabled": true,
+      "condition": "(*lightning_count && lightning_distance < 15) || (>wind_gust && wind_gust > 15)",
+      "cooldown": 300,
+      "tags": ["severe", "storm", "safety", "complex"],
+      "channels": [
+        {
+          "type": "console",
+          "template": "⚠️ SEVERE WEATHER! Lightning: {{lightning_count}} strikes at {{lightning_distance}}km, Wind: {{wind_gust}}m/s at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "Heat Index Rising",
+      "description": "Alert when temperature is high AND humidity is increasing",
+      "enabled": true,
+      "condition": "temperature > 32 && >humidity && humidity > 60",
+      "cooldown": 600,
+      "tags": ["heat", "humidity", "health"],
+      "channels": [
+        {
+          "type": "console",
+          "template": "🌡️ Dangerous heat building! Temp: {{temperature_f}}°F with {{humidity}}% humidity (rising) at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "Wind Strengthening",
+      "description": "Alert when wind gusts increase",
+      "enabled": true,
+      "condition": ">wind_gust && wind_gust > 10",
+      "cooldown": 180,
+      "tags": ["wind", "gusts"],
+      "channels": [
+        {
+          "type": "console",
+          "template": "💨 Wind strengthening! Gusts now {{wind_gust}}m/s ({{wind_gust_mph}}mph) and increasing at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "UV Index Rising",
+      "description": "Alert when UV index increases to dangerous levels",
+      "enabled": true,
+      "condition": ">uv && uv > 8",
+      "cooldown": 1800,
+      "tags": ["uv", "health", "sun"],
+      "channels": [
+        {
+          "type": "console",
+          "template": "☀️ UV index rising to dangerous levels! Current UV: {{uv}} (very high) at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "Temperature Plummeting",
+      "description": "Alert when temperature drops rapidly",
+      "enabled": false,
+      "condition": "<temperature && temperature < 5",
+      "cooldown": 300,
+      "tags": ["temperature", "cold", "freeze"],
+      "channels": [
+        {
+          "type": "console",
+          "template": "🥶 Temperature dropping rapidly! Now {{temperature_f}}°F ({{temperature}}°C) and falling at {{timestamp}}"
+        }
+      ]
+    }
+  ]
+}

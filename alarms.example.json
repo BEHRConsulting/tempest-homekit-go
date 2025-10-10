@@ -1,0 +1,168 @@
+{
+  "email": {
+    "provider": "smtp",
+    "smtp_host": "smtp.example.com",
+    "smtp_port": 587,
+    "username": "alerts@example.com",
+    "password": "${SMTP_PASSWORD}",
+    "from_address": "alerts@example.com",
+    "from_name": "Tempest Weather Alerts",
+    "use_tls": true
+  },
+  "sms": {
+    "provider": "twilio",
+    "account_sid": "${TWILIO_ACCOUNT_SID}",
+    "auth_token": "${TWILIO_AUTH_TOKEN}",
+    "from_number": "${TWILIO_FROM_NUMBER}"
+  },
+  "syslog": {
+    "network": "",
+    "address": "",
+    "priority": "warning",
+    "tag": "tempest-weather"
+  },
+  "alarms": [
+    {
+      "name": "high-temperature",
+      "description": "Alert when temperature exceeds 85°F",
+      "tags": ["temperature", "heat", "outdoor"],
+      "enabled": true,
+      "condition": "temperature > 85",
+      "cooldown": 1800,
+      "channels": [
+        {
+          "type": "console",
+          "template": "Tempest-Alarm [high-temperature]: Temperature is {{temperature}}°F (threshold: 85°F) at {{timestamp}}"
+        },
+        {
+          "type": "email",
+          "email": {
+            "to": ["admin@example.com"],
+            "subject": "High Temperature Alert: {{temperature}}°F",
+            "body": "Temperature has exceeded 85°F.\n\nCurrent reading: {{temperature}}°F\nHumidity: {{humidity}}%\nTime: {{timestamp}}\n\nLocation: {{station}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lightning-nearby",
+      "description": "Alert when lightning strikes within 2 miles",
+      "tags": ["lightning", "safety", "severe"],
+      "enabled": true,
+      "condition": "lightning_distance < 2",
+      "cooldown": 300,
+      "channels": [
+        {
+          "type": "console",
+          "template": "Tempest-Alarm [lightning-nearby]: Lightning detected {{lightning_distance}} miles away at {{timestamp}}"
+        },
+        {
+          "type": "sms",
+          "sms": {
+            "to": ["+15555551234"],
+            "message": "⚡ LIGHTNING ALERT: Strike detected {{lightning_distance}}mi away. Seek shelter immediately! - Tempest Weather"
+          }
+        },
+        {
+          "type": "syslog",
+          "template": "Tempest-Alarm [lightning-nearby]: Lightning strike at {{lightning_distance}} miles, count: {{lightning_count}}"
+        }
+      ]
+    },
+    {
+      "name": "hot-and-humid",
+      "description": "Alert for dangerous heat index conditions",
+      "tags": ["temperature", "humidity", "heat-index", "health"],
+      "enabled": true,
+      "condition": "temperature > 35 && humidity > 80",
+      "cooldown": 3600,
+      "channels": [
+        {
+          "type": "console",
+          "template": "Tempest-Alarm [hot-and-humid]: Dangerous conditions - Temp: {{temperature}}°C, Humidity: {{humidity}}% at {{timestamp}}"
+        },
+        {
+          "type": "email",
+          "email": {
+            "to": ["admin@example.com", "safety@example.com"],
+            "cc": ["alerts@example.com"],
+            "subject": "Heat Index Warning: {{temperature}}°C / {{humidity}}%",
+            "body": "Dangerous heat index conditions detected.\n\nTemperature: {{temperature}}°C ({{temperature_f}}°F)\nHumidity: {{humidity}}%\nHeat Index: High Risk\n\nTime: {{timestamp}}\nStation: {{station}}\n\nRecommendations:\n- Stay hydrated\n- Avoid strenuous outdoor activities\n- Check on vulnerable individuals"
+          }
+        }
+      ]
+    },
+    {
+      "name": "raining",
+      "description": "Simple rain detection alert",
+      "tags": ["rain", "precipitation"],
+      "enabled": true,
+      "condition": "rain_rate > 0",
+      "cooldown": 7200,
+      "channels": [
+        {
+          "type": "console",
+          "template": "Tempest-Alarm [raining]: Rain detected - Rate: {{rain_rate}} in/hr, Daily: {{rain_daily}} in at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "bright-conditions",
+      "description": "Alert for very bright outdoor conditions",
+      "tags": ["light", "lux", "outdoor"],
+      "enabled": false,
+      "condition": "lux > 10000 && lux < 50000",
+      "cooldown": 14400,
+      "channels": [
+        {
+          "type": "console",
+          "template": "Tempest-Alarm [bright-conditions]: Bright outdoor conditions detected - Lux: {{lux}} at {{timestamp}}"
+        },
+        {
+          "type": "eventlog",
+          "template": "Tempest-Alarm [bright-conditions]: Illuminance {{lux}} lux (optimal outdoor range)"
+        }
+      ]
+    },
+    {
+      "name": "high-uv-index",
+      "description": "Alert for dangerous UV exposure levels",
+      "tags": ["uv", "health", "sun-exposure"],
+      "enabled": true,
+      "condition": "uv >= 8",
+      "cooldown": 10800,
+      "channels": [
+        {
+          "type": "console",
+          "template": "Tempest-Alarm [high-uv-index]: Very high UV index detected: {{uv}} at {{timestamp}}"
+        },
+        {
+          "type": "email",
+          "email": {
+            "to": ["family@example.com"],
+            "subject": "High UV Alert: Index {{uv}}",
+            "body": "Very high UV exposure detected.\n\nUV Index: {{uv}} (Very High/Extreme)\nTime: {{timestamp}}\n\nProtection required:\n- Use SPF 30+ sunscreen\n- Wear protective clothing\n- Seek shade during peak hours\n- Wear sunglasses"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pressure-drop",
+      "description": "Rapid pressure drop indicating storm approach",
+      "tags": ["pressure", "weather-change", "storm"],
+      "enabled": true,
+      "condition": "pressure < 29.5",
+      "cooldown": 3600,
+      "channels": [
+        {
+          "type": "console",
+          "template": "Tempest-Alarm [pressure-drop]: Low pressure detected: {{pressure}} inHg at {{timestamp}} - Storm conditions possible"
+        },
+        {
+          "type": "syslog",
+          "template": "Tempest-Alarm [pressure-drop]: Barometric pressure {{pressure}} inHg (threshold: 29.5)"
+        }
+      ]
+    }
+  ]
+}

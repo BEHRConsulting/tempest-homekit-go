@@ -3316,6 +3316,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('🚀 DEBUG: Starting initial data fetch (before charts)');
         fetchWeather();
         fetchStatus();
+        fetchAlarmStatus();
     } catch (e) {
         debugLog(logLevels.ERROR, 'Error triggering initial fetches', e);
     }
@@ -3468,6 +3469,7 @@ document.addEventListener('DOMContentLoaded', function() {
         debugLog(logLevels.DEBUG, 'Periodic data fetch triggered');
         fetchWeather();
         fetchStatus();
+        fetchAlarmStatus();
     }, 10000);
     
     debugLog(logLevels.INFO, 'Dashboard initialization completed');
@@ -3879,4 +3881,115 @@ function updateChartsForDarkMode(isDark) {
             chart.update('none');
         }
     });
+}
+
+// Fetch and display alarm status
+async function fetchAlarmStatus() {
+    try {
+        debugLog(logLevels.DEBUG, 'Fetching alarm status...');
+        const response = await fetch('/api/alarm-status');
+        const data = await response.json();
+        
+        debugLog(logLevels.DEBUG, 'Alarm status received', data);
+        updateAlarmStatus(data);
+    } catch (error) {
+        debugLog(logLevels.ERROR, 'Failed to fetch alarm status', error);
+        updateAlarmStatus({
+            enabled: false,
+            configPath: 'Error loading',
+            lastReadTime: 'N/A',
+            totalAlarms: 0,
+            enabledAlarms: 0,
+            alarms: []
+        });
+    }
+}
+
+// Update alarm status display
+function updateAlarmStatus(data) {
+    // Update status indicator
+    const statusEl = document.getElementById('alarm-status');
+    if (statusEl) {
+        if (data.enabled) {
+            statusEl.textContent = '✅ Active';
+            statusEl.style.color = 'var(--success-color, #4caf50)';
+        } else {
+            statusEl.textContent = '⚠️ Not Configured';
+            statusEl.style.color = 'var(--warning-color, #ff9800)';
+        }
+    }
+    
+    // Update config path
+    const configPathEl = document.getElementById('alarm-config-path');
+    if (configPathEl) {
+        configPathEl.textContent = data.configPath || 'N/A';
+    }
+    
+    // Update last read time
+    const lastReadEl = document.getElementById('alarm-last-read');
+    if (lastReadEl) {
+        lastReadEl.textContent = data.lastReadTime || 'N/A';
+    }
+    
+    // Update counts
+    const totalCountEl = document.getElementById('alarm-total-count');
+    if (totalCountEl) {
+        totalCountEl.textContent = data.totalAlarms || 0;
+    }
+    
+    const enabledCountEl = document.getElementById('alarm-enabled-count');
+    if (enabledCountEl) {
+        enabledCountEl.textContent = data.enabledAlarms || 0;
+    }
+    
+    // Update alarm list
+    const alarmListEl = document.getElementById('alarm-list');
+    if (alarmListEl && data.alarms && data.alarms.length > 0) {
+        // Clear existing items except header
+        const header = alarmListEl.querySelector('.alarm-list-header');
+        alarmListEl.innerHTML = '';
+        if (header) {
+            alarmListEl.appendChild(header);
+        } else {
+            alarmListEl.innerHTML = '<div class="alarm-list-header">Active Alarms:</div>';
+        }
+        
+        // Add alarm items
+        data.alarms.forEach(alarm => {
+            if (!alarm.enabled) return; // Only show enabled alarms
+            
+            const alarmItem = document.createElement('div');
+            alarmItem.className = 'alarm-item';
+            
+            const alarmName = document.createElement('div');
+            alarmName.className = 'alarm-item-name';
+            alarmName.textContent = `🔔 ${alarm.name}`;
+            
+            const alarmDetails = document.createElement('div');
+            alarmDetails.className = 'alarm-item-details';
+            
+            const condition = document.createElement('div');
+            condition.className = 'alarm-item-condition';
+            condition.textContent = `Condition: ${alarm.condition}`;
+            
+            const lastTriggered = document.createElement('div');
+            lastTriggered.className = 'alarm-item-triggered';
+            lastTriggered.textContent = `Last: ${alarm.lastTriggered}`;
+            
+            const channels = document.createElement('div');
+            channels.className = 'alarm-item-channels';
+            channels.textContent = `Channels: ${alarm.channels.join(', ')}`;
+            
+            alarmDetails.appendChild(condition);
+            alarmDetails.appendChild(lastTriggered);
+            alarmDetails.appendChild(channels);
+            
+            alarmItem.appendChild(alarmName);
+            alarmItem.appendChild(alarmDetails);
+            
+            alarmListEl.appendChild(alarmItem);
+        });
+    } else if (alarmListEl) {
+        alarmListEl.innerHTML = '<div class="alarm-list-header">Active Alarms:</div><div class="alarm-list-empty">No active alarms configured</div>';
+    }
 }

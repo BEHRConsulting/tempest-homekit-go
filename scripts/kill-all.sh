@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# kill-all.sh
+# Kills all running tempest-homekit-go processes on the system
+#
+# Usage:
+#   ./scripts/kill-all.sh           # Kill with SIGTERM (graceful)
+#   ./scripts/kill-all.sh -9        # Kill with SIGKILL (force)
+#   ./scripts/kill-all.sh --force   # Kill with SIGKILL (force)
+
+set -e
+
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Parse arguments
+SIGNAL="TERM"
+SIGNAL_FLAG="-15"
+
+if [[ "$1" == "-9" ]] || [[ "$1" == "--force" ]]; then
+    SIGNAL="KILL"
+    SIGNAL_FLAG="-9"
+    echo -e "${YELLOW}Force kill mode enabled (SIGKILL)${NC}"
+fi
+
+# Find all tempest-homekit-go processes
+PIDS=$(pgrep -f "tempest-homekit-go" 2>/dev/null || true)
+
+if [ -z "$PIDS" ]; then
+    echo -e "${GREEN}✓${NC} No tempest-homekit-go processes found"
+    exit 0
+fi
+
+# Count processes
+PROC_COUNT=$(echo "$PIDS" | wc -l | tr -d ' ')
+
+echo -e "${BLUE}Found ${PROC_COUNT} tempest-homekit-go process(es):${NC}"
+echo ""
+
+# Display process information before killing
+ps -p $PIDS -o pid,ppid,command 2>/dev/null || true
+
+echo ""
+echo -e "${YELLOW}Sending SIG${SIGNAL} to process(es)...${NC}"
+
+# Kill each process
+KILLED=0
+FAILED=0
+
+for PID in $PIDS; do
+    if kill $SIGNAL_FLAG $PID 2>/dev/null; then
+        echo -e "${GREEN}✓${NC} Killed process $PID"
+        KILLED=$((KILLED + 1))
+    else
+        echo -e "${RED}✗${NC} Failed to kill process $PID (may have already exited)"
+        FAILED=$((FAILED + 1))
+    fi
+done
+
+# Wait a moment for processes to terminate
+sleep 1
+
+# Verify all processes are gone
+REMAINING=$(pgrep -f "tempest-homekit-go" 2>/dev/null || true)
+
+echo ""
+if [ -z "$REMAINING" ]; then
+    echo -e "${GREEN}✓${NC} All processes terminated successfully"
+    echo -e "  ${GREEN}Killed:${NC} $KILLED"
+    if [ $FAILED -gt 0 ]; then
+        echo -e "  ${YELLOW}Already gone:${NC} $FAILED"
+    fi
+    exit 0
+else
+    REMAINING_COUNT=$(echo "$REMAINING" | wc -l | tr -d ' ')
+    echo -e "${RED}✗${NC} Warning: $REMAINING_COUNT process(es) still running:"
+    ps -p $REMAINING -o pid,command 2>/dev/null || true
+    echo ""
+    echo -e "${YELLOW}Tip: Use './scripts/kill-all.sh --force' to send SIGKILL${NC}"
+    exit 1
+fi

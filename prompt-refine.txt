@@ -87,7 +87,7 @@
 
 [x] perform a full unit test coverage test and update readme.md with updated information and flags as needed.
 
-[] review code base and documentation for GitHub public release. Make appropriate changes needed to be read as a professional vibe research project. Need to verify keyword for vibe, macOS, HomeKit, tempest, and weather will find this repository. Also the public should know this is a work in project but currently stable in it current features. 
+[x] review code base and documentation for GitHub public release. Make appropriate changes needed to be read as a professional vibe research project. Need to verify keyword for vibe, macOS, HomeKit, tempest, and weather will find this repository. Also the public should know this is a work in project but currently stable in it current features. 
 
 [] update readme.md file to create a roadmap section. Add Features: (1) Alarms, this feature well alert based on weather. (2) Support for Email, SMS, Syslog, EventManager, and console log messages. (3) Support to monitor more than one station at a time. (4) Run in a container (a) docker, (b) AWS Lambda function
 

@@ -45,6 +45,11 @@ type Config struct {
 	// weather endpoint. Default: "/api/generate-weather". This can be overridden
 	// via the GENERATE_WEATHER_PATH environment variable or the --generate-path flag.
 	GeneratedWeatherPath string
+
+	// Alarm configuration
+	Alarms         string // Alarm configuration: @filename.json or inline JSON
+	AlarmsEdit     string // Alarm editor mode: @filename.json to edit
+	AlarmsEditPort string // Port for alarm editor (default: 8081)
 }
 
 // customUsage prints a well-formatted help message with grouped flags and examples
@@ -103,6 +108,17 @@ CONFIGURATION OPTIONS:
   --chart-history <hours>       Hours of data to display in charts (default: 24, 0=all)
                                 Env: CHART_HISTORY_HOURS
 
+ALARM OPTIONS:
+  --alarms <config>             Enable alarm system with configuration
+                                Format: @filename.json or inline JSON string
+                                Env: ALARMS
+  --alarms-edit <file>          Run alarm editor for config file (standalone mode)
+                                Format: @filename.json
+                                Opens web UI at http://localhost:<port>
+                                Env: ALARMS_EDIT
+  --alarms-edit-port <port>     Port for alarm editor web UI (default: 8081)
+                                Env: ALARMS_EDIT_PORT
+
 LOGGING & DEBUG OPTIONS:
   --loglevel <level>            Log level: error (default), info, debug
                                 Env: LOG_LEVEL
@@ -139,6 +155,12 @@ EXAMPLES:
   # Filter logs for UDP messages only
   tempest-homekit-go --token "your-token" --udp-stream --loglevel debug --logfilter "UDP"
 
+  # Run with alarm notifications
+  tempest-homekit-go --token "your-token" --alarms @alarms.json
+
+  # Edit alarm configuration (standalone)
+  tempest-homekit-go --alarms-edit @alarms.json --alarms-edit-port 8081
+
 ENVIRONMENT VARIABLES:
   All flags can also be set via environment variables (see individual flag descriptions above).
   Command-line flags take precedence over environment variables.
@@ -167,6 +189,9 @@ func LoadConfig() *Config {
 		HistoryPoints:        parseIntEnv("HISTORY_POINTS", 1000),
 		ChartHistoryHours:    parseIntEnv("CHART_HISTORY_HOURS", 24),
 		GeneratedWeatherPath: getEnvOrDefault("GENERATE_WEATHER_PATH", "/api/generate-weather"),
+		Alarms:               getEnvOrDefault("ALARMS", ""),
+		AlarmsEdit:           getEnvOrDefault("ALARMS_EDIT", ""),
+		AlarmsEditPort:       getEnvOrDefault("ALARMS_EDIT_PORT", "8081"),
 	}
 
 	// Set custom usage function
@@ -197,6 +222,9 @@ func LoadConfig() *Config {
 	flag.IntVar(&cfg.HistoryPoints, "history", cfg.HistoryPoints, "Number of data points to store in history (default: 1000, min: 10). Can also be set via HISTORY_POINTS environment variable")
 	flag.IntVar(&cfg.ChartHistoryHours, "chart-history", cfg.ChartHistoryHours, "Number of hours of data to display in charts (default: 24, 0=all). Can also be set via CHART_HISTORY_HOURS environment variable")
 	flag.StringVar(&cfg.GeneratedWeatherPath, "generate-path", cfg.GeneratedWeatherPath, "Path for generated weather endpoint (default: /api/generate-weather). Can also be set via GENERATE_WEATHER_PATH environment variable")
+	flag.StringVar(&cfg.Alarms, "alarms", cfg.Alarms, "Alarm configuration: @filename.json or inline JSON string")
+	flag.StringVar(&cfg.AlarmsEdit, "alarms-edit", cfg.AlarmsEdit, "Run alarm editor for specified config file: @filename.json")
+	flag.StringVar(&cfg.AlarmsEditPort, "alarms-edit-port", cfg.AlarmsEditPort, "Port for alarm editor web UI (default: 8081)")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
 
 	// Parse flags but check if elevation was actually provided

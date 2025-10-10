@@ -1205,3 +1205,99 @@ body {
         text-align: left;
     }
 }
+
+/* Alarm Status Card Styles */
+#alarm-card {
+    /* Same width as other cards - no span */
+}
+
+.alarm-status-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 0;
+}
+
+.alarm-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.alarm-label {
+    font-weight: 600;
+    color: var(--card-title);
+    font-size: 0.9rem;
+}
+
+.alarm-value {
+    font-size: 0.95rem;
+    color: var(--card-text);
+    font-weight: 500;
+}
+
+.alarm-list {
+    margin-top: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.alarm-list-header {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--card-title);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--bg-gradient-start);
+}
+
+.alarm-list-empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--card-text-light);
+    font-style: italic;
+}
+
+.alarm-item {
+    background: var(--status-bg, rgba(0,0,0,0.02));
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-left: 4px solid var(--bg-gradient-start);
+    transition: all 0.2s ease;
+}
+
+.alarm-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.alarm-item-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--card-text);
+    margin-bottom: 8px;
+}
+
+.alarm-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+}
+
+.alarm-item-condition {
+    color: var(--card-text);
+    font-weight: 500;
+}
+
+.alarm-item-triggered {
+    color: var(--card-text-light);
+}
+
+.alarm-item-channels {
+    color: var(--card-text-light);
+    font-size: 0.8rem;
+}

@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"tempest-homekit-go/pkg/alarm"
 	"tempest-homekit-go/pkg/logger"
 	"time"
 
@@ -18,6 +19,15 @@ import (
 	"tempest-homekit-go/pkg/udp"
 	"tempest-homekit-go/pkg/weather"
 )
+
+// AlarmManagerInterface defines the methods we need from the alarm manager
+type AlarmManagerInterface interface {
+	GetConfig() *alarm.AlarmConfig
+	GetAlarmCount() int
+	GetEnabledAlarmCount() int
+	GetConfigPath() string
+	GetLastLoadTime() time.Time
+}
 
 // WebServer provides HTTP endpoints and a web dashboard for weather monitoring.
 // It manages weather data, serves API endpoints, and provides real-time updates.
@@ -37,6 +47,7 @@ type WebServer struct {
 	units                  string  // units system: imperial, metric, or sae
 	unitsPressure          string  // pressure units: inHg or mb
 	logLevel               string  // log level for filtering debug messages
+	alarmManager           AlarmManagerInterface // alarm manager for status display
 	startTime              time.Time
 	historicalDataLoaded   bool
 	historicalDataCount    int
@@ -403,6 +414,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 	mux.HandleFunc("/", ws.handleDashboard)
 	mux.HandleFunc("/api/weather", ws.handleWeatherAPI)
 	mux.HandleFunc("/api/status", ws.handleStatusAPI)
+	mux.HandleFunc("/api/alarm-status", ws.handleAlarmStatusAPI)
 	mux.HandleFunc("/chart/", ws.handleChartPage)
 	mux.HandleFunc("/api/regenerate-weather", ws.handleRegenerateWeatherAPI)
 	mux.HandleFunc("/api/generate-weather", ws.handleGenerateWeatherAPI)
@@ -536,6 +548,14 @@ func (ws *WebServer) UpdateForecast(forecast *weather.ForecastResponse) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 	ws.forecastData = forecast
+}
+
+// SetAlarmManager sets the alarm manager for status display
+func (ws *WebServer) SetAlarmManager(manager AlarmManagerInterface) {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+	ws.alarmManager = manager
+	logger.Info("Alarm manager connected to web server")
 }
 
 // UpdateBatteryFromObservation updates the status manager with battery data from the latest observation
@@ -838,6 +858,101 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	}
 	// Fallback
 	_ = json.NewEncoder(w).Encode(response)
+}
+
+// AlarmStatusResponse represents the alarm status API response
+type AlarmStatusResponse struct {
+	Enabled       bool          `json:"enabled"`
+	ConfigPath    string        `json:"configPath"`
+	LastReadTime  string        `json:"lastReadTime"`
+	TotalAlarms   int           `json:"totalAlarms"`
+	EnabledAlarms int           `json:"enabledAlarms"`
+	Alarms        []AlarmStatus `json:"alarms"`
+}
+
+// AlarmStatus represents individual alarm information
+type AlarmStatus struct {
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	Enabled       bool     `json:"enabled"`
+	Condition     string   `json:"condition"`
+	Tags          []string `json:"tags"`
+	Channels      []string `json:"channels"`
+	LastTriggered string   `json:"lastTriggered"`
+	Cooldown      int      `json:"cooldown"`
+}
+
+func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	ws.mu.RLock()
+	alarmMgr := ws.alarmManager
+	ws.mu.RUnlock()
+
+	// If no alarm manager, return disabled status
+	if alarmMgr == nil {
+		json.NewEncoder(w).Encode(AlarmStatusResponse{
+			Enabled:       false,
+			ConfigPath:    "Not configured",
+			LastReadTime:  "N/A",
+			TotalAlarms:   0,
+			EnabledAlarms: 0,
+			Alarms:        []AlarmStatus{},
+		})
+		return
+	}
+
+	// Get alarm configuration
+	config := alarmMgr.GetConfig()
+	totalAlarms := alarmMgr.GetAlarmCount()
+	enabledAlarms := alarmMgr.GetEnabledAlarmCount()
+
+	// Build alarm status list
+	alarmStatuses := make([]AlarmStatus, 0, len(config.Alarms))
+	for _, alm := range config.Alarms {
+		// Get channel types
+		channels := make([]string, 0, len(alm.Channels))
+		for _, ch := range alm.Channels {
+			channels = append(channels, ch.Type)
+		}
+
+		// Get last triggered time
+		lastTriggered := "Never"
+		if lastFired := alm.GetLastFired(); !lastFired.IsZero() {
+			lastTriggered = lastFired.Format("2006-01-02 15:04:05")
+		}
+
+		alarmStatuses = append(alarmStatuses, AlarmStatus{
+			Name:          alm.Name,
+			Description:   alm.Description,
+			Enabled:       alm.Enabled,
+			Condition:     alm.Condition,
+			Tags:          alm.Tags,
+			Channels:      channels,
+			LastTriggered: lastTriggered,
+			Cooldown:      alm.Cooldown,
+		})
+	}
+
+	// Get actual config path and load time
+	configPath := alarmMgr.GetConfigPath()
+	lastLoadTime := alarmMgr.GetLastLoadTime()
+	lastReadTimeStr := "Never"
+	if !lastLoadTime.IsZero() {
+		lastReadTimeStr = lastLoadTime.Format("2006-01-02 15:04:05")
+	}
+
+	response := AlarmStatusResponse{
+		Enabled:       true,
+		ConfigPath:    configPath,
+		LastReadTime:  lastReadTimeStr,
+		TotalAlarms:   totalAlarms,
+		EnabledAlarms: enabledAlarms,
+		Alarms:        alarmStatuses,
+	}
+
+	json.NewEncoder(w).Encode(response)
 }
 
 // handleChartPage serves a dedicated chart page for a given weather type.
@@ -1429,6 +1544,35 @@ func (ws *WebServer) getDashboardHTML() string {
                     <div class="info-row">
                         <span class="info-label">PIN:</span>
                         <span class="info-value" id="homekit-pin">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="alarm-card">
+                <div class="card-header">
+                    <span class="card-icon">🚨</span>
+                    <span class="card-title">Alarm Status</span>
+                </div>
+                <div class="alarm-status-content">
+                    <div class="alarm-info-row">
+                        <span class="alarm-label">Status:</span>
+                        <span class="alarm-value" id="alarm-status">Loading...</span>
+                    </div>
+                    <div class="alarm-info-row">
+                        <span class="alarm-label">Config:</span>
+                        <span class="alarm-value" id="alarm-config-path">--</span>
+                    </div>
+                    <div class="alarm-info-row">
+                        <span class="alarm-label">Last Read:</span>
+                        <span class="alarm-value" id="alarm-last-read">--</span>
+                    </div>
+                    <div class="alarm-info-row">
+                        <span class="alarm-label">Total Alarms:</span>
+                        <span class="alarm-value"><span id="alarm-enabled-count">--</span> / <span id="alarm-total-count">--</span> enabled</span>
+                    </div>
+                    <div class="alarm-list" id="alarm-list">
+                        <div class="alarm-list-header">Active Alarms:</div>
+                        <!-- Alarm items will be inserted here by JavaScript -->
                     </div>
                 </div>
             </div>
