@@ -134,7 +134,13 @@ func (s *Server) handleStaticFiles(w http.ResponseWriter, r *http.Request) {
 
 // handleIndex serves the main editor HTML page
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.New("index").Parse(indexHTML))
+	tmpl, err := template.New("index").Parse(indexHTML)
+	if err != nil {
+		logger.Error("Failed to parse HTML template: %v", err)
+		http.Error(w, "Internal Server Error: Failed to parse template", http.StatusInternalServerError)
+		return
+	}
+
 	lastLoad := "never"
 	if !s.lastLoadTime.IsZero() {
 		lastLoad = s.lastLoadTime.Format("2006-01-02 15:04:05")
@@ -146,7 +152,8 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := tmpl.Execute(w, data); err != nil {
 		logger.Error("Failed to execute template: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "Internal Server Error: Failed to render page", http.StatusInternalServerError)
+		return
 	}
 }
 

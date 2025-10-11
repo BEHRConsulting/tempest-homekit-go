@@ -2,12 +2,12 @@
   "alarms": [
     {
       "name": "Hot outside",
-      "description": "Set when temp is > 85F",
+      "description": "Set when temp is \u003e 85F",
       "tags": [
         "hot"
       ],
       "enabled": true,
-      "condition": "temp > 85",
+      "condition": "temp \u003e 85",
       "cooldown": 1800,
       "channels": [
         {
@@ -36,7 +36,46 @@
           "template": "🚨 ALARM: Lightning Nearby\nCondition: {{.Condition}}\nValue: {{.Value}}\nTime: {{.Time}}"
         }
       ]
+    },
+    {
+      "name": "Lux Change",
+      "description": "This alarm should alert on LUX change",
+      "tags": [
+        "light"
+      ],
+      "enabled": true,
+      "condition": "*lux",
+      "cooldown": 10,
+      "channels": [
+        {
+          "type": "console",
+          "template": "🚨 ALARM: {{alarm_name}}\n{{alarm_description}}\n\nStation: {{station}}\nTime: {{timestamp}}\nCurrent LUX: {{lux}}\nPrevious LUX: {{last_lux}}"
+        },
+        {
+          "type": "oslog",
+          "template": "🚨 ALARM: {{alarm_name}}\n{{alarm_description}}\n\nStation: {{station}}\nTime: {{timestamp}}\nCurrent LUX: {{lux}}\nPrevious LUX: {{last_lux}}"
+        }
+      ]
+    },
+    {
+      "name": "Wind Change",
+      "description": "Let me know when the wind changes",
+      "tags": [
+        "wind"
+      ],
+      "enabled": true,
+      "condition": "*wind_speed",
+      "cooldown": 10,
+      "channels": [
+        {
+          "type": "console",
+          "template": "🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}\nDescription: {{alarm_description}}\nWind speed: {{wind_speed}}\nLast Wind Speed: {{last_wind_speed}}"
+        },
+        {
+          "type": "oslog",
+          "template": "🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}\nDescription: {{alarm_description}}\nWind speed: {{wind_speed}}\nLast Wind Speed: {{last_wind_speed}}"
+        }
+      ]
     }
-  ],
-  "_comment": "test"
+  ]
 }

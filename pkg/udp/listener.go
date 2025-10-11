@@ -101,12 +101,11 @@ func NewUDPListener(maxHistorySize int) *UDPListener {
 		maxHistorySize = 1000 // default if invalid
 	}
 
-	// Attempt to allocate the history array with error recovery
-	defer func() {
-		if r := recover(); r != nil {
-			panic(fmt.Sprintf("Failed to allocate history array of size %d: %v. Try reducing --history value.", maxHistorySize, r))
-		}
-	}()
+	// Validate history size to prevent excessive memory allocation
+	if maxHistorySize > 100000 {
+		logger.Warn("History size %d is very large, capping at 100000 to prevent memory issues", maxHistorySize)
+		maxHistorySize = 100000
+	}
 
 	return &UDPListener{
 		observations:    make([]weather.Observation, 0, maxHistorySize),

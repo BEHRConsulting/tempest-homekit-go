@@ -22,6 +22,8 @@ These are approximate times aggregated across the development sessions that prod
 - Release version bump, tag, and release workflow drafting: ~2-4 hours
 - Documentation, README changes, acknowledgements, and housekeeping: ~2-3 hours
 - Iterative debugging and CI troubleshooting: ~2-4 hours
+- Alarm system development (editor, JSON validation, debug logging): ~8-10 hours
+- Alarm change detection state persistence fix: ~2 hours
 
 Major Design Changes
 --------------------
@@ -38,12 +40,20 @@ Major Design Changes
   - Drafted a GitHub Actions `release.yml` to build cross-platform binaries and upload assets when an annotated tag is pushed. (Push of workflow file may require additional permissions.)
 - Accessibility / UI polish:
   - Tempest Station link label was truncated to 15 characters for card layout with full URL in `title` and `aria-label` for hover and screen readers.
+- Alarm System Architecture:
+  - Implemented comprehensive alarm system with change-detection operators (`*field`, `>field`, `<field`)
+  - Warning log level added (warn/warning aliases) between info and error
+  - Alarm editor web UI with template variable system (18 variables including `alarm_description`)
+  - JSON validation with line/column error reporting and helpful hints for missing @ prefix
+  - Enhanced debug logging with pretty JSON output and detailed evaluation traces
+  - **Critical Fix**: Changed `ProcessObservation()` to work with original alarms instead of copies, preserving `previousValue` state between calls. This fixed change-detection operators that were resetting state on every observation.
 
 Best & Worst Prompts (AI-assisted development)
 ----------------------------------------------
 - Best prompts (helpful):
   - "Make popout charts deterministic and match small-card visuals exactly (per-dataset styles, units) and add headless tests verifying parity." — This prompt led to compact, testable config encoding and robust headless tests.
   - "Harden headless tests to avoid CDN timing flakiness by injecting vendored Chart.js and exposing in-page test hooks." — This improved reliability in CI.
+  - "The alarm 'Lux Change' is not triggering after these observations..." with full log output — Provided concrete reproduction case that led to discovering the state persistence bug in `ProcessObservation()`.
 
 - Worst/ambiguous prompts (costly):
   - Broad requests like "Add release automation" without specifying how to handle GitHub token permissions led to local-only workflow drafts and a failed push due to token scope restrictions. Lesson: explicitly mention token policy or request a PR instead of direct pushes.

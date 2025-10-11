@@ -130,7 +130,7 @@ This document presents the technical requirements and implementation results for
 - ✅ `--token`: WeatherFlow API personal access token (required when using the WeatherFlow API as the data source; optional when using `--station-url` or `--use-generated-weather`)
 - ✅ `--station`: Tempest station name (default: "Chino Hills")
 - ✅ `--pin`: HomeKit pairing PIN (default: "00102003")
-- ✅ `--loglevel`: Logging verbosity - debug, info, error (default: "error")
+- ✅ `--loglevel`: Logging verbosity - debug, info, warn/warning, error (default: "error")
 - ✅ `--web-port`: Web dashboard port (default: "8080")
 - ✅ `--cleardb`: Clear HomeKit database and reset device pairing
 - ✅ `--elevation`: Station elevation in meters (auto-detect or manual, Earth-realistic range: -430m to 8848m)
@@ -145,6 +145,9 @@ This document presents the technical requirements and implementation results for
 - ✅ `--units-pressure`: Pressure units - inHg or mb (default: "inHg")
 - ✅ `--use-web-status`: Enable TempestWX status scraping with Chrome automation (incompatible with `--disable-internet`)
 - ✅ `--version`: Display version information and exit
+- ✅ `--alarms`: Enable alarm system with configuration file or inline JSON (e.g., `@alarms.json` or JSON string)
+- ✅ `--alarms-edit`: Run alarm editor for configuration file in standalone mode (e.g., `@alarms.json`)
+- ✅ `--alarms-edit-port`: Port for alarm editor web UI (default: "8081")
 
 #### Comprehensive Validation (v1.3.0)
 - ✅ **Required Token Validation**: Clear error messages for missing WeatherFlow API token
@@ -162,6 +165,9 @@ This document presents the technical requirements and implementation results for
 - ✅ `UNITS`: Units system - imperial, metric, or sae (default: "imperial")
 - ✅ `UNITS_PRESSURE`: Pressure units - inHg or mb (default: "inHg")
 - ✅ `WEB_PORT`: Web dashboard port (default: "8080")
+- ✅ `ALARMS`: Alarm system configuration (file path or JSON string)
+- ✅ `ALARMS_EDIT`: Alarm editor configuration file path (standalone mode)
+- ✅ `ALARMS_EDIT_PORT`: Alarm editor web UI port (default: "8081")
 
 ### Service Operation
 

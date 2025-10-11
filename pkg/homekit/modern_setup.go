@@ -300,7 +300,7 @@ func (ws *WeatherSystemModern) UpdateSensor(sensorName string, value float64) {
 			case *characteristic.Float:
 				v.SetValue(value)
 			default:
-				logger.Info("WARNING: Unsupported characteristic type for sensor %s", sensorName)
+				logger.Warn("Unsupported characteristic type for sensor %s", sensorName)
 			}
 		} else {
 			if ws.LogLevel == "debug" {
@@ -308,11 +308,9 @@ func (ws *WeatherSystemModern) UpdateSensor(sensorName string, value float64) {
 			}
 		}
 	} else {
-		logger.Info("WARNING: Sensor %s not found", sensorName)
+		logger.Warn("Sensor %s not found", sensorName)
 	}
-}
-
-// GetAvailableSensors returns the list of available sensor names
+} // GetAvailableSensors returns the list of available sensor names
 func (ws *WeatherSystemModern) GetAvailableSensors() []string {
 	sensors := make([]string, 0, len(ws.Accessories))
 	for name := range ws.Accessories {

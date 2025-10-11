@@ -41,12 +41,12 @@ type WebServer struct {
 	maxHistorySize         int
 	chartHistoryHours      int // hours of data to show in charts (0 = all)
 	stationName            string
-	stationURL             string  // station URL for weather data
-	stationID              int     // station ID for TempestWX status scraping
-	elevation              float64 // elevation in meters
-	units                  string  // units system: imperial, metric, or sae
-	unitsPressure          string  // pressure units: inHg or mb
-	logLevel               string  // log level for filtering debug messages
+	stationURL             string                // station URL for weather data
+	stationID              int                   // station ID for TempestWX status scraping
+	elevation              float64               // elevation in meters
+	units                  string                // units system: imperial, metric, or sae
+	unitsPressure          string                // pressure units: inHg or mb
+	logLevel               string                // log level for filtering debug messages
 	alarmManager           AlarmManagerInterface // alarm manager for status display
 	startTime              time.Time
 	historicalDataLoaded   bool
@@ -378,12 +378,15 @@ func getPressureWeatherForecast(pressure float64, trend string) string {
 }
 
 func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, stationURL string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface, units string, unitsPressure string, historyPoints int, chartHistoryHours int) *WebServer {
-	// Attempt to allocate the history array with error recovery
-	defer func() {
-		if r := recover(); r != nil {
-			panic(fmt.Sprintf("Failed to allocate web server history array of size %d: %v. Try reducing --history value.", historyPoints, r))
-		}
-	}()
+	// Validate history size to prevent excessive memory allocation
+	if historyPoints > 100000 {
+		logger.Warn("History size %d is very large, capping at 100000 to prevent memory issues", historyPoints)
+		historyPoints = 100000
+	}
+	if historyPoints < 10 {
+		logger.Warn("History size %d is too small, setting to minimum of 100", historyPoints)
+		historyPoints = 100
+	}
 
 	ws := &WebServer{
 		port:              port,
@@ -872,14 +875,16 @@ type AlarmStatusResponse struct {
 
 // AlarmStatus represents individual alarm information
 type AlarmStatus struct {
-	Name          string   `json:"name"`
-	Description   string   `json:"description"`
-	Enabled       bool     `json:"enabled"`
-	Condition     string   `json:"condition"`
-	Tags          []string `json:"tags"`
-	Channels      []string `json:"channels"`
-	LastTriggered string   `json:"lastTriggered"`
-	Cooldown      int      `json:"cooldown"`
+	Name              string   `json:"name"`
+	Description       string   `json:"description"`
+	Enabled           bool     `json:"enabled"`
+	Condition         string   `json:"condition"`
+	Tags              []string `json:"tags"`
+	Channels          []string `json:"channels"`
+	LastTriggered     string   `json:"lastTriggered"`
+	Cooldown          int      `json:"cooldown"`
+	CooldownRemaining int      `json:"cooldownRemaining"` // Seconds remaining in cooldown (0 if ready)
+	InCooldown        bool     `json:"inCooldown"`        // True if currently in cooldown
 }
 
 func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request) {
@@ -923,15 +928,21 @@ func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request
 			lastTriggered = lastFired.Format("2006-01-02 15:04:05")
 		}
 
+		// Get cooldown status
+		cooldownRemaining := alm.GetCooldownRemaining()
+		inCooldown := alm.IsInCooldown()
+
 		alarmStatuses = append(alarmStatuses, AlarmStatus{
-			Name:          alm.Name,
-			Description:   alm.Description,
-			Enabled:       alm.Enabled,
-			Condition:     alm.Condition,
-			Tags:          alm.Tags,
-			Channels:      channels,
-			LastTriggered: lastTriggered,
-			Cooldown:      alm.Cooldown,
+			Name:              alm.Name,
+			Description:       alm.Description,
+			Enabled:           alm.Enabled,
+			Condition:         alm.Condition,
+			Tags:              alm.Tags,
+			Channels:          channels,
+			LastTriggered:     lastTriggered,
+			Cooldown:          alm.Cooldown,
+			CooldownRemaining: cooldownRemaining,
+			InCooldown:        inCooldown,
 		})
 	}
 

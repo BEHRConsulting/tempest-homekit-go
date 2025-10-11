@@ -120,7 +120,7 @@ ALARM OPTIONS:
                                 Env: ALARMS_EDIT_PORT
 
 LOGGING & DEBUG OPTIONS:
-  --loglevel <level>            Log level: error (default), info, debug
+  --loglevel <level>            Log level: error (default), warn/warning, info, debug
                                 Env: LOG_LEVEL
   --logfilter <string>          Filter log messages (case-insensitive substring match)
                                 Env: LOG_FILTER
@@ -297,7 +297,7 @@ func validateConfig(cfg *Config) error {
 		cfg.ChartHistoryHours = 24
 	}
 	// Validate log level
-	validLogLevels := []string{"debug", "info", "error"}
+	validLogLevels := []string{"debug", "info", "warn", "warning", "error"}
 	validLevel := false
 	for _, level := range validLogLevels {
 		if cfg.LogLevel == level {
@@ -306,7 +306,7 @@ func validateConfig(cfg *Config) error {
 		}
 	}
 	if !validLevel {
-		return fmt.Errorf("invalid log level '%s'. Valid options: debug, info, error", cfg.LogLevel)
+		return fmt.Errorf("invalid log level '%s'. Valid options: debug, info, warn/warning, error", cfg.LogLevel)
 	}
 
 	// Validate sensor configuration by testing parsing

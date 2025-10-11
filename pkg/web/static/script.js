@@ -3980,9 +3980,24 @@ function updateAlarmStatus(data) {
             channels.className = 'alarm-item-channels';
             channels.textContent = `Channels: ${alarm.channels.join(', ')}`;
             
+            // Add cooldown status if applicable
+            const cooldown = document.createElement('div');
+            cooldown.className = 'alarm-item-cooldown';
+            if (alarm.inCooldown) {
+                const minutes = Math.floor(alarm.cooldownRemaining / 60);
+                const seconds = alarm.cooldownRemaining % 60;
+                const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+                cooldown.textContent = `⏳ Cooldown: ${timeStr} remaining`;
+                cooldown.style.color = 'var(--warning-color, #ff9800)';
+            } else {
+                cooldown.textContent = `✓ Ready (cooldown: ${alarm.cooldown}s)`;
+                cooldown.style.color = 'var(--success-color, #4caf50)';
+            }
+            
             alarmDetails.appendChild(condition);
             alarmDetails.appendChild(lastTriggered);
             alarmDetails.appendChild(channels);
+            alarmDetails.appendChild(cooldown);
             
             alarmItem.appendChild(alarmName);
             alarmItem.appendChild(alarmDetails);

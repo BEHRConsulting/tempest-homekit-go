@@ -11,7 +11,7 @@ The alarm system monitors weather observations and triggers notifications when c
 ### Types (`types.go`)
 - **AlarmConfig**: Complete alarm configuration with global settings and alarm definitions
 - **Alarm**: Individual alarm rule with condition, channels, tags, and cooldown
-- **Channel**: Notification channel configuration (console, email, SMS, syslog, eventlog)
+- **Channel**: Notification channel configuration (console, syslog, oslog, email, SMS, eventlog)
 - **EmailGlobalConfig**: Global email settings (SMTP, Microsoft 365)
 - **SMSGlobalConfig**: Global SMS settings (Twilio, AWS SNS)
 - **SyslogConfig**: Syslog configuration
@@ -48,8 +48,9 @@ rain_rate > 0
 Implements notification channels with template expansion.
 
 **Available channels:**
-- **Console**: Logs to stdout via logger
+- **Console**: Logs to stdout via logger (always visible regardless of log level)
 - **Syslog**: Local or remote syslog
+- **OSLog**: macOS unified logging system (os_log API via CGO, macOS only)
 - **EventLog**: System event log (Windows) or syslog (Unix)
 - **Email**: SMTP (with TLS support) or Microsoft 365 OAuth2
 - **SMS**: Twilio or AWS SNS (placeholder implementation)

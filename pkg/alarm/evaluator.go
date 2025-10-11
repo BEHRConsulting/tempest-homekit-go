@@ -246,16 +246,16 @@ func (e *Evaluator) evaluateChangeDetection(condition string, obs *weather.Obser
 	// Get previous value
 	previousValue, hasPrevious := alarm.GetPreviousValue(fieldName)
 
-	// Store current value for next evaluation
-	defer alarm.SetPreviousValue(fieldName, currentValue)
-
 	// If no previous value exists, don't trigger (need baseline)
 	if !hasPrevious {
 		logger.Debug("No previous value for %s, establishing baseline: %.2f", fieldName, currentValue)
+		// Store current value for next evaluation
+		alarm.SetPreviousValue(fieldName, currentValue)
 		return false, nil
 	}
 
 	// Evaluate based on operator
+	var triggered bool
 	switch operator {
 	case '*':
 		// Any change
@@ -263,7 +263,7 @@ func (e *Evaluator) evaluateChangeDetection(condition string, obs *weather.Obser
 		if changed {
 			logger.Debug("Change detected in %s: %.2f -> %.2f", fieldName, previousValue, currentValue)
 		}
-		return changed, nil
+		triggered = changed
 
 	case '>':
 		// Increase from previous
@@ -271,7 +271,7 @@ func (e *Evaluator) evaluateChangeDetection(condition string, obs *weather.Obser
 		if increased {
 			logger.Debug("Increase detected in %s: %.2f -> %.2f", fieldName, previousValue, currentValue)
 		}
-		return increased, nil
+		triggered = increased
 
 	case '<':
 		// Decrease from previous
@@ -279,31 +279,45 @@ func (e *Evaluator) evaluateChangeDetection(condition string, obs *weather.Obser
 		if decreased {
 			logger.Debug("Decrease detected in %s: %.2f -> %.2f", fieldName, previousValue, currentValue)
 		}
-		return decreased, nil
+		triggered = decreased
 
 	default:
 		return false, fmt.Errorf("unknown change-detection operator: %c", operator)
 	}
+
+	// If triggered, store the previous value in trigger context for notification display
+	if triggered {
+		alarm.SetTriggerContext(map[string]float64{fieldName: previousValue})
+	}
+
+	// Store current value for next evaluation (only after comparison is done)
+	alarm.SetPreviousValue(fieldName, currentValue)
+
+	return triggered, nil
 }
 
 // compare performs the actual comparison
 func (e *Evaluator) compare(a float64, operator string, b float64) bool {
+	var result bool
 	switch operator {
 	case ">":
-		return a > b
+		result = a > b
 	case "<":
-		return a < b
+		result = a < b
 	case ">=":
-		return a >= b
+		result = a >= b
 	case "<=":
-		return a <= b
+		result = a <= b
 	case "==":
-		return a == b
+		result = a == b
 	case "!=":
-		return a != b
+		result = a != b
 	default:
-		return false
+		result = false
 	}
+
+	logger.Debug("Comparison: %.2f %s %.2f = %v", a, operator, b, result)
+	return result
 }
 
 // GetAvailableFields returns a list of supported field names for conditions

@@ -60,11 +60,21 @@ func NewManager(configInput string, stationName string) (*Manager, error) {
 	for _, alarm := range config.Alarms {
 		if alarm.Enabled {
 			enabledCount++
-			logger.Info("Active alarm: %s - %s (cooldown: %ds, channels: %d)",
-				alarm.Name, alarm.Condition, alarm.Cooldown, len(alarm.Channels))
+			logger.Info("Loaded alarm: %s", alarm.Name)
+			logger.Debug("  Condition: %s", alarm.Condition)
+			logger.Debug("  Description: %s", alarm.Description)
+			logger.Debug("  Cooldown: %ds", alarm.Cooldown)
+			logger.Debug("  Channels: %d", len(alarm.Channels))
+		} else {
+			logger.Info("Loaded alarm (disabled): %s", alarm.Name)
 		}
 	}
 	logger.Info("%d of %d alarms are enabled", enabledCount, len(config.Alarms))
+
+	// Output pretty-formatted JSON of all alarms at debug level
+	if prettyJSON, err := json.MarshalIndent(config.Alarms, "", "  "); err == nil {
+		logger.Debug("Alarm configuration JSON:\n%s", string(prettyJSON))
+	}
 
 	return m, nil
 }
@@ -149,6 +159,29 @@ func (m *Manager) reloadConfig() error {
 	m.lastLoadTime = time.Now()
 	m.mu.Unlock()
 
+	// Log detailed information about the reloaded alarms (same as initial load)
+	logger.Info("Alarm manager initialized with %d alarms", len(newConfig.Alarms))
+
+	enabledCount := 0
+	for _, alarm := range newConfig.Alarms {
+		if alarm.Enabled {
+			enabledCount++
+			logger.Info("Loaded alarm: %s", alarm.Name)
+			logger.Debug("  Condition: %s", alarm.Condition)
+			logger.Debug("  Description: %s", alarm.Description)
+			logger.Debug("  Cooldown: %ds", alarm.Cooldown)
+			logger.Debug("  Channels: %d", len(alarm.Channels))
+		} else {
+			logger.Info("Loaded alarm (disabled): %s", alarm.Name)
+		}
+	}
+	logger.Info("%d of %d alarms are enabled", enabledCount, len(newConfig.Alarms))
+
+	// Output pretty-formatted JSON of all alarms at debug level
+	if prettyJSON, err := json.MarshalIndent(newConfig.Alarms, "", "  "); err == nil {
+		logger.Debug("Alarm configuration JSON:\n%s", string(prettyJSON))
+	}
+
 	return nil
 }
 
@@ -158,13 +191,13 @@ func (m *Manager) ProcessObservation(obs *weather.Observation) {
 		return
 	}
 
-	m.mu.RLock()
-	alarms := make([]Alarm, len(m.config.Alarms))
-	copy(alarms, m.config.Alarms)
-	m.mu.RUnlock()
+	// Work with the original alarms directly to preserve state (previousValue map)
+	// We lock for the entire duration to ensure consistent state
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	for i := range alarms {
-		alarm := &alarms[i]
+	for i := range m.config.Alarms {
+		alarm := &m.config.Alarms[i]
 
 		if !alarm.Enabled {
 			logger.Debug("Skipping disabled alarm: %s", alarm.Name)
@@ -176,7 +209,10 @@ func (m *Manager) ProcessObservation(obs *weather.Observation) {
 			continue
 		}
 
-		logger.Debug("Testing alarm: %s - %s", alarm.Name, alarm.Condition)
+		logger.Debug("Evaluating alarm: '%s'", alarm.Name)
+		logger.Debug("  Condition: %s", alarm.Condition)
+		logger.Debug("  Current observation: temp=%.1f°C, humidity=%.0f%%, pressure=%.2f, wind=%.1fm/s, lux=%.0f, uv=%d",
+			obs.AirTemperature, obs.RelativeHumidity, obs.StationPressure, obs.WindAvg, obs.Illuminance, obs.UV)
 
 		// Evaluate condition (pass alarm for change detection support)
 		triggered, err := m.evaluator.EvaluateWithAlarm(alarm.Condition, obs, alarm)
@@ -185,28 +221,22 @@ func (m *Manager) ProcessObservation(obs *weather.Observation) {
 			continue
 		}
 
+		logger.Debug("  Result: %v", triggered)
+
 		if triggered {
-			logger.Info("Alarm triggered: %s (condition: %s)", alarm.Name, alarm.Condition)
+			logger.Info("🚨 Alarm triggered: %s (condition: %s)", alarm.Name, alarm.Condition)
 			m.sendNotifications(alarm, obs)
 			alarm.MarkFired()
-
-			// Update the alarm in the config to persist the lastFired time
-			m.mu.Lock()
-			for j := range m.config.Alarms {
-				if m.config.Alarms[j].Name == alarm.Name {
-					m.config.Alarms[j].lastFired = alarm.lastFired
-					break
-				}
-			}
-			m.mu.Unlock()
 		}
 	}
 }
 
 // sendNotifications sends notifications through all configured channels for an alarm
 func (m *Manager) sendNotifications(alarm *Alarm, obs *weather.Observation) {
+	logger.Debug("Sending notifications for alarm '%s' through %d channels", alarm.Name, len(alarm.Channels))
 	for i := range alarm.Channels {
 		channel := &alarm.Channels[i]
+		logger.Debug("Processing channel %d: type=%s", i, channel.Type)
 
 		notifier, err := m.notifierFactory.GetNotifier(channel.Type)
 		if err != nil {
@@ -214,6 +244,7 @@ func (m *Manager) sendNotifications(alarm *Alarm, obs *weather.Observation) {
 			continue
 		}
 
+		logger.Debug("Attempting to send %s notification for alarm %s", channel.Type, alarm.Name)
 		if err := notifier.Send(alarm, channel, obs, m.stationName); err != nil {
 			logger.Error("Failed to send %s notification for alarm %s: %v",
 				channel.Type, alarm.Name, err)
@@ -221,6 +252,7 @@ func (m *Manager) sendNotifications(alarm *Alarm, obs *weather.Observation) {
 			logger.Info("Sent %s notification for alarm %s", channel.Type, alarm.Name)
 		}
 	}
+	logger.Debug("Finished sending notifications for alarm '%s'", alarm.Name)
 }
 
 // Stop stops the alarm manager and file watcher

@@ -57,7 +57,7 @@ func TestValidateConfigInvalidLogLevel(t *testing.T) {
 
 // TestValidateConfigValidLogLevels tests all valid log levels
 func TestValidateConfigValidLogLevels(t *testing.T) {
-	validLevels := []string{"debug", "info", "error"}
+	validLevels := []string{"debug", "info", "warn", "warning", "error"}
 
 	for _, level := range validLevels {
 		t.Run(level, func(t *testing.T) {

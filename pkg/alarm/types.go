@@ -58,15 +58,16 @@ type SyslogConfig struct {
 
 // Alarm represents a single alarm rule
 type Alarm struct {
-	Name          string             `json:"name"`
-	Description   string             `json:"description,omitempty"`
-	Tags          []string           `json:"tags,omitempty"`
-	Enabled       bool               `json:"enabled"`
-	Condition     string             `json:"condition"`          // e.g., "temperature > 85", "humidity > 80 && temperature > 35", "*lightning_count"
-	Cooldown      int                `json:"cooldown,omitempty"` // Seconds between repeated notifications
-	Channels      []Channel          `json:"channels"`
-	lastFired     time.Time          // Internal: last trigger time
-	previousValue map[string]float64 // Internal: previous field values for change detection
+	Name           string             `json:"name"`
+	Description    string             `json:"description,omitempty"`
+	Tags           []string           `json:"tags,omitempty"`
+	Enabled        bool               `json:"enabled"`
+	Condition      string             `json:"condition"`          // e.g., "temperature > 85", "humidity > 80 && temperature > 35", "*lightning_count"
+	Cooldown       int                `json:"cooldown,omitempty"` // Seconds between repeated notifications
+	Channels       []Channel          `json:"channels"`
+	lastFired      time.Time          // Internal: last trigger time
+	previousValue  map[string]float64 // Internal: previous field values for change detection
+	triggerContext map[string]float64 // Internal: field values at time of trigger (for notification display)
 }
 
 // Channel represents a notification channel configuration
@@ -97,22 +98,64 @@ type SMSConfig struct {
 func LoadAlarmConfig(input string) (*AlarmConfig, error) {
 	var data []byte
 	var err error
+	isFile := false
 
 	// Check if input is a file reference (@filename.json)
 	if strings.HasPrefix(input, "@") {
+		isFile = true
 		filename := strings.TrimPrefix(input, "@")
 		data, err = os.ReadFile(filename)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read alarm config file %s: %w", filename, err)
 		}
 	} else {
-		// Treat as inline JSON string
+		// Treat as inline JSON string - first validate it's JSON
 		data = []byte(input)
+
+		// Test if the string is valid JSON before attempting to parse into AlarmConfig
+		var jsonTest interface{}
+		if err := json.Unmarshal(data, &jsonTest); err != nil {
+			// Detect if they forgot the @ prefix
+			if !strings.HasPrefix(input, "{") && (strings.HasSuffix(input, ".json") || strings.Contains(input, "/")) {
+				return nil, fmt.Errorf("invalid JSON string: %w\nHint: Did you mean to use '@%s'? File paths must be prefixed with @", err, input)
+			}
+
+			// Provide detailed error for invalid JSON
+			if syntaxErr, ok := err.(*json.SyntaxError); ok {
+				// Calculate line and column
+				lines := strings.Split(input, "\n")
+				var line, col int
+				offset := syntaxErr.Offset
+				currentOffset := int64(0)
+
+				for i, l := range lines {
+					lineLen := int64(len(l) + 1) // +1 for newline
+					if currentOffset+lineLen > offset {
+						line = i + 1
+						col = int(offset - currentOffset + 1)
+						break
+					}
+					currentOffset += lineLen
+				}
+
+				if line == 0 {
+					line = 1
+					col = int(offset)
+				}
+
+				return nil, fmt.Errorf("invalid JSON syntax at line %d, column %d: %v\nProvide valid JSON string or use @filename.json to load from file", line, col, syntaxErr)
+			}
+
+			return nil, fmt.Errorf("invalid JSON string: %w\nProvide valid JSON string or use @filename.json to load from file", err)
+		}
 	}
 
 	var config AlarmConfig
 	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse alarm config: %w", err)
+		if isFile {
+			return nil, fmt.Errorf("failed to parse alarm config from file: %w", err)
+		}
+		return nil, fmt.Errorf("failed to parse alarm config from JSON string: %w\nEnsure your JSON matches the AlarmConfig structure", err)
 	}
 
 	// Validate config
@@ -164,15 +207,16 @@ func (c *Channel) Validate() error {
 		"email":    true,
 		"sms":      true,
 		"syslog":   true,
+		"oslog":    true,
 		"eventlog": true,
 	}
 
 	if !validTypes[c.Type] {
-		return fmt.Errorf("invalid channel type: %s (must be console, email, sms, syslog, or eventlog)", c.Type)
+		return fmt.Errorf("invalid channel type: %s (must be console, email, sms, syslog, oslog, or eventlog)", c.Type)
 	}
 
 	switch c.Type {
-	case "console", "syslog", "eventlog":
+	case "console", "syslog", "oslog", "eventlog":
 		if c.Template == "" {
 			return fmt.Errorf("template is required for %s channel", c.Type)
 		}
@@ -225,6 +269,25 @@ func (a *Alarm) GetLastFired() time.Time {
 	return a.lastFired
 }
 
+// GetCooldownRemaining returns the remaining cooldown time in seconds (0 if can fire)
+func (a *Alarm) GetCooldownRemaining() int {
+	if !a.Enabled || a.Cooldown == 0 {
+		return 0
+	}
+	elapsed := time.Since(a.lastFired)
+	cooldownDuration := time.Duration(a.Cooldown) * time.Second
+	if elapsed >= cooldownDuration {
+		return 0
+	}
+	remaining := cooldownDuration - elapsed
+	return int(remaining.Seconds())
+}
+
+// IsInCooldown returns true if the alarm is currently in cooldown
+func (a *Alarm) IsInCooldown() bool {
+	return a.GetCooldownRemaining() > 0
+}
+
 // GetPreviousValue returns the previous value for a field
 func (a *Alarm) GetPreviousValue(field string) (float64, bool) {
 	if a.previousValue == nil {
@@ -240,4 +303,18 @@ func (a *Alarm) SetPreviousValue(field string, value float64) {
 		a.previousValue = make(map[string]float64)
 	}
 	a.previousValue[field] = value
+}
+
+// GetTriggerValue returns the trigger context value for a field
+func (a *Alarm) GetTriggerValue(field string) (float64, bool) {
+	if a.triggerContext == nil {
+		return 0, false
+	}
+	val, ok := a.triggerContext[field]
+	return val, ok
+}
+
+// SetTriggerContext stores the field values at time of trigger
+func (a *Alarm) SetTriggerContext(values map[string]float64) {
+	a.triggerContext = values
 }

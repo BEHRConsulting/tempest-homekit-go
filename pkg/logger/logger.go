@@ -16,16 +16,24 @@ var logFilter string = "" // Filter string for log messages
 const (
 	LogLevelDebug = "debug"
 	LogLevelInfo  = "info"
+	LogLevelWarn  = "warn"
 	LogLevelError = "error"
 )
 
 // SetLogLevel configures the global log level and output settings
+// Accepts both 'warn' and 'warning' (normalized to 'warn' internally)
 func SetLogLevel(level string) {
+	// Normalize 'warning' to 'warn' for consistency
+	if level == "warning" {
+		level = "warn"
+	}
 	currentLogLevel = level
 	switch level {
 	case "debug":
 		log.SetFlags(log.LstdFlags | log.Lshortfile)
 	case "info":
+		log.SetFlags(log.LstdFlags)
+	case "warn":
 		log.SetFlags(log.LstdFlags)
 	case "error":
 		log.SetOutput(os.Stderr)
@@ -70,10 +78,29 @@ func Info(format string, v ...interface{}) {
 	}
 }
 
+// Warn prints warning messages if log level is debug, info, warn, or error
+func Warn(format string, v ...interface{}) {
+	if currentLogLevel == LogLevelDebug || currentLogLevel == LogLevelInfo || currentLogLevel == LogLevelWarn || currentLogLevel == LogLevelError {
+		message := fmt.Sprintf(format, v...)
+		if shouldLog(message) {
+			log.Printf("WARN: %s", message)
+		}
+	}
+}
+
 // Error always prints error messages
 func Error(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
 	if shouldLog(message) {
 		log.Printf("ERROR: %s", message)
+	}
+}
+
+// Alarm always prints alarm notifications, bypassing log level filtering
+// Alarms are critical events that should always be visible
+func Alarm(format string, v ...interface{}) {
+	message := fmt.Sprintf(format, v...)
+	if shouldLog(message) {
+		log.Printf("🚨 ALARM: %s", message)
 	}
 }

@@ -225,6 +225,59 @@ function insertField(fieldName) {
     textarea.setSelectionRange(cursorPos + prefix.length + fieldName.length, cursorPos + prefix.length + fieldName.length);
 }
 
+function insertVariable(textareaId, alternateId) {
+    const select = event.target;
+    const variable = select.value;
+    if (!variable) return;
+    
+    // Determine which textarea to use
+    let targetId = textareaId;
+    if (alternateId) {
+        // For email, determine if we should insert into subject or body based on focus
+        const subject = document.getElementById(textareaId);
+        const body = document.getElementById(alternateId);
+        if (document.activeElement === body) {
+            targetId = alternateId;
+        }
+    }
+    
+    const textarea = document.getElementById(targetId);
+    const cursorPos = textarea.selectionStart;
+    const textBefore = textarea.value.substring(0, cursorPos);
+    const textAfter = textarea.value.substring(cursorPos);
+    
+    textarea.value = textBefore + variable + textAfter;
+    textarea.focus();
+    const newPos = cursorPos + variable.length;
+    textarea.setSelectionRange(newPos, newPos);
+    
+    // Reset dropdown
+    select.selectedIndex = 0;
+}
+
+function toggleMessageSections() {
+    // Show/hide custom message sections based on selected delivery methods
+    const consoleChecked = document.getElementById('deliveryConsole').checked;
+    const syslogChecked = document.getElementById('deliverySyslog').checked;
+    const oslogChecked = document.getElementById('deliveryOslog').checked;
+    const eventlogChecked = document.getElementById('deliveryEventlog').checked;
+    const emailChecked = document.getElementById('deliveryEmail').checked;
+    const smsChecked = document.getElementById('deliverySMS').checked;
+    
+    document.getElementById('consoleMessageSection').style.display = consoleChecked ? 'block' : 'none';
+    document.getElementById('syslogMessageSection').style.display = syslogChecked ? 'block' : 'none';
+    document.getElementById('oslogMessageSection').style.display = oslogChecked ? 'block' : 'none';
+    document.getElementById('eventlogMessageSection').style.display = eventlogChecked ? 'block' : 'none';
+    document.getElementById('emailMessageSection').style.display = emailChecked ? 'block' : 'none';
+    document.getElementById('smsMessageSection').style.display = smsChecked ? 'block' : 'none';
+}
+
+function toggleCustomMessages() {
+    const useDefault = document.getElementById('useDefaultMessage').checked;
+    document.getElementById('defaultMessageSection').style.display = useDefault ? 'block' : 'none';
+    document.getElementById('customMessageSections').style.display = useDefault ? 'none' : 'block';
+}
+
 function showCreateModal() {
     currentAlarm = null;
     document.getElementById('alarmName').value = '';
@@ -237,13 +290,30 @@ function showCreateModal() {
     // Reset delivery methods to console only
     document.getElementById('deliveryConsole').checked = true;
     document.getElementById('deliverySyslog').checked = false;
+    document.getElementById('deliveryOslog').checked = false;
     document.getElementById('deliveryEventlog').checked = false;
     document.getElementById('deliveryEmail').checked = false;
     document.getElementById('deliverySMS').checked = false;
     
+    // Reset messages
+    document.getElementById('useDefaultMessage').checked = true;
+    document.getElementById('defaultMessage').value = '🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}';
+    document.getElementById('consoleMessage').value = '';
+    document.getElementById('syslogMessage').value = '';
+    document.getElementById('oslogMessage').value = '';
+    document.getElementById('eventlogMessage').value = '';
+    document.getElementById('emailTo').value = '';
+    document.getElementById('emailSubject').value = '';
+    document.getElementById('emailBody').value = '';
+    document.getElementById('smsTo').value = '';
+    document.getElementById('smsMessage').value = '';
+    
     selectedTags = [];
     renderSelectedTags();
     document.getElementById('tagSearchInput').value = '';
+    
+    toggleMessageSections();
+    toggleCustomMessages();
     
     document.getElementById('editModal').classList.add('active');
 }
@@ -264,13 +334,51 @@ function editAlarm(name) {
     document.getElementById('alarmCooldown').value = currentAlarm.cooldown || 1800;
     document.getElementById('alarmEnabled').checked = currentAlarm.enabled;
     
-    // Load delivery methods from channels
-    const channelTypes = (currentAlarm.channels || []).map(ch => ch.type);
+    // Load delivery methods and messages from channels
+    const channels = currentAlarm.channels || [];
+    const channelTypes = channels.map(ch => ch.type);
+    
     document.getElementById('deliveryConsole').checked = channelTypes.includes('console');
     document.getElementById('deliverySyslog').checked = channelTypes.includes('syslog');
+    document.getElementById('deliveryOslog').checked = channelTypes.includes('oslog');
     document.getElementById('deliveryEventlog').checked = channelTypes.includes('eventlog');
     document.getElementById('deliveryEmail').checked = channelTypes.includes('email');
     document.getElementById('deliverySMS').checked = channelTypes.includes('sms');
+    
+    // Load messages from channels
+    let hasCustomMessages = false;
+    let defaultMsg = '🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}';
+    
+    channels.forEach(channel => {
+        if (channel.type === 'console' && channel.template) {
+            document.getElementById('consoleMessage').value = channel.template;
+            defaultMsg = channel.template;
+        } else if (channel.type === 'syslog' && channel.template) {
+            document.getElementById('syslogMessage').value = channel.template;
+            if (!hasCustomMessages && channel.template !== defaultMsg) hasCustomMessages = true;
+        } else if (channel.type === 'oslog' && channel.template) {
+            document.getElementById('oslogMessage').value = channel.template;
+            if (!hasCustomMessages && channel.template !== defaultMsg) hasCustomMessages = true;
+        } else if (channel.type === 'eventlog' && channel.template) {
+            document.getElementById('eventlogMessage').value = channel.template;
+            if (!hasCustomMessages && channel.template !== defaultMsg) hasCustomMessages = true;
+        } else if (channel.type === 'email' && channel.email) {
+            document.getElementById('emailTo').value = (channel.email.to || []).join(', ');
+            document.getElementById('emailSubject').value = channel.email.subject || '';
+            document.getElementById('emailBody').value = channel.email.body || '';
+            hasCustomMessages = true;
+        } else if (channel.type === 'sms' && channel.sms) {
+            document.getElementById('smsTo').value = (channel.sms.to || []).join(', ');
+            document.getElementById('smsMessage').value = channel.sms.message || '';
+            hasCustomMessages = true;
+        }
+    });
+    
+    document.getElementById('defaultMessage').value = defaultMsg;
+    document.getElementById('useDefaultMessage').checked = !hasCustomMessages;
+    
+    toggleMessageSections();
+    toggleCustomMessages();
     
     document.getElementById('editModal').classList.add('active');
 }
@@ -327,45 +435,62 @@ async function copyJSON() {
 async function handleSubmit(e) {
     e.preventDefault();
     
-    // Build channels array from selected delivery methods with default templates
+    // Build channels array from selected delivery methods
     const channels = [];
-    const alarmName = document.getElementById('alarmName').value;
-    const defaultTemplate = `🚨 ALARM: ${alarmName}\nCondition: {{.Condition}}\nValue: {{.Value}}\nTime: {{.Time}}`;
+    const useDefault = document.getElementById('useDefaultMessage').checked;
+    const defaultMessage = document.getElementById('defaultMessage').value || '🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}';
     
     if (document.getElementById('deliveryConsole').checked) {
+        const template = useDefault ? defaultMessage : (document.getElementById('consoleMessage').value || defaultMessage);
         channels.push({ 
             type: 'console',
-            template: defaultTemplate
+            template: template
         });
     }
     if (document.getElementById('deliverySyslog').checked) {
+        const template = useDefault ? defaultMessage : (document.getElementById('syslogMessage').value || defaultMessage);
         channels.push({ 
             type: 'syslog',
-            template: defaultTemplate
+            template: template
+        });
+    }
+    if (document.getElementById('deliveryOslog').checked) {
+        const template = useDefault ? defaultMessage : (document.getElementById('oslogMessage').value || defaultMessage);
+        channels.push({ 
+            type: 'oslog',
+            template: template
         });
     }
     if (document.getElementById('deliveryEventlog').checked) {
+        const template = useDefault ? defaultMessage : (document.getElementById('eventlogMessage').value || defaultMessage);
         channels.push({ 
             type: 'eventlog',
-            template: defaultTemplate
+            template: template
         });
     }
     if (document.getElementById('deliveryEmail').checked) {
+        const emailTo = document.getElementById('emailTo').value;
+        const emailSubject = document.getElementById('emailSubject').value;
+        const emailBody = document.getElementById('emailBody').value;
+        
         channels.push({ 
             type: 'email',
             email: {
-                to: ['admin@example.com'],
-                subject: `⚠️ Weather Alarm: ${alarmName}`,
-                body: defaultTemplate
+                to: emailTo ? emailTo.split(',').map(e => e.trim()).filter(e => e) : ['admin@example.com'],
+                subject: emailSubject || '⚠️ Weather Alarm: {{alarm_name}}',
+                body: emailBody || defaultMessage
             }
         });
     }
     if (document.getElementById('deliverySMS').checked) {
+        const smsTo = document.getElementById('smsTo').value;
+        const smsMessage = document.getElementById('smsMessage').value;
+        
         channels.push({ 
             type: 'sms',
             sms: {
-                to: ['+1234567890'],
-                message: `ALARM: ${alarmName} - {{.Condition}}`
+                to: smsTo ? smsTo.split(',').map(p => p.trim()).filter(p => p) : ['+1234567890'],
+                message: smsMessage || 'ALARM: {{alarm_name}} at {{timestamp}}'
             }
         });
     }

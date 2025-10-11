@@ -579,3 +579,92 @@ body {
 .modal-content.wide {
     max-width: 900px;
 }
+
+.message-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.message-section label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.message-section input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.message-input-section {
+    margin-top: 15px;
+    padding: 15px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.message-header label {
+    font-weight: 600;
+    color: #495057;
+    margin: 0;
+}
+
+.variable-dropdown {
+    padding: 6px 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+    min-width: 180px;
+}
+
+.variable-dropdown:hover {
+    border-color: #667eea;
+}
+
+.message-input-section textarea,
+.message-input-section input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+    resize: vertical;
+}
+
+.message-input-section input[type="text"] {
+    margin-bottom: 10px;
+}
+
+.message-input-section textarea:focus,
+.message-input-section input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#customMessageSections {
+    margin-top: 15px;
+}
+
+#customMessageSections .message-input-section {
+    margin-bottom: 15px;
+}
+
+#customMessageSections .message-input-section:last-child {
+    margin-bottom: 0;
+}

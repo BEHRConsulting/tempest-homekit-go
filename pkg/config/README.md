@@ -86,7 +86,7 @@ fmt.Printf("Elevation: %.2f meters\n", elevation) // Output: 300.00 meters
 | `--station` | string | "Chino Hills" | Tempest station name |
 | `--pin` | string | "00102003" | HomeKit pairing PIN |
 | `--web-port` | string | "8080" | Web dashboard port |
-| `--loglevel` | string | "error" | Logging level (error/info/debug) |
+| `--loglevel` | string | "error" | Logging level (error/warn/warning/info/debug) |
 | `--logfilter` | string | "" | Filter log messages (case-insensitive substring match) |
 | `--elevation` | string | "" | Station elevation (e.g., "1000ft", "300m") |
 | `--read-history` | bool | false | Load historical weather data |

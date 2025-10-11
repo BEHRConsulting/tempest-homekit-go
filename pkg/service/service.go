@@ -321,7 +321,12 @@ func StartService(cfg *config.Config, version string) error {
 	if cfg.Alarms != "" {
 		logger.Info("Initializing alarm manager with config: %s", cfg.Alarms)
 		var err error
-		alarmManager, err = alarm.NewManager(cfg.Alarms, station.StationName)
+		// Use station Name if StationName is empty (API sometimes only populates Name field)
+		stationDisplayName := station.StationName
+		if stationDisplayName == "" {
+			stationDisplayName = station.Name
+		}
+		alarmManager, err = alarm.NewManager(cfg.Alarms, stationDisplayName)
 		if err != nil {
 			logger.Error("Failed to initialize alarm manager: %v", err)
 			logger.Error("Continuing without alarms - fix configuration to enable alarm notifications")

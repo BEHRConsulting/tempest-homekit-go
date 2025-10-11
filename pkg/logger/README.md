@@ -4,7 +4,7 @@ Centralized logging with level filtering and message filtering for the Tempest H
 
 ## Features
 
-- **Level-based Filtering**: Control verbosity with `debug`, `info`, and `error` levels
+- **Level-based Filtering**: Control verbosity with `debug`, `info`, `warn`/`warning`, and `error` levels
 - **Message Filtering**: Filter logs to show only messages containing specific strings
 - **Case-insensitive Matching**: Filter string matching ignores case for easier debugging
 - **Consistent Format**: All log messages include level prefix and timestamp
@@ -22,14 +22,29 @@ logger.SetLogLevel("debug")
 // Log messages
 logger.Debug("Detailed debug information: %s", debugData)
 logger.Info("General information: %d items processed", count)
+logger.Warn("Important adjustment made: %s", adjustment)
 logger.Error("Error occurred: %v", err)
+logger.Alarm("Critical weather condition detected: %s", condition)
 ```
 
 ### Log Levels
 
-- **`debug`**: Shows all messages (DEBUG, INFO, ERROR)
-- **`info`**: Shows INFO and ERROR messages
-- **`error`**: Shows only ERROR messages (default)
+The logger uses a hierarchical level system where each level includes all higher priority levels:
+
+- **`debug`**: Shows all messages (DEBUG, INFO, WARN, ERROR, ALARM)
+- **`info`**: Shows INFO, WARN, ERROR, and ALARM messages
+- **`warn`** (or **`warning`**): Shows WARN, ERROR, and ALARM messages
+- **`error`**: Shows ERROR and ALARM messages (default)
+
+**Note**: ALARM messages always appear regardless of log level - they bypass level filtering.
+
+#### When to Use Each Level
+
+- **`Debug()`**: Detailed technical information for troubleshooting (verbose)
+- **`Info()`**: General operational messages about normal system behavior
+- **`Warn()`**: Important automatic adjustments or non-critical issues that users should be aware of
+- **`Error()`**: Critical errors that require attention or prevent normal operation
+- **`Alarm()`**: Weather alarm notifications (always visible, bypasses log level filtering)
 
 ### Message Filtering
 
@@ -151,6 +166,11 @@ Logs an info message (shown when log level is `debug` or `info`)
 
 #### `Error(format string, v ...interface{})`
 Logs an error message (always shown)
+
+#### `Alarm(format string, v ...interface{})`
+Logs an alarm notification (always shown, bypasses log level filtering)
+
+**Note**: The `Alarm()` function is specifically designed for weather alarm notifications and always outputs regardless of the configured log level. This ensures critical alarm messages are never suppressed. See [ALARM_LOGGING.md](../../ALARM_LOGGING.md) for details.
 
 ## Testing
 

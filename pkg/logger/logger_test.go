@@ -72,6 +72,29 @@ func TestInfoAndDebugLevelFiltering(t *testing.T) {
 	SetLogLevel(LogLevelError)
 }
 
+func TestWarningAliasNormalization(t *testing.T) {
+	SetLogFilter("")
+
+	// Test that 'warning' is accepted and normalized to 'warn'
+	SetLogLevel("warning")
+	out := captureLogOutput(func() {
+		Warn("test-warning")
+		Info("test-info")
+	})
+
+	// Should show warn messages at 'warning' level (normalized to 'warn')
+	if !strings.Contains(out, "WARN: test-warning") {
+		t.Fatalf("expected WARN to log when level set to 'warning', got: %q", out)
+	}
+	// Should not show info at warn level
+	if strings.Contains(out, "INFO: test-info") {
+		t.Fatalf("did not expect INFO to log when level set to 'warning', got: %q", out)
+	}
+
+	// restore
+	SetLogLevel(LogLevelError)
+}
+
 func TestErrorAlwaysLogs(t *testing.T) {
 	SetLogFilter("")
 	SetLogLevel(LogLevelError)
@@ -82,4 +105,58 @@ func TestErrorAlwaysLogs(t *testing.T) {
 	if !strings.Contains(out, "ERROR: fatal-error") {
 		t.Fatalf("expected Error to always log, got: %q", out)
 	}
+}
+
+func TestWarnLogLevel(t *testing.T) {
+	SetLogFilter("")
+
+	// At error level, Warn should log
+	SetLogLevel(LogLevelError)
+	out := captureLogOutput(func() {
+		Warn("warning-message")
+		Info("info-message")
+	})
+	if !strings.Contains(out, "WARN: warning-message") {
+		t.Fatalf("expected WARN to log at error level, got: %q", out)
+	}
+	if strings.Contains(out, "INFO: info-message") {
+		t.Fatalf("did not expect INFO to log at error level, got: %q", out)
+	}
+
+	// At warn level, both Warn and Error should log, but not Info
+	SetLogLevel(LogLevelWarn)
+	out2 := captureLogOutput(func() {
+		Error("error-message")
+		Warn("warning-message")
+		Info("info-message")
+	})
+	if !strings.Contains(out2, "ERROR: error-message") {
+		t.Fatalf("expected ERROR to log at warn level, got: %q", out2)
+	}
+	if !strings.Contains(out2, "WARN: warning-message") {
+		t.Fatalf("expected WARN to log at warn level, got: %q", out2)
+	}
+	if strings.Contains(out2, "INFO: info-message") {
+		t.Fatalf("did not expect INFO to log at warn level, got: %q", out2)
+	}
+
+	// At info level, Warn, Info, and Error should log
+	SetLogLevel(LogLevelInfo)
+	out3 := captureLogOutput(func() {
+		Error("error-message")
+		Warn("warning-message")
+		Info("info-message")
+	})
+	if !strings.Contains(out3, "ERROR: error-message") {
+		t.Fatalf("expected ERROR to log at info level, got: %q", out3)
+	}
+	if !strings.Contains(out3, "WARN: warning-message") {
+		t.Fatalf("expected WARN to log at info level, got: %q", out3)
+	}
+	if !strings.Contains(out3, "INFO: info-message") {
+		t.Fatalf("expected INFO to log at info level, got: %q", out3)
+	}
+
+	// restore
+	SetLogLevel(LogLevelError)
 }

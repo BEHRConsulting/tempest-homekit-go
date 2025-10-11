@@ -36,6 +36,8 @@ func (f *NotifierFactory) GetNotifier(channelType string) (Notifier, error) {
 		return &ConsoleNotifier{}, nil
 	case "syslog":
 		return &SyslogNotifier{config: f.config.Syslog}, nil
+	case "oslog":
+		return &OSLogNotifier{}, nil
 	case "eventlog":
 		return &EventLogNotifier{}, nil
 	case "email":
@@ -52,7 +54,7 @@ type ConsoleNotifier struct{}
 
 func (n *ConsoleNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observation, stationName string) error {
 	message := expandTemplate(channel.Template, alarm, obs, stationName)
-	logger.Info("%s", message)
+	logger.Alarm("%s", message)
 	return nil
 }
 
@@ -274,7 +276,7 @@ func (n *SMSNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observat
 func expandTemplate(template string, alarm *Alarm, obs *weather.Observation, stationName string) string {
 	result := template
 
-	// Replace observation values
+	// Replace observation values (current)
 	replacements := map[string]string{
 		"{{temperature}}":        fmt.Sprintf("%.1f", obs.AirTemperature),
 		"{{temperature_f}}":      fmt.Sprintf("%.1f", obs.AirTemperature*9/5+32),
@@ -293,6 +295,95 @@ func expandTemplate(template string, alarm *Alarm, obs *weather.Observation, sta
 		"{{timestamp}}":          time.Unix(obs.Timestamp, 0).Format("2006-01-02 15:04:05 MST"),
 		"{{station}}":            stationName,
 		"{{alarm_name}}":         alarm.Name,
+		"{{alarm_description}}":  alarm.Description,
+	}
+
+	// Add previous values for change detection comparisons
+	// These show the value that was compared against to trigger the alarm
+	// Use trigger context if available (more accurate), otherwise fall back to previousValue
+	if lastTemp, ok := alarm.GetTriggerValue("temperature"); ok {
+		replacements["{{last_temperature}}"] = fmt.Sprintf("%.1f", lastTemp)
+	} else if lastTemp, ok := alarm.GetPreviousValue("temperature"); ok {
+		replacements["{{last_temperature}}"] = fmt.Sprintf("%.1f", lastTemp)
+	} else {
+		replacements["{{last_temperature}}"] = "N/A"
+	}
+	if lastHumidity, ok := alarm.GetTriggerValue("humidity"); ok {
+		replacements["{{last_humidity}}"] = fmt.Sprintf("%.0f", lastHumidity)
+	} else if lastHumidity, ok := alarm.GetPreviousValue("humidity"); ok {
+		replacements["{{last_humidity}}"] = fmt.Sprintf("%.0f", lastHumidity)
+	} else {
+		replacements["{{last_humidity}}"] = "N/A"
+	}
+	if lastPressure, ok := alarm.GetTriggerValue("pressure"); ok {
+		replacements["{{last_pressure}}"] = fmt.Sprintf("%.2f", lastPressure)
+	} else if lastPressure, ok := alarm.GetPreviousValue("pressure"); ok {
+		replacements["{{last_pressure}}"] = fmt.Sprintf("%.2f", lastPressure)
+	} else {
+		replacements["{{last_pressure}}"] = "N/A"
+	}
+	if lastWindSpeed, ok := alarm.GetTriggerValue("wind_speed"); ok {
+		replacements["{{last_wind_speed}}"] = fmt.Sprintf("%.1f", lastWindSpeed)
+	} else if lastWindSpeed, ok := alarm.GetPreviousValue("wind_speed"); ok {
+		replacements["{{last_wind_speed}}"] = fmt.Sprintf("%.1f", lastWindSpeed)
+	} else {
+		replacements["{{last_wind_speed}}"] = "N/A"
+	}
+	if lastWindGust, ok := alarm.GetTriggerValue("wind_gust"); ok {
+		replacements["{{last_wind_gust}}"] = fmt.Sprintf("%.1f", lastWindGust)
+	} else if lastWindGust, ok := alarm.GetPreviousValue("wind_gust"); ok {
+		replacements["{{last_wind_gust}}"] = fmt.Sprintf("%.1f", lastWindGust)
+	} else {
+		replacements["{{last_wind_gust}}"] = "N/A"
+	}
+	if lastWindDir, ok := alarm.GetTriggerValue("wind_direction"); ok {
+		replacements["{{last_wind_direction}}"] = fmt.Sprintf("%.0f", lastWindDir)
+	} else if lastWindDir, ok := alarm.GetPreviousValue("wind_direction"); ok {
+		replacements["{{last_wind_direction}}"] = fmt.Sprintf("%.0f", lastWindDir)
+	} else {
+		replacements["{{last_wind_direction}}"] = "N/A"
+	}
+	if lastLux, ok := alarm.GetTriggerValue("lux"); ok {
+		replacements["{{last_lux}}"] = fmt.Sprintf("%.0f", lastLux)
+	} else if lastLux, ok := alarm.GetPreviousValue("lux"); ok {
+		replacements["{{last_lux}}"] = fmt.Sprintf("%.0f", lastLux)
+	} else {
+		replacements["{{last_lux}}"] = "N/A"
+	}
+	if lastUV, ok := alarm.GetTriggerValue("uv"); ok {
+		replacements["{{last_uv}}"] = fmt.Sprintf("%d", int(lastUV))
+	} else if lastUV, ok := alarm.GetPreviousValue("uv"); ok {
+		replacements["{{last_uv}}"] = fmt.Sprintf("%d", int(lastUV))
+	} else {
+		replacements["{{last_uv}}"] = "N/A"
+	}
+	if lastRainRate, ok := alarm.GetTriggerValue("rain_rate"); ok {
+		replacements["{{last_rain_rate}}"] = fmt.Sprintf("%.2f", lastRainRate)
+	} else if lastRainRate, ok := alarm.GetPreviousValue("rain_rate"); ok {
+		replacements["{{last_rain_rate}}"] = fmt.Sprintf("%.2f", lastRainRate)
+	} else {
+		replacements["{{last_rain_rate}}"] = "N/A"
+	}
+	if lastRainDaily, ok := alarm.GetTriggerValue("rain_daily"); ok {
+		replacements["{{last_rain_daily}}"] = fmt.Sprintf("%.2f", lastRainDaily)
+	} else if lastRainDaily, ok := alarm.GetPreviousValue("rain_daily"); ok {
+		replacements["{{last_rain_daily}}"] = fmt.Sprintf("%.2f", lastRainDaily)
+	} else {
+		replacements["{{last_rain_daily}}"] = "N/A"
+	}
+	if lastLightning, ok := alarm.GetTriggerValue("lightning_count"); ok {
+		replacements["{{last_lightning_count}}"] = fmt.Sprintf("%d", int(lastLightning))
+	} else if lastLightning, ok := alarm.GetPreviousValue("lightning_count"); ok {
+		replacements["{{last_lightning_count}}"] = fmt.Sprintf("%d", int(lastLightning))
+	} else {
+		replacements["{{last_lightning_count}}"] = "N/A"
+	}
+	if lastLightningDist, ok := alarm.GetTriggerValue("lightning_distance"); ok {
+		replacements["{{last_lightning_distance}}"] = fmt.Sprintf("%.1f", lastLightningDist)
+	} else if lastLightningDist, ok := alarm.GetPreviousValue("lightning_distance"); ok {
+		replacements["{{last_lightning_distance}}"] = fmt.Sprintf("%.1f", lastLightningDist)
+	} else {
+		replacements["{{last_lightning_distance}}"] = "N/A"
 	}
 
 	for placeholder, value := range replacements {

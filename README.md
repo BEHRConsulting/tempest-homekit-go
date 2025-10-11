@@ -1,5 +1,11 @@
 # Tempest HomeKit Go: A Vibe Programming Case Study
 
+[![Go Version](https://img.shields.io/badge/Go-1.24.2+-00ADD8?style=flat&logo=go)](https://golang.org)
+[![Test Coverage](https://img.shields.io/badge/coverage-60.3%25-yellow?style=flat)](https://github.com/BEHRConsulting/tempest-homekit-go)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey?style=flat)](https://github.com/BEHRConsulting/tempest-homekit-go)
+[![HomeKit](https://img.shields.io/badge/HomeKit-Compatible-orange?style=flat&logo=apple)](https://developer.apple.com/homekit/)
+
 A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on weather conditions. This project serves as a comprehensive test case for **Vibe Programming** methodologies, demonstrating AI-assisted development techniques using modern Large Language Models.
 
 <!-- Version history moved to VERSIONS.md -->
@@ -32,7 +38,7 @@ A complete Go service application that monitors a WeatherFlow Tempest weather st
 This project successfully demonstrates the efficacy of vibe programming techniques in producing production-ready software with:
 - **Rapid Development Cycle**: Complete application developed through iterative AI assistance
 - **Adaptive Problem Solving**: Real-time debugging and feature enhancement through conversational programming
-- **Quality Assurance**: 78% test coverage achieved through AI-assisted test generation
+- **Quality Assurance**: 60.3% test coverage achieved through AI-assisted test generation
 - **Professional Standards**: Production-ready deployment with cross-platform service management
 
 ## Important Sensor Notes
@@ -112,7 +118,7 @@ Planned enhancements and strategic priorities for upcoming releases. Items are g
 High priority
 - Alarms and Notifications
   - Description: Rule-based alerting system that triggers notifications when weather conditions meet configured criteria (thresholds, combinations, or event patterns).
-  - Channels: Console logging, Syslog, Email, SMS, and an internal EventManager (webhook/HTTP). Support templated messages with runtime value interpolation.
+  - Channels: Console logging, Syslog, OSLog (macOS unified logging), Email, SMS, and an internal EventManager (webhook/HTTP). Support templated messages with runtime value interpolation.
   - CLI/Env: `--alarms @alarms.json` or `--alarms '{...json...}'`. File-watcher to auto-reload alarm configuration.
   - Notes: Provide a secure secrets mechanism for SMTP/SMS credentials (use `.env` or platform secrets). Include an interactive web-based alarm editor behind `--alarms-edit` for ease of configuration.
 
@@ -147,8 +153,9 @@ Contributing / Implementation notes
 The alarm system enables rule-based weather alerting with multiple notification channels. Configure alarms to trigger when weather conditions meet specific criteria (temperature thresholds, lightning proximity, rain events, etc.).
 
 **Supported Notification Channels:**
-- **Console**: Log messages to stdout
+- **Console**: Log messages to stdout (always visible regardless of log level)
 - **Syslog**: Local or remote syslog server
+- **OSLog**: macOS unified logging system (os_log API via CGO)
 - **Email**: SMTP or Microsoft 365 OAuth2
 - **SMS**: Twilio or AWS SNS
 - **EventLog**: System event log (Windows) or syslog (Unix)
@@ -217,7 +224,7 @@ When running the main service with alarms enabled, the web dashboard (`http://lo
 - **Active Alarms List**: Details for each enabled alarm:
   - Alarm name and condition
   - Last triggered timestamp (or "Never")
-  - Delivery channels (console, syslog, email, SMS, eventlog)
+  - Delivery channels (console, syslog, oslog, email, SMS, eventlog)
 
 The alarm status refreshes automatically every 10 seconds, providing real-time visibility into your alarm system without needing to open the alarm editor or check log files.
 
@@ -335,7 +342,7 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `--cleardb`: Clear HomeKit database and reset device pairing
 - `--disable-homekit`: Disable HomeKit services and run web console only
 - `--elevation`: Station elevation in meters (default: auto-detect, valid range: -430m to 8848m)
-- `--loglevel`: Logging level - debug, info, error (default: "error")
+- `--loglevel`: Logging level - debug, info, warn/warning, error (default: "error")
 - `--logfilter`: Filter log messages to only show those containing this string (case-insensitive) - useful for targeted debugging
 - `--pin`: HomeKit pairing PIN (default: "00102003")  
 - `--sensors`: Sensors to enable - 'all', 'min' (temp,lux,humidity), or comma-delimited list with aliases supported:
@@ -882,7 +889,7 @@ The application supports configuration via environment variables, which can be s
 | `CHART_HISTORY_HOURS` | `24` | Hours to display in charts (0=all) |
 | `UDP_STREAM` | `false` | Enable UDP mode (true/false) |
 | `DISABLE_INTERNET` | `false` | Offline mode (true/false) |
-| `LOG_LEVEL` | `error` | Logging level (error/info/debug) |
+| `LOG_LEVEL` | `error` | Logging level (error/warn/warning/info/debug) |
 | `LOG_FILTER` | *(empty)* | Filter log messages |
 
 **Note:** Command-line flags always override environment variables.
@@ -1097,10 +1104,27 @@ go test ./pkg/service/...
   - pkg/service: 49.1%  (highest-leverage area to add tests)
   - pkg/udp: 51.3%
   - pkg/weather: 60.8%
-  - pkg/web: 70.6%
+  - pkg/web: 65.0%
 
-- Aggregate coverage printed by the coverage tool on the last run: 4.0% (see `./coverage.out`). Note: per-package numbers above were collected from individual `go test` outputs during iterative runs; the aggregated percentage may vary depending on how coverage was collected. The current project goal is to raise overall coverage to >= 70% by adding targeted tests (priority: `pkg/service`, then `pkg/weather`).
- - Aggregate coverage printed by the coverage tool on the last run: 4.3% (see `./coverage.out`). Note: per-package numbers above were collected from individual `go test` outputs during iterative runs; these can be higher because they are per-package runs. The aggregate coverage uses a single `coverage.out` collected with `go test -coverprofile=coverage.out ./...` and is the authoritative project-wide percentage. The current project goal is to raise overall coverage to >= 70% by adding targeted tests (priority: `pkg/service`, then `pkg/weather`).
+**Current Aggregate Coverage**: 60.3% (see `./coverage.out`)
+
+Note: Per-package numbers above were collected from individual `go test` outputs during iterative runs. The aggregate coverage uses a single `coverage.out` collected with `go test -coverprofile=coverage.out ./...` and is the authoritative project-wide percentage. The current project goal is to raise overall coverage to >= 70% by adding targeted tests (priority: `pkg/service`, then `pkg/weather`).
+
+### Package Coverage Breakdown
+
+| Package | Coverage |
+|---------|----------|
+| pkg/alarm | 61.9% |
+| pkg/alarm/editor | 28.8% |
+| pkg/config | 80.2% |
+| pkg/generator | 87.8% |
+| pkg/homekit | 84.5% |
+| pkg/logger | 91.3% |
+| pkg/service | 47.7% |
+| pkg/udp | 51.3% |
+| pkg/weather | 60.8% |
+| pkg/web | 65.0% |
+| **Overall** | **60.3%** |
 
 ### Testing Architecture
 The project includes unit tests and integration-style tests that use small, isolated test doubles and local httptest servers where appropriate. Test patterns used across the repo:
@@ -1204,10 +1228,14 @@ This project was developed using various technologies, libraries, and tools. Bel
 ## Additional Documentation
 
 ### Alarm System Documentation
+- **[ALARM_LOGGING.md](ALARM_LOGGING.md)** - ⭐ Alarm logging behavior (always visible regardless of log level)
+- **[ALARM_COOLDOWN_STATUS.md](ALARM_COOLDOWN_STATUS.md)** - Real-time cooldown status display in web console
+- **[OSLOG_NOTIFIER.md](OSLOG_NOTIFIER.md)** - macOS unified logging integration for alarms
 - **[CHANGE_DETECTION_OPERATORS.md](CHANGE_DETECTION_OPERATORS.md)** - Complete technical reference for change detection operators (*field, >field, <field)
 - **[CHANGE_DETECTION_QUICKREF.md](CHANGE_DETECTION_QUICKREF.md)** - Quick reference guide with examples
 - **[CHANGE_DETECTION_VISUAL.md](CHANGE_DETECTION_VISUAL.md)** - Visual diagrams and state transition timelines
 - **[CHANGE_DETECTION_SUMMARY.md](CHANGE_DETECTION_SUMMARY.md)** - Implementation summary and architecture
+- **[ALARM_EDITOR_MESSAGES.md](ALARM_EDITOR_MESSAGES.md)** - Message configuration with variable templates
 - **[ALARM_EDITOR_CHANNEL_FIX.md](ALARM_EDITOR_CHANNEL_FIX.md)** - Documentation of alarm channel save fix
 - **[WEB_ALARM_STATUS_CARD.md](WEB_ALARM_STATUS_CARD.md)** - Web console alarm status card implementation
 - **[examples/alarms-with-change-detection.json](examples/alarms-with-change-detection.json)** - Ready-to-use alarm configurations
