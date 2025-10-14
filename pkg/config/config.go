@@ -72,7 +72,7 @@ DATA SOURCE OPTIONS:
   --station-url <url>           Custom station URL (e.g., http://localhost:8080/api/generate-weather)
                                 Overrides Tempest API, enables custom data sources
                                 Env: STATION_URL
-  --read-history                Preload last 24 hours of weather data from Tempest API
+	--read-history                Preload historical observations from Tempest API up to HISTORY_POINTS
   --disable-internet            Disable all internet access (offline mode)
                                 Requires: --udp-stream or --use-generated-weather
                                 Incompatible with: --use-web-status, --read-history
@@ -180,6 +180,7 @@ func LoadConfig() *Config {
 		LogFilter:            getEnvOrDefault("LOG_FILTER", ""),
 		WebPort:              getEnvOrDefault("WEB_PORT", "8080"),
 		Sensors:              getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
+		ReadHistory:          getEnvOrDefault("READ_HISTORY", "") == "true",
 		StationURL:           getEnvOrDefault("STATION_URL", ""),
 		UDPStream:            getEnvOrDefault("UDP_STREAM", "") == "true",
 		DisableInternet:      getEnvOrDefault("DISABLE_INTERNET", "") == "true",
@@ -209,7 +210,7 @@ func LoadConfig() *Config {
 	flag.StringVar(&elevationStr, "elevation", "", "Station elevation (e.g., 903ft, 275m). If not provided, elevation will be auto-detected from coordinates")
 	flag.BoolVar(&cfg.ClearDB, "cleardb", false, "Clear HomeKit database and reset device pairing")
 	flag.BoolVar(&cfg.DisableHomeKit, "disable-homekit", false, "Disable HomeKit services and run web console only")
-	flag.BoolVar(&cfg.ReadHistory, "read-history", false, "Preload last 24 hours of weather data from Tempest API")
+	flag.BoolVar(&cfg.ReadHistory, "read-history", cfg.ReadHistory, "Preload historical observations from Tempest API up to HISTORY_POINTS")
 	flag.BoolVar(&cfg.TestAPI, "test-api", false, "Test WeatherFlow API endpoints and data points")
 	flag.BoolVar(&cfg.UseWebStatus, "use-web-status", false, "Enable headless browser scraping of TempestWX status page every 15 minutes")
 	flag.StringVar(&cfg.StationURL, "station-url", cfg.StationURL, "Custom station URL for weather data (e.g., http://localhost:8080/api/generate-weather). Overrides Tempest API. Can also be set via STATION_URL environment variable")

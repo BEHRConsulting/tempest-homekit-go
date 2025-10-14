@@ -89,7 +89,7 @@ fmt.Printf("Elevation: %.2f meters\n", elevation) // Output: 300.00 meters
 | `--loglevel` | string | "error" | Logging level (error/warn/warning/info/debug) |
 | `--logfilter` | string | "" | Filter log messages (case-insensitive substring match) |
 | `--elevation` | string | "" | Station elevation (e.g., "1000ft", "300m") |
-| `--read-history` | bool | false | Load historical weather data |
+| `--read-history` | bool | false | Load historical weather data (preloads observations up to `HISTORY_POINTS`) |
 | `--cleardb` | bool | false | Reset HomeKit database |
 
 ## Environment Variables

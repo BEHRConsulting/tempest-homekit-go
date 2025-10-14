@@ -271,6 +271,32 @@ body {
     font-weight: 500;
 }
 
+/* Accessory status styling */
+.accessory-status {
+    margin-left: auto;
+    font-size: 0.85rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.accessory-status.enabled {
+    color: #155724;
+    background-color: rgba(40, 167, 69, 0.08);
+    border: 1px solid rgba(40,167,69,0.12);
+}
+
+.accessory-status.disabled {
+    color: #721c24;
+    background-color: rgba(220,53,69,0.06);
+    border: 1px solid rgba(220,53,69,0.08);
+}
+
+.accessory-item.disabled .accessory-name {
+    color: #999;
+    text-decoration: line-through;
+}
+
 .expand-icon {
     margin-left: auto;
     font-size: 0.8rem;
@@ -1204,6 +1230,42 @@ body {
     .forecast-day-precip {
         text-align: left;
     }
+}
+
+/* Chart Popout Page Styles */
+.chart-root {
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+}
+
+.chart-root h1 {
+    color: white;
+    font-size: 2rem;
+    margin-bottom: 20px;
+    text-align: center;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.chart-root .chart-container {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+}
+
+.chart-root .chart-container canvas {
+    max-width: 100%;
+    max-height: 100%;
 }
 
 /* Alarm Status Card Styles */

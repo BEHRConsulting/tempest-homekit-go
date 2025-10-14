@@ -69,6 +69,8 @@ log show --predicate 'subsystem == "com.bci.tempest-homekit" AND category == "al
 ```bash
 # Export to file
 log show --predicate 'subsystem == "com.bci.tempest-homekit"' --last 24h > alarms.log
+
+Note: The `--read-history`/`READ_HISTORY` option controls whether the service preloads historical observations on startup (it preloads up to `HISTORY_POINTS` observations). The `--chart-history`/`CHART_HISTORY_HOURS` setting controls the time range shown on charts (default 24 hours).
 ```
 ```
 

@@ -1,0 +1,576 @@
+{
+  "url": "http://127.0.0.1:8086/chart/humidity",
+  "start": "2025-10-13T23:57:35.768Z",
+  "console": [
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:36] INFO: DOM Content Loaded - Initializing dashboard",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "🔍 IMMEDIATE DOM CHECK:",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 3439,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "- pressure-info-icon exists: false",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 3440,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "- pressure-card exists: false",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 3441,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "- pressure-unit exists: false",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 3442,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "- pressure-unit element not found!",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 3453,
+        "columnNumber": 16
+      }
+    },
+    {
+      "type": "log",
+      "text": "- All pressure-related elements: JSHandle@array",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 3458,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "- All info-icon elements: JSHandle@array",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 3462,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "🔍 DOM CHECK COMPLETE",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 3464,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:36] INFO: Detected chart-only popout page - skipping dashboard fetches and event listener attachments",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:36] INFO: Initializing popout chart for chart-only page",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:36] INFO: Detected chart popout canvas - creating minimal popout chart",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:36] INFO: Popout chart created successfully",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "   Data: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 26,
+        "columnNumber": 16
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:36] INFO: Popout chart initialized successfully",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:36] INFO: Starting periodic data fetching (10-second intervals)",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "🚀 DEBUG: Starting initial data fetch",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 3653,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:36] INFO: Dashboard initialization completed",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "🔧 updateUnits() - Pressure unit update: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 889,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "❌ [23:57:36] ERROR: Error fetching status",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "   Data: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 26,
+        "columnNumber": 16
+      }
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/favicon.ico"
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:36] INFO: Weather data successfully parsed",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "   Data: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 26,
+        "columnNumber": 16
+      }
+    },
+    {
+      "type": "log",
+      "text": "⚠️ [23:57:36] WARN: updateDisplay: dashboard elements not present on this page - skipping full display update",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "🚀 DEBUG: About to call updateCharts with weatherData: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 2391,
+        "columnNumber": 24
+      }
+    },
+    {
+      "type": "log",
+      "text": "🚀 DEBUG: updateCharts() called JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 2034,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "🚀 DEBUG: Starting chart updates with data: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 2042,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "📊 CHART UPDATE DEBUG: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 2049,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:36] INFO: All charts updated successfully",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "🚀 DEBUG: updateCharts completed successfully",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 2393,
+        "columnNumber": 24
+      }
+    },
+    {
+      "type": "log",
+      "text": "❌ [23:57:36] ERROR: Error fetching weather data",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "   Data: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 26,
+        "columnNumber": 16
+      }
+    },
+    {
+      "type": "log",
+      "text": "🚀 DEBUG: Periodic data fetch triggered",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 3658,
+        "columnNumber": 16
+      }
+    },
+    {
+      "type": "log",
+      "text": "❌ [23:57:46] ERROR: Error fetching status",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "   Data: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 26,
+        "columnNumber": 16
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:46] INFO: Weather data successfully parsed",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "   Data: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 26,
+        "columnNumber": 16
+      }
+    },
+    {
+      "type": "log",
+      "text": "⚠️ [23:57:46] WARN: updateDisplay: dashboard elements not present on this page - skipping full display update",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "🚀 DEBUG: About to call updateCharts with weatherData: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 2391,
+        "columnNumber": 24
+      }
+    },
+    {
+      "type": "log",
+      "text": "🚀 DEBUG: updateCharts() called JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 2034,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "🚀 DEBUG: Starting chart updates with data: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 2042,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "📊 CHART UPDATE DEBUG: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 2049,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "ℹ️ [23:57:46] INFO: All charts updated successfully",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "🚀 DEBUG: updateCharts completed successfully",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 2393,
+        "columnNumber": 24
+      }
+    },
+    {
+      "type": "log",
+      "text": "❌ [23:57:46] ERROR: Error fetching weather data",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 24,
+        "columnNumber": 12
+      }
+    },
+    {
+      "type": "log",
+      "text": "   Data: JSHandle@object",
+      "args": [
+        null
+      ],
+      "location": {
+        "url": "http://127.0.0.1:8086/pkg/web/static/script.js",
+        "lineNumber": 26,
+        "columnNumber": 16
+      }
+    }
+  ],
+  "pageErrors": [],
+  "requestsFailed": [],
+  "httpStatus": {
+    "status": 200,
+    "statusText": "OK"
+  },
+  "screenshot": "/Users/kent/dev/clients/bci/tempest-homekit-go/puppeteer-popout.png",
+  "end": "2025-10-13T23:57:46.764Z"
+}

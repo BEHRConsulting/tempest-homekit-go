@@ -1,12 +1,15 @@
-# Tempest HomeKit Go: A Vibe Programming Case Study
+# Tempest HomeKit Go
 
-[![Go Version](https://img.shields.io/badge/Go-1.24.2+-00ADD8?style=flat&logo=go)](https://golang.org)
-[![Test Coverage](https://img.shields.io/badge/coverage-60.3%25-yellow?style=flat)](https://github.com/BEHRConsulting/tempest-homekit-go)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey?style=flat)](https://github.com/BEHRConsulting/tempest-homekit-go)
-[![HomeKit](https://img.shields.io/badge/HomeKit-Compatible-orange?style=flat&logo=apple)](https://developer.apple.com/homekit/)
+[![Go Version](https://img.shields.io/badge/Go-1.24.2+-00ADD8?style=flat&logo=go)](https://golang.org) [![Test Coverage](https://img.shields.io/badge/coverage-59.1%25-yellow?style=flat)](./coverage.out) [![Build](https://github.com/BEHRConsulting/tempest-homekit-go/actions/workflows/ci.yaml/badge.svg)](https://github.com/BEHRConsulting/tempest-homekit-go/actions) [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
-A complete Go service application that monitors a WeatherFlow Tempest weather station and updates Apple HomeKit accessories with real-time weather data, enabling smart home automation based on weather conditions. This project serves as a comprehensive test case for **Vibe Programming** methodologies, demonstrating AI-assisted development techniques using modern Large Language Models.
+Tempest HomeKit Go is a Go service that reads WeatherFlow Tempest station data and exposes sensors to Apple HomeKit while providing a modern web dashboard. It supports UDP stream mode, historical preloading, alarm notifications, and optional device status scraping.
+
+Table of Contents
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Configuration](#configuration)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
 
 <!-- Version history moved to VERSIONS.md -->
 
@@ -263,8 +266,8 @@ go build
 # Using environment variable (equivalent to above)
 STATION_URL=http://localhost:8080/api/generate-weather ./tempest-homekit-go
 
-# With historical data preloading
-./tempest-homekit-go --use-generated-weather --read-history
+# With historical data preloading (preloads up to HISTORY_POINTS observations)
+./tempest-homekit-go --use-generated-weather --read-history  # preloads up to HISTORY_POINTS observations
 ```
 
 ### Cross-Platform Build (All Platforms)
@@ -559,7 +562,7 @@ When your internet connection goes down, the WeatherFlow API becomes unavailable
 ./tempest-homekit-go --udp-stream --token "your-token"
 
 # Add historical data preloading from API
-./tempest-homekit-go --udp-stream --read-history --token "your-token"
+./tempest-homekit-go --udp-stream --read-history --token "your-token"  # preloads up to HISTORY_POINTS observations
 
 # Include web scraping for detailed device status
 ./tempest-homekit-go --udp-stream --use-web-status --token "your-token"

@@ -234,7 +234,7 @@ func StartService(cfg *config.Config, version string) error {
 	// Preload historical data if requested
 	if cfg.ReadHistory {
 		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-			logger.Info("--read-history flag detected, preloading last 24 hours of weather data...")
+			logger.Info("--read-history flag detected, preloading historical observations (up to HISTORY_POINTS points) from Tempest API...")
 		}
 
 		// Create a progress callback function
@@ -280,7 +280,7 @@ func StartService(cfg *config.Config, version string) error {
 			webServer.SetHistoricalDataStatus(len(historicalObs))
 
 			if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-				logger.Info("Historical data preload completed - loaded %d observations", len(historicalObs))
+				logger.Info("Historical data preload completed - loaded %d observations (up to configured HISTORY_POINTS)", len(historicalObs))
 			}
 		}
 	}

@@ -282,6 +282,197 @@ function initCharts() {
     // Set Chart.js default locale to ensure 24-hour format
     Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     
+    // If this page is a chart popout, it contains a single canvas with id
+    // `chart-canvas`. In that case build a minimal single chart and return.
+    const popoutCanvas = document.getElementById('chart-canvas');
+    if (popoutCanvas) {
+        try {
+            debugLog(logLevels.INFO, 'Detected chart popout canvas - creating minimal popout chart');
+            
+            // Detect chart type from URL path (/chart/temperature, /chart/humidity, etc.)
+            const urlPath = window.location.pathname;
+            const chartType = urlPath.split('/').pop(); // Gets 'temperature', 'humidity', etc.
+            
+            // Map chart types to colors and labels
+            const chartConfigs = {
+                'temperature': { color: '#ff6384', label: 'Temperature', unit: units.temperature === 'celsius' ? '°C' : '°F' },
+                'humidity': { color: '#36a2eb', label: 'Humidity', unit: '%' },
+                'wind': { color: '#ffce56', label: 'Wind Speed', unit: units.wind === 'mph' ? 'mph' : 'kph' },
+                'rain': { color: '#4bc0c0', label: 'Rain', unit: units.rain === 'inches' ? 'in' : 'mm' },
+                'pressure': { color: '#9966ff', label: 'Pressure', unit: units.pressure === 'mb' ? 'mb' : 'inHg' },
+                'light': { color: '#ff9f40', label: 'Light', unit: 'lux' },
+                'uv': { color: '#ff6384', label: 'UV Index', unit: 'UVI' }
+            };
+            
+            const config = chartConfigs[chartType] || { color: '#666', label: 'Data', unit: '' };
+            
+            const popCtx = popoutCanvas.getContext('2d');
+            
+            // Build datasets array - average/trend first (drawn behind), then data on top
+            const datasets = [
+                {
+                    data: [],
+                    borderColor: '#00cc66',
+                    backgroundColor: 'rgba(0, 204, 102, 0.2)',
+                    borderDash: [5, 5],
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0,
+                    label: 'Average'
+                }
+            ];
+            
+            // Pressure chart needs a trend line (dataset[1])
+            if (chartType === 'pressure') {
+                datasets.push({
+                    data: [],
+                    borderColor: '#ff6384',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    borderDash: [2, 2],
+                    borderWidth: 1.5,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0,
+                    label: 'Trend'
+                });
+            }
+            
+            // Main data line is always last (drawn on top)
+            datasets.push({ 
+                data: [], 
+                label: config.label,
+                borderColor: config.color,
+                backgroundColor: config.color + '1A',
+                fill: false,
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 2,
+                pointHoverRadius: 6,
+                pointBackgroundColor: config.color,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverBackgroundColor: config.color,
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 3
+            });
+            
+            const popChart = new Chart(popCtx, {
+                type: 'line',
+                data: { datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: true,
+                            labels: {
+                                font: { size: 16, weight: 'bold' },
+                                color: '#333',
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(20,20,20,0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            displayColors: true,
+                            callbacks: {
+                                title: function(context) {
+                                    const date = new Date(context[0].parsed.x);
+                                    return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+                                },
+                                label: function(context) {
+                                    return config.label + ': ' + context.parsed.y.toFixed(1) + ' ' + config.unit;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            type: 'time',
+                            time: {
+                                displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'MMM dd' },
+                                tooltipFormat: 'MMM dd, HH:mm'
+                            },
+                            grid: { 
+                                display: true, 
+                                color: 'rgba(0,0,0,0.12)',
+                                lineWidth: 1
+                            },
+                            ticks: { 
+                                maxTicksLimit: 8, 
+                                color: '#333', 
+                                font: { size: 14, weight: '500' },
+                                padding: 8,
+                                callback: function(value){ 
+                                    return new Date(value).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }); 
+                                } 
+                            }
+                        },
+                        y: {
+                            display: true,
+                            grid: { 
+                                display: true, 
+                                color: 'rgba(0,0,0,0.12)',
+                                lineWidth: 1
+                            },
+                            ticks: { 
+                                maxTicksLimit: 8, 
+                                color: '#333', 
+                                font: { size: 14, weight: '500' },
+                                padding: 8,
+                                callback: function(value){ return value.toFixed(1); } 
+                            },
+                            title: { 
+                                display: true, 
+                                text: config.unit, 
+                                color: '#333', 
+                                font: { size: 16, weight: 'bold' },
+                                padding: { top: 10, bottom: 10 }
+                            }
+                        }
+                    },
+                    elements: {
+                        point: { 
+                            radius: 2, 
+                            hoverRadius: 6, 
+                            backgroundColor: config.color, 
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        },
+                        line: { 
+                            borderWidth: 3, 
+                            borderJoinStyle: 'round', 
+                            tension: 0.4 
+                        }
+                    },
+                    interaction: { intersect: false, mode: 'index' }
+                }
+            });
+            
+            // Store chart type for data updates
+            charts.popoutType = chartType;
+            charts.popout = popChart;
+            
+            // Update the page title to reflect the chart type
+            const h1Element = document.querySelector('#chart-root h1');
+            if (h1Element) {
+                h1Element.textContent = config.label + ' Chart';
+            }
+            
+            debugLog(logLevels.INFO, 'Popout chart created successfully', { type: chartType, config: config });
+        } catch (e) {
+            debugLog(logLevels.ERROR, 'Failed to create popout chart', e);
+        }
+        return;
+    }
+
     const ctxTemp = document.getElementById('temperature-chart').getContext('2d');
     const ctxHumidity = document.getElementById('humidity-chart').getContext('2d');
     const ctxWind = document.getElementById('wind-chart').getContext('2d');
@@ -765,52 +956,56 @@ function updateUnits() {
     
     // Special handling for rain-unit to preserve the info icon
     const rainUnitElement = document.getElementById('rain-unit');
-    const rainInfoIcon = rainUnitElement.querySelector('.info-icon');
     const newRainUnitText = units.rain === 'inches' ? 'in ' : 'mm ';
-    
-    if (rainInfoIcon) {
-        rainUnitElement.innerHTML = newRainUnitText + rainInfoIcon.outerHTML;
-        // Re-attach click event listener to the rain info icon
-        const newRainInfoIcon = rainUnitElement.querySelector('.info-icon');
-        if (newRainInfoIcon) {
-            newRainInfoIcon.addEventListener('click', function(event) {
-                event.stopPropagation();
-                toggleRainTooltip(event);
-            });
+    if (rainUnitElement) {
+        const rainInfoIcon = rainUnitElement.querySelector('.info-icon');
+        if (rainInfoIcon) {
+            rainUnitElement.innerHTML = newRainUnitText + rainInfoIcon.outerHTML;
+            // Re-attach click event listener to the rain info icon
+            const newRainInfoIcon = rainUnitElement.querySelector('.info-icon');
+            if (newRainInfoIcon) {
+                newRainInfoIcon.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    toggleRainTooltip(event);
+                });
+            }
+        } else {
+            // Fallback: just set the text if no info icon
+            rainUnitElement.textContent = newRainUnitText.trim();
         }
     }
     
     // Special handling for pressure-unit to preserve the info icon
     const pressureUnitElement = document.getElementById('pressure-unit');
-    const infoIcon = pressureUnitElement.querySelector('.info-icon');
     const newUnitText = units.pressure === 'mb' ? 'mb ' : 'inHg ';
     
     console.log('🔧 updateUnits() - Pressure unit update:', {
         pressureUnitElement: !!pressureUnitElement,
-        infoIcon: !!infoIcon,
         currentInnerHTML: pressureUnitElement ? pressureUnitElement.innerHTML : 'N/A',
-        newUnitText: newUnitText,
-        infoIconOuterHTML: infoIcon ? infoIcon.outerHTML : 'N/A'
+        newUnitText: newUnitText
     });
-    
-    if (infoIcon) {
-        // Preserve the info icon by only updating the text node
-        pressureUnitElement.innerHTML = newUnitText + infoIcon.outerHTML;
-        console.log('🔧 updateUnits() - After setting innerHTML:', pressureUnitElement.innerHTML);
-        
-        // Re-attach the event listener to prevent click bubbling
-        const newInfoIcon = pressureUnitElement.querySelector('.info-icon');
-        if (newInfoIcon) {
-            newInfoIcon.addEventListener('click', function(e) {
-                e.stopPropagation();
-                togglePressureTooltip(e);
-            });
-            console.log('🔧 updateUnits() - Re-attached click event listener to info icon');
+
+    if (pressureUnitElement) {
+        const infoIcon = pressureUnitElement.querySelector('.info-icon');
+        if (infoIcon) {
+            // Preserve the info icon by only updating the text node
+            pressureUnitElement.innerHTML = newUnitText + infoIcon.outerHTML;
+            console.log('🔧 updateUnits() - After setting innerHTML:', pressureUnitElement.innerHTML);
+
+            // Re-attach the event listener to prevent click bubbling
+            const newInfoIcon = pressureUnitElement.querySelector('.info-icon');
+            if (newInfoIcon) {
+                newInfoIcon.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    togglePressureTooltip(e);
+                });
+                console.log('🔧 updateUnits() - Re-attached click event listener to info icon');
+            }
+        } else {
+            // Fallback if no info icon found
+            pressureUnitElement.textContent = newUnitText.trim();
+            console.log('🔧 updateUnits() - Info icon not found, used textContent fallback');
         }
-    } else {
-        // Fallback if no info icon found
-        pressureUnitElement.textContent = newUnitText.trim();
-        console.log('🔧 updateUnits() - Info icon not found, used textContent fallback');
     }
     
     // Update elevation display with new units
@@ -1525,7 +1720,7 @@ function handlePressureTooltipClickOutside(event) {
     const infoIcon = document.getElementById('pressure-info-icon');
 
     // If tooltip is visible and click is outside the tooltip and info icon
-    if (tooltip.classList.contains('show') &&
+    if (tooltip && infoIcon && tooltip.classList.contains('show') &&
         !tooltip.contains(event.target) &&
         !infoIcon.contains(event.target)) {
         closePressureTooltip();
@@ -1555,7 +1750,7 @@ function handleLuxTooltipClickOutside(event) {
     const tooltip = document.getElementById('lux-tooltip');
     const infoIcon = document.getElementById('lux-info-icon');
     
-    if (tooltip.classList.contains('show') &&
+    if (tooltip && infoIcon && tooltip.classList.contains('show') &&
         !tooltip.contains(event.target) &&
         !infoIcon.contains(event.target)) {
         closeLuxTooltip();
@@ -1653,7 +1848,7 @@ function handleHeatIndexTooltipClickOutside(event) {
     const tooltip = document.getElementById('heat-index-tooltip');
     const infoIcon = document.getElementById('heat-index-info-icon');
     
-    if (tooltip.classList.contains('show') &&
+    if (tooltip && infoIcon && tooltip.classList.contains('show') &&
         !tooltip.contains(event.target) &&
         !infoIcon.contains(event.target)) {
         closeHeatIndexTooltip();
@@ -1682,7 +1877,7 @@ function handleUVTooltipClickOutside(event) {
     const tooltip = document.getElementById('uv-tooltip');
     const infoIcon = document.getElementById('uv-info-icon');
     
-    if (tooltip.classList.contains('show') &&
+    if (tooltip && infoIcon && tooltip.classList.contains('show') &&
         !tooltip.contains(event.target) &&
         !infoIcon.contains(event.target)) {
         closeUVTooltip();
@@ -1690,6 +1885,15 @@ function handleUVTooltipClickOutside(event) {
 }
 
 function updateDisplay() {
+    // If the page does not include the main dashboard elements (for example
+    // the chart popout page which only includes a single canvas), skip the
+    // full display update to avoid null dereferences when elements like
+    // `#temperature` are absent.
+    if (!document.getElementById('temperature')) {
+        debugLog(logLevels.WARN, 'updateDisplay: dashboard elements not present on this page - skipping full display update');
+        return;
+    }
+
     if (!weatherData) {
         debugLog(logLevels.WARN, 'updateDisplay called but no weatherData available');
         return;
@@ -2038,6 +2242,87 @@ function updateCharts() {
         debugLog(logLevels.DEBUG, 'UV chart not available, skipping UV update');
     }
 
+    // Update popout chart if present (for expanded chart views)
+    if (charts.popout && charts.popout.data && charts.popout.data.datasets && charts.popout.data.datasets.length > 0) {
+        // Determine which data to show based on the chart type stored during initialization
+        let popoutValue = 0;
+        const chartType = charts.popoutType || 'temperature';
+        // Main data is always the last dataset in popout charts
+        const datasetIndex = charts.popout.data.datasets.length - 1;
+        
+        switch(chartType) {
+            case 'temperature':
+                popoutValue = tempValue;
+                break;
+            case 'humidity':
+                popoutValue = humidityValue;
+                break;
+            case 'wind':
+                popoutValue = windValue;
+                break;
+            case 'rain':
+                popoutValue = rainValue;
+                break;
+            case 'pressure':
+                popoutValue = pressureValue;
+                break;
+            case 'light':
+                popoutValue = illuminanceValue;
+                break;
+            case 'uv':
+                const uvValue = (typeof weatherData.uv === 'number' && Number.isFinite(weatherData.uv)) ? weatherData.uv : 0;
+                popoutValue = uvValue;
+                break;
+            default:
+                popoutValue = tempValue;
+        }
+        
+        charts.popout.data.datasets[datasetIndex].data.push({ x: now, y: popoutValue });
+        if (charts.popout.data.datasets[datasetIndex].data.length > maxDataPoints) {
+            charts.popout.data.datasets[datasetIndex].data.shift();
+        }
+        
+        // Update average line (dataset[0])
+        const mainData = charts.popout.data.datasets[datasetIndex].data;
+        if (mainData.length > 0) {
+            // Calculate and update average line
+            let sum = 0;
+            let count = 0;
+            for (let i = 0; i < mainData.length; i++) {
+                if (mainData[i] && typeof mainData[i].y === 'number') {
+                    sum += mainData[i].y;
+                    count++;
+                }
+            }
+            const avg = count > 0 ? sum / count : 0;
+            const firstX = mainData[0].x;
+            const lastX = mainData[mainData.length - 1].x;
+            charts.popout.data.datasets[0].data = [
+                { x: firstX, y: avg },
+                { x: lastX, y: avg }
+            ];
+            
+            // Update trend line for pressure (dataset[1])
+            if (chartType === 'pressure' && charts.popout.data.datasets[1]) {
+                const trendData = calculateTrendLine(mainData);
+                charts.popout.data.datasets[1].data = trendData;
+            }
+        }
+        
+        try { 
+            charts.popout.update(); 
+            debugLog(logLevels.DEBUG, 'Popout chart updated', { 
+                type: chartType, 
+                value: popoutValue,
+                dataPoints: mainData.length,
+                avgPoints: charts.popout.data.datasets[0].data.length,
+                trendPoints: (chartType === 'pressure' && charts.popout.data.datasets[1]) ? charts.popout.data.datasets[1].data.length : 0
+            });
+        } catch (e) { 
+            debugLog(logLevels.ERROR, 'Popout chart update failed', { error: e.message }); 
+        }
+    }
+
     debugLog(logLevels.INFO, 'All charts updated successfully');
 }
 
@@ -2237,8 +2522,12 @@ async function fetchWeather() {
                 debugLog(logLevels.ERROR, 'updateCharts error', { error: error.message, stack: error.stack });
             }
             
-            document.getElementById('status').textContent = 'Connected to Tempest station';
-            document.getElementById('status').style.background = 'rgba(40,  167, 69, 0.1)';
+            // Only update status element if it exists (not present on chart-only popout pages)
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = 'Connected to Tempest station';
+                statusEl.style.background = 'rgba(40,  167, 69, 0.1)';
+            }
             
             console.log('🚀 DEBUG: fetchWeather completed, calling updateCharts');
             debugLog(logLevels.INFO, 'Weather fetch completed successfully', {
@@ -2269,6 +2558,123 @@ async function fetchWeather() {
                 statusEl.style.background = 'rgba(220, 53, 69, 0.1)';
             }
         }
+    }
+}
+
+// Load historical data for popout chart pages
+async function loadHistoricalDataForPopout() {
+    if (!charts.popout || !charts.popoutType) {
+        debugLog(logLevels.WARN, 'Cannot load historical data - popout chart not initialized');
+        return;
+    }
+    
+    try {
+        debugLog(logLevels.INFO, 'Loading historical data for popout chart', { type: charts.popoutType });
+        const response = await fetch('/api/history');
+        if (!response.ok) {
+            throw new Error(`History API returned ${response.status}`);
+        }
+        
+        const history = await response.json();
+        if (!history || !Array.isArray(history)) {
+            debugLog(logLevels.WARN, 'No historical data available');
+            return;
+        }
+        
+        debugLog(logLevels.INFO, `Loaded ${history.length} historical data points for popout chart`);
+        
+        // Process each historical observation and add to chart
+        const chartType = charts.popoutType;
+        // Main data is always the last dataset in popout charts
+        const datasetIndex = charts.popout.data.datasets.length - 1;
+        
+        history.forEach(obs => {
+            if (!obs || !obs.timestamp) return;
+            
+            const timestamp = new Date(obs.timestamp * 1000);
+            let value = 0;
+            
+            switch(chartType) {
+                case 'temperature':
+                    value = obs.air_temperature || 0;
+                    if (units.temperature === 'fahrenheit') {
+                        value = celsiusToFahrenheit(value);
+                    }
+                    break;
+                case 'humidity':
+                    value = obs.relative_humidity || 0;
+                    break;
+                case 'wind':
+                    value = obs.wind_avg || 0;
+                    if (units.wind === 'kph') {
+                        value = mphToKph(value);
+                    }
+                    break;
+                case 'rain':
+                    value = obs.rain_accumulated || 0;
+                    if (units.rain === 'mm') {
+                        value = inchesToMm(value);
+                    }
+                    break;
+                case 'pressure':
+                    value = obs.station_pressure || 0;
+                    if (units.pressure === 'inHg') {
+                        value = mbToInHg(value);
+                    }
+                    break;
+                case 'light':
+                    value = obs.illuminance || 0;
+                    break;
+                case 'uv':
+                    value = obs.uv || 0;
+                    break;
+            }
+            
+            charts.popout.data.datasets[datasetIndex].data.push({ x: timestamp, y: value });
+        });
+        
+        // Calculate and populate average line (dataset[0])
+        const mainData = charts.popout.data.datasets[datasetIndex].data;
+        if (mainData.length > 0) {
+            // Calculate average
+            let sum = 0;
+            let count = 0;
+            for (let i = 0; i < mainData.length; i++) {
+                if (mainData[i] && typeof mainData[i].y === 'number') {
+                    sum += mainData[i].y;
+                    count++;
+                }
+            }
+            const avg = count > 0 ? sum / count : 0;
+            const firstX = mainData[0].x;
+            const lastX = mainData[mainData.length - 1].x;
+            charts.popout.data.datasets[0].data = [
+                { x: firstX, y: avg },
+                { x: lastX, y: avg }
+            ];
+            
+            // Calculate trend line for pressure (dataset[1])
+            if (chartType === 'pressure' && charts.popout.data.datasets[1]) {
+                const trendData = calculateTrendLine(mainData);
+                charts.popout.data.datasets[1].data = trendData;
+            }
+        }
+        
+        // Update the chart
+        try {
+            charts.popout.update();
+            debugLog(logLevels.INFO, 'Popout chart updated with historical data', {
+                dataPoints: mainData.length,
+                avgPoints: charts.popout.data.datasets[0].data.length,
+                trendPoints: (chartType === 'pressure' && charts.popout.data.datasets[1]) ? charts.popout.data.datasets[1].data.length : 0
+            });
+        } catch (e) {
+            debugLog(logLevels.ERROR, 'Failed to update popout chart', e);
+        }
+    } catch (error) {
+        debugLog(logLevels.ERROR, 'Failed to load historical data for popout', {
+            error: error.message
+        });
     }
 }
 
@@ -2318,6 +2724,12 @@ async function fetchStatus() {
 function updateStatusDisplay(status) {
     debugLog(logLevels.DEBUG, 'Updating status display', status);
     debugLog(logLevels.DEBUG, '🔍 STATUS DEBUG - Full status object:', JSON.stringify(status, null, 2));
+    
+    // Skip status display updates on chart-only popout pages
+    if (!document.getElementById('tempest-status')) {
+        debugLog(logLevels.DEBUG, 'Skipping status display update on chart-only page');
+        return;
+    }
     
     // Store status data globally for unit conversions
     statusData = status;
@@ -3303,22 +3715,33 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('🔍 DOM CHECK COMPLETE');
     
+    // Detect if we're running on the standalone chart popout page which
+    // contains only the chart canvas (`#chart-root`) and not the full
+    // dashboard elements (e.g. `#temperature`). In that case skip dashboard
+    // specific initialization (fetching/updating DOM elements, attaching
+    // dashboard event listeners) since those elements don't exist.
+    const isChartOnly = !!document.getElementById('chart-root') && !document.getElementById('temperature');
+
     // Load units configuration from server first, then update units
     loadUnitsConfig().then(() => {
         updateUnits();
     });
 
-    // Start data fetching immediately so the status UI updates even if Chart.js
-    // is unavailable or takes time to load. This prevents a ReferenceError in
-    // initCharts (when Chart is undefined) from blocking network calls and
-    // leaving the page stuck on "Connecting to weather station...".
-    try {
-        console.log('🚀 DEBUG: Starting initial data fetch (before charts)');
-        fetchWeather();
-        fetchStatus();
-        fetchAlarmStatus();
-    } catch (e) {
-        debugLog(logLevels.ERROR, 'Error triggering initial fetches', e);
+    if (!isChartOnly) {
+        // Start data fetching immediately so the status UI updates even if Chart.js
+        // is unavailable or takes time to load. This prevents a ReferenceError in
+        // initCharts (when Chart is undefined) from blocking network calls and
+        // leaving the page stuck on "Connecting to weather station...".
+        try {
+            console.log('🚀 DEBUG: Starting initial data fetch (before charts)');
+            fetchWeather();
+            fetchStatus();
+            fetchAlarmStatus();
+        } catch (e) {
+            debugLog(logLevels.ERROR, 'Error triggering initial fetches', e);
+        }
+    } else {
+        debugLog(logLevels.INFO, 'Detected chart-only popout page - skipping dashboard fetches and event listener attachments');
     }
     
     // Ensure pressure info icon has proper event listener attached initially
@@ -3335,7 +3758,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // If Chart is undefined, attempt to load the local vendored copy and
     // initialize charts when it finishes loading. Meanwhile, data fetches
     // are already running so the UI won't be blocked.
-    (function initChartsResilient() {
+    // For popout pages, we just call initCharts() directly since the canvas is already present
+    if (isChartOnly) {
+        debugLog(logLevels.INFO, 'Initializing popout chart for chart-only page');
+        if (typeof Chart !== 'undefined') {
+            try {
+                initCharts();
+                __chartsInitialized = true;
+                debugLog(logLevels.INFO, 'Popout chart initialized successfully');
+                
+                // Load historical data for the popout chart
+                loadHistoricalDataForPopout();
+            } catch (e) {
+                debugLog(logLevels.ERROR, 'Failed to initialize popout chart', e);
+            }
+        } else {
+            debugLog(logLevels.ERROR, 'Chart.js not loaded - cannot initialize popout chart');
+        }
+    } else {
+        // Only attempt the full chart initialization flow on the dashboard page.
+        (function initChartsResilient() {
         if (__chartsInitialized) return; // already initialized successfully
 
         __chartInitAttempts++;
@@ -3414,9 +3856,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // As a final fallback, try again shortly
         setTimeout(initChartsResilient, 500);
-    })();
+        })();
+    }
 
-    // Attach event listeners with debug logging
+    // Attach event listeners with debug logging (skip if chart-only popout)
     debugLog(logLevels.DEBUG, 'Starting to attach event listeners');
     
     // Debug: Check if pressure elements exist and log all IDs
@@ -3434,19 +3877,21 @@ document.addEventListener('DOMContentLoaded', function() {
         allIds: allIds
     });
     
-    attachEventListener('accessories-row', 'click', toggleAccessoriesExpansion, 'Toggle accessories expansion');
-    attachEventListener('lux-info-icon', 'click', toggleLuxTooltip, 'Show/hide lux information tooltip');
-    attachEventListener('lux-tooltip-close', 'click', closeLuxTooltip, 'Close lux tooltip');
-    attachEventListener('rain-info-icon', 'click', toggleRainTooltip, 'Show/hide rain information tooltip');
-    attachEventListener('rain-tooltip-close', 'click', closeRainTooltip, 'Close rain tooltip');
-    attachEventListener('humidity-info-icon', 'click', toggleHumidityTooltip, 'Show/hide humidity information tooltip');
-    attachEventListener('humidity-tooltip-close', 'click', closeHumidityTooltip, 'Close humidity tooltip');
-    attachEventListener('heat-index-info-icon', 'click', toggleHeatIndexTooltip, 'Show/hide heat index tooltip');
-    attachEventListener('heat-index-tooltip-close', 'click', closeHeatIndexTooltip, 'Close heat index tooltip');
-    attachEventListener('uv-info-icon', 'click', toggleUVTooltip, 'Show/hide UV information tooltip');
-    attachEventListener('uv-tooltip-close', 'click', closeUVTooltip, 'Close UV tooltip');
-    attachEventListener('pressure-info-icon', 'click', togglePressureTooltip, 'Show/hide pressure tooltip');
-    attachEventListener('pressure-tooltip-close', 'click', closePressureTooltip, 'Close pressure tooltip');
+    if (!isChartOnly) {
+        attachEventListener('accessories-row', 'click', toggleAccessoriesExpansion, 'Toggle accessories expansion');
+        attachEventListener('lux-info-icon', 'click', toggleLuxTooltip, 'Show/hide lux information tooltip');
+        attachEventListener('lux-tooltip-close', 'click', closeLuxTooltip, 'Close lux tooltip');
+        attachEventListener('rain-info-icon', 'click', toggleRainTooltip, 'Show/hide rain information tooltip');
+        attachEventListener('rain-tooltip-close', 'click', closeRainTooltip, 'Close rain tooltip');
+        attachEventListener('humidity-info-icon', 'click', toggleHumidityTooltip, 'Show/hide humidity information tooltip');
+        attachEventListener('humidity-tooltip-close', 'click', closeHumidityTooltip, 'Close humidity tooltip');
+        attachEventListener('heat-index-info-icon', 'click', toggleHeatIndexTooltip, 'Show/hide heat index tooltip');
+        attachEventListener('heat-index-tooltip-close', 'click', closeHeatIndexTooltip, 'Close heat index tooltip');
+        attachEventListener('uv-info-icon', 'click', toggleUVTooltip, 'Show/hide UV information tooltip');
+        attachEventListener('uv-tooltip-close', 'click', closeUVTooltip, 'Close UV tooltip');
+        attachEventListener('pressure-info-icon', 'click', togglePressureTooltip, 'Show/hide pressure tooltip');
+        attachEventListener('pressure-tooltip-close', 'click', closePressureTooltip, 'Close pressure tooltip');
+    }
 
     // Global click handlers for closing tooltips
     document.addEventListener('click', handleLuxTooltipClickOutside);

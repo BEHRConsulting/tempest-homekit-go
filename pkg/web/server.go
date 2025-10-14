@@ -418,6 +418,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 	mux.HandleFunc("/api/weather", ws.handleWeatherAPI)
 	mux.HandleFunc("/api/status", ws.handleStatusAPI)
 	mux.HandleFunc("/api/alarm-status", ws.handleAlarmStatusAPI)
+	mux.HandleFunc("/api/history", ws.handleHistoryAPI)
 	mux.HandleFunc("/chart/", ws.handleChartPage)
 	mux.HandleFunc("/api/regenerate-weather", ws.handleRegenerateWeatherAPI)
 	mux.HandleFunc("/api/generate-weather", ws.handleGenerateWeatherAPI)
@@ -1034,6 +1035,22 @@ func (ws *WebServer) handleUnitsAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(response)
+}
+
+// handleHistoryAPI returns historical weather observations for popout charts
+func (ws *WebServer) handleHistoryAPI(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	ws.logDebug("History endpoint called from %s", r.RemoteAddr)
+
+	ws.mu.RLock()
+	history := make([]weather.Observation, len(ws.dataHistory))
+	copy(history, ws.dataHistory)
+	ws.mu.RUnlock()
+
+	// Return the historical data
+	json.NewEncoder(w).Encode(history)
 }
 
 func (ws *WebServer) getDashboardHTML() string {
