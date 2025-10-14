@@ -1,6 +1,6 @@
 # Tempest HomeKit Go
 
-[![Go Version](https://img.shields.io/badge/Go-1.24.2+-00ADD8?style=flat&logo=go)](https://golang.org) [![Test Coverage](https://img.shields.io/badge/coverage-59.1%25-yellow?style=flat)](./coverage.out) [![Build](https://github.com/BEHRConsulting/tempest-homekit-go/actions/workflows/ci.yaml/badge.svg)](https://github.com/BEHRConsulting/tempest-homekit-go/actions) [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+[![Go Version](https://img.shields.io/badge/Go-1.24.2+-00ADD8?style=flat&logo=go)](https://golang.org) [![Test Coverage](https://img.shields.io/badge/coverage-59.1%25-yellow?style=flat)](./coverage.out) [![Build](https://github.com/BEHRConsulting/tempest-homekit-go/actions/workflows/ci.yml/badge.svg)](https://github.com/BEHRConsulting/tempest-homekit-go/actions) [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
 Tempest HomeKit Go is a Go service that reads WeatherFlow Tempest station data and exposes sensors to Apple HomeKit while providing a modern web dashboard. It supports UDP stream mode, historical preloading, alarm notifications, and optional device status scraping.
 
