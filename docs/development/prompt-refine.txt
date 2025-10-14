@@ -1,0 +1,117 @@
+
+[x] web console is missing the homeKit and tempest information blocks below the sensors
+
+[x] When clicking on the accessories row, expand the row to show all accessories just below the accessories row.
+
+[x] win the web dashboard, Use the lux table at https://en.wikipedia.org/wiki/Lux showing "Illuminance (lux)" and "Surfaces illuminated by" to give the lux value some context
+
+[x] in the web dashboard, As with the light  box, use the table at xxx to give pressure value some context.
+
+[x] in the web dashboard, As with the light sensor box, use the table at xxx to give humidity value some context. And add a "Feels like" temperature in the humidity box based on current temperature and humidity 
+
+[x] in the web dashboard, As with the light  box, use the table at xxx to give rain value some context.
+
+[x] in the web dashboard, add a box for UV Index sensor.
+
+[x] in the web dashboard, As with the light box, use the table at https://en.wikipedia.org/wiki/Ultraviolet_index Table column "UV Index" update with "media graphic color" and the text from column "Risk of harm from unprotected sun exposure, for the average adult" to give UV Index value some context.
+
+[x] in the web dashboard temperature box, add a line for average temp on this day over the last 5 years.
+
+[x] Adjust pressure to sea level and show that it is adjusted. Click to toggle.
+
+[x] update readme.md, requirements.md, code_review.md
+
+[x] Update readme.md to show you and I are the authors. Add a reference section to show what you may have used in this program
+
+[x] lets re-implment the homekit sensors. Place all sensors in the Tempest Weather group. All sensors report a number. Sensors: (1) Wind Average: floating point, (2) Wind Guest: floating point, (3) wind direction: integer 0-360, (4) Air temperature: floating point, (5) relitive humidity: integer, percentage, (6) lux: floating, range: 0.0001 - 100000, (7) uv: integer, (8) rain: floating, (9) percipition type: integer, (10)lightning strike count: integer, (11) lightning strike distance: integer, (12) lightning strike count: integer
+
+[x] on the web console, add fair, clearing, storm, etc to the pressure card based on preasure history. Add tool tip showing table to calculation as with the light card
+
+[x] web console, include precipitation_type on rain card
+
+[x] can we move all javascript to script.js and keep the html clean? with loglevel dubug shouls also include calculated values, api calls and responces
+
+[x] web console, allow grid to expand past 3 wide for larger screens
+
+[x] web console, Add a trend line for the pressure graph based on all saved data for preasure.
+
+[x] add the command line parameter --read-history to use the tempest API to preload 200 point, at 5 minute intervals, to keep API rate limiting happy (preloads up to HISTORY_POINTS observations).
+
+[x] if reading historical data, update card tempest station status to "Reading Historical Observations" and Historical line to <n>/200 when <n> is the sample being read.
+
+[x] web console, rain card, add local day rain accumulation
+
+[x] web console, new card Tempest Forcast, fill card with tempest API GET /better_forecast
+
+[x] time format for card graphs: wind, uv index. use light as a guide
+
+[x] web console, wind card, add Winds gusting to <speed>
+
+[x] web console, tempest card, add battery level
+
+[x] fix homekit humidity sensor
+
+[x] fix homekit lux sensor
+
+[x] add the command line parameter --use-generated-weather for ui testing. This replaces data from Tempest API with programm generated data for all sensors. Generate all 1000 points for all sensors if --use-history has been set, continue generating for live data. Ramdomly select a season and location, generate appropiate data for that season and location. Set status for Tempest Station to "Generated" and a line below labeled Generated Season/Loc with a clickable value of the generated location and season. Clickong on the value will regenerate all data.
+
+[x] Review the Service Characteristics in requirements.md, these are out if sync with the current codebase. May check all of requirements.md to verify you could recreat this app from the file contents
+
+[x] In the readme.md file, show that this program is my test created using vibe programming technique. Define the Vibe coding. Note that the LLMs in use are "Claude Sonnet 4" and "Grok Code Fast 1 (preview)". using GitHub's Copilot and Visual Code on a Macintosh. Add the pop out graph function and also add to requirments.md. 
+
+[x] In the web console, Tempest Station card, shorten the link lable to 15 characters to fit within the card. hover to show full url.
+
+[x] Let's start on the /chart/<weather-type> feature. When clicking on a chart in the web console, I want the /chart/<weather-type> to open a new window/tab that is a dedicated version of the dashboard graph that was clicked. The data units, data history, time format, color, and lines that were on the card graph should be on the dedicated graph page. 
+
+[x] Create or update WORK_LOG.md file that shows what went into creation of this application both from myself and Copilot. Time spent, major design changes, the best and worst prompts. Anything else that makes since to be in a work log.
+
+[x] Add another api like generated-weather, this time gather the weather informaiton direct from the tempest weather station via it's udp stream (see https://apidocs.tempestwx.com/reference/tempest-udp-broadcast), not the WeatherFlow website. Tempest station broadcasts UDP messages over port 50222 on the local network. Use the command line parameter --udp-stream or --station-url http://localhost:8080/api/udp-stream. Spawn a task to listen and collect weather informaiton for the history and update homekit and the web console as data is collected. Update web console Tempest Station with Data Source of udp-stream and it's IP address and total packet count collected. If the udp stream is not detected, the station status should be No UDP Packets. the main reason I would like to implment this feature to to allow weather information to be gatherd when the internet is down. Lets remember to note the reason for this option in readme.md and requirements.md. we also may want to add a command line optionenv variable --no-internet (when set, do not try to use weatherflow API or read the status page) and status update. This should also cause a version update when complete.
+
+[x] when --loglevel debug is set, log each udp packet as it is precessed
+
+[x] Let add a logging message filter --logfilter <string>. oly output the logging messages the include the <string>. This will help in targeted debugging
+
+[x] add command line/env variable to history points (--history <value>)/env, currently it is statically set to 1000 points, lets make that the default, but allow for a min of 10 points. Attempt to allocate the space for the array, and report the array was too large on failure. To go with this, let's add the --chart-history <value>)/env to limit the data being graphed on the web console cards and popout charts. Default the value to CHART_HISTORY_HOURS (default: 24) of data if available.
+
+[x] set up usage of .env and .env.example
+
+[x] update readme.md and usage sh show command line parameter --token is only required for WeatherFlow API stations
+
+[x] I'd like to offer the user a dropdown list of styles that can be applied to the web console. We have aread moved all the styles to styles.css, call this the default style. Please come up with a few neat stles. Place the style dwopdown in the footer. Ideas?
+
+[x] update and clean up readme.md, requirements.md, and code_review.md and usage sh show command line parameter --token and --station are required for WeatherFlow API stations
+
+[x] I'd like to offer the user a dropdown list of styles that can be applied to the web console. We have aread moved all the styles to styles.css, call this the default style. Please come up with a few neat stles. Place the style dwopdown in the footer. Ideas?
+
+[-] add unit tests as needed in the order you select. I would like to see coverage above 70%. Do not stop to confirm until over 70%. Then update documentation on test coverage in the readme.md and it's flags.
+
+[x] perform a full unit test coverage test and update readme.md with updated information and flags as needed.
+
+[x] review code base and documentation for GitHub public release. Make appropriate changes needed to be read as a professional vibe research project. Need to verify keyword for vibe, macOS, HomeKit, tempest, and weather will find this repository. Also the public should know this is a work in project but currently stable in it current features. 
+
+[x] update readme.md file to create a roadmap section. Add Features: (1) Alarms, this feature well alert based on weather. (2) Support for Email, SMS, Syslog, EventManager, and console log messages. (3) Support to monitor more than one station at a time. (4) Run in a container (a) docker, (b) AWS Lambda function
+
+[x] add Alarms feature. Use command line flag --alarms "json-string" or @filename.json . This will be the alarm module. This will allow notifacations via console log, email, sms, syslog, or event log when triggered on weather events. Design a json format that is clean and allows for global email, email template, sms alerts and sms templets, an array of alarms based on crossing temperature, humidity, pressure, lighting count, lightning strike counts, lux, uvi, and rain values, should have customized text template to allow values and times replaced. Trigger examples: (1) Temputure > 85F, (2) Lightning < 2m, (3) Temputure > 35C && Humidity > 80%, (4) Raining == true, (5) 10000 < lux < 50000. Each alarm needs a unique name, one or more tags, and can have one or more alert types (console,email,sms,syslog,eventlog). If console,syslog or eventlog, a templete string is needed. If email, from,to,cc,bc,subject, and template body are needed. if sms, sms-number, and template message are needed.  console, syslog, and eventlog messages should include "Tempest-Alarm" as a flag at the begining of the message. Add an standalone interactive web tool For editing the alarm file, command parameter --alarms-edit @filename.json and --alarms-edit-port <port> can be used to specify the port this editor is on. If --alarms-edit, then no other part of this application will run. The editor should be able to filter by a part of the name, or one or more tags. Include a tag editor for consistant tag usage. If the application has --alarms @filename.json definied, then it will re-read the edited file to update the alarm configuration if it detects the file has changed. This change detection needs to work on mac, windows, and linux. Lets use https://github.com/casdoor/go-sms-sender for setting up SMS messages. I can test Twilio and Amazon SNS currently, so lets make sure their required parameters are in the .env files. Let's support email to Microsoft 365 exchange server and a generic POP server. The .env and .env.example file should be extended to include to support our email and sms provider requirerments. New program version needed for this Alarm feature. Update version as needed in .go and .md files.
+
+[x] update readme.md file to create a roadmap section. Add Features: (1) Alarms, this feature well alert based on weather. (2) Support for Email, SMS, Syslog, EventManager, and console log messages. (3) Support to monitor more than one station at a time. (4) Run in a container (a) docker, (b) AWS Lambda function
+
+[x] alarm editor: Allow a quick click add for each sensor name to make writing the condition faster. Add a set of check boxes for how the alarm will be delivered. Default to console. check boxes for mail, sms, eventlog, and syslog should be available. debug logs should include each alarm test, info log should have active alarms after reading the alarm file and when triggered. 
+
+[x] implement the alarm console and syslog delivery methods
+
+[x] implement macOS OSLog for unified logging. Syslog is not working for macOS
+
+[x] add a way to view the json file in a window from the alarm editor page. Add a way to view the json entry for each alarm in the named alarm card.
+
+[x] show the active alarm json file that is being watched in the alarm editor page
+
+[x] verify that the alarm conditional supports F and C. Ie: 80F and 32C. Same for any units in the conditional: wind_speed and wind_guest: mph, ma/s. Temp C or F. 
+
+[] Request this every 3-4 major changes or monthly:
+"Perform a comprehensive documentation audit comparing REQUIREMENTS.md, README.md, and CODE_REVIEW.md against the current codebase. 
+
+1. **REQUIREMENTS.md**: Verify every section can be used to recreate the app
+2. **README.md**: Ensure all examples, flags, and features work as documented  
+3. **CODE_REVIEW.md**: Confirm architectural descriptions match actual implementation
+
+Create a detailed gap analysis with specific line numbers and provide corrected sections."
