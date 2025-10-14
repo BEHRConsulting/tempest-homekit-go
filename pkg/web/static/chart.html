@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tempest Charts</title>
+    <link rel="stylesheet" href="/pkg/web/static/styles.css">
+  </head>
+  <body>
+    <div id="chart-root" class="chart-root">
+      <h1>Tempest Chart</h1>
+      <div class="chart-container">
+        <canvas id="chart-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Load charting libraries from local static files when possible -->
+    <script src="/pkg/web/static/chart.umd.js"></script>
+    <script src="/pkg/web/static/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="/pkg/web/static/script.js"></script>
+
+    <script>
+      // Initialize a lightweight chart if Chart is available
+      if (typeof Chart !== 'undefined') {
+        function init() {
+          try {
+            const ctx = document.getElementById('chart-canvas').getContext('2d');
+            const chart = new Chart(ctx, {
+              type: 'line',
+              data: { labels: [], datasets: [{ label: 'Temperature', data: [] }] },
+              options: {}
+            });
+            window.initCharts = function() { return chart; };
+          } catch (e) {
+            window.initCharts = function() { throw e; };
+          }
+        }
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        window.initCharts = function() { return null; };
+      }
+    </script>
+  </body>
+</html>
