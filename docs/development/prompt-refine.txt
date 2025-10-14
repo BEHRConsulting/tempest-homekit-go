@@ -107,6 +107,12 @@
 
 [x] verify that the alarm conditional supports F and C. Ie: 80F and 32C. Same for any units in the conditional: wind_speed and wind_guest: mph, ma/s. Temp C or F. 
 
+[] Lets implment the alarms email notifacations
+
+[] Lets implement the alarms sms (AWS SNS) notifacations 
+
+[] Lets implement the alarms sms (Twilio) notifacations
+
 [] Request this every 3-4 major changes or monthly:
 "Perform a comprehensive documentation audit comparing REQUIREMENTS.md, README.md, and CODE_REVIEW.md against the current codebase. 
 
