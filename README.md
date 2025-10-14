@@ -30,7 +30,7 @@ Table of Contents
 **Primary Development Tools:**
 - **IDE**: Visual Studio Code on macOS (Apple Silicon)
 - **AI Assistants**: 
-  - **Claude Sonnet 3.5** - Primary architectural design and complex problem resolution
+  - **Claude Sonnet 4.5** - Primary architectural design and complex problem resolution
   - **GitHub Copilot with Grok Code Fast 1 (preview)** - Code completion and rapid prototyping
   - **GPT-5 mini** - Auxiliary AI assistant used for targeted code edits and documentation updates
 - **Version Control**: Git with GitHub integration
