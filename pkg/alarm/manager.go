@@ -76,7 +76,118 @@ func NewManager(configInput string, stationName string) (*Manager, error) {
 		logger.Debug("Alarm configuration JSON:\n%s", string(prettyJSON))
 	}
 
+	// Validate that required provider configuration is present
+	validateConfigProviders(config)
+
 	return m, nil
+}
+
+// validateConfigProviders checks that required environment variables are set for delivery methods
+func validateConfigProviders(config *AlarmConfig) {
+	// Track which delivery methods are used
+	usesEmail := false
+	usesSMS := false
+
+	for _, alarm := range config.Alarms {
+		if !alarm.Enabled {
+			continue
+		}
+		for _, channel := range alarm.Channels {
+			if channel.Type == "email" {
+				usesEmail = true
+			} else if channel.Type == "sms" {
+				usesSMS = true
+			}
+		}
+	}
+
+	// Validate email configuration
+	if usesEmail {
+		if config.Email == nil {
+			logger.Info("⚠️  Email delivery is configured in alarms, but no email provider is configured.")
+			logger.Info("    Set either SMTP_* or MS365_* environment variables in .env file.")
+			logger.Info("    For SMTP: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_ADDRESS")
+			logger.Info("    For MS365: MS365_CLIENT_ID, MS365_CLIENT_SECRET, MS365_TENANT_ID, MS365_FROM_ADDRESS")
+		} else {
+			// Validate specific provider requirements
+			if config.Email.Provider == "smtp" {
+				missing := []string{}
+				if config.Email.SMTPHost == "" {
+					missing = append(missing, "SMTP_HOST")
+				}
+				if config.Email.Username == "" {
+					missing = append(missing, "SMTP_USERNAME")
+				}
+				if config.Email.Password == "" {
+					missing = append(missing, "SMTP_PASSWORD")
+				}
+				if config.Email.FromAddress == "" {
+					missing = append(missing, "SMTP_FROM_ADDRESS")
+				}
+				if len(missing) > 0 {
+					logger.Info("⚠️  SMTP email is configured but missing required environment variables: %s", strings.Join(missing, ", "))
+				}
+			} else if config.Email.Provider == "microsoft365" {
+				missing := []string{}
+				if config.Email.ClientID == "" {
+					missing = append(missing, "MS365_CLIENT_ID")
+				}
+				if config.Email.ClientSecret == "" {
+					missing = append(missing, "MS365_CLIENT_SECRET")
+				}
+				if config.Email.TenantID == "" {
+					missing = append(missing, "MS365_TENANT_ID")
+				}
+				if config.Email.FromAddress == "" {
+					missing = append(missing, "MS365_FROM_ADDRESS")
+				}
+				if len(missing) > 0 {
+					logger.Info("⚠️  Microsoft 365 email is configured but missing required environment variables: %s", strings.Join(missing, ", "))
+				}
+			}
+		}
+	}
+
+	// Validate SMS configuration
+	if usesSMS {
+		if config.SMS == nil {
+			logger.Info("⚠️  SMS delivery is configured in alarms, but no SMS provider is configured.")
+			logger.Info("    Set either TWILIO_* or AWS_* environment variables in .env file.")
+			logger.Info("    For Twilio: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER")
+			logger.Info("    For AWS SNS: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_SNS_TOPIC_ARN")
+		} else {
+			// Validate specific provider requirements
+			if config.SMS.Provider == "twilio" {
+				missing := []string{}
+				if config.SMS.AccountSID == "" {
+					missing = append(missing, "TWILIO_ACCOUNT_SID")
+				}
+				if config.SMS.AuthToken == "" {
+					missing = append(missing, "TWILIO_AUTH_TOKEN")
+				}
+				if config.SMS.FromNumber == "" {
+					missing = append(missing, "TWILIO_FROM_NUMBER")
+				}
+				if len(missing) > 0 {
+					logger.Info("⚠️  Twilio SMS is configured but missing required environment variables: %s", strings.Join(missing, ", "))
+				}
+			} else if config.SMS.Provider == "aws_sns" {
+				missing := []string{}
+				if config.SMS.AWSAccessKey == "" {
+					missing = append(missing, "AWS_ACCESS_KEY_ID")
+				}
+				if config.SMS.AWSSecretKey == "" {
+					missing = append(missing, "AWS_SECRET_ACCESS_KEY")
+				}
+				if config.SMS.AWSRegion == "" {
+					missing = append(missing, "AWS_REGION")
+				}
+				if len(missing) > 0 {
+					logger.Info("⚠️  AWS SNS is configured but missing required environment variables: %s", strings.Join(missing, ", "))
+				}
+			}
+		}
+	}
 }
 
 // setupFileWatcher sets up cross-platform file watching for alarm config
@@ -149,6 +260,19 @@ func (m *Manager) reloadConfig() error {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
 
+	// Load config from environment variables and merge (env takes precedence)
+	envConfig, _ := LoadConfigFromEnv()
+	if envConfig.Email != nil {
+		newConfig.Email = envConfig.Email
+	}
+	if envConfig.SMS != nil {
+		newConfig.SMS = envConfig.SMS
+	}
+	if envConfig.Syslog != nil && newConfig.Syslog == nil {
+		// Only use env syslog if not defined in JSON
+		newConfig.Syslog = envConfig.Syslog
+	}
+
 	if err := newConfig.Validate(); err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
@@ -181,6 +305,9 @@ func (m *Manager) reloadConfig() error {
 	if prettyJSON, err := json.MarshalIndent(newConfig.Alarms, "", "  "); err == nil {
 		logger.Debug("Alarm configuration JSON:\n%s", string(prettyJSON))
 	}
+
+	// Validate that required provider configuration is present
+	validateConfigProviders(&newConfig)
 
 	return nil
 }

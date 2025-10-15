@@ -1,6 +1,7 @@
 package alarm
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log/syslog"
@@ -10,8 +11,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	msgraphsdkgo "github.com/microsoftgraph/msgraph-sdk-go"
+	"github.com/microsoftgraph/msgraph-sdk-go/models"
+	"github.com/microsoftgraph/msgraph-sdk-go/users"
+
 	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/weather"
+)
+
+var (
+	// appStartTime tracks when the application started
+	appStartTime = time.Now()
 )
 
 // Notifier interface for sending notifications
@@ -135,9 +146,17 @@ func (n *EmailNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observ
 		return fmt.Errorf("global email configuration not set")
 	}
 
-	// Expand templates
+	// Expand templates - use channel.Template if email.Body is empty
 	subject := expandTemplate(channel.Email.Subject, alarm, obs, stationName)
-	body := expandTemplate(channel.Email.Body, alarm, obs, stationName)
+	bodyTemplate := channel.Email.Body
+	if bodyTemplate == "" {
+		bodyTemplate = channel.Template
+	}
+	body := expandTemplate(bodyTemplate, alarm, obs, stationName)
+
+	// Prepend recipient information to body for better context
+	toList := strings.Join(channel.Email.To, ", ")
+	body = fmt.Sprintf("To: %s\n\n%s", toList, body)
 
 	// Build email message
 	from := n.config.FromAddress
@@ -152,7 +171,15 @@ func (n *EmailNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observ
 		msg.WriteString(fmt.Sprintf("Cc: %s\r\n", strings.Join(channel.Email.CC, ", ")))
 	}
 	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
-	msg.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+
+	// Set content type based on Html flag
+	if channel.Email.Html {
+		msg.WriteString("MIME-Version: 1.0\r\n")
+		msg.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
+	} else {
+		msg.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+	}
+
 	msg.WriteString("\r\n")
 	msg.WriteString(body)
 
@@ -165,10 +192,12 @@ func (n *EmailNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observ
 	switch n.config.Provider {
 	case "smtp":
 		return n.sendSMTP(recipients, []byte(msg.String()))
-	case "microsoft365":
-		// OAuth2 for Microsoft 365 would require additional implementation
-		// For now, fall back to SMTP
-		logger.Info("Microsoft 365 OAuth2 not yet implemented, using SMTP")
+	case "microsoft365", "o365", "exchange":
+		if n.config.UseOAuth2 {
+			return n.sendMicrosoft365(channel.Email, subject, body)
+		}
+		// Fall back to SMTP for M365 without OAuth2
+		logger.Info("Microsoft 365 OAuth2 not configured, using SMTP for Exchange")
 		return n.sendSMTP(recipients, []byte(msg.String()))
 	default:
 		return fmt.Errorf("unsupported email provider: %s", n.config.Provider)
@@ -185,57 +214,222 @@ func (n *EmailNotifier) sendSMTP(to []string, msg []byte) error {
 	addr := fmt.Sprintf("%s:%d", n.config.SMTPHost, n.config.SMTPPort)
 
 	if n.config.UseTLS {
-		// Use TLS connection
+		// Determine if we should use implicit TLS (port 465) or STARTTLS (port 587)
+		useImplicitTLS := n.config.SMTPPort == 465
+
 		tlsConfig := &tls.Config{
 			ServerName: n.config.SMTPHost,
 		}
 
-		conn, err := tls.Dial("tcp", addr, tlsConfig)
-		if err != nil {
-			return fmt.Errorf("failed to dial TLS: %w", err)
-		}
-		defer conn.Close()
-
-		client, err := smtp.NewClient(conn, n.config.SMTPHost)
-		if err != nil {
-			return fmt.Errorf("failed to create SMTP client: %w", err)
-		}
-		defer client.Close()
-
-		if err = client.Auth(auth); err != nil {
-			return fmt.Errorf("SMTP auth failed: %w", err)
-		}
-
-		if err = client.Mail(n.config.FromAddress); err != nil {
-			return fmt.Errorf("SMTP MAIL failed: %w", err)
-		}
-
-		for _, addr := range to {
-			if err = client.Rcpt(addr); err != nil {
-				return fmt.Errorf("SMTP RCPT failed for %s: %w", addr, err)
+		if useImplicitTLS {
+			// Implicit TLS: Connect with TLS from the start (port 465)
+			conn, err := tls.Dial("tcp", addr, tlsConfig)
+			if err != nil {
+				return fmt.Errorf("failed to dial TLS: %w", err)
 			}
-		}
+			defer conn.Close()
 
-		w, err := client.Data()
-		if err != nil {
-			return fmt.Errorf("SMTP DATA failed: %w", err)
-		}
+			client, err := smtp.NewClient(conn, n.config.SMTPHost)
+			if err != nil {
+				return fmt.Errorf("failed to create SMTP client: %w", err)
+			}
+			defer client.Close()
 
-		_, err = w.Write(msg)
-		if err != nil {
-			return fmt.Errorf("failed to write message: %w", err)
-		}
+			if err = client.Auth(auth); err != nil {
+				return fmt.Errorf("SMTP auth failed: %w", err)
+			}
 
-		err = w.Close()
-		if err != nil {
-			return fmt.Errorf("failed to close data writer: %w", err)
-		}
+			if err = client.Mail(n.config.FromAddress); err != nil {
+				return fmt.Errorf("SMTP MAIL failed: %w", err)
+			}
 
-		return client.Quit()
+			for _, addr := range to {
+				if err = client.Rcpt(addr); err != nil {
+					return fmt.Errorf("SMTP RCPT failed for %s: %w", addr, err)
+				}
+			}
+
+			w, err := client.Data()
+			if err != nil {
+				return fmt.Errorf("SMTP DATA failed: %w", err)
+			}
+
+			_, err = w.Write(msg)
+			if err != nil {
+				return fmt.Errorf("failed to write message: %w", err)
+			}
+
+			err = w.Close()
+			if err != nil {
+				return fmt.Errorf("failed to close data writer: %w", err)
+			}
+
+			return client.Quit()
+		} else {
+			// STARTTLS: Connect plain, then upgrade to TLS (port 587)
+			client, err := smtp.Dial(addr)
+			if err != nil {
+				return fmt.Errorf("failed to dial SMTP: %w", err)
+			}
+			defer client.Close()
+
+			// Send STARTTLS command
+			if err = client.StartTLS(tlsConfig); err != nil {
+				return fmt.Errorf("STARTTLS failed: %w", err)
+			}
+
+			if err = client.Auth(auth); err != nil {
+				return fmt.Errorf("SMTP auth failed: %w", err)
+			}
+
+			if err = client.Mail(n.config.FromAddress); err != nil {
+				return fmt.Errorf("SMTP MAIL failed: %w", err)
+			}
+
+			for _, addr := range to {
+				if err = client.Rcpt(addr); err != nil {
+					return fmt.Errorf("SMTP RCPT failed for %s: %w", addr, err)
+				}
+			}
+
+			w, err := client.Data()
+			if err != nil {
+				return fmt.Errorf("SMTP DATA failed: %w", err)
+			}
+
+			_, err = w.Write(msg)
+			if err != nil {
+				return fmt.Errorf("failed to write message: %w", err)
+			}
+
+			err = w.Close()
+			if err != nil {
+				return fmt.Errorf("failed to close data writer: %w", err)
+			}
+
+			return client.Quit()
+		}
 	}
 
 	// Non-TLS SMTP
 	return smtp.SendMail(addr, auth, n.config.FromAddress, to, msg)
+}
+
+func (n *EmailNotifier) sendMicrosoft365(emailConfig *EmailConfig, subject, body string) error {
+	// Get credentials from environment (expand environment variables)
+	clientID := os.ExpandEnv(n.config.ClientID)
+	clientSecret := os.ExpandEnv(n.config.ClientSecret)
+	tenantID := os.ExpandEnv(n.config.TenantID)
+	fromAddress := os.ExpandEnv(n.config.FromAddress)
+
+	if clientID == "" || clientSecret == "" || tenantID == "" {
+		return fmt.Errorf("Microsoft 365 OAuth2 credentials missing (CLIENT_ID, CLIENT_SECRET, TENANT_ID required)")
+	}
+
+	if fromAddress == "" {
+		return fmt.Errorf("FROM_ADDRESS is required for Microsoft 365 email")
+	}
+
+	logger.Debug("Sending email via Microsoft 365 Graph API")
+	logger.Debug("  Tenant ID: %s", tenantID)
+	logger.Debug("  Client ID: %s", clientID)
+	logger.Debug("  From: %s", fromAddress)
+	logger.Debug("  To: %v", emailConfig.To)
+
+	// Create client credentials
+	cred, err := azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create Azure credentials: %w", err)
+	}
+
+	// Create Graph client
+	client, err := msgraphsdkgo.NewGraphServiceClientWithCredentials(cred, []string{"https://graph.microsoft.com/.default"})
+	if err != nil {
+		return fmt.Errorf("failed to create Graph client: %w", err)
+	}
+
+	// Build message
+	message := models.NewMessage()
+	message.SetSubject(&subject)
+
+	// Set body
+	bodyContent := models.NewItemBody()
+	contentType := models.TEXT_BODYTYPE
+	if emailConfig.Html {
+		contentType = models.HTML_BODYTYPE
+	}
+	bodyContent.SetContentType(&contentType)
+	bodyContent.SetContent(&body)
+	message.SetBody(bodyContent)
+
+	// Set recipients
+	toRecipients := make([]models.Recipientable, 0, len(emailConfig.To))
+	for _, addr := range emailConfig.To {
+		recipient := models.NewRecipient()
+		emailAddr := models.NewEmailAddress()
+		emailAddr.SetAddress(&addr)
+		recipient.SetEmailAddress(emailAddr)
+		toRecipients = append(toRecipients, recipient)
+	}
+	message.SetToRecipients(toRecipients)
+
+	// Set CC if provided
+	if len(emailConfig.CC) > 0 {
+		ccRecipients := make([]models.Recipientable, 0, len(emailConfig.CC))
+		for _, addr := range emailConfig.CC {
+			recipient := models.NewRecipient()
+			emailAddr := models.NewEmailAddress()
+			emailAddr.SetAddress(&addr)
+			recipient.SetEmailAddress(emailAddr)
+			ccRecipients = append(ccRecipients, recipient)
+		}
+		message.SetCcRecipients(ccRecipients)
+	}
+
+	// Set BCC if provided
+	if len(emailConfig.BCC) > 0 {
+		bccRecipients := make([]models.Recipientable, 0, len(emailConfig.BCC))
+		for _, addr := range emailConfig.BCC {
+			recipient := models.NewRecipient()
+			emailAddr := models.NewEmailAddress()
+			emailAddr.SetAddress(&addr)
+			recipient.SetEmailAddress(emailAddr)
+			bccRecipients = append(bccRecipients, recipient)
+		}
+		message.SetBccRecipients(bccRecipients)
+	}
+
+	// Set from address
+	fromRecipient := models.NewRecipient()
+	fromEmailAddr := models.NewEmailAddress()
+	fromEmailAddr.SetAddress(&fromAddress)
+	if n.config.FromName != "" {
+		fromEmailAddr.SetName(&n.config.FromName)
+	}
+	fromRecipient.SetEmailAddress(fromEmailAddr)
+	message.SetFrom(fromRecipient)
+
+	// Create send mail request body
+	sendMailBody := users.NewItemSendMailPostRequestBody()
+	sendMailBody.SetMessage(message)
+	saveToSentItems := false
+	sendMailBody.SetSaveToSentItems(&saveToSentItems)
+
+	// Send the email using the from address as the user principal
+	// Note: The from address must be a valid user principal name (UPN) in the tenant
+	ctx := context.Background()
+
+	// Extract the user principal - ensure it's properly formatted
+	userPrincipal := fromAddress
+	logger.Debug("  Sending as user principal: %s", userPrincipal)
+
+	err = client.Users().ByUserId(userPrincipal).SendMail().Post(ctx, sendMailBody, nil)
+	if err != nil {
+		return fmt.Errorf("failed to send email via Microsoft Graph API (user: %s): %w", userPrincipal, err)
+	}
+
+	logger.Info("Email sent successfully via Microsoft 365 to %v", emailConfig.To)
+	return nil
 }
 
 // SMSNotifier sends SMS notifications
@@ -272,9 +466,172 @@ func (n *SMSNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observat
 	return nil
 }
 
+// formatAppInfo returns formatted application information
+func formatAppInfo(isHTML bool) string {
+	uptime := time.Since(appStartTime)
+	days := int(uptime.Hours() / 24)
+	hours := int(uptime.Hours()) % 24
+	minutes := int(uptime.Minutes()) % 60
+
+	uptimeStr := ""
+	if days > 0 {
+		uptimeStr = fmt.Sprintf("%d days, %d hours, %d minutes", days, hours, minutes)
+	} else if hours > 0 {
+		uptimeStr = fmt.Sprintf("%d hours, %d minutes", hours, minutes)
+	} else {
+		uptimeStr = fmt.Sprintf("%d minutes", minutes)
+	}
+
+	if isHTML {
+		return fmt.Sprintf(`<div style="font-size: 11px; color: #666; font-family: monospace;">
+			<strong>Tempest HomeKit Bridge</strong> %s | Uptime: %s | Go %s
+		</div>`, appVersion, uptimeStr, runtime.Version())
+	}
+
+	return fmt.Sprintf("Tempest HomeKit Bridge %s | Uptime: %s | Go %s",
+		appVersion, uptimeStr, runtime.Version())
+}
+
+// formatAlarmInfo returns formatted alarm information
+func formatAlarmInfo(alarm *Alarm, isHTML bool) string {
+	enabledStr := "enabled"
+	if !alarm.Enabled {
+		enabledStr = "disabled"
+	}
+
+	cooldownStr := fmt.Sprintf("%d seconds", alarm.Cooldown)
+	if alarm.Cooldown >= 3600 {
+		cooldownStr = fmt.Sprintf("%d hours", alarm.Cooldown/3600)
+	} else if alarm.Cooldown >= 60 {
+		cooldownStr = fmt.Sprintf("%d minutes", alarm.Cooldown/60)
+	}
+
+	tagsStr := "none"
+	if len(alarm.Tags) > 0 {
+		tagsStr = strings.Join(alarm.Tags, ", ")
+	}
+
+	if isHTML {
+		return fmt.Sprintf(`<table style="border-collapse: collapse; width: 100%%;">
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Alarm:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Description:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Condition:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Status:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Cooldown:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Tags:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+		</table>`,
+			alarm.Name, alarm.Description, alarm.Condition, enabledStr, cooldownStr, tagsStr)
+	}
+
+	return fmt.Sprintf("Alarm: %s\nDescription: %s\nCondition: %s\nStatus: %s\nCooldown: %s\nTags: %s",
+		alarm.Name, alarm.Description, alarm.Condition, enabledStr, cooldownStr, tagsStr)
+}
+
+// formatSensorInfo returns formatted sensor information
+func formatSensorInfo(obs *weather.Observation, isHTML bool) string {
+	tempF := obs.AirTemperature*9/5 + 32
+	windSpeedMph := obs.WindAvg * 2.23694
+	windGustMph := obs.WindGust * 2.23694
+	rainDaily := obs.RainDailyTotal / 25.4 // Convert mm to inches
+
+	// Wind direction cardinal
+	dir := obs.WindDirection
+	cardinal := "N"
+	switch {
+	case dir >= 337.5 || dir < 22.5:
+		cardinal = "N"
+	case dir >= 22.5 && dir < 67.5:
+		cardinal = "NE"
+	case dir >= 67.5 && dir < 112.5:
+		cardinal = "E"
+	case dir >= 112.5 && dir < 157.5:
+		cardinal = "SE"
+	case dir >= 157.5 && dir < 202.5:
+		cardinal = "S"
+	case dir >= 202.5 && dir < 247.5:
+		cardinal = "SW"
+	case dir >= 247.5 && dir < 292.5:
+		cardinal = "W"
+	case dir >= 292.5 && dir < 337.5:
+		cardinal = "NW"
+	}
+
+	if isHTML {
+		return fmt.Sprintf(`<table style="border-collapse: collapse; width: 100%%;">
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Temperature:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f°F (%.1f°C)</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Humidity:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.0f%%</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Pressure:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f mb</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Speed:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f mph (%.1f m/s)</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Gust:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f mph (%.1f m/s)</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Direction:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.0f° (%s)</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>UV Index:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%d</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Illuminance:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%s lux</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Rain Rate:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f mm/hr</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Daily Rain:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f in (%.1f mm)</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Lightning:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%d strikes</td></tr>
+		</table>`,
+			tempF, obs.AirTemperature,
+			obs.RelativeHumidity,
+			obs.StationPressure,
+			windSpeedMph, obs.WindAvg,
+			windGustMph, obs.WindGust,
+			obs.WindDirection, cardinal,
+			obs.UV,
+			formatNumber(obs.Illuminance),
+			obs.RainAccumulated,
+			rainDaily, obs.RainDailyTotal,
+			obs.LightningStrikeCount)
+	}
+
+	return fmt.Sprintf(`Temperature: %.1f°F (%.1f°C)
+Humidity: %.0f%%
+Pressure: %.2f mb
+Wind Speed: %.1f mph (%.1f m/s)
+Wind Gust: %.1f mph (%.1f m/s)
+Wind Direction: %.0f° (%s)
+UV Index: %d
+Illuminance: %s lux
+Rain Rate: %.2f mm/hr
+Daily Rain: %.2f in (%.1f mm)
+Lightning: %d strikes`,
+		tempF, obs.AirTemperature,
+		obs.RelativeHumidity,
+		obs.StationPressure,
+		windSpeedMph, obs.WindAvg,
+		windGustMph, obs.WindGust,
+		obs.WindDirection, cardinal,
+		obs.UV,
+		formatNumber(obs.Illuminance),
+		obs.RainAccumulated,
+		rainDaily, obs.RainDailyTotal,
+		obs.LightningStrikeCount)
+}
+
+// formatNumber formats a number with thousands separator
+func formatNumber(n float64) string {
+	s := fmt.Sprintf("%.0f", n)
+	if len(s) <= 3 {
+		return s
+	}
+
+	var result strings.Builder
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			result.WriteString(",")
+		}
+		result.WriteRune(c)
+	}
+	return result.String()
+}
+
 // expandTemplate replaces template variables with actual values
 func expandTemplate(template string, alarm *Alarm, obs *weather.Observation, stationName string) string {
 	result := template
+
+	// Detect if this is an HTML template
+	isHTML := strings.Contains(template, "<html>") || strings.Contains(template, "<table>") ||
+		strings.Contains(template, "<div") || strings.Contains(template, "<h1>") ||
+		strings.Contains(template, "<h2>") || strings.Contains(template, "<p>")
 
 	// Replace observation values (current)
 	replacements := map[string]string{
@@ -296,6 +653,11 @@ func expandTemplate(template string, alarm *Alarm, obs *weather.Observation, sta
 		"{{station}}":            stationName,
 		"{{alarm_name}}":         alarm.Name,
 		"{{alarm_description}}":  alarm.Description,
+		"{{alarm_condition}}":    alarm.Condition,
+		// New composite variables
+		"{{app_info}}":    formatAppInfo(isHTML),
+		"{{alarm_info}}":  formatAlarmInfo(alarm, isHTML),
+		"{{sensor_info}}": formatSensorInfo(obs, isHTML),
 	}
 
 	// Add previous values for change detection comparisons

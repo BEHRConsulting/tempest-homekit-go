@@ -309,8 +309,11 @@ function initCharts() {
             const popCtx = popoutCanvas.getContext('2d');
             
             // Build datasets array - average/trend first (drawn behind), then data on top
-            const datasets = [
-                {
+            // Light and UV charts don't need average lines
+            const datasets = [];
+            
+            if (chartType !== 'light' && chartType !== 'uv') {
+                datasets.push({
                     data: [],
                     borderColor: '#00cc66',
                     backgroundColor: 'rgba(0, 204, 102, 0.2)',
@@ -320,10 +323,10 @@ function initCharts() {
                     pointRadius: 0,
                     tension: 0,
                     label: 'Average'
-                }
-            ];
+                });
+            }
             
-            // Pressure chart needs a trend line (dataset[1])
+            // Pressure chart needs a trend line (dataset[1] if average exists, dataset[0] if not)
             if (chartType === 'pressure') {
                 datasets.push({
                     data: [],
@@ -335,6 +338,31 @@ function initCharts() {
                     pointRadius: 0,
                     tension: 0,
                     label: 'Trend'
+                });
+            }
+            
+            // Rain chart needs accumulated line and today total (datasets 1 and 2)
+            if (chartType === 'rain') {
+                datasets.push({
+                    data: [],
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0,
+                    label: 'Window Total'
+                });
+                datasets.push({
+                    data: [],
+                    borderColor: '#ff6b35',
+                    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                    borderDash: [3, 3],
+                    borderWidth: 4,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0,
+                    label: 'Today Total'
                 });
             }
             
@@ -417,6 +445,9 @@ function initCharts() {
                         },
                         y: {
                             display: true,
+                            beginAtZero: (chartType === 'rain' || chartType === 'humidity' || chartType === 'uv' || chartType === 'light'),
+                            suggestedMin: (chartType === 'rain' || chartType === 'humidity' || chartType === 'uv' || chartType === 'light') ? 0 : undefined,
+                            suggestedMax: chartType === 'rain' ? 0.1 : undefined,
                             grid: { 
                                 display: true, 
                                 color: 'rgba(0,0,0,0.12)',
@@ -461,16 +492,224 @@ function initCharts() {
             charts.popout = popChart;
             
             // Update the page title to reflect the chart type
+            const chartTitle = config.label + ' Chart';
+            document.title = chartTitle + ' - Tempest';
+            
             const h1Element = document.querySelector('#chart-root h1');
+            const titleElement = document.getElementById('chart-title');
             if (h1Element) {
-                h1Element.textContent = config.label + ' Chart';
+                h1Element.textContent = chartTitle;
+            }
+            if (titleElement) {
+                titleElement.textContent = chartTitle;
+            }
+            
+            // Set up time range selector
+            const timeRangeSelect = document.getElementById('time-range');
+            if (timeRangeSelect) {
+                timeRangeSelect.addEventListener('change', function() {
+                    const hours = parseInt(this.value);
+                    filterChartDataByTime(charts.popout, hours);
+                });
+            }
+            
+            // Set up export buttons
+            const exportCsvBtn = document.getElementById('export-csv');
+            if (exportCsvBtn) {
+                exportCsvBtn.addEventListener('click', function() {
+                    exportChartData(charts.popout, chartType, 'csv');
+                });
+            }
+            
+            const exportJsonBtn = document.getElementById('export-json');
+            if (exportJsonBtn) {
+                exportJsonBtn.addEventListener('click', function() {
+                    exportChartData(charts.popout, chartType, 'json');
+                });
             }
             
             debugLog(logLevels.INFO, 'Popout chart created successfully', { type: chartType, config: config });
+            
+            // Add window resize handler for popout charts
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(function() {
+                    if (charts.popout) {
+                        charts.popout.resize();
+                        debugLog(logLevels.DEBUG, 'Popout chart resized to fit window');
+                    }
+                }, 250); // Debounce resize events
+            });
         } catch (e) {
             debugLog(logLevels.ERROR, 'Failed to create popout chart', e);
         }
         return;
+    }
+
+    /**
+     * Filter chart data by time range (for popout charts)
+     * @param {Chart} chart - The Chart.js instance
+     * @param {number} hours - Number of hours to show (0 = all data)
+     */
+    function filterChartDataByTime(chart, hours) {
+        if (!chart || !chart.options || !chart.options.scales || !chart.options.scales.x) {
+            return;
+        }
+        
+        let minTime, maxTime;
+        
+        if (hours === 0) {
+            // Show all data - remove time constraints
+            delete chart.options.scales.x.min;
+            delete chart.options.scales.x.max;
+            
+            // Get the actual data range for updating horizontal lines
+            const lastDataset = chart.data.datasets[chart.data.datasets.length - 1];
+            if (lastDataset && lastDataset.data && lastDataset.data.length > 0) {
+                minTime = lastDataset.data[0].x;
+                maxTime = lastDataset.data[lastDataset.data.length - 1].x;
+            }
+        } else {
+            // Filter to last N hours
+            const now = new Date();
+            const startTime = new Date(now.getTime() - (hours * 60 * 60 * 1000));
+            minTime = startTime.getTime();
+            maxTime = now.getTime();
+            chart.options.scales.x.min = minTime;
+            chart.options.scales.x.max = maxTime;
+        }
+        
+        // Update horizontal lines (Average, Trend, Today Total) to match the filtered time range
+        // For rain chart, update the "Today Total" line (dataset 2) if it exists
+        const chartType = charts.popoutType;
+        if (chartType === 'rain' && chart.data.datasets[2] && chart.data.datasets[2].data.length === 2 && minTime && maxTime) {
+            const currentYValue = chart.data.datasets[2].data[0].y;
+            chart.data.datasets[2].data = [
+                { x: minTime, y: currentYValue },
+                { x: maxTime, y: currentYValue }
+            ];
+        }
+        
+        // Update Average line (dataset 0) to match filtered range - skip for light and UV
+        if (chartType !== 'light' && chartType !== 'uv' && chart.data.datasets[0] && chart.data.datasets[0].data.length === 2 && minTime && maxTime) {
+            const currentAvgValue = chart.data.datasets[0].data[0].y;
+            chart.data.datasets[0].data = [
+                { x: minTime, y: currentAvgValue },
+                { x: maxTime, y: currentAvgValue }
+            ];
+        }
+        
+        // Update Trend line (dataset 1) for pressure charts if needed
+        if (chartType === 'pressure' && chart.data.datasets[1] && minTime && maxTime) {
+            // Trend line needs recalculation based on visible data, but for now just update endpoints
+            // The main data filtering happens via x-axis min/max, so trend will be recalculated on next update
+        }
+        
+        chart.update();
+        debugLog(logLevels.INFO, 'Chart time range updated', { hours: hours, chartType: chartType });
+    }
+
+    /**
+     * Export chart data in CSV or JSON format
+     * @param {Chart} chart - The Chart.js instance
+     * @param {string} chartType - Type of chart (temperature, rain, etc.)
+     * @param {string} format - Export format ('csv' or 'json')
+     */
+    function exportChartData(chart, chartType, format) {
+        if (!chart || !chart.data || !chart.data.datasets || chart.data.datasets.length === 0) {
+            alert('No data available to export');
+            return;
+        }
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+        const filename = `tempest-${chartType}-${timestamp}.${format}`;
+
+        if (format === 'csv') {
+            exportAsCSV(chart, filename);
+        } else if (format === 'json') {
+            exportAsJSON(chart, filename);
+        }
+    }
+
+    /**
+     * Export chart data as CSV
+     */
+    function exportAsCSV(chart, filename) {
+        let csv = 'Timestamp,';
+        
+        // Add headers for each dataset
+        chart.data.datasets.forEach((dataset, index) => {
+            csv += dataset.label || `Dataset ${index}`;
+            if (index < chart.data.datasets.length - 1) csv += ',';
+        });
+        csv += '\n';
+
+        // Get all unique timestamps
+        const timestamps = new Set();
+        chart.data.datasets.forEach(dataset => {
+            if (dataset.data) {
+                dataset.data.forEach(point => {
+                    if (point && point.x) timestamps.add(point.x);
+                });
+            }
+        });
+
+        // Sort timestamps
+        const sortedTimestamps = Array.from(timestamps).sort((a, b) => a - b);
+
+        // Add data rows
+        sortedTimestamps.forEach(timestamp => {
+            const date = new Date(timestamp);
+            csv += date.toISOString() + ',';
+            
+            chart.data.datasets.forEach((dataset, index) => {
+                const point = dataset.data.find(p => p.x === timestamp);
+                csv += point ? (point.y !== undefined ? point.y : '') : '';
+                if (index < chart.data.datasets.length - 1) csv += ',';
+            });
+            csv += '\n';
+        });
+
+        downloadFile(csv, filename, 'text/csv');
+    }
+
+    /**
+     * Export chart data as JSON
+     */
+    function exportAsJSON(chart, filename) {
+        const exportData = {
+            chartType: charts.popoutType || 'unknown',
+            exportTime: new Date().toISOString(),
+            datasets: chart.data.datasets.map(dataset => ({
+                label: dataset.label,
+                borderColor: dataset.borderColor,
+                backgroundColor: dataset.backgroundColor,
+                data: dataset.data.map(point => ({
+                    timestamp: new Date(point.x).toISOString(),
+                    value: point.y
+                }))
+            }))
+        };
+
+        const json = JSON.stringify(exportData, null, 2);
+        downloadFile(json, filename, 'application/json');
+    }
+
+    /**
+     * Trigger file download in browser
+     */
+    function downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        debugLog(logLevels.INFO, 'File downloaded', { filename: filename, size: content.length });
     }
 
     const ctxTemp = document.getElementById('temperature-chart').getContext('2d');
@@ -662,7 +901,7 @@ function initCharts() {
                 label: 'Rain (incremental)',
                 pointRadius: 2,
                 pointHoverRadius: 4,
-                order: 3  // Render data points at bottom layer
+                order: 4  // Render data points at bottom layer
             }, {
                 data: [],
                 borderColor: '#66ff66',
@@ -673,7 +912,7 @@ function initCharts() {
                 pointRadius: 0,
                 tension: 0,
                 label: 'Average',
-                order: 2  // Render above data points
+                order: 3  // Render above data points
             }, {
                 data: [],
                 borderColor: '#ff6b35',
@@ -685,6 +924,16 @@ function initCharts() {
                 tension: 0,
                 label: 'Today Total',
                 order: 1  // Render on top of everything
+            }, {
+                data: [],
+                borderColor: '#00d4ff',
+                backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                borderWidth: 2,
+                fill: false,
+                pointRadius: 0,
+                tension: 0,
+                label: 'Window Total',
+                order: 2  // Render between data and today total
             }]
         },
         options: {
@@ -900,14 +1149,17 @@ function forceChartColors() {
         }
     }
     
-    // Rain: Purple data → Yellow-green average → Orange 24h total
+    // Rain: Purple data → Yellow-green average → Orange 24h total → Cyan window total
     if (charts.rain) {
         ensureDataset(charts.rain, 1);
         ensureDataset(charts.rain, 2);
+        ensureDataset(charts.rain, 3);
         charts.rain.data.datasets[1].borderColor = '#66ff66';
         charts.rain.data.datasets[1].backgroundColor = 'rgba(102, 255, 102, 0.2)';
         charts.rain.data.datasets[2].borderColor = '#ff6b35';
         charts.rain.data.datasets[2].backgroundColor = 'rgba(255, 107, 53, 0.1)';
+        charts.rain.data.datasets[3].borderColor = '#00d4ff';
+        charts.rain.data.datasets[3].backgroundColor = 'rgba(0, 212, 255, 0.1)';
         charts.rain.update('none');
     }
     
@@ -1445,6 +1697,39 @@ function update24HourAccumulationLine(chart, rainDailyTotal, units) {
         unit: units?.rain || 'inches',
         dataPoints: accumulationLineData.length,
         lineData: accumulationLineData
+    });
+}
+
+/**
+ * Updates the accumulated rain line (dataset 3) in the rain chart
+ * This shows cumulative rain over the chart's timeframe
+ */
+function updateAccumulatedRainLine(chart) {
+    if (!chart || !chart.data || !chart.data.datasets[0] || !chart.data.datasets[3]) {
+        return;
+    }
+
+    const mainData = chart.data.datasets[0].data;
+    if (mainData.length === 0) {
+        chart.data.datasets[3].data = [];
+        return;
+    }
+
+    // Calculate cumulative sum of rain data over the visible timeframe
+    // The incremental rain values (rainAccum) are calculated by the server to handle
+    // decreases in rain_accumulated (from historical data issues or midnight resets).
+    // We simply sum these incremental values to get the window total.
+    let cumulativeSum = 0;
+    const accumulatedData = mainData.map(point => {
+        cumulativeSum += (point.y || 0);
+        return { x: point.x, y: cumulativeSum };
+    });
+
+    chart.data.datasets[3].data = accumulatedData;
+
+    debugLog(logLevels.DEBUG, 'Window total rain line updated', {
+        dataPoints: accumulatedData.length,
+        windowTotal: cumulativeSum.toFixed(3)
     });
 }
 
@@ -2197,6 +2482,7 @@ function updateCharts() {
         const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
         updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
         try { update24HourAccumulationLine(charts.rain, weatherData.rainDailyTotal, units); } catch (e) { debugLog(logLevels.ERROR, 'update24HourAccumulationLine failed', { error: e.message }); }
+        try { updateAccumulatedRainLine(charts.rain); } catch (e) { debugLog(logLevels.ERROR, 'updateAccumulatedRainLine failed', { error: e.message }); }
         charts.rain.options.scales.y.title = { display: true, text: units.rain === 'inches' ? 'in' : 'mm' };
         try { charts.rain.update(); } catch (e) { debugLog(logLevels.ERROR, 'Rain chart update failed', { error: e.message }); }
     }
@@ -2282,30 +2568,58 @@ function updateCharts() {
             charts.popout.data.datasets[datasetIndex].data.shift();
         }
         
-        // Update average line (dataset[0])
+        // Update average line (dataset[0]) - skip for light and UV
         const mainData = charts.popout.data.datasets[datasetIndex].data;
         if (mainData.length > 0) {
-            // Calculate and update average line
-            let sum = 0;
-            let count = 0;
-            for (let i = 0; i < mainData.length; i++) {
-                if (mainData[i] && typeof mainData[i].y === 'number') {
-                    sum += mainData[i].y;
-                    count++;
-                }
-            }
-            const avg = count > 0 ? sum / count : 0;
             const firstX = mainData[0].x;
             const lastX = mainData[mainData.length - 1].x;
-            charts.popout.data.datasets[0].data = [
-                { x: firstX, y: avg },
-                { x: lastX, y: avg }
-            ];
+            
+            // Calculate and update average line for charts that have one
+            if (chartType !== 'light' && chartType !== 'uv') {
+                let sum = 0;
+                let count = 0;
+                for (let i = 0; i < mainData.length; i++) {
+                    if (mainData[i] && typeof mainData[i].y === 'number') {
+                        sum += mainData[i].y;
+                        count++;
+                    }
+                }
+                const avg = count > 0 ? sum / count : 0;
+                charts.popout.data.datasets[0].data = [
+                    { x: firstX, y: avg },
+                    { x: lastX, y: avg }
+                ];
+            }
             
             // Update trend line for pressure (dataset[1])
             if (chartType === 'pressure' && charts.popout.data.datasets[1]) {
                 const trendData = calculateTrendLine(mainData);
                 charts.popout.data.datasets[1].data = trendData;
+            }
+            
+            // Update accumulated and today total lines for rain (datasets 1 and 2)
+            if (chartType === 'rain') {
+                // Update accumulated line (dataset 1)
+                if (charts.popout.data.datasets[1]) {
+                    let cumulativeSum = 0;
+                    const accumulatedData = mainData.map(point => {
+                        cumulativeSum += (point.y || 0);
+                        return { x: point.x, y: cumulativeSum };
+                    });
+                    charts.popout.data.datasets[1].data = accumulatedData;
+                }
+                
+                // Update today total line (dataset 2)
+                if (charts.popout.data.datasets[2] && weatherData && weatherData.rainDailyTotal !== undefined) {
+                    let dailyTotal = weatherData.rainDailyTotal;
+                    if (units.rain === 'mm') {
+                        dailyTotal = inchesToMm(dailyTotal);
+                    }
+                    charts.popout.data.datasets[2].data = [
+                        { x: firstX, y: dailyTotal },
+                        { x: lastX, y: dailyTotal }
+                    ];
+                }
             }
         }
         
@@ -2377,6 +2691,8 @@ function recalculateAverages(changedSensor) {
         if (weatherData && weatherData.rainDailyTotal !== undefined) {
             update24HourAccumulationLine(charts.rain, weatherData.rainDailyTotal, units);
         }
+        // Update accumulated rain line
+        updateAccumulatedRainLine(charts.rain);
         charts.rain.update();
     }
 
@@ -2611,7 +2927,9 @@ async function loadHistoricalDataForPopout() {
                     }
                     break;
                 case 'rain':
-                    value = obs.rain_accumulated || 0;
+                    // Use rainAccum (incremental rain since last reading) for the chart
+                    // The history API now calculates this correctly, handling midnight resets
+                    value = obs.rainAccum || 0;
                     if (units.rain === 'mm') {
                         value = inchesToMm(value);
                     }
@@ -2633,41 +2951,104 @@ async function loadHistoricalDataForPopout() {
             charts.popout.data.datasets[datasetIndex].data.push({ x: timestamp, y: value });
         });
         
-        // Calculate and populate average line (dataset[0])
+        // Calculate and populate average line (dataset[0]) - skip for light and UV
         const mainData = charts.popout.data.datasets[datasetIndex].data;
         if (mainData.length > 0) {
-            // Calculate average
-            let sum = 0;
-            let count = 0;
-            for (let i = 0; i < mainData.length; i++) {
-                if (mainData[i] && typeof mainData[i].y === 'number') {
-                    sum += mainData[i].y;
-                    count++;
-                }
-            }
-            const avg = count > 0 ? sum / count : 0;
             const firstX = mainData[0].x;
             const lastX = mainData[mainData.length - 1].x;
-            charts.popout.data.datasets[0].data = [
-                { x: firstX, y: avg },
-                { x: lastX, y: avg }
-            ];
+            
+            // Calculate average for charts that have an average line
+            if (chartType !== 'light' && chartType !== 'uv') {
+                let sum = 0;
+                let count = 0;
+                for (let i = 0; i < mainData.length; i++) {
+                    if (mainData[i] && typeof mainData[i].y === 'number') {
+                        sum += mainData[i].y;
+                        count++;
+                    }
+                }
+                const avg = count > 0 ? sum / count : 0;
+                charts.popout.data.datasets[0].data = [
+                    { x: firstX, y: avg },
+                    { x: lastX, y: avg }
+                ];
+            }
             
             // Calculate trend line for pressure (dataset[1])
             if (chartType === 'pressure' && charts.popout.data.datasets[1]) {
                 const trendData = calculateTrendLine(mainData);
                 charts.popout.data.datasets[1].data = trendData;
             }
+            
+            // Calculate accumulated line for rain (dataset[1]) and today total (dataset[2])
+            if (chartType === 'rain') {
+                // Calculate accumulated line (cumulative sum of rain)
+                if (charts.popout.data.datasets[1]) {
+                    let cumulativeSum = 0;
+                    const accumulatedData = mainData.map(point => {
+                        cumulativeSum += (point.y || 0);
+                        return { x: point.x, y: cumulativeSum };
+                    });
+                    charts.popout.data.datasets[1].data = accumulatedData;
+                    debugLog(logLevels.INFO, 'Rain accumulated line calculated for popout', {
+                        dataPoints: accumulatedData.length,
+                        mainDataPoints: mainData.length,
+                        finalTotal: cumulativeSum.toFixed(3),
+                        firstPoint: mainData[0] ? mainData[0].y : 'none',
+                        lastPoint: mainData[mainData.length - 1] ? mainData[mainData.length - 1].y : 'none',
+                        samplePoints: mainData.slice(0, 5).map(p => p.y)
+                    });
+                }
+                
+                // Fetch current weather data to get today's rain total for dataset[2]
+                if (charts.popout.data.datasets[2]) {
+                    try {
+                        const weatherResponse = await fetch('/api/weather');
+                        if (weatherResponse.ok) {
+                            const weatherData = await weatherResponse.json();
+                            if (weatherData && weatherData.rainDailyTotal !== undefined) {
+                                let dailyTotal = weatherData.rainDailyTotal;
+                                if (units.rain === 'mm') {
+                                    dailyTotal = inchesToMm(dailyTotal);
+                                }
+                                const firstX = mainData[0].x;
+                                const lastX = mainData[mainData.length - 1].x;
+                                charts.popout.data.datasets[2].data = [
+                                    { x: firstX, y: dailyTotal },
+                                    { x: lastX, y: dailyTotal }
+                                ];
+                                debugLog(logLevels.INFO, 'Today Total line set for popout rain chart', {
+                                    dailyTotal: dailyTotal,
+                                    unit: units.rain
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        debugLog(logLevels.ERROR, 'Failed to fetch weather data for Today Total line', e);
+                    }
+                }
+            }
         }
         
         // Update the chart
         try {
             charts.popout.update();
-            debugLog(logLevels.INFO, 'Popout chart updated with historical data', {
+            const debugInfo = {
+                chartType: chartType,
                 dataPoints: mainData.length,
                 avgPoints: charts.popout.data.datasets[0].data.length,
-                trendPoints: (chartType === 'pressure' && charts.popout.data.datasets[1]) ? charts.popout.data.datasets[1].data.length : 0
-            });
+                trendPoints: (chartType === 'pressure' && charts.popout.data.datasets[1]) ? charts.popout.data.datasets[1].data.length : 0,
+                totalDatasets: charts.popout.data.datasets.length
+            };
+            if (chartType === 'rain') {
+                debugInfo.accumulatedPoints = charts.popout.data.datasets[1] ? charts.popout.data.datasets[1].data.length : 0;
+                debugInfo.todayTotalPoints = charts.popout.data.datasets[2] ? charts.popout.data.datasets[2].data.length : 0;
+                debugInfo.dataset0_length = charts.popout.data.datasets[0] ? charts.popout.data.datasets[0].data.length : 0;
+                debugInfo.dataset1_length = charts.popout.data.datasets[1] ? charts.popout.data.datasets[1].data.length : 0;
+                debugInfo.dataset2_length = charts.popout.data.datasets[2] ? charts.popout.data.datasets[2].data.length : 0;
+                debugInfo.dataset3_length = charts.popout.data.datasets[3] ? charts.popout.data.datasets[3].data.length : 0;
+            }
+            debugLog(logLevels.INFO, 'Popout chart updated with historical data', debugInfo);
         } catch (e) {
             debugLog(logLevels.ERROR, 'Failed to update popout chart', e);
         }

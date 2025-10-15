@@ -15,9 +15,9 @@ const indexHTML = `<!DOCTYPE html>
             <p>Create and manage weather alarms with real-time monitoring</p>
             <div class="config-path-display">
                 <span class="label">📁 Watching:</span>
-                <span class="path">{{"{{"}}{{.ConfigPath}}</span>
+                <span class="path">{{.ConfigPath}}</span>
                 <span class="label" style="margin-left: 20px;">🕒 Last read:</span>
-                <span class="path">{{"{{"}}{{.LastLoad}}</span>
+                <span class="path">{{.LastLoad}}</span>
             </div>
         </div>
         
@@ -82,6 +82,8 @@ const indexHTML = `<!DOCTYPE html>
                         <button type="button" class="sensor-field-btn" onclick="insertField('wind_speed')">wind_speed</button>
                     </div>
                     <textarea id="alarmCondition" required></textarea>
+                    <button type="button" class="btn btn-info" onclick="validateCondition()" style="margin-top: 8px;">✓ Validate Condition</button>
+                    <div id="validationResult" style="margin-top: 8px; padding: 8px; border-radius: 4px; display: none;"></div>
                     <small>Click sensor names above to insert into condition. Supports units: 80F or 26.7C (temp), 25mph or 11.2m/s (wind). Change detection: *field (any change), &gt;field (increase), &lt;field (decrease). Examples: temperature &gt; 85F, *lightning_count (any strike), &gt;rain_rate (rain increasing), &lt;lightning_distance (lightning closer)</small>
                 </div>
                 
@@ -113,26 +115,25 @@ const indexHTML = `<!DOCTYPE html>
                             <span>📱 SMS</span>
                         </label>
                     </div>
-                    <small>Select at least one delivery method</small>
+                    <small>Select at least one delivery method. Each method will show its configuration below with defaults pre-populated.</small>
                 </div>
                 
-                <div class="form-group message-section">
-                    <label>
-                        <input type="checkbox" id="useDefaultMessage" checked onchange="toggleCustomMessages()" />
-                        Use Default Message for All Selected Methods
-                    </label>
-                    <div id="defaultMessageSection" class="message-input-section">
+                <div id="messageSections">
+                    <div id="consoleMessageSection" class="form-group message-input-section" style="display:block;">
                         <div class="message-header">
-                            <label>Default Message Template</label>
-                            <select id="variableDropdown" onchange="insertVariable('defaultMessage')" class="variable-dropdown">
+                            <label>📟 Console Message</label>
+                            <select onchange="insertVariable('consoleMessage')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
+                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
                                 <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
                                 <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
+                                <option value="{{"{{"}}alarm_condition}}">{{"{{"}}alarm_condition}} - Alarm condition</option>
                                 <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
                                 <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
                                 <option value="{{"{{"}}temperature}}">{{"{{"}}temperature}} - Temperature °C (current)</option>
                                 <option value="{{"{{"}}temperature_f}}">{{"{{"}}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{"{{"}}temperature_c}}">{{"{{"}}temperature_c}} - Temperature °C (current)</option>
                                 <option value="{{"{{"}}humidity}}">{{"{{"}}humidity}} - Humidity % (current)</option>
                                 <option value="{{"{{"}}pressure}}">{{"{{"}}pressure}} - Pressure mb (current)</option>
                                 <option value="{{"{{"}}wind_speed}}">{{"{{"}}wind_speed}} - Wind Speed m/s (current)</option>
@@ -144,73 +145,22 @@ const indexHTML = `<!DOCTYPE html>
                                 <option value="{{"{{"}}rain_daily}}">{{"{{"}}rain_daily}} - Daily Rain mm (current)</option>
                                 <option value="{{"{{"}}lightning_count}}">{{"{{"}}lightning_count}} - Lightning Strikes (current)</option>
                                 <option value="{{"{{"}}lightning_distance}}">{{"{{"}}lightning_distance}} - Lightning Distance km (current)</option>
-                                <option value="{{"{{"}}last_temperature}}">{{"{{"}}last_temperature}} - Temperature °C (previous)</option>
-                                <option value="{{"{{"}}last_humidity}}">{{"{{"}}last_humidity}} - Humidity % (previous)</option>
-                                <option value="{{"{{"}}last_pressure}}">{{"{{"}}last_pressure}} - Pressure mb (previous)</option>
-                                <option value="{{"{{"}}last_wind_speed}}">{{"{{"}}last_wind_speed}} - Wind Speed m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_gust}}">{{"{{"}}last_wind_gust}} - Wind Gust m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_direction}}">{{"{{"}}last_wind_direction}} - Wind Direction° (previous)</option>
-                                <option value="{{"{{"}}last_lux}}">{{"{{"}}last_lux}} - Light Lux (previous)</option>
-                                <option value="{{"{{"}}last_uv}}">{{"{{"}}last_uv}} - UV Index (previous)</option>
-                                <option value="{{"{{"}}last_rain_rate}}">{{"{{"}}last_rain_rate}} - Rain Rate mm (previous)</option>
-                                <option value="{{"{{"}}last_rain_daily}}">{{"{{"}}last_rain_daily}} - Daily Rain mm (previous)</option>
-                                <option value="{{"{{"}}last_lightning_count}}">{{"{{"}}last_lightning_count}} - Lightning Strikes (previous)</option>
-                                <option value="{{"{{"}}last_lightning_distance}}">{{"{{"}}last_lightning_distance}} - Lightning Distance km (previous)</option>
                             </select>
                         </div>
-                        <textarea id="defaultMessage" rows="5" placeholder="Enter default message template for all channels...">🚨 ALARM: {{"{{"}}alarm_name}}
-{{"{{"}}alarm_description}}
-
-Station: {{"{{"}}station}}
-Time: {{"{{"}}timestamp}}</textarea>
-                    </div>
-                </div>
-                
-                <div id="customMessageSections" style="display:none;">
-                    <div id="consoleMessageSection" class="message-input-section" style="display:none;">
-                        <div class="message-header">
-                            <label>📟 Console Message</label>
-                            <select onchange="insertVariable('consoleMessage')" class="variable-dropdown">
-                                <option value="">📋 Insert Variable...</option>
-                                <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
-                                <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
-                                <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
-                                <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
-                                <option value="{{"{{"}}temperature}}">{{"{{"}}temperature}} - Temperature °C (current)</option>
-                                <option value="{{"{{"}}temperature_f}}">{{"{{"}}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{"{{"}}humidity}}">{{"{{"}}humidity}} - Humidity % (current)</option>
-                                <option value="{{"{{"}}pressure}}">{{"{{"}}pressure}} - Pressure mb (current)</option>
-                                <option value="{{"{{"}}wind_speed}}">{{"{{"}}wind_speed}} - Wind Speed m/s (current)</option>
-                                <option value="{{"{{"}}wind_gust}}">{{"{{"}}wind_gust}} - Wind Gust m/s (current)</option>
-                                <option value="{{"{{"}}wind_direction}}">{{"{{"}}wind_direction}} - Wind Direction° (current)</option>
-                                <option value="{{"{{"}}lux}}">{{"{{"}}lux}} - Light Lux (current)</option>
-                                <option value="{{"{{"}}uv}}">{{"{{"}}uv}} - UV Index (current)</option>
-                                <option value="{{"{{"}}rain_rate}}">{{"{{"}}rain_rate}} - Rain Rate mm (current)</option>
-                                <option value="{{"{{"}}lightning_count}}">{{"{{"}}lightning_count}} - Lightning Strikes (current)</option>
-                                <option value="{{"{{"}}lightning_distance}}">{{"{{"}}lightning_distance}} - Lightning Distance km (current)</option>
-                                <option value="{{"{{"}}last_temperature}}">{{"{{"}}last_temperature}} - Temperature °C (previous)</option>
-                                <option value="{{"{{"}}last_humidity}}">{{"{{"}}last_humidity}} - Humidity % (previous)</option>
-                                <option value="{{"{{"}}last_pressure}}">{{"{{"}}last_pressure}} - Pressure mb (previous)</option>
-                                <option value="{{"{{"}}last_wind_speed}}">{{"{{"}}last_wind_speed}} - Wind Speed m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_gust}}">{{"{{"}}last_wind_gust}} - Wind Gust m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_direction}}">{{"{{"}}last_wind_direction}} - Wind Direction° (previous)</option>
-                                <option value="{{"{{"}}last_lux}}">{{"{{"}}last_lux}} - Light Lux (previous)</option>
-                                <option value="{{"{{"}}last_uv}}">{{"{{"}}last_uv}} - UV Index (previous)</option>
-                                <option value="{{"{{"}}last_rain_rate}}">{{"{{"}}last_rain_rate}} - Rain Rate mm (previous)</option>
-                                <option value="{{"{{"}}last_lightning_count}}">{{"{{"}}last_lightning_count}} - Lightning Strikes (previous)</option>
-                                <option value="{{"{{"}}last_lightning_distance}}">{{"{{"}}last_lightning_distance}} - Lightning Distance km (previous)</option>
-                            </select>
-                        </div>
-                        <textarea id="consoleMessage" rows="4" placeholder="Console-specific message..."></textarea>
+                        <textarea id="consoleMessage" rows="5" placeholder="Console-specific message..."></textarea>
                     </div>
                     
-                    <div id="syslogMessageSection" class="message-input-section" style="display:none;">
+                    <div id="syslogMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>📋 Syslog Message</label>
                             <select onchange="insertVariable('syslogMessage')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
+                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
                                 <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
                                 <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
+                                <option value="{{"{{"}}alarm_condition}}">{{"{{"}}alarm_condition}} - Alarm condition</option>
                                 <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
                                 <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
                                 <option value="{{"{{"}}temperature}}">{{"{{"}}temperature}} - Temperature °C (current)</option>
@@ -218,177 +168,84 @@ Time: {{"{{"}}timestamp}}</textarea>
                                 <option value="{{"{{"}}humidity}}">{{"{{"}}humidity}} - Humidity % (current)</option>
                                 <option value="{{"{{"}}pressure}}">{{"{{"}}pressure}} - Pressure mb (current)</option>
                                 <option value="{{"{{"}}wind_speed}}">{{"{{"}}wind_speed}} - Wind Speed m/s (current)</option>
-                                <option value="{{"{{"}}wind_gust}}">{{"{{"}}wind_gust}} - Wind Gust m/s (current)</option>
-                                <option value="{{"{{"}}wind_direction}}">{{"{{"}}wind_direction}} - Wind Direction° (current)</option>
-                                <option value="{{"{{"}}lux}}">{{"{{"}}lux}} - Light Lux (current)</option>
-                                <option value="{{"{{"}}uv}}">{{"{{"}}uv}} - UV Index (current)</option>
-                                <option value="{{"{{"}}rain_rate}}">{{"{{"}}rain_rate}} - Rain Rate mm (current)</option>
-                                <option value="{{"{{"}}lightning_count}}">{{"{{"}}lightning_count}} - Lightning Strikes (current)</option>
-                                <option value="{{"{{"}}lightning_distance}}">{{"{{"}}lightning_distance}} - Lightning Distance km (current)</option>
-                                <option value="{{"{{"}}last_temperature}}">{{"{{"}}last_temperature}} - Temperature °C (previous)</option>
-                                <option value="{{"{{"}}last_humidity}}">{{"{{"}}last_humidity}} - Humidity % (previous)</option>
-                                <option value="{{"{{"}}last_pressure}}">{{"{{"}}last_pressure}} - Pressure mb (previous)</option>
-                                <option value="{{"{{"}}last_wind_speed}}">{{"{{"}}last_wind_speed}} - Wind Speed m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_gust}}">{{"{{"}}last_wind_gust}} - Wind Gust m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_direction}}">{{"{{"}}last_wind_direction}} - Wind Direction° (previous)</option>
-                                <option value="{{"{{"}}last_lux}}">{{"{{"}}last_lux}} - Light Lux (previous)</option>
-                                <option value="{{"{{"}}last_uv}}">{{"{{"}}last_uv}} - UV Index (previous)</option>
-                                <option value="{{"{{"}}last_rain_rate}}">{{"{{"}}last_rain_rate}} - Rain Rate mm (previous)</option>
-                                <option value="{{"{{"}}last_lightning_count}}">{{"{{"}}last_lightning_count}} - Lightning Strikes (previous)</option>
-                                <option value="{{"{{"}}last_lightning_distance}}">{{"{{"}}last_lightning_distance}} - Lightning Distance km (previous)</option>
                             </select>
                         </div>
-                        <textarea id="syslogMessage" rows="4" placeholder="Syslog-specific message..."></textarea>
+                        <textarea id="syslogMessage" rows="5" placeholder="Syslog-specific message..."></textarea>
                     </div>
                     
-                    <div id="oslogMessageSection" class="message-input-section" style="display:none;">
+                    <div id="oslogMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>🍎 OSLog Message (macOS Unified Logging)</label>
                             <select onchange="insertVariable('oslogMessage')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
+                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
                                 <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
                                 <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
-                                <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
-                                <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
-                                <option value="{{"{{"}}temperature}}">{{"{{"}}temperature}} - Temperature °C (current)</option>
-                                <option value="{{"{{"}}temperature_f}}">{{"{{"}}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{"{{"}}humidity}}">{{"{{"}}humidity}} - Humidity % (current)</option>
-                                <option value="{{"{{"}}pressure}}">{{"{{"}}pressure}} - Pressure mb (current)</option>
-                                <option value="{{"{{"}}wind_speed}}">{{"{{"}}wind_speed}} - Wind Speed m/s (current)</option>
-                                <option value="{{"{{"}}wind_gust}}">{{"{{"}}wind_gust}} - Wind Gust m/s (current)</option>
-                                <option value="{{"{{"}}wind_direction}}">{{"{{"}}wind_direction}} - Wind Direction° (current)</option>
-                                <option value="{{"{{"}}lux}}">{{"{{"}}lux}} - Light Lux (current)</option>
-                                <option value="{{"{{"}}uv}}">{{"{{"}}uv}} - UV Index (current)</option>
-                                <option value="{{"{{"}}rain_rate}}">{{"{{"}}rain_rate}} - Rain Rate mm (current)</option>
-                                <option value="{{"{{"}}lightning_count}}">{{"{{"}}lightning_count}} - Lightning Strikes (current)</option>
-                                <option value="{{"{{"}}lightning_distance}}">{{"{{"}}lightning_distance}} - Lightning Distance km (current)</option>
-                                <option value="{{"{{"}}last_temperature}}">{{"{{"}}last_temperature}} - Temperature °C (previous)</option>
-                                <option value="{{"{{"}}last_humidity}}">{{"{{"}}last_humidity}} - Humidity % (previous)</option>
-                                <option value="{{"{{"}}last_pressure}}">{{"{{"}}last_pressure}} - Pressure mb (previous)</option>
-                                <option value="{{"{{"}}last_wind_speed}}">{{"{{"}}last_wind_speed}} - Wind Speed m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_gust}}">{{"{{"}}last_wind_gust}} - Wind Gust m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_direction}}">{{"{{"}}last_wind_direction}} - Wind Direction° (previous)</option>
-                                <option value="{{"{{"}}last_lux}}">{{"{{"}}last_lux}} - Light Lux (previous)</option>
-                                <option value="{{"{{"}}last_uv}}">{{"{{"}}last_uv}} - UV Index (previous)</option>
-                                <option value="{{"{{"}}last_rain_rate}}">{{"{{"}}last_rain_rate}} - Rain Rate mm (previous)</option>
-                                <option value="{{"{{"}}last_lightning_count}}">{{"{{"}}last_lightning_count}} - Lightning Strikes (previous)</option>
-                                <option value="{{"{{"}}last_lightning_distance}}">{{"{{"}}last_lightning_distance}} - Lightning Distance km (previous)</option>
                             </select>
                         </div>
-                        <textarea id="oslogMessage" rows="4" placeholder="OSLog-specific message (visible in Console.app and log command)..."></textarea>
+                        <textarea id="oslogMessage" rows="5" placeholder="OSLog-specific message (visible in Console.app and log command)..."></textarea>
                     </div>
                     
-                    <div id="eventlogMessageSection" class="message-input-section" style="display:none;">
+                    <div id="eventlogMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>📊 Event Log Message</label>
                             <select onchange="insertVariable('eventlogMessage')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
+                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
                                 <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
                                 <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
-                                <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
-                                <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
-                                <option value="{{"{{"}}temperature}}">{{"{{"}}temperature}} - Temperature °C (current)</option>
-                                <option value="{{"{{"}}temperature_f}}">{{"{{"}}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{"{{"}}humidity}}">{{"{{"}}humidity}} - Humidity % (current)</option>
-                                <option value="{{"{{"}}pressure}}">{{"{{"}}pressure}} - Pressure mb (current)</option>
-                                <option value="{{"{{"}}wind_speed}}">{{"{{"}}wind_speed}} - Wind Speed m/s (current)</option>
-                                <option value="{{"{{"}}wind_gust}}">{{"{{"}}wind_gust}} - Wind Gust m/s (current)</option>
-                                <option value="{{"{{"}}wind_direction}}">{{"{{"}}wind_direction}} - Wind Direction° (current)</option>
-                                <option value="{{"{{"}}lux}}">{{"{{"}}lux}} - Light Lux (current)</option>
-                                <option value="{{"{{"}}uv}}">{{"{{"}}uv}} - UV Index (current)</option>
-                                <option value="{{"{{"}}rain_rate}}">{{"{{"}}rain_rate}} - Rain Rate mm (current)</option>
-                                <option value="{{"{{"}}lightning_count}}">{{"{{"}}lightning_count}} - Lightning Strikes (current)</option>
-                                <option value="{{"{{"}}lightning_distance}}">{{"{{"}}lightning_distance}} - Lightning Distance km (current)</option>
-                                <option value="{{"{{"}}last_temperature}}">{{"{{"}}last_temperature}} - Temperature °C (previous)</option>
-                                <option value="{{"{{"}}last_humidity}}">{{"{{"}}last_humidity}} - Humidity % (previous)</option>
-                                <option value="{{"{{"}}last_pressure}}">{{"{{"}}last_pressure}} - Pressure mb (previous)</option>
-                                <option value="{{"{{"}}last_wind_speed}}">{{"{{"}}last_wind_speed}} - Wind Speed m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_gust}}">{{"{{"}}last_wind_gust}} - Wind Gust m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_direction}}">{{"{{"}}last_wind_direction}} - Wind Direction° (previous)</option>
-                                <option value="{{"{{"}}last_lux}}">{{"{{"}}last_lux}} - Light Lux (previous)</option>
-                                <option value="{{"{{"}}last_uv}}">{{"{{"}}last_uv}} - UV Index (previous)</option>
-                                <option value="{{"{{"}}last_rain_rate}}">{{"{{"}}last_rain_rate}} - Rain Rate mm (previous)</option>
-                                <option value="{{"{{"}}last_lightning_count}}">{{"{{"}}last_lightning_count}} - Lightning Strikes (previous)</option>
-                                <option value="{{"{{"}}last_lightning_distance}}">{{"{{"}}last_lightning_distance}} - Lightning Distance km (previous)</option>
                             </select>
                         </div>
-                        <textarea id="eventlogMessage" rows="4" placeholder="Event log-specific message..."></textarea>
+                        <textarea id="eventlogMessage" rows="5" placeholder="Event log-specific message..."></textarea>
                     </div>
                     
-                    <div id="emailMessageSection" class="message-input-section" style="display:none;">
+                    <div id="emailMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>✉️ Email Configuration</label>
-                            <select onchange="insertVariable('emailSubject', 'emailBody')" class="variable-dropdown">
+                            <select onchange="insertVariable('emailBody')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
+                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
                                 <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
                                 <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
                                 <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
                                 <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
-                                <option value="{{"{{"}}temperature}}">{{"{{"}}temperature}} - Temperature °C (current)</option>
-                                <option value="{{"{{"}}temperature_f}}">{{"{{"}}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{"{{"}}humidity}}">{{"{{"}}humidity}} - Humidity % (current)</option>
-                                <option value="{{"{{"}}pressure}}">{{"{{"}}pressure}} - Pressure mb (current)</option>
-                                <option value="{{"{{"}}wind_speed}}">{{"{{"}}wind_speed}} - Wind Speed m/s (current)</option>
-                                <option value="{{"{{"}}wind_gust}}">{{"{{"}}wind_gust}} - Wind Gust m/s (current)</option>
-                                <option value="{{"{{"}}wind_direction}}">{{"{{"}}wind_direction}} - Wind Direction° (current)</option>
-                                <option value="{{"{{"}}lux}}">{{"{{"}}lux}} - Light Lux (current)</option>
-                                <option value="{{"{{"}}uv}}">{{"{{"}}uv}} - UV Index (current)</option>
-                                <option value="{{"{{"}}rain_rate}}">{{"{{"}}rain_rate}} - Rain Rate mm (current)</option>
-                                <option value="{{"{{"}}lightning_count}}">{{"{{"}}lightning_count}} - Lightning Strikes (current)</option>
-                                <option value="{{"{{"}}lightning_distance}}">{{"{{"}}lightning_distance}} - Lightning Distance km (current)</option>
-                                <option value="{{"{{"}}last_temperature}}">{{"{{"}}last_temperature}} - Temperature °C (previous)</option>
-                                <option value="{{"{{"}}last_humidity}}">{{"{{"}}last_humidity}} - Humidity % (previous)</option>
-                                <option value="{{"{{"}}last_pressure}}">{{"{{"}}last_pressure}} - Pressure mb (previous)</option>
-                                <option value="{{"{{"}}last_wind_speed}}">{{"{{"}}last_wind_speed}} - Wind Speed m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_gust}}">{{"{{"}}last_wind_gust}} - Wind Gust m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_direction}}">{{"{{"}}last_wind_direction}} - Wind Direction° (previous)</option>
-                                <option value="{{"{{"}}last_lux}}">{{"{{"}}last_lux}} - Light Lux (previous)</option>
-                                <option value="{{"{{"}}last_uv}}">{{"{{"}}last_uv}} - UV Index (previous)</option>
-                                <option value="{{"{{"}}last_rain_rate}}">{{"{{"}}last_rain_rate}} - Rain Rate mm (previous)</option>
-                                <option value="{{"{{"}}last_lightning_count}}">{{"{{"}}last_lightning_count}} - Lightning Strikes (previous)</option>
-                                <option value="{{"{{"}}last_lightning_distance}}">{{"{{"}}last_lightning_distance}} - Lightning Distance km (previous)</option>
                             </select>
                         </div>
-                        <input type="text" id="emailTo" placeholder="Recipient email (comma-separated)" />
-                        <input type="text" id="emailSubject" placeholder="Subject" />
-                        <textarea id="emailBody" rows="4" placeholder="Email body..."></textarea>
+                        <label for="emailTo" style="font-weight: 600;">To: <span style="color: red;">*</span></label>
+                        <input type="text" id="emailTo" placeholder="recipient@example.com (comma-separated for multiple)" />
+                        <label for="emailSubject" style="margin-top: 10px; font-weight: 600;">Subject:</label>
+                        <input type="text" id="emailSubject" placeholder="Tempest Alert: {{"{{"}}alarm_name}}" />
+                        <label style="margin-top: 10px;">
+                            <input type="checkbox" id="emailHtml" />
+                            Send as HTML formatted email
+                        </label>
+                        <label for="emailBody" style="margin-top: 10px; font-weight: 600;">Body:</label>
+                        <textarea id="emailBody" rows="8" placeholder="Email body..."></textarea>
+                        <small>When HTML is enabled, use HTML tags like &lt;h1&gt;, &lt;p&gt;, &lt;strong&gt;, &lt;br&gt;, etc. for formatting</small>
                     </div>
                     
-                    <div id="smsMessageSection" class="message-input-section" style="display:none;">
+                    <div id="smsMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>📱 SMS Configuration</label>
                             <select onchange="insertVariable('smsMessage')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
+                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
                                 <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
-                                <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
                                 <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
                                 <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
-                                <option value="{{"{{"}}temperature}}">{{"{{"}}temperature}} - Temperature °C (current)</option>
-                                <option value="{{"{{"}}temperature_f}}">{{"{{"}}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{"{{"}}humidity}}">{{"{{"}}humidity}} - Humidity % (current)</option>
-                                <option value="{{"{{"}}pressure}}">{{"{{"}}pressure}} - Pressure mb (current)</option>
-                                <option value="{{"{{"}}wind_speed}}">{{"{{"}}wind_speed}} - Wind Speed m/s (current)</option>
-                                <option value="{{"{{"}}wind_gust}}">{{"{{"}}wind_gust}} - Wind Gust m/s (current)</option>
-                                <option value="{{"{{"}}wind_direction}}">{{"{{"}}wind_direction}} - Wind Direction° (current)</option>
-                                <option value="{{"{{"}}lux}}">{{"{{"}}lux}} - Light Lux (current)</option>
-                                <option value="{{"{{"}}uv}}">{{"{{"}}uv}} - UV Index (current)</option>
-                                <option value="{{"{{"}}rain_rate}}">{{"{{"}}rain_rate}} - Rain Rate mm (current)</option>
-                                <option value="{{"{{"}}lightning_count}}">{{"{{"}}lightning_count}} - Lightning Strikes (current)</option>
-                                <option value="{{"{{"}}lightning_distance}}">{{"{{"}}lightning_distance}} - Lightning Distance km (current)</option>
-                                <option value="{{"{{"}}last_temperature}}">{{"{{"}}last_temperature}} - Temperature °C (previous)</option>
-                                <option value="{{"{{"}}last_humidity}}">{{"{{"}}last_humidity}} - Humidity % (previous)</option>
-                                <option value="{{"{{"}}last_pressure}}">{{"{{"}}last_pressure}} - Pressure mb (previous)</option>
-                                <option value="{{"{{"}}last_wind_speed}}">{{"{{"}}last_wind_speed}} - Wind Speed m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_gust}}">{{"{{"}}last_wind_gust}} - Wind Gust m/s (previous)</option>
-                                <option value="{{"{{"}}last_wind_direction}}">{{"{{"}}last_wind_direction}} - Wind Direction° (previous)</option>
-                                <option value="{{"{{"}}last_lux}}">{{"{{"}}last_lux}} - Light Lux (previous)</option>
-                                <option value="{{"{{"}}last_uv}}">{{"{{"}}last_uv}} - UV Index (previous)</option>
-                                <option value="{{"{{"}}last_rain_rate}}">{{"{{"}}last_rain_rate}} - Rain Rate mm (previous)</option>
-                                <option value="{{"{{"}}last_lightning_count}}">{{"{{"}}last_lightning_count}} - Lightning Strikes (previous)</option>
-                                <option value="{{"{{"}}last_lightning_distance}}">{{"{{"}}last_lightning_distance}} - Lightning Distance km (previous)</option>
                             </select>
                         </div>
+                        <label for="smsTo" style="font-weight: 600;">To: <span style="color: red;">*</span></label>
                         <input type="text" id="smsTo" placeholder="Phone number(s) (comma-separated)" />
+                        <label for="smsMessage" style="margin-top: 10px; font-weight: 600;">Message:</label>
                         <textarea id="smsMessage" rows="3" placeholder="SMS message (keep it short)..."></textarea>
                     </div>
                 </div>
@@ -401,27 +258,30 @@ Time: {{"{{"}}timestamp}}</textarea>
                             <input type="text" 
                                    id="tagSearchInput" 
                                    class="tag-search-input" 
-                                   placeholder="Search or add new tag..." 
+                                   placeholder="Search or create tags..." 
                                    autocomplete="off" />
                             <div id="tagDropdown" class="tag-dropdown"></div>
                         </div>
                     </div>
-                    <small>Click to select existing tags or type to create new ones</small>
                 </div>
                 
                 <div class="form-group">
                     <label>Cooldown (seconds)</label>
-                    <input type="number" id="alarmCooldown" value="1800" />
+                    <input type="number" id="alarmCooldown" value="1800" min="0" />
+                    <small>Minimum time between consecutive alarm triggers</small>
                 </div>
                 
-                <div class="form-group checkbox-group">
-                    <input type="checkbox" id="alarmEnabled" checked />
-                    <label for="alarmEnabled">Enabled</label>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="alarmEnabled" checked />
+                        Enabled
+                    </label>
                 </div>
                 
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Alarm</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteAlarm()" id="deleteBtn" style="display:none;">Delete</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
         </div>
@@ -431,4 +291,5 @@ Time: {{"{{"}}timestamp}}</textarea>
     
     <script src="/alarm-editor/static/script.js"></script>
 </body>
-</html>`
+</html>
+`

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -85,13 +86,93 @@ type EmailConfig struct {
 	CC      []string `json:"cc,omitempty"`
 	BCC     []string `json:"bcc,omitempty"`
 	Subject string   `json:"subject"`
-	Body    string   `json:"body"` // Template string
+	Body    string   `json:"body"`           // Template string
+	Html    bool     `json:"html,omitempty"` // Send as HTML email
 }
 
 // SMSConfig for alarm-specific SMS settings
 type SMSConfig struct {
 	To      []string `json:"to"`      // Phone numbers
 	Message string   `json:"message"` // Template string
+}
+
+// LoadConfigFromEnv loads email/SMS configuration from environment variables
+func LoadConfigFromEnv() (*AlarmConfig, error) {
+	config := &AlarmConfig{}
+
+	// Load email configuration from environment
+	if clientID := os.Getenv("MS365_CLIENT_ID"); clientID != "" {
+		// Microsoft 365 OAuth2
+		config.Email = &EmailGlobalConfig{
+			Provider:     "microsoft365",
+			UseOAuth2:    true,
+			ClientID:     clientID,
+			ClientSecret: os.Getenv("MS365_CLIENT_SECRET"),
+			TenantID:     os.Getenv("MS365_TENANT_ID"),
+			FromAddress:  os.Getenv("MS365_FROM_ADDRESS"),
+			FromName:     os.Getenv("SMTP_FROM_NAME"), // Can use same FROM_NAME
+		}
+	} else if smtpHost := os.Getenv("SMTP_HOST"); smtpHost != "" {
+		// Generic SMTP
+		smtpPort := 587 // default
+		if portStr := os.Getenv("SMTP_PORT"); portStr != "" {
+			if port, err := strconv.Atoi(portStr); err == nil {
+				smtpPort = port
+			}
+		}
+		useTLS := true // default
+		if tlsStr := os.Getenv("SMTP_USE_TLS"); tlsStr == "false" {
+			useTLS = false
+		}
+		config.Email = &EmailGlobalConfig{
+			Provider:    "smtp",
+			SMTPHost:    smtpHost,
+			SMTPPort:    smtpPort,
+			Username:    os.Getenv("SMTP_USERNAME"),
+			Password:    os.Getenv("SMTP_PASSWORD"),
+			FromAddress: os.Getenv("SMTP_FROM_ADDRESS"),
+			FromName:    os.Getenv("SMTP_FROM_NAME"),
+			UseTLS:      useTLS,
+		}
+	}
+
+	// Load SMS configuration from environment
+	if twilioSID := os.Getenv("TWILIO_ACCOUNT_SID"); twilioSID != "" {
+		// Twilio
+		config.SMS = &SMSGlobalConfig{
+			Provider:   "twilio",
+			AccountSID: twilioSID,
+			AuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
+			FromNumber: os.Getenv("TWILIO_FROM_NUMBER"),
+		}
+	} else if awsKey := os.Getenv("AWS_ACCESS_KEY_ID"); awsKey != "" {
+		// AWS SNS
+		config.SMS = &SMSGlobalConfig{
+			Provider:       "aws_sns",
+			AWSAccessKey:   awsKey,
+			AWSSecretKey:   os.Getenv("AWS_SECRET_ACCESS_KEY"),
+			AWSRegion:      os.Getenv("AWS_REGION"),
+			AWSSNSTopicARN: os.Getenv("AWS_SNS_TOPIC_ARN"),
+		}
+	}
+
+	// Load syslog configuration from environment (optional)
+	if syslogAddr := os.Getenv("SYSLOG_ADDRESS"); syslogAddr != "" {
+		config.Syslog = &SyslogConfig{
+			Network:  os.Getenv("SYSLOG_NETWORK"),
+			Address:  syslogAddr,
+			Priority: os.Getenv("SYSLOG_PRIORITY"),
+			Tag:      os.Getenv("SYSLOG_TAG"),
+		}
+		if config.Syslog.Priority == "" {
+			config.Syslog.Priority = "warning"
+		}
+		if config.Syslog.Tag == "" {
+			config.Syslog.Tag = "tempest-weather"
+		}
+	}
+
+	return config, nil
 }
 
 // LoadAlarmConfig loads alarm configuration from file or JSON string
@@ -158,6 +239,19 @@ func LoadAlarmConfig(input string) (*AlarmConfig, error) {
 		return nil, fmt.Errorf("failed to parse alarm config from JSON string: %w\nEnsure your JSON matches the AlarmConfig structure", err)
 	}
 
+	// Load config from environment variables and merge (env takes precedence)
+	envConfig, _ := LoadConfigFromEnv()
+	if envConfig.Email != nil {
+		config.Email = envConfig.Email
+	}
+	if envConfig.SMS != nil {
+		config.SMS = envConfig.SMS
+	}
+	if envConfig.Syslog != nil && config.Syslog == nil {
+		// Only use env syslog if not defined in JSON
+		config.Syslog = envConfig.Syslog
+	}
+
 	// Validate config
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid alarm config: %w", err)
@@ -168,8 +262,9 @@ func LoadAlarmConfig(input string) (*AlarmConfig, error) {
 
 // Validate checks if the alarm configuration is valid
 func (c *AlarmConfig) Validate() error {
+	// Allow empty alarm list - manager can start and watch for file changes
 	if len(c.Alarms) == 0 {
-		return fmt.Errorf("at least one alarm must be defined")
+		return nil
 	}
 
 	names := make(map[string]bool)

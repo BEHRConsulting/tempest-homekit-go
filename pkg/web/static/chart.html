@@ -3,12 +3,29 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Tempest Charts</title>
+    <title>Tempest Chart</title>
     <link rel="stylesheet" href="/pkg/web/static/styles.css">
+    <link rel="stylesheet" href="/pkg/web/static/chart.css">
   </head>
   <body>
     <div id="chart-root" class="chart-root">
-      <h1>Tempest Chart</h1>
+      <div class="chart-header">
+        <h1 id="chart-title">Tempest Chart</h1>
+        <div class="chart-controls">
+          <label for="time-range">Time Range:</label>
+          <select id="time-range">
+            <option value="1">Last Hour</option>
+            <option value="3">Last 3 Hours</option>
+            <option value="6">Last 6 Hours</option>
+            <option value="12">Last 12 Hours</option>
+            <option value="24" selected>Last 24 Hours</option>
+            <option value="48">Last 48 Hours</option>
+            <option value="0">All Data</option>
+          </select>
+          <button id="export-csv">Export CSV</button>
+          <button id="export-json">Export JSON</button>
+        </div>
+      </div>
       <div class="chart-container">
         <canvas id="chart-canvas"></canvas>
       </div>
@@ -18,27 +35,5 @@
     <script src="/pkg/web/static/chart.umd.js"></script>
     <script src="/pkg/web/static/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="/pkg/web/static/script.js"></script>
-
-    <script>
-      // Initialize a lightweight chart if Chart is available
-      if (typeof Chart !== 'undefined') {
-        function init() {
-          try {
-            const ctx = document.getElementById('chart-canvas').getContext('2d');
-            const chart = new Chart(ctx, {
-              type: 'line',
-              data: { labels: [], datasets: [{ label: 'Temperature', data: [] }] },
-              options: {}
-            });
-            window.initCharts = function() { return chart; };
-          } catch (e) {
-            window.initCharts = function() { throw e; };
-          }
-        }
-        document.addEventListener('DOMContentLoaded', init);
-      } else {
-        window.initCharts = function() { return null; };
-      }
-    </script>
   </body>
 </html>

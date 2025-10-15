@@ -649,10 +649,13 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 	pressureTrend := getPressureTrend(ws.dataHistory, ws.elevation)
 	weatherForecast := getPressureWeatherForecast(seaLevelPressure, pressureTrend)
 
-	// Calculate daily rain accumulation
-	dailyRainTotal := ws.calculateDailyRainAccumulation()
+	// Use the precip_accum_local_day field from the WeatherFlow API as the daily total
+	// The WeatherFlow API provides this value in millimeters which resets at midnight local time
+	// Convert from mm to inches (1 inch = 25.4 mm)
+	dailyRainTotal := ws.weatherData.RainDailyTotal / 25.4
 
 	// Calculate incremental rain since last sample
+	// The RainAccumulated field is the "precip" field which is also in mm, so convert it too
 	var incrementalRain float64
 	if len(ws.dataHistory) > 0 {
 		// Use a sorted copy of history to ensure we get the chronologically latest reading
@@ -660,7 +663,7 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		copy(historyCopy, ws.dataHistory)
 		sort.Slice(historyCopy, func(i, j int) bool { return historyCopy[i].Timestamp < historyCopy[j].Timestamp })
 		lastReading := historyCopy[len(historyCopy)-1].RainAccumulated
-		incrementalRain = math.Max(0, ws.weatherData.RainAccumulated-lastReading)
+		incrementalRain = math.Max(0, ws.weatherData.RainAccumulated-lastReading) / 25.4
 	} else {
 		incrementalRain = 0 // No previous data
 	}
@@ -1037,7 +1040,30 @@ func (ws *WebServer) handleUnitsAPI(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// HistoryResponse represents a single historical observation with calculated incremental rain
+type HistoryResponse struct {
+	Timestamp            int64   `json:"timestamp"`
+	AirTemperature       float64 `json:"air_temperature"`
+	RelativeHumidity     float64 `json:"relative_humidity"`
+	WindLull             float64 `json:"wind_lull"`
+	WindAvg              float64 `json:"wind_avg"`
+	WindGust             float64 `json:"wind_gust"`
+	WindDirection        float64 `json:"wind_direction"`
+	StationPressure      float64 `json:"station_pressure"`
+	Illuminance          float64 `json:"illuminance"`
+	UV                   int     `json:"uv"`
+	SolarRadiation       float64 `json:"solar_radiation"`
+	RainAccum            float64 `json:"rainAccum"`        // Incremental rain since last reading
+	RainAccumulated      float64 `json:"rain_accumulated"` // API's cumulative rain from midnight
+	PrecipitationType    int     `json:"precipitation_type"`
+	LightningStrikeAvg   float64 `json:"lightning_strike_avg_distance"`
+	LightningStrikeCount int     `json:"lightning_strike_count"`
+	Battery              float64 `json:"battery"`
+	ReportInterval       int     `json:"report_interval"`
+}
+
 // handleHistoryAPI returns historical weather observations for popout charts
+// with calculated incremental rain values
 func (ws *WebServer) handleHistoryAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -1049,8 +1075,45 @@ func (ws *WebServer) handleHistoryAPI(w http.ResponseWriter, r *http.Request) {
 	copy(history, ws.dataHistory)
 	ws.mu.RUnlock()
 
-	// Return the historical data
-	json.NewEncoder(w).Encode(history)
+	// Convert to response format
+	// NOTE: We set rainAccum=0 for all historical observations because the WeatherFlow
+	// historical API returns data from different time periods mixed together, causing
+	// rain_accumulated values to jump around unpredictably. This makes it impossible to
+	// calculate reliable incremental rain from historical data.
+	// The "Window Total" line will only show meaningful data for observations collected
+	// live going forward, not for preloaded historical data.
+	response := make([]HistoryResponse, 0, len(history))
+
+	for _, obs := range history {
+		// Convert rain from mm to inches (WeatherFlow API returns rain in mm)
+		rainInInches := obs.RainAccumulated / 25.4
+
+		response = append(response, HistoryResponse{
+			Timestamp:            obs.Timestamp,
+			AirTemperature:       obs.AirTemperature,
+			RelativeHumidity:     obs.RelativeHumidity,
+			WindLull:             obs.WindLull,
+			WindAvg:              obs.WindAvg,
+			WindGust:             obs.WindGust,
+			WindDirection:        obs.WindDirection,
+			StationPressure:      obs.StationPressure,
+			Illuminance:          obs.Illuminance,
+			UV:                   obs.UV,
+			SolarRadiation:       obs.SolarRadiation,
+			RainAccum:            rainInInches, // Incremental rain per observation in inches
+			RainAccumulated:      rainInInches, // Same value for backward compatibility
+			PrecipitationType:    obs.PrecipitationType,
+			LightningStrikeAvg:   obs.LightningStrikeAvg,
+			LightningStrikeCount: obs.LightningStrikeCount,
+			Battery:              obs.Battery,
+			ReportInterval:       obs.ReportInterval,
+		})
+	}
+
+	ws.logDebug("Returning %d historical observations with calculated incremental rain", len(response))
+
+	// Return the historical data with incremental rain
+	json.NewEncoder(w).Encode(response)
 }
 
 func (ws *WebServer) getDashboardHTML() string {

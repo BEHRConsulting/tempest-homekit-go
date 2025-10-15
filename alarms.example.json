@@ -1,26 +1,21 @@
 {
-  "email": {
-    "provider": "smtp",
-    "smtp_host": "smtp.example.com",
-    "smtp_port": 587,
-    "username": "alerts@example.com",
-    "password": "${SMTP_PASSWORD}",
-    "from_address": "alerts@example.com",
-    "from_name": "Tempest Weather Alerts",
-    "use_tls": true
-  },
-  "sms": {
-    "provider": "twilio",
-    "account_sid": "${TWILIO_ACCOUNT_SID}",
-    "auth_token": "${TWILIO_AUTH_TOKEN}",
-    "from_number": "${TWILIO_FROM_NUMBER}"
-  },
-  "syslog": {
-    "network": "",
-    "address": "",
-    "priority": "warning",
-    "tag": "tempest-weather"
-  },
+  "_comment1": "=========================================================================",
+  "_comment2": "ALARM CONFIGURATION",
+  "_comment3": "=========================================================================",
+  "_comment4": "All email/SMS credentials are loaded from .env file - not here!",
+  "_comment5": "",
+  "_comment6": "SETUP INSTRUCTIONS:",
+  "_comment7": "1. Copy .env.example to .env",
+  "_comment8": "2. Configure email/SMS provider credentials in .env:",
+  "_comment9": "   - For SMTP: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, etc.",
+  "_comment10": "   - For MS365: MS365_CLIENT_ID, MS365_CLIENT_SECRET, MS365_TENANT_ID",
+  "_comment11": "   - For Twilio: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER",
+  "_comment12": "   - For AWS SNS: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION",
+  "_comment13": "3. Define your alarm rules below",
+  "_comment14": "4. Run: ./tempest-homekit-go --alarms @alarms.json",
+  "_comment15": "",
+  "_comment16": "This file contains ONLY alarm rules, no credentials!",
+  "_comment17": "=========================================================================",
   "alarms": [
     {
       "name": "high-temperature",

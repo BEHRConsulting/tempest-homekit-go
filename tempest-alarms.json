@@ -1,79 +1,40 @@
 {
+  "email": {
+    "provider": "microsoft365",
+    "from_address": "${MS365_FROM_ADDRESS}",
+    "from_name": "Weather Station",
+    "use_tls": false,
+    "use_oauth2": true,
+    "client_id": "${MS365_CLIENT_ID}",
+    "client_secret": "${MS365_CLIENT_SECRET}",
+    "tenant_id": "${MS365_TENANT_ID}"
+  },
   "alarms": [
     {
-      "name": "Hot outside",
-      "description": "Set when temp is \u003e 85F",
-      "tags": [
-        "hot"
-      ],
-      "enabled": true,
-      "condition": "temp \u003e 85",
-      "cooldown": 1800,
-      "channels": [
-        {
-          "type": "console",
-          "template": "🚨 ALARM: Hot outside\nCondition: {{.Condition}}\nValue: {{.Value}}\nTime: {{.Time}}"
-        },
-        {
-          "type": "syslog",
-          "template": "🚨 ALARM: Hot outside\nCondition: {{.Condition}}\nValue: {{.Value}}\nTime: {{.Time}}"
-        }
-      ]
-    },
-    {
-      "name": "Lightning Nearby",
-      "description": "Let me know when lightning strikes nearby",
-      "enabled": true,
-      "condition": "*lightning_count",
-      "cooldown": 1800,
-      "channels": [
-        {
-          "type": "console",
-          "template": "🚨 ALARM: Lightning Nearby\nCondition: {{.Condition}}\nValue: {{.Value}}\nTime: {{.Time}}"
-        },
-        {
-          "type": "syslog",
-          "template": "🚨 ALARM: Lightning Nearby\nCondition: {{.Condition}}\nValue: {{.Value}}\nTime: {{.Time}}"
-        }
-      ]
-    },
-    {
-      "name": "Lux Change",
-      "description": "This alarm should alert on LUX change",
-      "tags": [
-        "light"
-      ],
-      "enabled": true,
-      "condition": "*lux",
-      "cooldown": 10,
-      "channels": [
-        {
-          "type": "console",
-          "template": "🚨 ALARM: {{alarm_name}}\n{{alarm_description}}\n\nStation: {{station}}\nTime: {{timestamp}}\nCurrent LUX: {{lux}}\nPrevious LUX: {{last_lux}}"
-        },
-        {
-          "type": "oslog",
-          "template": "🚨 ALARM: {{alarm_name}}\n{{alarm_description}}\n\nStation: {{station}}\nTime: {{timestamp}}\nCurrent LUX: {{lux}}\nPrevious LUX: {{last_lux}}"
-        }
-      ]
-    },
-    {
       "name": "Wind Change",
-      "description": "Let me know when the wind changes",
+      "description": "Trigger on any wind change",
       "tags": [
-        "wind"
+        "wind",
+        "rapid-change"
       ],
       "enabled": true,
-      "condition": "*wind_speed",
-      "cooldown": 10,
+      "condition": "* wind_speed",
+      "cooldown": 300,
       "channels": [
         {
           "type": "console",
-          "template": "🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}\nDescription: {{alarm_description}}\nWind speed: {{wind_speed}}\nLast Wind Speed: {{last_wind_speed}}"
+          "template": "🚨 WEATHER ALARM TRIGGERED\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nAlarm:       {{alarm_name}}\nDescription: {{alarm_description}}\nStation:     {{station}}\nTime:        {{timestamp}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n{{sensor_info}}"
         },
         {
-          "type": "oslog",
-          "template": "🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}\nDescription: {{alarm_description}}\nWind speed: {{wind_speed}}\nLast Wind Speed: {{last_wind_speed}}"
+          "type": "email",
+          "email": {
+            "to": [
+              "kent@bci.com"
+            ],
+            "subject": "⚠️ Weather Alert: {{alarm_name}}",
+            "body": "\u003ch2 style=\"color: #d9534f;\"\u003e⚠️ Weather Alarm Triggered\u003c/h2\u003e\n\n\u003cdiv style=\"background: #f5f5f5; padding: 15px; border-left: 4px solid #d9534f; margin: 20px 0;\"\u003e\n    \u003ch3 style=\"margin-top: 0;\"\u003e{{alarm_name}}\u003c/h3\u003e\n    \u003cp\u003e{{alarm_description}}\u003c/p\u003e\n\u003c/div\u003e\n\n\u003ctable style=\"width: 100%; border-collapse: collapse; margin: 20px 0;\"\u003e\n    \u003ctr style=\"background: #f9f9f9;\"\u003e\n        \u003ctd style=\"padding: 10px; border: 1px solid #ddd;\"\u003e\u003cstrong\u003eStation\u003c/strong\u003e\u003c/td\u003e\n        \u003ctd style=\"padding: 10px; border: 1px solid #ddd;\"\u003e{{station}}\u003c/td\u003e\n    \u003c/tr\u003e\n    \u003ctr\u003e\n        \u003ctd style=\"padding: 10px; border: 1px solid #ddd;\"\u003e\u003cstrong\u003eTime\u003c/strong\u003e\u003c/td\u003e\n        \u003ctd style=\"padding: 10px; border: 1px solid #ddd;\"\u003e{{timestamp}}\u003c/td\u003e\n    \u003c/tr\u003e\n    \u003ctr style=\"background: #f9f9f9;\"\u003e\n        \u003ctd style=\"padding: 10px; border: 1px solid #ddd;\"\u003e\u003cstrong\u003eCondition\u003c/strong\u003e\u003c/td\u003e\n        \u003ctd style=\"padding: 10px; border: 1px solid #ddd;\"\u003e{{alarm_condition}}\u003c/td\u003e\n    \u003c/tr\u003e\n\u003c/table\u003e\n\n\u003ch4\u003eCurrent Sensor Readings:\u003c/h4\u003e\n\u003cdiv style=\"background: #fff; padding: 15px; border: 1px solid #ddd;\"\u003e\n    {{sensor_info}}\n\u003c/div\u003e\n\n\u003chr style=\"margin: 20px 0; border: none; border-top: 1px solid #ddd;\"\u003e\n\u003cp style=\"color: #666; font-size: 12px;\"\u003e{{app_info}}\u003c/p\u003e",
+            "html": true
+          }
         }
       ]
     }

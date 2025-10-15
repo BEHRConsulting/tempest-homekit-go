@@ -13,7 +13,7 @@ async function init() {
 }
 
 async function loadAlarms() {
-    const response = await fetch('/api/config');
+    const response = await fetch('/api/config?_=' + Date.now());
     const config = await response.json();
     alarms = config.alarms || [];
     renderAlarms();
@@ -256,7 +256,7 @@ function insertVariable(textareaId, alternateId) {
 }
 
 function toggleMessageSections() {
-    // Show/hide custom message sections based on selected delivery methods
+    // Show/hide message sections based on selected delivery methods
     const consoleChecked = document.getElementById('deliveryConsole').checked;
     const syslogChecked = document.getElementById('deliverySyslog').checked;
     const oslogChecked = document.getElementById('deliveryOslog').checked;
@@ -264,18 +264,13 @@ function toggleMessageSections() {
     const emailChecked = document.getElementById('deliveryEmail').checked;
     const smsChecked = document.getElementById('deliverySMS').checked;
     
+    // Message sections for each delivery method
     document.getElementById('consoleMessageSection').style.display = consoleChecked ? 'block' : 'none';
     document.getElementById('syslogMessageSection').style.display = syslogChecked ? 'block' : 'none';
     document.getElementById('oslogMessageSection').style.display = oslogChecked ? 'block' : 'none';
     document.getElementById('eventlogMessageSection').style.display = eventlogChecked ? 'block' : 'none';
     document.getElementById('emailMessageSection').style.display = emailChecked ? 'block' : 'none';
     document.getElementById('smsMessageSection').style.display = smsChecked ? 'block' : 'none';
-}
-
-function toggleCustomMessages() {
-    const useDefault = document.getElementById('useDefaultMessage').checked;
-    document.getElementById('defaultMessageSection').style.display = useDefault ? 'block' : 'none';
-    document.getElementById('customMessageSections').style.display = useDefault ? 'none' : 'block';
 }
 
 function showCreateModal() {
@@ -295,27 +290,106 @@ function showCreateModal() {
     document.getElementById('deliveryEmail').checked = false;
     document.getElementById('deliverySMS').checked = false;
     
-    // Reset messages
-    document.getElementById('useDefaultMessage').checked = true;
-    document.getElementById('defaultMessage').value = '🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}';
-    document.getElementById('consoleMessage').value = '';
-    document.getElementById('syslogMessage').value = '';
-    document.getElementById('oslogMessage').value = '';
-    document.getElementById('eventlogMessage').value = '';
+    // Set default messages with nice formatting
+    // Console: Simple, clean terminal output
+    document.getElementById('consoleMessage').value = `🚨 WEATHER ALARM TRIGGERED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Alarm:       {{alarm_name}}
+Description: {{alarm_description}}
+Station:     {{station}}
+Time:        {{timestamp}}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{{sensor_info}}`;
+    
+    // Syslog: Compact, structured format
+    document.getElementById('syslogMessage').value = `tempest-alarm: {{alarm_name}} triggered - {{alarm_description}} | station={{station}} time={{timestamp}} | {{sensor_info}}`;
+    
+    // OSLog: Clean macOS logging format
+    document.getElementById('oslogMessage').value = `[ALARM] {{alarm_name}}: {{alarm_description}} at {{station}} ({{timestamp}})`;
+    
+    // Event Log: Windows Event Viewer style
+    document.getElementById('eventlogMessage').value = `Event Type: Warning
+Source: Tempest HomeKit
+Event ID: 1001
+Description: Weather alarm condition detected
+
+{{alarm_info}}
+
+Station: {{station}}
+Date/Time: {{timestamp}}
+
+Sensor Data:
+{{sensor_info}}
+
+{{app_info}}`;
+    
+    // Email: Professional HTML-ready format
+    // Will be populated from env defaults after modal opens
     document.getElementById('emailTo').value = '';
-    document.getElementById('emailSubject').value = '';
-    document.getElementById('emailBody').value = '';
+    document.getElementById('emailSubject').value = '⚠️ Weather Alert: {{alarm_name}}';
+    document.getElementById('emailHtml').checked = true;
+    document.getElementById('emailBody').value = `<h2 style="color: #d9534f;">⚠️ Weather Alarm Triggered</h2>
+
+<div style="background: #f5f5f5; padding: 15px; border-left: 4px solid #d9534f; margin: 20px 0;">
+    <h3 style="margin-top: 0;">{{alarm_name}}</h3>
+    <p>{{alarm_description}}</p>
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <tr style="background: #f9f9f9;">
+        <td style="padding: 10px; border: 1px solid #ddd;"><strong>Station</strong></td>
+        <td style="padding: 10px; border: 1px solid #ddd;">{{station}}</td>
+    </tr>
+    <tr>
+        <td style="padding: 10px; border: 1px solid #ddd;"><strong>Time</strong></td>
+        <td style="padding: 10px; border: 1px solid #ddd;">{{timestamp}}</td>
+    </tr>
+    <tr style="background: #f9f9f9;">
+        <td style="padding: 10px; border: 1px solid #ddd;"><strong>Condition</strong></td>
+        <td style="padding: 10px; border: 1px solid #ddd;">{{alarm_condition}}</td>
+    </tr>
+</table>
+
+<h4>Current Sensor Readings:</h4>
+<div style="background: #fff; padding: 15px; border: 1px solid #ddd;">
+    {{sensor_info}}
+</div>
+
+<hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+<p style="color: #666; font-size: 12px;">{{app_info}}</p>`;
+    
+    // SMS: Very concise
+    // Will be populated from env defaults after modal opens
     document.getElementById('smsTo').value = '';
-    document.getElementById('smsMessage').value = '';
+    document.getElementById('smsMessage').value = `⚠️ {{alarm_name}} at {{station}} - {{timestamp}}. {{alarm_description}}`;
     
     selectedTags = [];
     renderSelectedTags();
     document.getElementById('tagSearchInput').value = '';
     
     toggleMessageSections();
-    toggleCustomMessages();
     
     document.getElementById('editModal').classList.add('active');
+    
+    // Load environment defaults for email/SMS addresses
+    loadEnvDefaults();
+}
+
+async function loadEnvDefaults() {
+    try {
+        const response = await fetch('/api/env-defaults');
+        const defaults = await response.json();
+        
+        // Only set defaults if fields are empty (don't override user input)
+        if (defaults.emailTo && !document.getElementById('emailTo').value) {
+            document.getElementById('emailTo').value = defaults.emailTo;
+        }
+        if (defaults.smsTo && !document.getElementById('smsTo').value) {
+            document.getElementById('smsTo').value = defaults.smsTo;
+        }
+    } catch (error) {
+        console.warn('Failed to load environment defaults:', error);
+    }
 }
 
 function editAlarm(name) {
@@ -346,39 +420,27 @@ function editAlarm(name) {
     document.getElementById('deliverySMS').checked = channelTypes.includes('sms');
     
     // Load messages from channels
-    let hasCustomMessages = false;
-    let defaultMsg = '🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}';
-    
     channels.forEach(channel => {
         if (channel.type === 'console' && channel.template) {
             document.getElementById('consoleMessage').value = channel.template;
-            defaultMsg = channel.template;
         } else if (channel.type === 'syslog' && channel.template) {
             document.getElementById('syslogMessage').value = channel.template;
-            if (!hasCustomMessages && channel.template !== defaultMsg) hasCustomMessages = true;
         } else if (channel.type === 'oslog' && channel.template) {
             document.getElementById('oslogMessage').value = channel.template;
-            if (!hasCustomMessages && channel.template !== defaultMsg) hasCustomMessages = true;
         } else if (channel.type === 'eventlog' && channel.template) {
             document.getElementById('eventlogMessage').value = channel.template;
-            if (!hasCustomMessages && channel.template !== defaultMsg) hasCustomMessages = true;
         } else if (channel.type === 'email' && channel.email) {
             document.getElementById('emailTo').value = (channel.email.to || []).join(', ');
             document.getElementById('emailSubject').value = channel.email.subject || '';
             document.getElementById('emailBody').value = channel.email.body || '';
-            hasCustomMessages = true;
+            document.getElementById('emailHtml').checked = channel.email.html || false;
         } else if (channel.type === 'sms' && channel.sms) {
             document.getElementById('smsTo').value = (channel.sms.to || []).join(', ');
             document.getElementById('smsMessage').value = channel.sms.message || '';
-            hasCustomMessages = true;
         }
     });
     
-    document.getElementById('defaultMessage').value = defaultMsg;
-    document.getElementById('useDefaultMessage').checked = !hasCustomMessages;
-    
     toggleMessageSections();
-    toggleCustomMessages();
     
     document.getElementById('editModal').classList.add('active');
 }
@@ -389,6 +451,48 @@ function closeModal() {
 
 function closeJSONModal() {
     document.getElementById('jsonModal').classList.remove('active');
+}
+
+async function validateCondition() {
+    const condition = document.getElementById('alarmCondition').value;
+    const resultDiv = document.getElementById('validationResult');
+    
+    if (!condition || condition.trim() === '') {
+        resultDiv.style.display = 'block';
+        resultDiv.style.backgroundColor = '#fff3cd';
+        resultDiv.style.color = '#856404';
+        resultDiv.innerHTML = '⚠️ Please enter a condition to validate';
+        return false;
+    }
+    
+    try {
+        const response = await fetch('/api/validate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ condition: condition })
+        });
+        
+        const result = await response.json();
+        resultDiv.style.display = 'block';
+        
+        if (result.valid) {
+            resultDiv.style.backgroundColor = '#d4edda';
+            resultDiv.style.color = '#155724';
+            resultDiv.innerHTML = `✓ Valid condition!<br><strong>Meaning:</strong> ${result.paraphrase}`;
+            return true;
+        } else {
+            resultDiv.style.backgroundColor = '#f8d7da';
+            resultDiv.style.color = '#721c24';
+            resultDiv.innerHTML = `✗ Invalid condition: ${result.error}`;
+            return false;
+        }
+    } catch (error) {
+        resultDiv.style.display = 'block';
+        resultDiv.style.backgroundColor = '#f8d7da';
+        resultDiv.style.color = '#721c24';
+        resultDiv.innerHTML = `✗ Validation error: ${error.message}`;
+        return false;
+    }
 }
 
 function showFullJSON() {
@@ -435,34 +539,39 @@ async function copyJSON() {
 async function handleSubmit(e) {
     e.preventDefault();
     
+    // Validate condition before saving
+    const isValid = await validateCondition();
+    if (!isValid) {
+        showNotification('Please fix the condition before saving', 'error');
+        return;
+    }
+    
     // Build channels array from selected delivery methods
     const channels = [];
-    const useDefault = document.getElementById('useDefaultMessage').checked;
-    const defaultMessage = document.getElementById('defaultMessage').value || '🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}';
     
     if (document.getElementById('deliveryConsole').checked) {
-        const template = useDefault ? defaultMessage : (document.getElementById('consoleMessage').value || defaultMessage);
+        const template = document.getElementById('consoleMessage').value || '🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}';
         channels.push({ 
             type: 'console',
             template: template
         });
     }
     if (document.getElementById('deliverySyslog').checked) {
-        const template = useDefault ? defaultMessage : (document.getElementById('syslogMessage').value || defaultMessage);
+        const template = document.getElementById('syslogMessage').value || 'tempest-alarm: {{alarm_name}} - {{alarm_description}}';
         channels.push({ 
             type: 'syslog',
             template: template
         });
     }
     if (document.getElementById('deliveryOslog').checked) {
-        const template = useDefault ? defaultMessage : (document.getElementById('oslogMessage').value || defaultMessage);
+        const template = document.getElementById('oslogMessage').value || '[ALARM] {{alarm_name}}: {{alarm_description}}';
         channels.push({ 
             type: 'oslog',
             template: template
         });
     }
     if (document.getElementById('deliveryEventlog').checked) {
-        const template = useDefault ? defaultMessage : (document.getElementById('eventlogMessage').value || defaultMessage);
+        const template = document.getElementById('eventlogMessage').value || 'Weather alarm: {{alarm_name}}';
         channels.push({ 
             type: 'eventlog',
             template: template
@@ -470,15 +579,17 @@ async function handleSubmit(e) {
     }
     if (document.getElementById('deliveryEmail').checked) {
         const emailTo = document.getElementById('emailTo').value;
-        const emailSubject = document.getElementById('emailSubject').value;
-        const emailBody = document.getElementById('emailBody').value;
+        const emailSubject = document.getElementById('emailSubject').value || 'Tempest Alert: {{alarm_name}}';
+        const emailBody = document.getElementById('emailBody').value || '{{alarm_info}}\n\n{{sensor_info}}';
+        const emailHtml = document.getElementById('emailHtml').checked;
         
         channels.push({ 
             type: 'email',
             email: {
                 to: emailTo ? emailTo.split(',').map(e => e.trim()).filter(e => e) : ['admin@example.com'],
-                subject: emailSubject || '⚠️ Weather Alarm: {{alarm_name}}',
-                body: emailBody || defaultMessage
+                subject: emailSubject,
+                body: emailBody,
+                html: emailHtml
             }
         });
     }
@@ -540,7 +651,22 @@ async function deleteAlarm(name) {
             throw new Error(await response.text());
         }
         
+        // If the deleted alarm is currently being viewed/edited, close the modal
+        if (currentAlarm && currentAlarm.name === name) {
+            closeModal();
+            closeJSONModal();
+            currentAlarm = null;
+        }
+        
+        // Remove the alarm from the local array immediately
+        alarms = alarms.filter(a => a.name !== name);
+        
+        // Re-render the UI immediately
+        renderAlarms();
+        
         showNotification('Alarm deleted successfully', 'success');
+        
+        // Reload from server to ensure consistency and update tags
         await loadAlarms();
         await loadTags();
     } catch (error) {

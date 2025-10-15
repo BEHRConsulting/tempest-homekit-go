@@ -100,6 +100,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/tags", s.handleGetTags)
 	mux.HandleFunc("/api/validate", s.handleValidate)
 	mux.HandleFunc("/api/fields", s.handleGetFields)
+	mux.HandleFunc("/api/env-defaults", s.handleGetEnvDefaults)
 
 	addr := ":" + s.port
 	logger.Info("Starting Alarm Editor on http://localhost%s", addr)
@@ -396,15 +397,52 @@ func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
 		UV:               3,
 	}
 
-	evaluator := alarm.NewEvaluator()
-	_, err := evaluator.Evaluate(req.Condition, testObs)
+	// Validate condition format before evaluation
+	condition := strings.TrimSpace(req.Condition)
 
-	response := map[string]interface{}{
-		"valid": err == nil,
+	var validationErr error
+
+	if condition == "" {
+		validationErr = fmt.Errorf("condition cannot be empty")
+	} else if strings.HasSuffix(condition, "&&") || strings.HasSuffix(condition, "||") {
+		validationErr = fmt.Errorf("condition ends with incomplete operator (&&/||)")
+	} else if strings.HasPrefix(condition, "&&") || strings.HasPrefix(condition, "||") {
+		validationErr = fmt.Errorf("condition starts with incomplete operator (&&/||)")
+	} else if strings.Contains(condition, "&&") && strings.Contains(condition, "|| ") {
+		// Check for empty parts in compound conditions
+		parts := strings.FieldsFunc(condition, func(r rune) bool {
+			return r == '&' || r == '|'
+		})
+		for _, part := range parts {
+			if strings.TrimSpace(part) == "" {
+				validationErr = fmt.Errorf("logical operator (&&/||) requires expressions on both sides")
+				break
+			}
+		}
 	}
 
-	if err != nil {
-		response["error"] = err.Error()
+	response := map[string]interface{}{}
+
+	if validationErr != nil {
+		response["valid"] = false
+		response["error"] = validationErr.Error()
+	} else {
+		// Create a dummy alarm context for change detection validation
+		dummyAlarm := &alarm.Alarm{
+			Name: "validation-test",
+		}
+
+		evaluator := alarm.NewEvaluator()
+		_, err := evaluator.EvaluateWithAlarm(condition, testObs, dummyAlarm)
+
+		response["valid"] = err == nil
+
+		if err != nil {
+			response["error"] = err.Error()
+		} else {
+			// Add paraphrase for valid conditions
+			response["paraphrase"] = evaluator.Paraphrase(condition)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -418,4 +456,15 @@ func (s *Server) handleGetFields(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(fields)
+}
+
+// handleGetEnvDefaults returns default values from environment variables
+func (s *Server) handleGetEnvDefaults(w http.ResponseWriter, r *http.Request) {
+	defaults := map[string]string{
+		"emailTo": os.Getenv("MS365_TO_ADDRESS"),
+		"smsTo":   os.Getenv("SMS_TO_NUMBER"),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(defaults)
 }

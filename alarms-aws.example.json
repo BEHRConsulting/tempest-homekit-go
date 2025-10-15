@@ -1,0 +1,42 @@
+{
+  "_comment1": "=========================================================================",
+  "_comment2": "AWS SNS SMS - EXAMPLE ALARM CONFIGURATION",
+  "_comment3": "=========================================================================",
+  "_comment4": "This example is identical to alarms.example.json",
+  "_comment5": "The only difference is which SMS credentials you set in .env file:",
+  "_comment6": "",
+  "_comment7": "FOR AWS SNS (instead of Twilio):",
+  "_comment8": "  1. Set these in .env:",
+  "_comment9": "     AWS_ACCESS_KEY_ID=your-access-key",
+  "_comment10": "     AWS_SECRET_ACCESS_KEY=your-secret-key",
+  "_comment11": "     AWS_REGION=us-east-1",
+  "_comment12": "     AWS_SNS_TOPIC_ARN=arn:aws:sns:us-east-1:123456789012:topic",
+  "_comment13": "  2. Also set email provider (SMTP_* or MS365_* variables)",
+  "_comment14": "  3. Run: ./tempest-homekit-go --alarms @alarms-aws.example.json",
+  "_comment15": "",
+  "_comment16": "All provider config is in .env - this file only has alarm rules!",
+  "_comment17": "=========================================================================",
+  "alarms": [
+    {
+      "name": "lightning-nearby",
+      "description": "Alert when lightning strikes within 2 miles",
+      "tags": ["lightning", "safety", "severe"],
+      "enabled": true,
+      "condition": "lightning_distance < 2",
+      "cooldown": 300,
+      "channels": [
+        {
+          "type": "console",
+          "template": "⚡ Lightning detected {{lightning_distance}} miles away!"
+        },
+        {
+          "type": "sms",
+          "sms": {
+            "to": ["+15555551234"],
+            "message": "⚡ LIGHTNING ALERT: Strike {{lightning_distance}}mi away. Seek shelter!"
+          }
+        }
+      ]
+    }
+  ]
+}

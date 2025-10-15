@@ -1,0 +1,44 @@
+{
+  "_comment1": "=========================================================================",
+  "_comment2": "MICROSOFT 365 OAUTH2 EMAIL - EXAMPLE ALARM CONFIGURATION",
+  "_comment3": "=========================================================================",
+  "_comment4": "This example is identical to alarms.example.json",
+  "_comment5": "The only difference is which credentials you set in .env file:",
+  "_comment6": "",
+  "_comment7": "FOR MICROSOFT 365 OAUTH2 (more secure, enterprise):",
+  "_comment8": "  1. Configure Azure AD app (see .env.example for detailed steps)",
+  "_comment9": "  2. Set these in .env:",
+  "_comment10": "     MS365_CLIENT_ID=your-client-id",
+  "_comment11": "     MS365_CLIENT_SECRET=your-client-secret",
+  "_comment12": "     MS365_TENANT_ID=your-tenant-id",
+  "_comment13": "     MS365_FROM_ADDRESS=alerts@yourdomain.com",
+  "_comment14": "  3. Run: ./tempest-homekit-go --alarms @alarms-ms365.example.json",
+  "_comment15": "",
+  "_comment16": "All provider config is in .env - this file only has alarm rules!",
+  "_comment17": "=========================================================================",
+  "alarms": [
+    {
+      "name": "high-temperature",
+      "description": "Alert when temperature exceeds 85°F",
+      "tags": ["temperature", "heat"],
+      "enabled": true,
+      "condition": "temperature > 85F",
+      "cooldown": 1800,
+      "channels": [
+        {
+          "type": "console",
+          "template": "🌡️ High Temperature Alert: {{temperature}}°F at {{timestamp}}"
+        },
+        {
+          "type": "email",
+          "email": {
+            "to": ["admin@example.com"],
+            "subject": "⚠️ High Temperature: {{temperature}}°F",
+            "body": "High temperature detected.\n\n{{app_info}}\n\n{{alarm_info}}\n\n{{sensor_info}}",
+            "html": true
+          }
+        }
+      ]
+    }
+  ]
+}

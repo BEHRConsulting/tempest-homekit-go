@@ -45,8 +45,12 @@ func (e *Evaluator) EvaluateWithAlarm(condition string, obs *weather.Observation
 	// Handle compound conditions with && and ||
 	if strings.Contains(condition, "&&") {
 		parts := strings.Split(condition, "&&")
-		for _, part := range parts {
-			result, err := e.evaluateSimpleWithAlarm(strings.TrimSpace(part), obs, alarm)
+		for i, part := range parts {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				return false, fmt.Errorf("AND operator (&&) requires expressions on both sides (missing expression at position %d)", i+1)
+			}
+			result, err := e.evaluateSimpleWithAlarm(part, obs, alarm)
 			if err != nil {
 				logger.Debug("Evaluation error for part '%s': %v", part, err)
 				return false, err
@@ -62,8 +66,12 @@ func (e *Evaluator) EvaluateWithAlarm(condition string, obs *weather.Observation
 
 	if strings.Contains(condition, "||") {
 		parts := strings.Split(condition, "||")
-		for _, part := range parts {
-			result, err := e.evaluateSimpleWithAlarm(strings.TrimSpace(part), obs, alarm)
+		for i, part := range parts {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				return false, fmt.Errorf("OR operator (||) requires expressions on both sides (missing expression at position %d)", i+1)
+			}
+			result, err := e.evaluateSimpleWithAlarm(part, obs, alarm)
 			if err != nil {
 				logger.Debug("Evaluation error for part '%s': %v", part, err)
 				return false, err
@@ -337,4 +345,124 @@ func (e *Evaluator) GetAvailableFields() []string {
 		"lightning_distance",
 		"precipitation_type",
 	}
+}
+
+// Paraphrase converts a condition into human-readable text
+func (e *Evaluator) Paraphrase(condition string) string {
+	condition = strings.TrimSpace(condition)
+	if condition == "" {
+		return "No condition specified"
+	}
+
+	// Handle compound conditions
+	if strings.Contains(condition, "&&") {
+		parts := strings.Split(condition, "&&")
+		paraphrases := []string{}
+		for _, part := range parts {
+			paraphrases = append(paraphrases, e.paraphraseSimple(strings.TrimSpace(part)))
+		}
+		return "When " + strings.Join(paraphrases, " AND ")
+	}
+
+	if strings.Contains(condition, "||") {
+		parts := strings.Split(condition, "||")
+		paraphrases := []string{}
+		for _, part := range parts {
+			paraphrases = append(paraphrases, e.paraphraseSimple(strings.TrimSpace(part)))
+		}
+		return "When " + strings.Join(paraphrases, " OR ")
+	}
+
+	return "When " + e.paraphraseSimple(condition)
+}
+
+// paraphraseSimple converts a simple condition into human-readable text
+func (e *Evaluator) paraphraseSimple(condition string) string {
+	// Handle change detection operators
+	if len(condition) > 0 {
+		firstChar := condition[0]
+		if firstChar == '*' {
+			fieldName := strings.TrimSpace(condition[1:])
+			return e.formatFieldName(fieldName) + " changes (any value)"
+		} else if firstChar == '>' {
+			fieldName := strings.TrimSpace(condition[1:])
+			return e.formatFieldName(fieldName) + " increases"
+		} else if firstChar == '<' && !strings.Contains(condition, "<=") {
+			// Check if this is unary < (not binary comparison)
+			fieldName := strings.TrimSpace(condition[1:])
+			if !strings.ContainsAny(fieldName, "0123456789") {
+				return e.formatFieldName(fieldName) + " decreases"
+			}
+		}
+	}
+
+	// Handle binary comparisons
+	for _, op := range []string{">=", "<=", "!=", "==", ">", "<"} {
+		if strings.Contains(condition, op) {
+			parts := strings.SplitN(condition, op, 2)
+			if len(parts) == 2 {
+				fieldName := strings.TrimSpace(parts[0])
+				value := strings.TrimSpace(parts[1])
+				opText := map[string]string{
+					">=": "is at least",
+					"<=": "is at most",
+					"!=": "is not",
+					"==": "is",
+					">":  "exceeds",
+					"<":  "is below",
+				}[op]
+				return e.formatFieldName(fieldName) + " " + opText + " " + e.formatValue(value)
+			}
+		}
+	}
+
+	return condition
+}
+
+// formatFieldName converts a field name into human-readable text
+func (e *Evaluator) formatFieldName(field string) string {
+	field = strings.ToLower(strings.TrimSpace(field))
+	fieldNames := map[string]string{
+		"temperature":        "temperature",
+		"temp":               "temperature",
+		"humidity":           "humidity",
+		"pressure":           "pressure",
+		"wind_speed":         "wind speed",
+		"wind":               "wind speed",
+		"wind_gust":          "wind gust",
+		"wind_direction":     "wind direction",
+		"lux":                "light level",
+		"light":              "light level",
+		"uv":                 "UV index",
+		"uv_index":           "UV index",
+		"rain_rate":          "rain rate",
+		"rain_daily":         "daily rainfall",
+		"lightning_count":    "lightning strike count",
+		"lightning_distance": "lightning distance",
+		"precipitation_type": "precipitation type",
+	}
+	if name, ok := fieldNames[field]; ok {
+		return name
+	}
+	return field
+}
+
+// formatValue formats a value with its unit if applicable
+func (e *Evaluator) formatValue(value string) string {
+	value = strings.TrimSpace(value)
+	// Check for temperature units
+	if strings.HasSuffix(strings.ToUpper(value), "F") {
+		return value[:len(value)-1] + "°F"
+	}
+	if strings.HasSuffix(strings.ToUpper(value), "C") {
+		return value[:len(value)-1] + "°C"
+	}
+	// Check for speed units
+	if strings.HasSuffix(value, "mph") {
+		return value[:len(value)-3] + " mph"
+	}
+	if strings.HasSuffix(value, "m/s") {
+		return value[:len(value)-3] + " m/s"
+	}
+	return value
 }

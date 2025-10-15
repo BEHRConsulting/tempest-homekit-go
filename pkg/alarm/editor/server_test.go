@@ -247,6 +247,18 @@ func TestHandleValidate(t *testing.T) {
 					t.Logf("Error: %v", result["error"])
 				}
 			}
+
+			// Check that valid conditions include paraphrase
+			if valid {
+				paraphrase, hasParaphrase := result["paraphrase"].(string)
+				if !hasParaphrase {
+					t.Error("Valid condition should include paraphrase")
+				} else if paraphrase == "" {
+					t.Error("Paraphrase should not be empty for valid condition")
+				} else {
+					t.Logf("Paraphrase: %s", paraphrase)
+				}
+			}
 		})
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"tempest-homekit-go/pkg/alarm"
 	"tempest-homekit-go/pkg/alarm/editor"
 	"tempest-homekit-go/pkg/config"
 	"tempest-homekit-go/pkg/logger"
@@ -37,7 +38,7 @@ func main() {
 
 	// Handle version flag
 	if cfg.Version {
-		fmt.Println("tempest-homekit-go v1.6.0")
+		fmt.Println("tempest-homekit-go v1.7.0")
 		fmt.Println("Built with Go 1.24.2")
 		fmt.Println("HomeKit integration for WeatherFlow Tempest weather stations")
 		os.Exit(0)
@@ -53,6 +54,13 @@ func main() {
 		if err := editorServer.Start(); err != nil {
 			log.Fatalf("Failed to start alarm editor: %v", err)
 		}
+		return
+	}
+
+	// Handle email testing if requested
+	if cfg.EmailTest {
+		logger.Info("EmailTest flag detected, sending test email...")
+		runEmailTest(cfg)
 		return
 	}
 
@@ -84,6 +92,19 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	sig := <-c
 	logger.Info("Received signal %v, shutting down...", sig)
+}
+
+// runEmailTest sends a test email using the configured email settings
+func runEmailTest(cfg *config.Config) {
+	fmt.Println("=== Email Configuration Test ===")
+	fmt.Println()
+
+	if cfg.Alarms == "" {
+		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+	}
+
+	// Use alarm package's email test function
+	alarm.RunEmailTest(cfg.Alarms, cfg.StationName)
 }
 
 // runAPITests performs comprehensive testing of all WeatherFlow API endpoints

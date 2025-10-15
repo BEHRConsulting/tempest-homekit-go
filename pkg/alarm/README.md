@@ -52,7 +52,7 @@ Implements notification channels with template expansion.
 - **Syslog**: Local or remote syslog
 - **OSLog**: macOS unified logging system (os_log API via CGO, macOS only)
 - **EventLog**: System event log (Windows) or syslog (Unix)
-- **Email**: SMTP (with TLS support) or Microsoft 365 OAuth2
+- **Email**: SMTP (with TLS support) or **Microsoft 365 OAuth2** ✅
 - **SMS**: Twilio or AWS SNS (placeholder implementation)
 
 **Template variables:**
@@ -76,6 +76,7 @@ Orchestrates alarm evaluation and notification delivery.
 
 ### Basic Configuration
 
+#### SMTP Email
 ```json
 {
   "email": {
@@ -132,6 +133,24 @@ for obs := range observationChannel {
 }
 ```
 
+#### Microsoft 365 Email (OAuth2)
+```json
+{
+  "email": {
+    "provider": "microsoft365",
+    "use_oauth2": true,
+    "client_id": "${MS365_CLIENT_ID}",
+    "client_secret": "${MS365_CLIENT_SECRET}",
+    "tenant_id": "${MS365_TENANT_ID}",
+    "from_address": "alerts@yourdomain.com",
+    "from_name": "Weather Alerts"
+  },
+  "alarms": [...]
+}
+```
+
+See [EMAIL_O365_IMPLEMENTATION.md](docs/EMAIL_O365_IMPLEMENTATION.md) for complete setup instructions.
+
 ## Environment Variables
 
 Configure notification providers via environment variables:
@@ -143,6 +162,11 @@ SMTP_PORT=587
 SMTP_USERNAME=alerts@example.com
 SMTP_PASSWORD=your-password
 SMTP_USE_TLS=true
+
+# Microsoft 365 Email (OAuth2)
+MS365_CLIENT_ID=your-client-id
+MS365_CLIENT_SECRET=your-client-secret
+MS365_TENANT_ID=your-tenant-id
 
 # Twilio SMS
 TWILIO_ACCOUNT_SID=your-account-sid
@@ -158,9 +182,14 @@ AWS_SNS_TOPIC_ARN=arn:aws:sns:us-east-1:123456789012:topic
 
 ## Testing
 
+### Unit Tests
+
 ```bash
 # Run all alarm tests
 go test ./pkg/alarm/...
+
+# Run with coverage
+go test -cover ./pkg/alarm/...
 
 # Run with verbose output
 go test -v ./pkg/alarm/...
@@ -169,11 +198,54 @@ go test -v ./pkg/alarm/...
 go test -run TestEvaluator ./pkg/alarm/...
 ```
 
+### Email Configuration Test
+
+Test your email configuration before deploying:
+
+```bash
+./tempest-homekit-go --email-test --alarms @alarms.json
+```
+
+**What it tests:**
+- Provider detection (Microsoft 365 OAuth2 vs SMTP)
+- Credential validation from environment variables
+- Email delivery with test message
+- Template expansion with real weather data
+
+**Test email includes:**
+- Application name and version (v1.7.0)
+- Timestamp with timezone
+- Command line options used
+- Email provider and configuration
+- Current weather observation data
+
+**Provider Priority:**
+1. Microsoft 365 OAuth2 (if `MS365_CLIENT_ID`, `MS365_CLIENT_SECRET`, `MS365_TENANT_ID` set)
+2. SMTP (if `SMTP_HOST` set)
+3. Error if neither configured
+
+**Microsoft 365 Requirements:**
+- `MS365_CLIENT_ID` - Azure AD application client ID
+- `MS365_CLIENT_SECRET` - Azure AD client secret (value, not ID)
+- `MS365_TENANT_ID` - Azure AD tenant ID
+- `MS365_FROM_ADDRESS` - Sender email address
+- Mail.Send API permission with admin consent
+
+**SMTP Requirements:**
+- `SMTP_HOST` - SMTP server hostname
+- `SMTP_PORT` - SMTP port (usually 587)
+- `SMTP_USERNAME` - SMTP authentication username
+- `SMTP_PASSWORD` - SMTP authentication password
+- `SMTP_FROM_ADDRESS` or `SMTP_USERNAME` - Sender email
+- `SMTP_USE_TLS=true` - Enable TLS encryption
+
+See `.env.example` for complete setup instructions with provider-specific examples.
+
 ## Future Enhancements
 
 - **Alarm Editor**: Interactive web UI for alarm management (--alarms-edit mode)
 - **SMS Integration**: Full go-sms-sender implementation for Twilio/AWS SNS
-- **Microsoft 365 OAuth2**: Complete OAuth2 flow for Microsoft 365 email
+- **Generic SMTP**: Complete generic SMTP implementation with enhanced TLS support
 - **Advanced Conditions**: Support for time windows, rate limiting, aggregations
 - **Notification History**: Track and display notification history in web UI
 - **Alarm Templates**: Pre-built alarm configurations for common scenarios
@@ -182,4 +254,6 @@ go test -run TestEvaluator ./pkg/alarm/...
 
 - `/alarms.example.json`: Complete example configuration
 - `/.env.example`: Environment variable template
+- [EMAIL_O365_IMPLEMENTATION.md](docs/EMAIL_O365_IMPLEMENTATION.md): Microsoft 365 setup guide
+- [alarms-o365-email.json](docs/examples/alarms-o365-email.json): Example O365 alarm configuration
 - Main documentation: `/README.md#alarms-and-notifications`

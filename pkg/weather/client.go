@@ -54,7 +54,8 @@ type Observation struct {
 	Illuminance          float64 `json:"illuminance"`
 	UV                   int     `json:"uv"`
 	SolarRadiation       float64 `json:"solar_radiation"`
-	RainAccumulated      float64 `json:"rain_accumulated"`
+	RainAccumulated      float64 `json:"rain_accumulated"` // Incremental rain since last obs (from "precip" field)
+	RainDailyTotal       float64 `json:"rain_daily_total"` // Total rain since midnight (from "precip_accum_local_day" field)
 	PrecipitationType    int     `json:"precipitation_type"`
 	LightningStrikeAvg   float64 `json:"lightning_strike_avg_distance"`
 	LightningStrikeCount int     `json:"lightning_strike_count"`
@@ -181,7 +182,8 @@ func GetObservationFromURL(url string) (*Observation, error) {
 		Illuminance:          getFloat64(latest["brightness"]), // API uses "brightness" instead of "illuminance"
 		UV:                   getInt(latest["uv"]),
 		SolarRadiation:       getFloat64(latest["solar_radiation"]),
-		RainAccumulated:      getFloat64(latest["precip"]), // API uses "precip" instead of "rain_accumulated"
+		RainAccumulated:      getFloat64(latest["precip"]),                 // Incremental rain since last obs
+		RainDailyTotal:       getFloat64(latest["precip_accum_local_day"]), // Total rain since midnight (mm)
 		PrecipitationType:    getInt(latest["precipitation_type"]),
 		LightningStrikeAvg:   getFloat64(latest["lightning_strike_avg"]),
 		LightningStrikeCount: getInt(latest["lightning_strike_count"]),

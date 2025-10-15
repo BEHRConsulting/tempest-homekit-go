@@ -180,11 +180,52 @@ The alarm system enables rule-based weather alerting with multiple notification 
 # Run with alarm configuration
 ./tempest-homekit-go --token "your-token" --alarms @alarms.json
 
+# Test email configuration before deploying
+./tempest-homekit-go --email-test --alarms @alarms.json
+
 # Edit alarm configuration (standalone editor mode)
 ./tempest-homekit-go --alarms-edit @alarms.json --alarms-edit-port 8081
 ```
 
-See `alarms.example.json` for a complete configuration example with all supported alarm types and notification channels. Configure SMTP/SMS credentials in `.env` file or via environment variables (see `.env.example`).
+**Example Alarm Configuration Files:**
+- `alarms.example.json` - Complete alarm examples (works with any provider)
+- `alarms-ms365.example.json` - Same alarms, shows MS365 setup instructions
+- `alarms-aws.example.json` - Same alarms, shows AWS SNS setup instructions
+
+**Important:** All email/SMS credentials are configured in `.env` file only - NOT in alarm JSON files! The alarm JSON files contain only alarm rules. Configure your provider credentials in `.env` (see `.env.example` for details), then use any of the alarm example files above.
+
+### Testing Email Configuration
+
+Before deploying alarms in production, test your email configuration:
+
+```bash
+./tempest-homekit-go --email-test --alarms @alarms.json
+```
+
+The email test will:
+1. Validate email provider configuration (Microsoft 365 OAuth2 or SMTP)
+2. Check all required credentials from `.env` file
+3. Prompt for a recipient email address
+4. Send a test email with:
+   - Application name and version
+   - Timestamp and command line options
+   - Email configuration details
+   - Current weather data from your station
+5. Provide troubleshooting guidance if delivery fails
+
+**Microsoft 365 Setup:**
+For complete Microsoft 365 OAuth2 setup instructions, see the detailed comments in `.env.example`. You'll need:
+- Azure AD app registration
+- Client ID, Client Secret, and Tenant ID
+- Mail.Send API permission with admin consent
+- From address (`MS365_FROM_ADDRESS`)
+
+**SMTP Setup:**
+For generic SMTP providers (Gmail, SendGrid, Mailgun, etc.), configure:
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`
+- `SMTP_FROM_ADDRESS`, `SMTP_USE_TLS=true`
+
+See `.env.example` for provider-specific examples with standard ports and TLS settings.
 
 ### Using the Alarm Editor
 

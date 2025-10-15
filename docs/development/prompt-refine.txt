@@ -107,7 +107,11 @@
 
 [x] verify that the alarm conditional supports F and C. Ie: 80F and 32C. Same for any units in the conditional: wind_speed and wind_guest: mph, ma/s. Temp C or F. 
 
-[] Lets implment the alarms email (o365 exchange) notifications
+[x] Lets implment the alarms email (o365 exchange) notifications
+
+[-] Remove the use default message for all selected methods. display message config for each delivery method selected. pre-set all fields with nicely formatted defaults for this specific alarm (ie.: what looks like in microsoft even viewer for the event log, what looks nice for terminal console and email. etc.) Add a variable app-info that shows application information (version, date, time, etc). Add a variable for alarm-info that shows information about this specific alarm. Add a variable sensor-info that display a nicely formated list of the sensor info that caused the alarm. Add an option to email for an option to create a HTML styled email, if not check, pure text is created.
+
+[] when editing an alarm, add a validate condition button to validate the condition and paraphrase. always validate on save, but paraphase is not needed.
 
 [] Lets implment the alarms email (smtp) notifications
 

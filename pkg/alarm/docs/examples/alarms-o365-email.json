@@ -1,0 +1,125 @@
+{
+  "email": {
+    "provider": "microsoft365",
+    "use_oauth2": true,
+    "client_id": "${MS365_CLIENT_ID}",
+    "client_secret": "${MS365_CLIENT_SECRET}",
+    "tenant_id": "${MS365_TENANT_ID}",
+    "from_address": "weather-alerts@yourdomain.com",
+    "from_name": "Tempest Weather Station"
+  },
+  "alarms": [
+    {
+      "name": "High Temperature Warning",
+      "description": "Alert when temperature exceeds 85°F",
+      "enabled": true,
+      "condition": "temperature_f > 85",
+      "cooldown": "1h",
+      "channels": [
+        {
+          "type": "console"
+        },
+        {
+          "type": "email",
+          "email": {
+            "to": ["admin@yourdomain.com", "ops@yourdomain.com"],
+            "subject": "🌡️ High Temperature Alert: {{temperature_f}}°F",
+            "body": "Temperature has exceeded the safety threshold.\n\nCurrent Temperature: {{temperature_f}}°F ({{temperature_c}}°C)\nPrevious Temperature: {{last_temperature_f}}°F\n\nAdditional Conditions:\n- Humidity: {{humidity}}%\n- Pressure: {{pressure}} mb\n- Wind Speed: {{wind_speed}} mph\n\nStation: {{station}}\nTime: {{timestamp}}\n\nAlarm: {{alarm_name}}\nDescription: {{alarm_description}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Severe Weather Alert",
+      "description": "Lightning detected with high winds",
+      "enabled": true,
+      "condition": "lightning_count > 0 && wind_gust > 40",
+      "cooldown": "30m",
+      "channels": [
+        {
+          "type": "console"
+        },
+        {
+          "type": "email",
+          "email": {
+            "to": ["emergency@yourdomain.com"],
+            "cc": ["admin@yourdomain.com"],
+            "subject": "⚡ SEVERE WEATHER: Lightning + High Winds",
+            "body": "SEVERE WEATHER CONDITIONS DETECTED\n\n⚡ Lightning Activity:\n- Strikes: {{lightning_count}}\n- Average Distance: {{lightning_distance}} km\n\n💨 Wind Conditions:\n- Current Speed: {{wind_speed}} mph\n- Gust Speed: {{wind_gust}} mph\n- Direction: {{wind_direction}}°\n\n🌧️ Precipitation:\n- Rain Rate: {{rain_rate}} in/hr\n- Daily Total: {{rain_daily}} in\n\nStation: {{station}}\nTime: {{timestamp}}\n\n⚠️ Take appropriate safety precautions immediately."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rapid Pressure Drop",
+      "description": "Pressure dropping quickly - storm approaching",
+      "enabled": true,
+      "condition": "pressure < last_pressure - 3",
+      "cooldown": "2h",
+      "channels": [
+        {
+          "type": "email",
+          "email": {
+            "to": ["forecasters@yourdomain.com"],
+            "subject": "📉 Rapid Pressure Drop Detected",
+            "body": "Barometric pressure is dropping rapidly, indicating potential storm development.\n\nPressure Change:\n- Current: {{pressure}} mb\n- Previous: {{last_pressure}} mb\n- Drop: {{last_pressure - pressure}} mb\n\nCurrent Conditions:\n- Temperature: {{temperature_f}}°F\n- Humidity: {{humidity}}%\n- Wind: {{wind_speed}} mph from {{wind_direction}}°\n- Rain Rate: {{rain_rate}} in/hr\n\nStation: {{station}}\nTime: {{timestamp}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Daily Weather Summary",
+      "description": "End of day weather summary",
+      "enabled": false,
+      "condition": "rain_daily > 0",
+      "cooldown": "23h",
+      "channels": [
+        {
+          "type": "email",
+          "email": {
+            "to": ["weather-logs@yourdomain.com"],
+            "subject": "📊 Daily Weather Summary - {{timestamp}}",
+            "body": "Daily Weather Summary for {{station}}\n\n🌡️ Temperature:\n- Current: {{temperature_f}}°F\n- High: (tracked separately)\n- Low: (tracked separately)\n\n💧 Precipitation:\n- Total: {{rain_daily}} inches\n- Current Rate: {{rain_rate}} in/hr\n\n💨 Wind:\n- Average: {{wind_speed}} mph\n- Peak Gust: {{wind_gust}} mph\n- Direction: {{wind_direction}}°\n\n⚡ Lightning:\n- Strikes: {{lightning_count}}\n- Distance: {{lightning_distance}} km\n\n☀️ Solar:\n- UV Index: {{uv}}\n- Illuminance: {{lux}} lux\n\n🌡️ Atmospheric:\n- Pressure: {{pressure}} mb\n- Humidity: {{humidity}}%\n\nReport Generated: {{timestamp}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Freeze Warning",
+      "description": "Temperature at or below freezing",
+      "enabled": true,
+      "condition": "temperature_f <= 32",
+      "cooldown": "6h",
+      "channels": [
+        {
+          "type": "console"
+        },
+        {
+          "type": "email",
+          "email": {
+            "to": ["maintenance@yourdomain.com", "facilities@yourdomain.com"],
+            "subject": "❄️ FREEZE WARNING: {{temperature_f}}°F",
+            "body": "Temperature has reached freezing point.\n\n❄️ Temperature: {{temperature_f}}°F ({{temperature_c}}°C)\n\nProtective Actions Required:\n- Protect sensitive equipment\n- Check pipe insulation\n- Monitor outdoor systems\n\nCurrent Conditions:\n- Humidity: {{humidity}}%\n- Wind Chill: (calculate with wind speed)\n- Wind: {{wind_speed}} mph\n\nStation: {{station}}\nTime: {{timestamp}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "UV Index Warning",
+      "description": "High UV exposure levels",
+      "enabled": true,
+      "condition": "uv >= 8",
+      "cooldown": "4h",
+      "channels": [
+        {
+          "type": "email",
+          "email": {
+            "to": ["safety@yourdomain.com"],
+            "subject": "☀️ High UV Index Warning: {{uv}}",
+            "body": "UV index has reached levels requiring protective measures.\n\n☀️ UV Index: {{uv}} (Very High / Extreme)\n☀️ Illuminance: {{lux}} lux\n\nRecommended Actions:\n- Minimize sun exposure between 10 AM - 4 PM\n- Use SPF 30+ sunscreen\n- Wear protective clothing\n- Seek shade when possible\n\nCurrent Conditions:\n- Temperature: {{temperature_f}}°F\n- Humidity: {{humidity}}%\n\nStation: {{station}}\nTime: {{timestamp}}"
+          }
+        }
+      ]
+    }
+  ]
+}
