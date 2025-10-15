@@ -355,6 +355,20 @@ func (m *Manager) ProcessObservation(obs *weather.Observation) {
 			m.sendNotifications(alarm, obs)
 			alarm.MarkFired()
 		}
+
+		// Store all sensor values for next evaluation
+		// This happens after evaluation so they become "previous" values on next run
+		alarm.SetPreviousValue("temperature", obs.AirTemperature)
+		alarm.SetPreviousValue("humidity", obs.RelativeHumidity)
+		alarm.SetPreviousValue("pressure", obs.StationPressure)
+		alarm.SetPreviousValue("wind_speed", obs.WindAvg)
+		alarm.SetPreviousValue("wind_gust", obs.WindGust)
+		alarm.SetPreviousValue("wind_direction", obs.WindDirection)
+		alarm.SetPreviousValue("uv", float64(obs.UV))
+		alarm.SetPreviousValue("lux", obs.Illuminance)
+		alarm.SetPreviousValue("rain_rate", obs.RainAccumulated)
+		alarm.SetPreviousValue("rain_daily", obs.RainDailyTotal)
+		alarm.SetPreviousValue("lightning_count", float64(obs.LightningStrikeCount))
 	}
 }
 

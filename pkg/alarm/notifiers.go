@@ -529,6 +529,10 @@ func formatAlarmInfo(alarm *Alarm, isHTML bool) string {
 
 // formatSensorInfo returns formatted sensor information
 func formatSensorInfo(obs *weather.Observation, isHTML bool) string {
+	return formatSensorInfoWithAlarm(obs, nil, isHTML)
+}
+
+func formatSensorInfoWithAlarm(obs *weather.Observation, alarm *Alarm, isHTML bool) string {
 	tempF := obs.AirTemperature*9/5 + 32
 	windSpeedMph := obs.WindAvg * 2.23694
 	windGustMph := obs.WindGust * 2.23694
@@ -556,55 +560,123 @@ func formatSensorInfo(obs *weather.Observation, isHTML bool) string {
 		cardinal = "NW"
 	}
 
-	if isHTML {
-		return fmt.Sprintf(`<table style="border-collapse: collapse; width: 100%%;">
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Temperature:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f°F (%.1f°C)</td></tr>
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Humidity:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.0f%%</td></tr>
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Pressure:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f mb</td></tr>
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Speed:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f mph (%.1f m/s)</td></tr>
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Gust:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f mph (%.1f m/s)</td></tr>
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Direction:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.0f° (%s)</td></tr>
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>UV Index:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%d</td></tr>
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Illuminance:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%s lux</td></tr>
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Rain Rate:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f mm/hr</td></tr>
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Daily Rain:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f in (%.1f mm)</td></tr>
-			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Lightning:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%d strikes</td></tr>
-		</table>`,
-			tempF, obs.AirTemperature,
-			obs.RelativeHumidity,
-			obs.StationPressure,
-			windSpeedMph, obs.WindAvg,
-			windGustMph, obs.WindGust,
-			obs.WindDirection, cardinal,
-			obs.UV,
-			formatNumber(obs.Illuminance),
-			obs.RainAccumulated,
-			rainDaily, obs.RainDailyTotal,
-			obs.LightningStrikeCount)
+	// Helper to check if value changed
+	hasChanged := func(key string, current float64, threshold float64) bool {
+		if alarm == nil {
+			return false
+		}
+		var prev float64
+		var ok bool
+		if prev, ok = alarm.GetTriggerValue(key); !ok {
+			if prev, ok = alarm.GetPreviousValue(key); !ok {
+				return false
+			}
+		}
+		// Check if difference exceeds threshold
+		diff := current - prev
+		if diff < 0 {
+			diff = -diff
+		}
+		return diff > threshold
 	}
 
-	return fmt.Sprintf(`Temperature: %.1f°F (%.1f°C)
-Humidity: %.0f%%
-Pressure: %.2f mb
-Wind Speed: %.1f mph (%.1f m/s)
-Wind Gust: %.1f mph (%.1f m/s)
-Wind Direction: %.0f° (%s)
-UV Index: %d
-Illuminance: %s lux
-Rain Rate: %.2f mm/hr
-Daily Rain: %.2f in (%.1f mm)
-Lightning: %d strikes`,
-		tempF, obs.AirTemperature,
-		obs.RelativeHumidity,
-		obs.StationPressure,
-		windSpeedMph, obs.WindAvg,
-		windGustMph, obs.WindGust,
-		obs.WindDirection, cardinal,
-		obs.UV,
-		formatNumber(obs.Illuminance),
-		obs.RainAccumulated,
-		rainDaily, obs.RainDailyTotal,
-		obs.LightningStrikeCount)
+	// Helper to get previous value with proper formatting
+	getPrevValue := func(key string, current float64, format string) string {
+		if alarm == nil {
+			return "N/A"
+		}
+		if prev, ok := alarm.GetTriggerValue(key); ok {
+			return fmt.Sprintf(format, prev)
+		}
+		if prev, ok := alarm.GetPreviousValue(key); ok {
+			return fmt.Sprintf(format, prev)
+		}
+		return "N/A"
+	}
+	
+	// Special handler for illuminance which needs number formatting
+	getPrevLux := func() string {
+		if alarm == nil {
+			return "N/A"
+		}
+		if prev, ok := alarm.GetTriggerValue("lux"); ok {
+			return formatNumber(prev)
+		}
+		if prev, ok := alarm.GetPreviousValue("lux"); ok {
+			return formatNumber(prev)
+		}
+		return "N/A"
+	}
+	
+	// Helper to get row style based on whether value changed
+	getRowStyle := func(changed bool) string {
+		if changed {
+			return ` style="background: #fff3cd;"`
+		}
+		return ""
+	}
+
+	if isHTML {
+		return fmt.Sprintf(`<table style="border-collapse: collapse; width: 100%%;">
+			<tr style="background: #f0f0f0;"><th style="padding: 5px; border: 1px solid #ddd;">Sensor</th><th style="padding: 5px; border: 1px solid #ddd;">Current</th><th style="padding: 5px; border: 1px solid #ddd;">Last</th></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Temperature:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f°F (%.1f°C)</td><td style="padding: 5px; border: 1px solid #ddd;">%s°C</td></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Humidity:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.0f%%</td><td style="padding: 5px; border: 1px solid #ddd;">%s%%</td></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Pressure:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f mb</td><td style="padding: 5px; border: 1px solid #ddd;">%s mb</td></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Speed:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f mph (%.1f m/s)</td><td style="padding: 5px; border: 1px solid #ddd;">%s m/s</td></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Gust:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f mph (%.1f m/s)</td><td style="padding: 5px; border: 1px solid #ddd;">%s m/s</td></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Direction:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.0f° (%s)</td><td style="padding: 5px; border: 1px solid #ddd;">%s°</td></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>UV Index:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%d</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Illuminance:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%s lux</td><td style="padding: 5px; border: 1px solid #ddd;">%s lux</td></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Rain Rate:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f mm/hr</td><td style="padding: 5px; border: 1px solid #ddd;">%s mm/hr</td></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Daily Rain:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f in (%.1f mm)</td><td style="padding: 5px; border: 1px solid #ddd;">%s mm</td></tr>
+			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Lightning:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%d strikes</td><td style="padding: 5px; border: 1px solid #ddd;">%s strikes</td></tr>
+		</table>`,
+			getRowStyle(hasChanged("temperature", obs.AirTemperature, 0.1)),
+			tempF, obs.AirTemperature, getPrevValue("temperature", obs.AirTemperature, "%.1f"),
+			getRowStyle(hasChanged("humidity", obs.RelativeHumidity, 1.0)),
+			obs.RelativeHumidity, getPrevValue("humidity", obs.RelativeHumidity, "%.0f"),
+			getRowStyle(hasChanged("pressure", obs.StationPressure, 0.1)),
+			obs.StationPressure, getPrevValue("pressure", obs.StationPressure, "%.2f"),
+			getRowStyle(hasChanged("wind_speed", obs.WindAvg, 0.1)),
+			windSpeedMph, obs.WindAvg, getPrevValue("wind_speed", obs.WindAvg, "%.1f"),
+			getRowStyle(hasChanged("wind_gust", obs.WindGust, 0.1)),
+			windGustMph, obs.WindGust, getPrevValue("wind_gust", obs.WindGust, "%.1f"),
+			getRowStyle(hasChanged("wind_direction", obs.WindDirection, 5.0)),
+			obs.WindDirection, cardinal, getPrevValue("wind_direction", obs.WindDirection, "%.0f"),
+			getRowStyle(hasChanged("uv", float64(obs.UV), 0.5)),
+			obs.UV, getPrevValue("uv", float64(obs.UV), "%.0f"),
+			getRowStyle(hasChanged("lux", obs.Illuminance, 100.0)),
+			formatNumber(obs.Illuminance), getPrevLux(),
+			getRowStyle(hasChanged("rain_rate", obs.RainAccumulated, 0.01)),
+			obs.RainAccumulated, getPrevValue("rain_rate", obs.RainAccumulated, "%.2f"),
+			getRowStyle(hasChanged("rain_daily", obs.RainDailyTotal, 0.1)),
+			rainDaily, obs.RainDailyTotal, getPrevValue("rain_daily", obs.RainDailyTotal, "%.1f"),
+			getRowStyle(hasChanged("lightning_count", float64(obs.LightningStrikeCount), 0.5)),
+			obs.LightningStrikeCount, getPrevValue("lightning_count", float64(obs.LightningStrikeCount), "%.0f"))
+	}
+
+	return fmt.Sprintf(`Temperature: %.1f°F (%.1f°C) [Last: %s°C]
+Humidity: %.0f%% [Last: %s%%]
+Pressure: %.2f mb [Last: %s mb]
+Wind Speed: %.1f mph (%.1f m/s) [Last: %s m/s]
+Wind Gust: %.1f mph (%.1f m/s) [Last: %s m/s]
+Wind Direction: %.0f° (%s) [Last: %s°]
+UV Index: %d [Last: %s]
+Illuminance: %s lux [Last: %s lux]
+Rain Rate: %.2f mm/hr [Last: %s mm/hr]
+Daily Rain: %.2f in (%.1f mm) [Last: %s mm]
+Lightning: %d strikes [Last: %s strikes]`,
+		tempF, obs.AirTemperature, getPrevValue("temperature", obs.AirTemperature, "%.1f"),
+		obs.RelativeHumidity, getPrevValue("humidity", obs.RelativeHumidity, "%.0f"),
+		obs.StationPressure, getPrevValue("pressure", obs.StationPressure, "%.2f"),
+		windSpeedMph, obs.WindAvg, getPrevValue("wind_speed", obs.WindAvg, "%.1f"),
+		windGustMph, obs.WindGust, getPrevValue("wind_gust", obs.WindGust, "%.1f"),
+		obs.WindDirection, cardinal, getPrevValue("wind_direction", obs.WindDirection, "%.0f"),
+		obs.UV, getPrevValue("uv", float64(obs.UV), "%.0f"),
+		formatNumber(obs.Illuminance), getPrevLux(),
+		obs.RainAccumulated, getPrevValue("rain_rate", obs.RainAccumulated, "%.2f"),
+		rainDaily, obs.RainDailyTotal, getPrevValue("rain_daily", obs.RainDailyTotal, "%.1f"),
+		obs.LightningStrikeCount, getPrevValue("lightning_count", float64(obs.LightningStrikeCount), "%.0f"))
 }
 
 // formatNumber formats a number with thousands separator
@@ -657,7 +729,7 @@ func expandTemplate(template string, alarm *Alarm, obs *weather.Observation, sta
 		// New composite variables
 		"{{app_info}}":    formatAppInfo(isHTML),
 		"{{alarm_info}}":  formatAlarmInfo(alarm, isHTML),
-		"{{sensor_info}}": formatSensorInfo(obs, isHTML),
+		"{{sensor_info}}": formatSensorInfoWithAlarm(obs, alarm, isHTML),
 	}
 
 	// Add previous values for change detection comparisons
