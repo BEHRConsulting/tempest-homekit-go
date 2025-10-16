@@ -89,12 +89,6 @@ func (e *Evaluator) EvaluateWithAlarm(condition string, obs *weather.Observation
 	return e.evaluateSimpleWithAlarm(condition, obs, alarm)
 }
 
-// evaluateSimple evaluates a simple comparison (no logical operators)
-// Kept for backward compatibility
-func (e *Evaluator) evaluateSimple(condition string, obs *weather.Observation) (bool, error) {
-	return e.evaluateSimpleWithAlarm(condition, obs, nil)
-}
-
 // evaluateSimpleWithAlarm evaluates a simple comparison with optional alarm state
 func (e *Evaluator) evaluateSimpleWithAlarm(condition string, obs *weather.Observation, alarm *Alarm) (bool, error) {
 	// Check for unary change-detection operators first

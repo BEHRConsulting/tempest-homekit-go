@@ -1,3 +1,5 @@
+//go:build !no_browser
+
 package web
 
 import (

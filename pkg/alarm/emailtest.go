@@ -24,13 +24,12 @@ func TestEmailConfiguration(alarmsJSON, stationName string) error {
 	tenantID := os.Getenv("MS365_TENANT_ID")
 
 	var provider string
-	if clientID != "" && clientSecret != "" && tenantID != "" {
+	switch {
+	case clientID != "" && clientSecret != "" && tenantID != "":
 		provider = "microsoft365"
-	} else if os.Getenv("SMTP_HOST") != "" {
+	case os.Getenv("SMTP_HOST") != "":
 		provider = "smtp"
-	}
-
-	if provider == "" {
+	default:
 		return fmt.Errorf("no email configuration found. Set either:\n  - MS365_CLIENT_ID, MS365_CLIENT_SECRET, MS365_TENANT_ID for Microsoft 365\n  - SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD for SMTP")
 	}
 

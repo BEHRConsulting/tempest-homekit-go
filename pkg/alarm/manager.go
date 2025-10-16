@@ -93,9 +93,10 @@ func validateConfigProviders(config *AlarmConfig) {
 			continue
 		}
 		for _, channel := range alarm.Channels {
-			if channel.Type == "email" {
+			switch channel.Type {
+			case "email":
 				usesEmail = true
-			} else if channel.Type == "sms" {
+			case "sms":
 				usesSMS = true
 			}
 		}
@@ -110,7 +111,8 @@ func validateConfigProviders(config *AlarmConfig) {
 			logger.Info("    For MS365: MS365_CLIENT_ID, MS365_CLIENT_SECRET, MS365_TENANT_ID, MS365_FROM_ADDRESS")
 		} else {
 			// Validate specific provider requirements
-			if config.Email.Provider == "smtp" {
+			switch config.Email.Provider {
+			case "smtp":
 				missing := []string{}
 				if config.Email.SMTPHost == "" {
 					missing = append(missing, "SMTP_HOST")
@@ -127,7 +129,7 @@ func validateConfigProviders(config *AlarmConfig) {
 				if len(missing) > 0 {
 					logger.Info("⚠️  SMTP email is configured but missing required environment variables: %s", strings.Join(missing, ", "))
 				}
-			} else if config.Email.Provider == "microsoft365" {
+			case "microsoft365":
 				missing := []string{}
 				if config.Email.ClientID == "" {
 					missing = append(missing, "MS365_CLIENT_ID")
@@ -157,7 +159,8 @@ func validateConfigProviders(config *AlarmConfig) {
 			logger.Info("    For AWS SNS: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_SNS_TOPIC_ARN")
 		} else {
 			// Validate specific provider requirements
-			if config.SMS.Provider == "twilio" {
+			switch config.SMS.Provider {
+			case "twilio":
 				missing := []string{}
 				if config.SMS.AccountSID == "" {
 					missing = append(missing, "TWILIO_ACCOUNT_SID")
@@ -171,7 +174,7 @@ func validateConfigProviders(config *AlarmConfig) {
 				if len(missing) > 0 {
 					logger.Info("⚠️  Twilio SMS is configured but missing required environment variables: %s", strings.Join(missing, ", "))
 				}
-			} else if config.SMS.Provider == "aws_sns" {
+			case "aws_sns":
 				missing := []string{}
 				if config.SMS.AWSAccessKey == "" {
 					missing = append(missing, "AWS_ACCESS_KEY_ID")

@@ -662,7 +662,7 @@ func formatSensorInfoWithAlarm(obs *weather.Observation, alarm *Alarm, isHTML bo
 	}
 
 	// Helper to get previous value with proper formatting
-	getPrevValue := func(key string, current float64, format string) string {
+	getPrevValue := func(key string, _ /* current */ float64, format string) string {
 		if alarm == nil {
 			return "N/A"
 		}
