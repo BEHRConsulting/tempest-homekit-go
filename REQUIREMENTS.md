@@ -19,7 +19,7 @@ This document presents the technical requirements and implementation results for
 ### Research Implementation Environment
 
 **Primary AI Development Tools:**
-- **Claude Sonnet 3.5**: Advanced reasoning for architectural decisions and complex problem resolution
+- **Claude Sonnet 4.5**: Advanced reasoning for architectural decisions and complex problem resolution
 - **GitHub Copilot with Grok Code Fast 1 (preview)**: Real-time code completion and rapid prototyping assistance
 - **Development Platform**: Visual Studio Code on macOS (Apple Silicon architecture)
 - **Methodology Validation**: Production-ready software development through conversational programming
@@ -123,6 +123,107 @@ This document presents the technical requirements and implementation results for
 - ✅ **Data Source Transparency**: Clear metadata indicating scraping source and timestamp
 - ✅ **Graceful Degradation**: Continue operation even if Chrome is not available
 - ✅ **Status API Integration**: Include scraped data in `/api/status` endpoint response
+
+#### Alarm System (v1.6.0+)
+- ✅ **Rule-Based Weather Alerting**: Monitor weather conditions and trigger notifications automatically
+- ✅ **Multiple Notification Channels**: Console, email (SMTP, Microsoft 365), SMS (AWS SNS, Twilio), syslog, oslog, eventlog
+- ✅ **Flexible Condition Syntax**: Support for comparison operators (`>`, `<`, `>=`, `<=`, `==`, `!=`) and logical operators (`&&`, `||`)
+- ✅ **Template-Based Messages**: Dynamic message content with weather variable interpolation
+- ✅ **Cross-Platform File Watching**: Automatic configuration reload on file changes (macOS, Windows, Linux)
+- ✅ **Per-Alarm Cooldown**: Configurable cooldown periods to prevent notification spam
+- ✅ **Interactive Alarm Editor**: Web-based UI for creating, editing, and managing alarm rules
+- ✅ **Environment-First Configuration**: Credentials loaded from `.env` file (v1.7.0+)
+- ✅ **Alarm Name Editing**: Edit alarm names with duplicate prevention (v1.8.0+)
+
+**Supported Weather Fields:**
+- Temperature: `temperature`, `temp` (°C)
+- Humidity: `humidity` (%)
+- Pressure: `pressure` (mb or inHg)
+- Wind: `wind_speed`, `wind`, `wind_gust` (m/s)
+- Wind Direction: `wind_direction` (degrees 0-360)
+- Light: `lux`, `light` (lux)
+- UV: `uv`, `uv_index`
+- Rain: `rain_rate`, `rain_accumulated` (mm/hr, mm)
+- Lightning: `lightning_count`, `lightning_distance` (strikes, miles)
+
+**Notification Channels:**
+- **Console**: Standard output logging (always visible)
+- **Syslog**: Local or remote syslog servers
+- **OSLog**: macOS unified logging system (macOS only, via CGO)
+- **EventLog**: Windows event log or Unix syslog fallback
+- **Email**: 
+  - Microsoft 365 OAuth2 with Graph API (v1.7.0+)
+  - SMTP with TLS support
+- **SMS**:
+  - AWS SNS with direct SMS and topic publishing (v1.8.0+)
+  - Twilio (planned)
+
+**Template Variables:**
+- Weather values: `{{temperature}}`, `{{temperature_f}}`, `{{temperature_c}}`, `{{humidity}}`, `{{pressure}}`, `{{wind_speed}}`, `{{wind_gust}}`, `{{wind_direction}}`, `{{lux}}`, `{{uv}}`, `{{rain_rate}}`, `{{rain_daily}}`, `{{lightning_count}}`, `{{lightning_distance}}`
+- Previous values: `{{last_temperature}}`, `{{last_humidity}}`, etc. (v1.7.0+)
+- Metadata: `{{timestamp}}`, `{{station}}`, `{{alarm_name}}`
+- Composite: `{{app_info}}`, `{{alarm_info}}`, `{{sensor_info}}` (v1.7.0+)
+
+**Alarm Editor Features (v1.6.0+):**
+- ✅ Interactive web UI on port 8081 (configurable)
+- ✅ Create, edit, delete alarm rules
+- ✅ Live validation of conditions and configuration
+- ✅ Search and filter alarms by name, tags, status
+- ✅ Toggle alarm enabled/disabled state
+- ✅ Real-time preview of template expansion
+- ✅ Edit alarm names with duplicate detection (v1.8.0+)
+- ✅ Full test suite with 100% pass rate
+
+**Configuration Options:**
+- File-based: `--alarms @alarms.json`
+- Inline JSON: `--alarms '{"alarms": [...]}'`
+- Environment variable: `ALARMS=@alarms.json`
+- Editor mode: `--alarms-edit @alarms.json`
+
+**Example Alarm Configuration:**
+```json
+{
+  "alarms": [
+    {
+      "name": "high-temperature",
+      "description": "Alert when temperature exceeds 85°F",
+      "tags": ["temperature", "heat"],
+      "enabled": true,
+      "condition": "temperature > 85",
+      "cooldown": 1800,
+      "channels": [
+        {
+          "type": "console",
+          "template": "HIGH TEMP: {{temperature}}°F at {{timestamp}}"
+        },
+        {
+          "type": "email",
+          "email": {
+            "to": ["admin@example.com"],
+            "subject": "High Temperature Alert",
+            "body": "Temperature: {{temperature}}°F\nStation: {{station}}\n\n{{sensor_info}}"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**AWS SNS Setup (v1.8.0+):**
+- Interactive setup script: `scripts/setup-aws-sns.sh`
+- Two-tier credential system: admin credentials for setup, runtime credentials for sending
+- Cross-account SNS topic support with resource-based policies
+- Direct SMS to phone numbers or SNS topic broadcasting
+- Production SMS type configuration and spending limits
+- Complete documentation in `.env.example` and `AWS_SNS_IMPLEMENTATION.md`
+
+**See Also:**
+- `pkg/alarm/README.md`: Complete alarm system documentation
+- `alarms.example.json`: Example alarm configurations
+- `.env.example`: Environment variable setup for all notification providers
+- `AWS_SNS_IMPLEMENTATION.md`: AWS SNS implementation details
+- `docs/EMAIL_O365_IMPLEMENTATION.md`: Microsoft 365 email setup guide
 
 ### Configuration Management
 
@@ -644,7 +745,7 @@ require (
 This project demonstrates a novel **Vibe Programming** approach where Large Language Models served as primary development partners in creating production-ready software. The methodology validation occurred through systematic phases:
 
 #### Phase 1: Conversational Architecture Design
-1. ✅ **Natural Language Requirements**: Project specifications expressed through conversational interaction with Claude Sonnet 3.5
+1. ✅ **Natural Language Requirements**: Project specifications expressed through conversational interaction with Claude Sonnet 4.5
 2. ✅ **AI-Guided Package Structure**: Emergent architecture development through iterative AI consultation
 3. ✅ **Contextual Dependency Selection**: LLM-assisted evaluation of Go libraries and framework choices
 4. ✅ **Configuration Strategy**: AI-recommended approach to command-line and environment variable management
@@ -652,7 +753,7 @@ This project demonstrates a novel **Vibe Programming** approach where Large Lang
 #### Phase 2: AI-Partnered API Integration
 1. ✅ **Conversational API Design**: WeatherFlow API client architecture developed through natural language specification
 2. ✅ **LLM-Generated Data Structures**: Station and Observation types created through AI-assisted code generation
-3. ✅ **Intelligent Error Handling**: Comprehensive error management strategies recommended by Claude Sonnet 3.5
+3. ✅ **Intelligent Error Handling**: Comprehensive error management strategies recommended by Claude Sonnet 4.5
 4. ✅ **Contextual Station Discovery**: AI-guided implementation of name-based station identification
 
 #### Phase 3: AI-Enhanced HomeKit Implementation
@@ -663,7 +764,7 @@ This project demonstrates a novel **Vibe Programming** approach where Large Lang
 
 #### Phase 4: Interactive Web Dashboard Development
 1. ✅ **Conversational UI/UX Design**: Dashboard architecture emergent through AI-assisted exploration
-2. ✅ **LLM-Generated JavaScript Architecture**: External script organization recommended by Claude Sonnet 3.5
+2. ✅ **LLM-Generated JavaScript Architecture**: External script organization recommended by Claude Sonnet 4.5
 3. ✅ **AI-Assisted Chart Integration**: Interactive pop-out chart system developed through iterative AI partnership
 4. ✅ **Contextual Event Management**: Complex DOM manipulation and event handling through AI guidance
 5. ✅ **Intelligent Real-time Updates**: Fetch API implementation and error handling designed with AI assistance
@@ -677,7 +778,7 @@ This project demonstrates a novel **Vibe Programming** approach where Large Lang
 #### Phase 6: AI-Assisted Quality Assurance
 1. ✅ **Conversational Testing Strategy**: Test development through natural language interaction with AI partners
 2. ✅ **LLM-Generated Test Coverage**: 78% test coverage achieved through AI-assisted test case generation
-3. ✅ **Intelligent Debugging**: Real-time problem resolution through conversational programming with Claude Sonnet 3.5
+3. ✅ **Intelligent Debugging**: Real-time problem resolution through conversational programming with Claude Sonnet 4.5
 4. ✅ **AI-Recommended Error Recovery**: Comprehensive error handling patterns suggested by LLM analysis
 
 ### Vibe Programming Validation Results
@@ -815,4 +916,4 @@ This repository is targeted for public release as a research project demonstrati
 We acknowledge the human contributors and AI assistants who supported this project:
 
 - Human contributors: Kent
-- AI assistants: Claude Sonnet 3.5, GitHub Copilot (Grok Code Fast 1 preview), GPT-5 mini
+- AI assistants: Claude Sonnet 4.5, GitHub Copilot (Grok Code Fast 1 preview), GPT-5 mini

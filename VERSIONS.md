@@ -2,7 +2,23 @@
 
 This file tracks released versions and the notable changes implemented in each release. Its purpose is to keep the README concise and centralize the version-by-version changelog.
 
-## v1.6.0 (current)
+## v1.8.0 (current)
+- AWS SNS SMS notifications with complete production setup
+- Cross-account SNS support with resource-based policies
+- Interactive setup script (scripts/setup-aws-sns.sh) for AWS CLI automation
+- Alarm name editing capability in the alarm editor
+- Enhanced .gitignore protection for environment files
+- Comprehensive AWS SNS documentation and unit tests
+
+## v1.7.0
+- Microsoft 365 OAuth2 email integration with Graph API
+- HTML email rendering support for alarm notifications
+- Previous sensor values tracking and display in notifications
+- Smart change detection with row highlighting in sensor tables
+- Composite template variables ({{app_info}}, {{alarm_info}}, {{sensor_info}})
+- Email testing functionality with --email-test flag
+
+## v1.6.0
 - Alarm system with rule-based weather alerting
 - Multiple notification channels (console, email, SMS, syslog, eventlog)
 - Template-based messages with runtime value interpolation

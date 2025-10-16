@@ -26,6 +26,7 @@ type APIDataSource struct {
 	observationCount  int64
 	lastUpdate        time.Time
 	running           bool
+	wg                sync.WaitGroup
 }
 
 // APIDataSourceOptions holds optional parameters for creating APIDataSource
@@ -72,6 +73,7 @@ func (a *APIDataSource) Start() (<-chan Observation, error) {
 		return a.observationChan, nil
 	}
 	a.running = true
+	a.wg.Add(1)
 	a.mu.Unlock()
 
 	// Start polling goroutine
@@ -83,15 +85,22 @@ func (a *APIDataSource) Start() (<-chan Observation, error) {
 // Stop gracefully shuts down the API data source
 func (a *APIDataSource) Stop() error {
 	a.mu.Lock()
-	defer a.mu.Unlock()
-
 	if !a.running {
+		a.mu.Unlock()
 		return nil
 	}
 
-	close(a.stopChan)
 	a.running = false
+	a.mu.Unlock()
+
+	// Signal stop and wait for goroutine to finish
+	close(a.stopChan)
+	a.wg.Wait()
+
+	// Now safe to close the channel
+	a.mu.Lock()
 	close(a.observationChan)
+	a.mu.Unlock()
 
 	logger.Info("API data source stopped")
 	return nil
@@ -163,6 +172,7 @@ func (a *APIDataSource) pollLoop() {
 		select {
 		case <-a.stopChan:
 			logger.Info("API polling loop stopped")
+			a.wg.Done()
 			return
 
 		case <-ticker.C:
@@ -208,14 +218,19 @@ func (a *APIDataSource) fetchObservation() {
 		a.latestObservation = obs
 		a.lastUpdate = time.Now()
 		a.observationCount++
+		obsChan := a.observationChan
+		isRunning := a.running
 		a.mu.Unlock()
 
-		// Send to channel (non-blocking)
-		select {
-		case a.observationChan <- *obs:
-			logger.Debug("Observation sent to channel")
-		default:
-			logger.Debug("Observation channel full, skipping")
+		// Only send if still running
+		if isRunning {
+			// Send to channel (non-blocking)
+			select {
+			case obsChan <- *obs:
+				logger.Debug("Observation sent to channel")
+			default:
+				logger.Debug("Observation channel full, skipping")
+			}
 		}
 	}
 }

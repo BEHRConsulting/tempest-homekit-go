@@ -300,7 +300,7 @@ func TestAlarmConfigValidate(t *testing.T) {
 			config: AlarmConfig{
 				Alarms: []Alarm{},
 			},
-			wantError: true, // Validate requires at least one alarm
+			wantError: false, // Empty config is allowed - manager can watch for file changes
 		},
 	}
 
