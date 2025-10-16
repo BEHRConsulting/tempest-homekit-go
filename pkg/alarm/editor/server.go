@@ -281,10 +281,26 @@ func (s *Server) handleUpdateAlarm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find and update the alarm
+	// Get original name from query parameter (for name changes)
+	oldName := r.URL.Query().Get("oldName")
+	if oldName == "" {
+		oldName = updatedAlarm.Name // Default to current name if not changing
+	}
+
+	// Check for duplicate name (if name is changing)
+	if oldName != updatedAlarm.Name {
+		for _, a := range s.config.Alarms {
+			if a.Name == updatedAlarm.Name {
+				http.Error(w, fmt.Sprintf("Alarm with name '%s' already exists", updatedAlarm.Name), http.StatusConflict)
+				return
+			}
+		}
+	}
+
+	// Find and update the alarm by old name
 	found := false
 	for i, a := range s.config.Alarms {
-		if a.Name == updatedAlarm.Name {
+		if a.Name == oldName {
 			// Validate channels
 			for j, ch := range updatedAlarm.Channels {
 				if err := ch.Validate(); err != nil {
@@ -300,7 +316,7 @@ func (s *Server) handleUpdateAlarm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !found {
-		http.Error(w, fmt.Sprintf("Alarm '%s' not found", updatedAlarm.Name), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Alarm '%s' not found", oldName), http.StatusNotFound)
 		return
 	}
 

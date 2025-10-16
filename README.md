@@ -160,7 +160,7 @@ The alarm system enables rule-based weather alerting with multiple notification 
 - **Syslog**: Local or remote syslog server
 - **OSLog**: macOS unified logging system (os_log API via CGO)
 - **Email**: SMTP or Microsoft 365 OAuth2
-- **SMS**: Twilio or AWS SNS
+- **SMS**: ✅ **AWS SNS** (fully implemented) | ⏳ Twilio (coming soon)
 - **EventLog**: System event log (Windows) or syslog (Unix)
 
 **Features:**
@@ -226,6 +226,20 @@ For generic SMTP providers (Gmail, SendGrid, Mailgun, etc.), configure:
 - `SMTP_FROM_ADDRESS`, `SMTP_USE_TLS=true`
 
 See `.env.example` for provider-specific examples with standard ports and TLS settings.
+
+**AWS SNS SMS Setup:**
+For AWS SNS configuration (recommended for production SMS), see detailed setup instructions in `.env.example`. Quick setup:
+1. Create IAM user with `sns:Publish` permission (principle of least privilege)
+2. Configure credentials in `.env`: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`
+3. Run the automated setup script: `./scripts/setup-aws-sns.sh`
+4. The script will:
+   - Verify AWS CLI credentials (uses your admin credentials from `~/.aws/`)
+   - Configure production SMS settings (type, spending limits)
+   - Optionally create SNS topics with subscriptions
+   - Update `.env` with Topic ARN automatically
+   - Send test SMS for verification
+
+**Important**: The AWS credentials in `.env` are for the **application runtime user** (limited permissions). The setup script uses your **admin AWS CLI credentials** from `~/.aws/credentials` or `aws configure`.
 
 ### Using the Alarm Editor
 

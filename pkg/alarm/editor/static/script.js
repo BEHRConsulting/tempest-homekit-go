@@ -397,7 +397,7 @@ function editAlarm(name) {
     if (!currentAlarm) return;
     
     document.getElementById('alarmName').value = currentAlarm.name;
-    document.getElementById('alarmName').readOnly = true;
+    document.getElementById('alarmName').readOnly = false;
     document.getElementById('alarmDescription').value = currentAlarm.description || '';
     document.getElementById('alarmCondition').value = currentAlarm.condition;
     
@@ -616,7 +616,9 @@ async function handleSubmit(e) {
         channels: channels
     };
     
-    const endpoint = currentAlarm ? '/api/alarms/update' : '/api/alarms/create';
+    // Track original name for updates (in case name changed)
+    const originalName = currentAlarm ? currentAlarm.name : null;
+    const endpoint = currentAlarm ? `/api/alarms/update?oldName=${encodeURIComponent(originalName)}` : '/api/alarms/create';
     
     try {
         const response = await fetch(endpoint, {

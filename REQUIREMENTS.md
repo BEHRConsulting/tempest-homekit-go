@@ -1,7 +1,7 @@
 # Tempest HomeKit Go Service - Requirements & Features
 # Vibe Programming Research Implementation
 
-**Version**: v1.5.0
+**Version**: v1.8.0
 
 ## Research Methodology Overview
 
@@ -168,6 +168,10 @@ This document presents the technical requirements and implementation results for
 - ✅ `ALARMS`: Alarm system configuration (file path or JSON string)
 - ✅ `ALARMS_EDIT`: Alarm editor configuration file path (standalone mode)
 - ✅ `ALARMS_EDIT_PORT`: Alarm editor web UI port (default: "8081")
+- ✅ `AWS_ACCESS_KEY_ID`: AWS IAM user access key for SNS (SMS notifications)
+- ✅ `AWS_SECRET_ACCESS_KEY`: AWS IAM user secret key for SNS
+- ✅ `AWS_REGION`: AWS region for SNS service (e.g., us-west-2)
+- ✅ `AWS_SNS_TOPIC_ARN`: Optional SNS topic ARN for broadcasting SMS (e.g., arn:aws:sns:us-west-2:123456789012:WeatherAlert)
 
 ### Service Operation
 

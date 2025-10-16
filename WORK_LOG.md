@@ -25,6 +25,7 @@ These are approximate times aggregated across the development sessions that prod
 - Alarm system development (editor, JSON validation, debug logging): ~8-10 hours
 - Alarm change detection state persistence fix: ~2 hours
 - Microsoft 365 OAuth2 email implementation: ~3-4 hours
+- AWS SNS SMS notifications implementation (v1.8.0): ~4-6 hours
 
 Major Design Changes
 --------------------
@@ -57,6 +58,15 @@ Major Design Changes
   - Automatic fallback to SMTP if OAuth2 credentials are missing
   - Full documentation with Azure AD setup instructions, permissions guide, and troubleshooting
   - Example alarm configuration with 6 realistic weather alert scenarios
+- AWS SNS SMS Integration (v1.8.0):
+  - Implemented complete AWS SNS SMS notification delivery using AWS SDK v2
+  - Support for both direct SMS to phone numbers and SNS topic broadcasting
+  - Two-tier credential system: admin credentials for setup, runtime credentials for sending
+  - Comprehensive setup automation script (`scripts/setup-aws-sns.sh`) with interactive configuration
+  - Environment-first architecture: all provider credentials in `.env`, alarm rules in JSON
+  - Complete unit test suite covering configuration, templating, and error handling
+  - Enhanced `.gitignore` to protect all `.env` variants and backups
+  - Full documentation with IAM setup, security best practices, and production considerations
 
 Best & Worst Prompts (AI-assisted development)
 ----------------------------------------------

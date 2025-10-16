@@ -38,7 +38,7 @@ func main() {
 
 	// Handle version flag
 	if cfg.Version {
-		fmt.Println("tempest-homekit-go v1.7.0")
+		fmt.Println("tempest-homekit-go v1.8.0")
 		fmt.Println("Built with Go 1.24.2")
 		fmt.Println("HomeKit integration for WeatherFlow Tempest weather stations")
 		os.Exit(0)
@@ -82,7 +82,7 @@ func main() {
 	}
 
 	logger.Info("Starting service with config: WebPort=%s, LogLevel=%s", cfg.WebPort, cfg.LogLevel)
-	err := service.StartService(cfg, "1.6.0")
+	err := service.StartService(cfg, "1.8.0")
 	if err != nil {
 		log.Fatalf("Service failed: %v", err)
 	}

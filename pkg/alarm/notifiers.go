@@ -16,6 +16,10 @@ import (
 	"github.com/microsoftgraph/msgraph-sdk-go/models"
 	"github.com/microsoftgraph/msgraph-sdk-go/users"
 
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	awscredentials "github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
+
 	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/weather"
 )
@@ -448,22 +452,99 @@ func (n *SMSNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observat
 
 	message := expandTemplate(channel.SMS.Message, alarm, obs, stationName)
 
-	// Note: go-sms-sender integration would go here
-	// For now, log the SMS that would be sent
-	logger.Info("SMS Notification [%s provider]: To=%v, Message=%s",
-		n.config.Provider, channel.SMS.To, message)
+	// Send based on provider
+	switch n.config.Provider {
+	case "aws_sns", "sns", "aws":
+		return n.sendAWSSNS(channel.SMS, message)
+	case "twilio":
+		return n.sendTwilio(channel.SMS, message)
+	default:
+		return fmt.Errorf("unsupported SMS provider: %s", n.config.Provider)
+	}
+}
 
-	// TODO: Implement actual SMS sending using go-sms-sender
-	// Example for Twilio:
-	// client := sms.NewClient(n.config.AccountSID, n.config.AuthToken)
-	// for _, to := range channel.SMS.To {
-	//     err := client.Send(n.config.FromNumber, to, message)
-	//     if err != nil {
-	//         return err
-	//     }
-	// }
+func (n *SMSNotifier) sendAWSSNS(smsConfig *SMSConfig, message string) error {
+	// Get credentials from config (with environment variable expansion)
+	accessKey := os.ExpandEnv(n.config.AWSAccessKey)
+	secretKey := os.ExpandEnv(n.config.AWSSecretKey)
+	region := os.ExpandEnv(n.config.AWSRegion)
+	topicARN := os.ExpandEnv(n.config.AWSSNSTopicARN)
+
+	if accessKey == "" || secretKey == "" || region == "" {
+		return fmt.Errorf("AWS SNS credentials missing (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION required)")
+	}
+
+	logger.Debug("Sending SMS via AWS SNS")
+	logger.Debug("  Region: %s", region)
+	logger.Debug("  To: %v", smsConfig.To)
+
+	// Create AWS config with credentials
+	ctx := context.Background()
+	cfg, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithRegion(region),
+		awsconfig.WithCredentialsProvider(awscredentials.NewStaticCredentialsProvider(
+			accessKey,
+			secretKey,
+			"",
+		)),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	// Create SNS client
+	snsClient := sns.NewFromConfig(cfg)
+
+	// Send to each recipient
+	var lastErr error
+	successCount := 0
+
+	for _, phoneNumber := range smsConfig.To {
+		// If topic ARN is provided, publish to topic
+		if topicARN != "" {
+			logger.Debug("Publishing to SNS topic: %s", topicARN)
+			publishInput := &sns.PublishInput{
+				Message:  &message,
+				TopicArn: &topicARN,
+			}
+			_, err := snsClient.Publish(ctx, publishInput)
+			if err != nil {
+				lastErr = err
+				logger.Error("Failed to publish to SNS topic %s: %v", topicARN, err)
+			} else {
+				successCount++
+				logger.Info("SMS published to SNS topic %s", topicARN)
+			}
+		} else {
+			// Direct SMS to phone number
+			logger.Debug("Sending direct SMS to: %s", phoneNumber)
+			publishInput := &sns.PublishInput{
+				Message:     &message,
+				PhoneNumber: &phoneNumber,
+			}
+			_, err := snsClient.Publish(ctx, publishInput)
+			if err != nil {
+				lastErr = err
+				logger.Error("Failed to send SMS to %s via AWS SNS: %v", phoneNumber, err)
+			} else {
+				successCount++
+				logger.Info("SMS sent successfully to %s via AWS SNS", phoneNumber)
+			}
+		}
+	}
+
+	if successCount == 0 && lastErr != nil {
+		return fmt.Errorf("failed to send any SMS messages: %w", lastErr)
+	}
 
 	return nil
+}
+
+func (n *SMSNotifier) sendTwilio(smsConfig *SMSConfig, message string) error {
+	// TODO: Implement Twilio SMS sending
+	logger.Info("SMS Notification [Twilio]: To=%v, Message=%s", smsConfig.To, message)
+	logger.Warn("Twilio SMS sending not yet implemented")
+	return fmt.Errorf("Twilio SMS provider not yet implemented")
 }
 
 // formatAppInfo returns formatted application information
@@ -593,7 +674,7 @@ func formatSensorInfoWithAlarm(obs *weather.Observation, alarm *Alarm, isHTML bo
 		}
 		return "N/A"
 	}
-	
+
 	// Special handler for illuminance which needs number formatting
 	getPrevLux := func() string {
 		if alarm == nil {
@@ -607,7 +688,7 @@ func formatSensorInfoWithAlarm(obs *weather.Observation, alarm *Alarm, isHTML bo
 		}
 		return "N/A"
 	}
-	
+
 	// Helper to get row style based on whether value changed
 	getRowStyle := func(changed bool) string {
 		if changed {
