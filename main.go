@@ -22,8 +22,20 @@ import (
 )
 
 func main() {
-	// Load .env file if it exists (silently ignore if not present)
-	_ = godotenv.Load()
+	// Parse --env flag early to determine which environment file to load
+	envFile := ".env"
+	for i, arg := range os.Args {
+		if arg == "--env" && i+1 < len(os.Args) {
+			envFile = os.Args[i+1]
+			break
+		}
+	}
+
+	// Load environment file (silently ignore if not present)
+	if err := godotenv.Load(envFile); err != nil && envFile != ".env" {
+		// If a custom env file was specified but couldn't be loaded, show error
+		log.Printf("Warning: Could not load environment file '%s': %v", envFile, err)
+	}
 
 	cfg := config.LoadConfig()
 

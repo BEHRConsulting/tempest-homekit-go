@@ -51,6 +51,9 @@ type Config struct {
 	Alarms         string // Alarm configuration: @filename.json or inline JSON
 	AlarmsEdit     string // Alarm editor mode: @filename.json to edit
 	AlarmsEditPort string // Port for alarm editor (default: 8081)
+
+	// Environment file
+	EnvFile string // Custom environment file (default: .env)
 }
 
 // customUsage prints a well-formatted help message with grouped flags and examples
@@ -98,6 +101,9 @@ WEB CONSOLE OPTIONS:
                                 Updates every 15 minutes, incompatible with --disable-internet
 
 CONFIGURATION OPTIONS:
+  --env <filename>              Custom environment file to load (default: ".env")
+                                Overrides default .env file location
+                                Env: ENV_FILE
   --elevation <value>           Station elevation (e.g., 903ft, 275m)
                                 Auto-detected from station coordinates if not provided
   --units <system>              Units system: imperial (default), metric, or sae
@@ -196,6 +202,7 @@ func LoadConfig() *Config {
 		Alarms:               getEnvOrDefault("ALARMS", ""),
 		AlarmsEdit:           getEnvOrDefault("ALARMS_EDIT", ""),
 		AlarmsEditPort:       getEnvOrDefault("ALARMS_EDIT_PORT", "8081"),
+		EnvFile:              getEnvOrDefault("ENV_FILE", ".env"),
 	}
 
 	// Set custom usage function
@@ -230,6 +237,7 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.Alarms, "alarms", cfg.Alarms, "Alarm configuration: @filename.json or inline JSON string")
 	flag.StringVar(&cfg.AlarmsEdit, "alarms-edit", cfg.AlarmsEdit, "Run alarm editor for specified config file: @filename.json")
 	flag.StringVar(&cfg.AlarmsEditPort, "alarms-edit-port", cfg.AlarmsEditPort, "Port for alarm editor web UI (default: 8081)")
+	flag.StringVar(&cfg.EnvFile, "env", cfg.EnvFile, "Custom environment file to load (default: .env)")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
 
 	// Parse flags but check if elevation was actually provided
