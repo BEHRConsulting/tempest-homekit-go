@@ -400,6 +400,10 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `--cleardb`: Clear HomeKit database and reset device pairing
 - `--disable-homekit`: Disable HomeKit services and run web console only
 - `--elevation`: Station elevation in meters (default: auto-detect, valid range: -430m to 8848m)
+- `--env`: Custom environment file to load (default: ".env"). Env: ENV_FILE
+  - Overrides the default `.env` file location
+  - Useful for multiple configurations or deployment environments
+  - Example: `./tempest-homekit-go --env /etc/tempest/production.env`
 - `--loglevel`: Logging level - debug, info, warn/warning, error (default: "error")
 - `--logfilter`: Filter log messages to only show those containing this string (case-insensitive) - useful for targeted debugging
 - `--pin`: HomeKit pairing PIN (default: "00102003")  

@@ -119,7 +119,9 @@
 
 [] Lets implement the alarms sms (Twilio) notifications
 
-[] Request this every 3-4 major changes or monthly:
+[x] Add a command line parameter --env <filename> that overrides .env. 
+
+[x] Request this every 3-4 major changes or monthly:
 "Perform a comprehensive documentation audit comparing REQUIREMENTS.md, README.md, and CODE_REVIEW.md against the current codebase. 
 
 1. **REQUIREMENTS.md**: Verify every section can be used to recreate the app

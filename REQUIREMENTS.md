@@ -235,6 +235,7 @@ This document presents the technical requirements and implementation results for
 - ✅ `--web-port`: Web dashboard port (default: "8080")
 - ✅ `--cleardb`: Clear HomeKit database and reset device pairing
 - ✅ `--elevation`: Station elevation in meters (auto-detect or manual, Earth-realistic range: -430m to 8848m)
+- ✅ `--env`: Custom environment file to load (default: ".env") - Overrides default .env file location for multiple configurations or deployment environments
 - ✅ `--sensors`: Enhanced sensor configuration with aliases support:
   - **Sensor Aliases**: `temp`/`temperature`, `lux`/`light`, `uv`/`uvi`
   - **Preset Options**: `all` (all sensors), `min` (temp,humidity,lux)
@@ -258,6 +259,7 @@ This document presents the technical requirements and implementation results for
 - ✅ **Alias Support**: Intuitive sensor name aliases for improved user experience
 
 #### Environment Variables
+- ✅ `ENV_FILE`: Custom environment file path (default: ".env")
 - ✅ `TEMPEST_TOKEN`: WeatherFlow API token
 - ✅ `TEMPEST_STATION_NAME`: Station name
 - ✅ `HOMEKIT_PIN`: HomeKit PIN
