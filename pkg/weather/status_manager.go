@@ -249,12 +249,12 @@ type UDPDeviceStatus struct {
 
 // UDPHubStatus represents hub status from UDP broadcasts
 type UDPHubStatus struct {
-	Timestamp      int64
-	FirmwareRev    string
-	Uptime         int
-	RSSI           int
-	ResetFlags     string
-	SerialNumber   string
+	Timestamp    int64
+	FirmwareRev  string
+	Uptime       int
+	RSSI         int
+	ResetFlags   string
+	SerialNumber string
 }
 
 // UpdateFromUDP updates the cached status with data from UDP broadcasts

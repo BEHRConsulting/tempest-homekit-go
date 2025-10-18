@@ -205,6 +205,19 @@ func StartService(cfg *config.Config, version string) error {
 		enabledSensors = append(enabledSensors, "Lightning")
 	}
 
+	// Build complete sensor list (all possible sensors, regardless of enabled/disabled status)
+	allSensorsList := []string{
+		"Temperature",
+		"Humidity",
+		"Light",
+		"UV",
+		"Wind Speed",
+		"Wind Direction",
+		"Rain",
+		"Pressure",
+		"Lightning",
+	}
+
 	// Update HomeKit status in web server based on whether HomeKit is enabled
 	var homekitStatus map[string]interface{}
 	if cfg.DisableHomeKit {
@@ -213,18 +226,28 @@ func StartService(cfg *config.Config, version string) error {
 			"name":           "HomeKit Disabled",
 			"accessories":    0,
 			"accessoryNames": []string{},
+			"allSensors":     allSensorsList,
 			"sensorConfig":   "Web Console Only",
 			"pin":            "N/A",
 			"status":         "Disabled by --disable-homekit flag",
 		}
 	} else {
-		homekitStatus = map[string]interface{}{
-			"bridge":         true,
-			"name":           "Tempest HomeKit Bridge",
-			"accessories":    len(enabledSensors),
-			"accessoryNames": enabledSensors,
-			"sensorConfig":   cfg.Sensors,
-			"pin":            cfg.Pin,
+		// Get detailed HomeKit info from weather system if available
+		if ws != nil {
+			homekitStatus = ws.GetDetailedInfo()
+			homekitStatus["sensorConfig"] = cfg.Sensors
+			homekitStatus["allSensors"] = allSensorsList
+			homekitStatus["accessoryNames"] = enabledSensors // Override with actual enabled sensors from config
+		} else {
+			homekitStatus = map[string]interface{}{
+				"bridge":         true,
+				"name":           "Tempest HomeKit Bridge",
+				"accessories":    len(enabledSensors),
+				"accessoryNames": enabledSensors,
+				"allSensors":     allSensorsList,
+				"sensorConfig":   cfg.Sensors,
+				"pin":            cfg.Pin,
+			}
 		}
 	}
 	if webServer != nil {

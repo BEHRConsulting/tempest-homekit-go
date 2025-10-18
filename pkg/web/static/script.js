@@ -308,9 +308,28 @@ function initCharts() {
             
             const popCtx = popoutCanvas.getContext('2d');
             
-            // Build datasets array - average/trend first (drawn behind), then data on top
+            // Build datasets array - data line first (underneath), then average/trend lines on top
             // Light and UV charts don't need average lines
             const datasets = [];
+            
+            // Main data line is always first (drawn underneath)
+            datasets.push({ 
+                data: [], 
+                label: config.label,
+                borderColor: config.color,
+                backgroundColor: config.color + '1A',
+                fill: false,
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 2,
+                pointHoverRadius: 6,
+                pointBackgroundColor: config.color,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverBackgroundColor: config.color,
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 3
+            });
             
             if (chartType !== 'light' && chartType !== 'uv') {
                 datasets.push({
@@ -326,7 +345,7 @@ function initCharts() {
                 });
             }
             
-            // Pressure chart needs a trend line (dataset[1] if average exists, dataset[0] if not)
+            // Pressure chart needs a trend line (on top of average)
             if (chartType === 'pressure') {
                 datasets.push({
                     data: [],
@@ -341,7 +360,7 @@ function initCharts() {
                 });
             }
             
-            // Rain chart needs accumulated line and today total (datasets 1 and 2)
+            // Rain chart needs accumulated line and today total (on top of data)
             if (chartType === 'rain') {
                 datasets.push({
                     data: [],
@@ -365,25 +384,6 @@ function initCharts() {
                     label: 'Today Total'
                 });
             }
-            
-            // Main data line is always last (drawn on top)
-            datasets.push({ 
-                data: [], 
-                label: config.label,
-                borderColor: config.color,
-                backgroundColor: config.color + '1A',
-                fill: false,
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 2,
-                pointHoverRadius: 6,
-                pointBackgroundColor: config.color,
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointHoverBackgroundColor: config.color,
-                pointHoverBorderColor: '#fff',
-                pointHoverBorderWidth: 3
-            });
             
             const popChart = new Chart(popCtx, {
                 type: 'line',
@@ -900,8 +900,7 @@ function initCharts() {
                 spanGaps: false,
                 label: 'Rain (incremental)',
                 pointRadius: 2,
-                pointHoverRadius: 4,
-                order: 4  // Render data points at bottom layer
+                pointHoverRadius: 4
             }, {
                 data: [],
                 borderColor: '#66ff66',
@@ -911,8 +910,16 @@ function initCharts() {
                 fill: false,
                 pointRadius: 0,
                 tension: 0,
-                label: 'Average',
-                order: 3  // Render above data points
+                label: 'Average'
+            }, {
+                data: [],
+                borderColor: '#00d4ff',
+                backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                borderWidth: 2,
+                fill: false,
+                pointRadius: 0,
+                tension: 0,
+                label: 'Window Total'
             }, {
                 data: [],
                 borderColor: '#ff6b35',
@@ -922,18 +929,7 @@ function initCharts() {
                 fill: false,
                 pointRadius: 0,
                 tension: 0,
-                label: 'Today Total',
-                order: 1  // Render on top of everything
-            }, {
-                data: [],
-                borderColor: '#00d4ff',
-                backgroundColor: 'rgba(0, 212, 255, 0.1)',
-                borderWidth: 2,
-                fill: false,
-                pointRadius: 0,
-                tension: 0,
-                label: 'Window Total',
-                order: 2  // Render between data and today total
+                label: 'Today Total'
             }]
         },
         options: {
@@ -3284,8 +3280,8 @@ function updateStatusDisplay(status) {
     if (homekitBridge) homekitBridge.textContent = hk.name || '--';
     if (homekitPin) homekitPin.textContent = hk.pin || '--';
 
-    // Update accessories list
-    updateAccessoriesList(hk.accessoryNames || []);
+    // Update detailed HomeKit connection info, technical details, and accessories
+    updateHomekitStatus(status);
     
     debugLog(logLevels.DEBUG, 'Status display update completed', {
         tempestConnected: status.connected,
@@ -3422,17 +3418,28 @@ function updateDetailedStationStatus(status) {
         // Update Device Status fields from actual station status
         if (deviceUptime) deviceUptime.textContent = stationStatus.deviceUptime || '--';
         if (deviceNetwork) deviceNetwork.textContent = stationStatus.deviceNetworkStatus || '--';
-        if (deviceSignal) deviceSignal.textContent = stationStatus.deviceSignal || '--';
+        if (deviceSignal) {
+            deviceSignal.textContent = stationStatus.deviceSignal || '--';
+            // Update signal bars
+            createSignalBars(stationStatus.deviceSignal, 'tempest-device-signal-bars');
+        }
         if (deviceLastObs) deviceLastObs.textContent = stationStatus.deviceLastObs || '--';
         if (deviceSerial) deviceSerial.textContent = stationStatus.deviceSerialNumber || '--';
         if (deviceFirmware) deviceFirmware.textContent = stationStatus.deviceFirmware || '--';
         if (sensorStatus) sensorStatus.textContent = stationStatus.sensorStatus || '--';
         if (batteryStatus) batteryStatus.textContent = stationStatus.batteryStatus || '--';
+        
+        // Update battery indicator with color coding
+        updateBatteryIndicator(stationStatus.batteryVoltage);
 
         // Update Hub Status fields from actual station status
         if (hubUptime) hubUptime.textContent = stationStatus.hubUptime || '--';
         if (hubNetwork) hubNetwork.textContent = stationStatus.hubNetworkStatus || '--';
-        if (hubWifi) hubWifi.textContent = stationStatus.hubWiFiSignal || '--';
+        if (hubWifi) {
+            hubWifi.textContent = stationStatus.hubWiFiSignal || '--';
+            // Update signal bars for hub
+            createSignalBars(stationStatus.hubWiFiSignal, 'tempest-hub-signal-bars');
+        }
         if (hubLastStatus) hubLastStatus.textContent = stationStatus.hubLastStatus || '--';
         if (hubSerial) hubSerial.textContent = stationStatus.hubSerialNumber || '--';
         if (hubFirmware) hubFirmware.textContent = stationStatus.hubFirmware || '--';
@@ -3882,8 +3889,54 @@ function updateHomekitStatus(status) {
     if (homekitBridge) homekitBridge.textContent = hk.name || '--';
     if (homekitPin) homekitPin.textContent = hk.pin || '--';
 
-    // Update accessories list
-    updateAccessoriesList(hk.accessoryNames || []);
+    // Update Connection Info fields
+    const setupCode = document.getElementById('homekit-setup-code');
+    const pairedDevices = document.getElementById('homekit-paired-devices');
+    const reachability = document.getElementById('homekit-reachability');
+    const lastRequest = document.getElementById('homekit-last-request');
+    
+    if (setupCode) setupCode.textContent = hk.bridge ? (hk.setupCode || '--') : 'N/A';
+    if (pairedDevices) pairedDevices.textContent = hk.bridge ? (hk.pairedDevices || 'Unknown') : 'N/A';
+    
+    // Generate QR code for HomeKit pairing
+    if (hk.bridge && hk.setupCode) {
+        generateHomekitQRCode(hk.setupCode);
+    }
+    if (reachability) {
+        if (hk.bridge) {
+            const reachable = hk.reachability !== false;
+            reachability.textContent = reachable ? '✓ Reachable' : '✗ Unreachable';
+            reachability.style.color = reachable ? '#28a745' : '#dc3545';
+        } else {
+            reachability.textContent = 'N/A';
+            reachability.style.color = '#6c757d';
+        }
+    }
+    if (lastRequest) lastRequest.textContent = hk.bridge ? (hk.lastRequest || 'Active') : 'N/A';
+    
+    // Update Technical Details fields
+    const bridgeId = document.getElementById('homekit-bridge-id');
+    const manufacturer = document.getElementById('homekit-manufacturer');
+    const model = document.getElementById('homekit-model');
+    const firmware = document.getElementById('homekit-firmware');
+    const port = document.getElementById('homekit-port');
+    const hapVersion = document.getElementById('homekit-hap-version');
+    const configNumber = document.getElementById('homekit-config-number');
+    const category = document.getElementById('homekit-category');
+    const pairedUptime = document.getElementById('homekit-paired-uptime');
+    
+    if (bridgeId) bridgeId.textContent = hk.bridge ? (hk.bridgeId || '--') : 'N/A';
+    if (manufacturer) manufacturer.textContent = hk.bridge ? (hk.manufacturer || '--') : 'N/A';
+    if (model) model.textContent = hk.bridge ? (hk.model || '--') : 'N/A';
+    if (firmware) firmware.textContent = hk.bridge ? (hk.firmware || '--') : 'N/A';
+    if (port) port.textContent = hk.bridge ? (hk.port || '--') : 'N/A';
+    if (hapVersion) hapVersion.textContent = hk.bridge ? (hk.hapVersion || '--') : 'N/A';
+    if (configNumber) configNumber.textContent = hk.bridge ? (hk.configNumber || '--') : 'N/A';
+    if (category) category.textContent = hk.bridge ? (hk.category || '--') : 'N/A';
+    if (pairedUptime) pairedUptime.textContent = hk.bridge ? (hk.pairedUptime || 'Not yet paired') : 'N/A';
+
+    // Update accessories list with all sensors info
+    updateAccessoriesList(hk.accessoryNames || [], hk.allSensors || []);
     
     debugLog(logLevels.DEBUG, 'Status display update completed', {
         tempestConnected: status.connected,
@@ -3892,8 +3945,84 @@ function updateHomekitStatus(status) {
     });
 }
 
-function updateAccessoriesList(accessoryNames) {
-    debugLog(logLevels.DEBUG, 'Updating accessories list', { accessoryNames });
+// Generate HomeKit QR code on canvas
+function generateHomekitQRCode(setupCode) {
+    const canvas = document.getElementById('homekit-qr-code');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const size = 200; // QR code size in pixels
+    canvas.width = size;
+    canvas.height = size;
+    
+    // Clear canvas
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, size, size);
+    
+    // Simple QR code generation using a basic pattern
+    // For HomeKit setup code format: X-HH-HHH-HHH where H is PIN digit
+    const cellSize = size / 21; // 21x21 grid for simplicity
+    
+    // Create a simple data matrix based on setup code
+    const data = encodeHomekitSetupCode(setupCode);
+    
+    // Draw QR-like pattern
+    ctx.fillStyle = 'black';
+    for (let y = 0; y < 21; y++) {
+        for (let x = 0; x < 21; x++) {
+            const index = y * 21 + x;
+            if (data[index]) {
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            }
+        }
+    }
+}
+
+// Encode HomeKit setup code into a simple pattern
+function encodeHomekitSetupCode(setupCode) {
+    const size = 21 * 21;
+    const data = new Array(size).fill(false);
+    
+    // Add finder patterns (corners)
+    const addFinderPattern = (startX, startY) => {
+        for (let y = 0; y < 7; y++) {
+            for (let x = 0; x < 7; x++) {
+                const shouldFill = (x === 0 || x === 6 || y === 0 || y === 6 || (x >= 2 && x <= 4 && y >= 2 && y <= 4));
+                if (shouldFill) {
+                    const index = (startY + y) * 21 + (startX + x);
+                    if (index < size) data[index] = true;
+                }
+            }
+        }
+    };
+    
+    addFinderPattern(0, 0);   // Top-left
+    addFinderPattern(14, 0);  // Top-right
+    addFinderPattern(0, 14);  // Bottom-left
+    
+    // Encode the setup code into the center area
+    const codeStr = setupCode.replace(/[^0-9]/g, ''); // Extract digits only
+    for (let i = 0; i < codeStr.length && i < 8; i++) {
+        const digit = parseInt(codeStr[i]);
+        const startX = 8 + (i % 4);
+        const startY = 8 + Math.floor(i / 4) * 2;
+        
+        // Encode each digit as a 2x2 pattern
+        for (let bit = 0; bit < 4; bit++) {
+            if (digit & (1 << bit)) {
+                const x = startX + (bit % 2);
+                const y = startY + Math.floor(bit / 2);
+                const index = y * 21 + x;
+                if (index < size) data[index] = true;
+            }
+        }
+    }
+    
+    return data;
+}
+
+function updateAccessoriesList(accessoryNames, allSensors) {
+    debugLog(logLevels.DEBUG, 'Updating accessories list', { accessoryNames, allSensors });
     
     const accessoriesList = document.getElementById('accessories-list');
     if (!accessoriesList) {
@@ -3903,35 +4032,43 @@ function updateAccessoriesList(accessoryNames) {
     
     accessoriesList.innerHTML = '';
 
-    if (!accessoryNames || accessoryNames.length === 0) {
-        accessoriesList.innerHTML = '<div class="accessory-item">No accessories available</div>';
-        debugLog(logLevels.DEBUG, 'No accessories to display');
+    // If no configured sensors at all
+    if (!allSensors || allSensors.length === 0) {
+        accessoriesList.innerHTML = '<div class="accessory-item">No sensors configured</div>';
+        debugLog(logLevels.DEBUG, 'No sensors configured');
         return;
     }
 
-    // Define all possible sensors with their icons
-    const allSensors = [
-        { name: 'Temperature', icon: '🌡️', key: 'Temperature' },
-        { name: 'Humidity', icon: '💧', key: 'Humidity' },
-        { name: 'Light', icon: '☀️', key: 'Light' },
-        { name: 'UV Index', icon: '🌞', key: 'UV' },
-        { name: 'Wind Speed', icon: '🌬️', key: 'Wind Speed' },
-        { name: 'Wind Direction', icon: '🧭', key: 'Wind Direction' },
-        { name: 'Rain', icon: '🌧️', key: 'Rain' },
-        { name: 'Pressure', icon: '📊', key: 'Pressure' },
-        { name: 'Lightning', icon: '⚡', key: 'Lightning' }
-    ];
+    // Define sensor icons mapping
+    const sensorIcons = {
+        'Temperature': '🌡️',
+        'Humidity': '💧',
+        'Light': '☀️',
+        'UV': '🌞',
+        'Wind Speed': '🌬️',
+        'Wind Direction': '🧭',
+        'Rain': '🌧️',
+        'Pressure': '📊',
+        'Lightning': '⚡'
+    };
 
     // Determine which sensors are enabled based on accessoryNames
     const enabledSensors = [];
     const disabledSensors = [];
 
-    allSensors.forEach(sensor => {
-        const isEnabled = accessoryNames && accessoryNames.some(name => name.includes(sensor.key));
+    allSensors.forEach(sensorName => {
+        const isEnabled = accessoryNames && accessoryNames.some(name => name.includes(sensorName) || sensorName.includes(name));
+        const sensor = {
+            name: sensorName === 'UV' ? 'UV Index' : sensorName,
+            icon: sensorIcons[sensorName] || '❓',
+            key: sensorName,
+            enabled: isEnabled
+        };
+        
         if (isEnabled) {
-            enabledSensors.push({ ...sensor, enabled: true });
+            enabledSensors.push(sensor);
         } else {
-            disabledSensors.push({ ...sensor, enabled: false });
+            disabledSensors.push(sensor);
         }
     });
 
@@ -3982,6 +4119,164 @@ function toggleAccessoriesExpansion() {
         }
         
         debugLog(logLevels.DEBUG, 'Accessories expansion toggled', { expanded: !isExpanded });
+    }
+}
+
+function toggleDeviceStatusExpansion() {
+    const expandedDiv = document.getElementById('device-status-expanded');
+    const expandIcon = document.getElementById('device-status-expand-icon');
+
+    if (expandedDiv && expandIcon) {
+        const isExpanded = expandedDiv.style.display !== 'none' && expandedDiv.style.display !== '';
+        
+        if (!isExpanded) {
+            expandedDiv.style.display = 'block';
+            expandIcon.textContent = '▼';
+        } else {
+            expandedDiv.style.display = 'none';
+            expandIcon.textContent = '▶';
+        }
+        
+        debugLog(logLevels.DEBUG, 'Device status expansion toggled', { expanded: !isExpanded });
+    }
+}
+
+function toggleHubStatusExpansion() {
+    const expandedDiv = document.getElementById('hub-status-expanded');
+    const expandIcon = document.getElementById('hub-status-expand-icon');
+
+    if (expandedDiv && expandIcon) {
+        const isExpanded = expandedDiv.style.display !== 'none' && expandedDiv.style.display !== '';
+        
+        if (!isExpanded) {
+            expandedDiv.style.display = 'block';
+            expandIcon.textContent = '▼';
+        } else {
+            expandedDiv.style.display = 'none';
+            expandIcon.textContent = '▶';
+        }
+        
+        debugLog(logLevels.DEBUG, 'Hub status expansion toggled', { expanded: !isExpanded });
+    }
+}
+
+function toggleHomekitConnectionExpansion() {
+    const expandedDiv = document.getElementById('homekit-connection-expanded');
+    const expandIcon = document.getElementById('homekit-connection-expand-icon');
+
+    if (expandedDiv && expandIcon) {
+        const isExpanded = expandedDiv.style.display !== 'none' && expandedDiv.style.display !== '';
+        
+        if (!isExpanded) {
+            expandedDiv.style.display = 'block';
+            expandIcon.textContent = '▼';
+        } else {
+            expandedDiv.style.display = 'none';
+            expandIcon.textContent = '▶';
+        }
+        
+        debugLog(logLevels.DEBUG, 'HomeKit connection expansion toggled', { expanded: !isExpanded });
+    }
+}
+
+function toggleHomekitTechnicalExpansion() {
+    const expandedDiv = document.getElementById('homekit-technical-expanded');
+    const expandIcon = document.getElementById('homekit-technical-expand-icon');
+
+    if (expandedDiv && expandIcon) {
+        const isExpanded = expandedDiv.style.display !== 'none' && expandedDiv.style.display !== '';
+        
+        if (!isExpanded) {
+            expandedDiv.style.display = 'block';
+            expandIcon.textContent = '▼';
+        } else {
+            expandedDiv.style.display = 'none';
+            expandIcon.textContent = '▶';
+        }
+        
+        debugLog(logLevels.DEBUG, 'HomeKit technical expansion toggled', { expanded: !isExpanded });
+    }
+}
+
+// Toggle compact mode for Tempest card
+function toggleCompactMode() {
+    const tempestCard = document.getElementById('tempest-card');
+    if (tempestCard) {
+        tempestCard.classList.toggle('compact');
+        const isCompact = tempestCard.classList.contains('compact');
+        localStorage.setItem('tempest-compact-mode', isCompact ? 'true' : 'false');
+        debugLog(logLevels.DEBUG, 'Compact mode toggled', { compact: isCompact });
+    }
+}
+
+// Update battery indicator with color coding
+function updateBatteryIndicator(voltage) {
+    const indicator = document.getElementById('tempest-battery-indicator');
+    if (!indicator) return;
+    
+    // Remove all status classes
+    indicator.classList.remove('good', 'fair', 'low');
+    
+    // Parse voltage if it's a string like "2.45V"
+    let voltageNum = typeof voltage === 'string' ? parseFloat(voltage) : voltage;
+    
+    if (isNaN(voltageNum)) {
+        indicator.style.display = 'none';
+        return;
+    }
+    
+    indicator.style.display = 'inline-block';
+    
+    // Color code based on voltage
+    if (voltageNum > 2.5) {
+        indicator.classList.add('good');
+    } else if (voltageNum > 2.3) {
+        indicator.classList.add('fair');
+    } else {
+        indicator.classList.add('low');
+    }
+}
+
+// Create signal strength bars
+function createSignalBars(rssi, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // Clear existing bars
+    container.innerHTML = '';
+    
+    // Parse RSSI if it's a string like "-45 dBm (Excellent)"
+    let rssiNum = typeof rssi === 'string' ? parseInt(rssi) : rssi;
+    
+    if (isNaN(rssiNum)) {
+        return;
+    }
+    
+    // Determine signal quality
+    let quality;
+    let activeBars;
+    if (rssiNum >= -50) {
+        quality = 'excellent';
+        activeBars = 4;
+    } else if (rssiNum >= -60) {
+        quality = 'good';
+        activeBars = 3;
+    } else if (rssiNum >= -70) {
+        quality = 'fair';
+        activeBars = 2;
+    } else {
+        quality = 'poor';
+        activeBars = 1;
+    }
+    
+    // Create 4 bars
+    for (let i = 1; i <= 4; i++) {
+        const bar = document.createElement('span');
+        bar.className = 'signal-bar';
+        if (i <= activeBars) {
+            bar.classList.add('active', quality);
+        }
+        container.appendChild(bar);
     }
 }
 
@@ -4260,6 +4555,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (!isChartOnly) {
         attachEventListener('accessories-row', 'click', toggleAccessoriesExpansion, 'Toggle accessories expansion');
+        attachEventListener('device-status-row', 'click', toggleDeviceStatusExpansion, 'Toggle device status expansion');
+        attachEventListener('hub-status-row', 'click', toggleHubStatusExpansion, 'Toggle hub status expansion');
+        attachEventListener('homekit-connection-row', 'click', toggleHomekitConnectionExpansion, 'Toggle HomeKit connection info');
+        attachEventListener('homekit-technical-row', 'click', toggleHomekitTechnicalExpansion, 'Toggle HomeKit technical details');
+        attachEventListener('tempest-compact-toggle', 'click', toggleCompactMode, 'Toggle compact/detailed view mode');
         attachEventListener('lux-info-icon', 'click', toggleLuxTooltip, 'Show/hide lux information tooltip');
         attachEventListener('lux-tooltip-close', 'click', closeLuxTooltip, 'Close lux tooltip');
         attachEventListener('rain-info-icon', 'click', toggleRainTooltip, 'Show/hide rain information tooltip');
@@ -4283,6 +4583,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', handlePressureTooltipClickOutside);
     
     debugLog(logLevels.DEBUG, 'All event listeners attached');
+    
+    // Restore compact mode from localStorage
+    const isCompact = localStorage.getItem('tempest-compact-mode') === 'true';
+    if (isCompact) {
+        const tempestCard = document.getElementById('tempest-card');
+        if (tempestCard) {
+            tempestCard.classList.add('compact');
+        }
+    }
 
     // Start data fetching - fetch status first to determine data source type
     debugLog(logLevels.INFO, 'Starting periodic data fetching (10-second intervals)');

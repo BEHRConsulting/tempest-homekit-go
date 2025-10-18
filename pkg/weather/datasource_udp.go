@@ -169,7 +169,7 @@ func (u *UDPDataSource) forwardLoop() {
 	logger.Info("Starting UDP observation forwarding loop with periodic status updates (30s interval)")
 
 	udpChan := u.listener.ObservationChannel()
-	
+
 	// Create ticker for periodic status updates (every 30 seconds)
 	statusTicker := time.NewTicker(30 * time.Second)
 	defer statusTicker.Stop()
@@ -267,12 +267,12 @@ func (u *UDPDataSource) updateStatusFromUDP() {
 		// Convert from udp.HubStatus to weather.UDPHubStatus
 		if hsMap, ok := hs.(map[string]interface{}); ok {
 			hubStatus = &UDPHubStatus{
-				Timestamp:      getMapInt64(hsMap, "timestamp"),
-				FirmwareRev:    getMapString(hsMap, "firmware_rev"),
-				Uptime:         getMapInt(hsMap, "uptime"),
-				RSSI:           getMapInt(hsMap, "rssi"),
-				ResetFlags:     getMapString(hsMap, "reset_flags"),
-				SerialNumber:   getMapString(hsMap, "serial_number"),
+				Timestamp:    getMapInt64(hsMap, "timestamp"),
+				FirmwareRev:  getMapString(hsMap, "firmware_rev"),
+				Uptime:       getMapInt(hsMap, "uptime"),
+				RSSI:         getMapInt(hsMap, "rssi"),
+				ResetFlags:   getMapString(hsMap, "reset_flags"),
+				SerialNumber: getMapString(hsMap, "serial_number"),
 			}
 		}
 	}
@@ -303,7 +303,7 @@ func (u *UDPDataSource) fetchForecast() {
 	u.latestForecast = forecast
 	u.mu.Unlock()
 
-		logger.Debug("Successfully fetched forecast data")
+	logger.Debug("Successfully fetched forecast data")
 }
 
 // Helper functions for converting map values (prefixed to avoid name conflicts)
@@ -357,5 +357,3 @@ func getMapString(m map[string]interface{}, key string) string {
 	}
 	return ""
 }
-
-

@@ -177,6 +177,7 @@ body {
     display: flex;
     align-items: center;
     margin-bottom: 15px;
+    position: relative;
 }
 
 .card-icon {
@@ -188,6 +189,29 @@ body {
     font-size: 1.2rem;
     font-weight: 600;
     color: var(--card-title);
+    flex: 1;
+}
+
+/* Compact Mode Toggle Button */
+.compact-toggle {
+    margin-left: auto;
+    background: none;
+    border: 1px solid rgba(0, 123, 255, 0.3);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    color: #666;
+}
+
+.compact-toggle:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+    border-color: rgba(0, 123, 255, 0.5);
+}
+
+.compact-toggle:active {
+    transform: scale(0.95);
 }
 
 .card-value {
@@ -252,6 +276,93 @@ body {
     background-color: rgba(0, 123, 255, 0.05);
     border-radius: 6px;
     border-left: 3px solid #007bff;
+}
+
+.status-expanded {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: 6px;
+    border-left: 3px solid #007bff;
+}
+
+/* Battery Indicator */
+.battery-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.battery-indicator.good {
+    background-color: #28a745;
+    box-shadow: 0 0 4px rgba(40, 167, 69, 0.5);
+}
+
+.battery-indicator.fair {
+    background-color: #ffc107;
+    box-shadow: 0 0 4px rgba(255, 193, 7, 0.5);
+}
+
+.battery-indicator.low {
+    background-color: #dc3545;
+    box-shadow: 0 0 4px rgba(220, 53, 69, 0.5);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Signal Strength Bars */
+.signal-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 12px;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.signal-bar {
+    width: 3px;
+    background-color: #ccc;
+    transition: background-color 0.3s;
+}
+
+.signal-bar:nth-child(1) { height: 4px; }
+.signal-bar:nth-child(2) { height: 7px; }
+.signal-bar:nth-child(3) { height: 10px; }
+.signal-bar:nth-child(4) { height: 12px; }
+
+.signal-bar.active.excellent { background-color: #28a745; }
+.signal-bar.active.good { background-color: #28a745; }
+.signal-bar.active.fair { background-color: #ffc107; }
+.signal-bar.active.poor { background-color: #dc3545; }
+
+/* Compact Mode */
+.card.compact .info-row {
+    padding: 2px 0;
+    font-size: 0.85rem;
+}
+
+.card.compact .status-section {
+    margin-top: 8px;
+}
+
+.card.compact .section-header {
+    font-size: 0.9rem;
+}
+
+.card.compact .info-label {
+    font-size: 0.85rem;
+}
+
+.card.compact .info-value {
+    font-size: 0.85rem;
 }
 
 .accessory-item {

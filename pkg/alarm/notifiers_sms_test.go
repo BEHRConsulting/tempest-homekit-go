@@ -44,7 +44,7 @@ func TestSMSNotifier(t *testing.T) {
 				os.Unsetenv("AWS_SECRET_ACCESS_KEY")
 				os.Unsetenv("AWS_REGION")
 			},
-			cleanupEnv: func() {},
+			cleanupEnv:    func() {},
 			expectError:   true,
 			errorContains: "AWS SNS credentials missing",
 		},
@@ -56,7 +56,7 @@ func TestSMSNotifier(t *testing.T) {
 				os.Unsetenv("TWILIO_AUTH_TOKEN")
 				os.Unsetenv("TWILIO_FROM_NUMBER")
 			},
-			cleanupEnv: func() {},
+			cleanupEnv:    func() {},
 			expectError:   true,
 			errorContains: "Twilio credentials missing",
 		},

@@ -9,7 +9,7 @@ import (
 // TestUnitConversionTemperature tests temperature unit conversions (F to C)
 func TestUnitConversionTemperature(t *testing.T) {
 	evaluator := NewEvaluator()
-	
+
 	tests := []struct {
 		name      string
 		condition string
@@ -47,7 +47,7 @@ func TestUnitConversionTemperature(t *testing.T) {
 			tempC:     24.0, // 24C = 75.2F
 			expected:  true,
 		},
-		
+
 		// Explicit Celsius (no conversion needed)
 		{
 			name:      "30C explicit",
@@ -61,7 +61,7 @@ func TestUnitConversionTemperature(t *testing.T) {
 			tempC:     31.0,
 			expected:  true,
 		},
-		
+
 		// No unit suffix (assumed Celsius)
 		{
 			name:      "No unit suffix defaults to Celsius",
@@ -69,7 +69,7 @@ func TestUnitConversionTemperature(t *testing.T) {
 			tempC:     26.0,
 			expected:  true,
 		},
-		
+
 		// Complex conditions
 		{
 			name:      "Compound condition with F and C",
@@ -84,13 +84,13 @@ func TestUnitConversionTemperature(t *testing.T) {
 			expected:  true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			obs := &weather.Observation{
 				AirTemperature: tt.tempC,
 			}
-			
+
 			result, err := evaluator.Evaluate(tt.condition, obs)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
@@ -106,7 +106,7 @@ func TestUnitConversionTemperature(t *testing.T) {
 // TestUnitConversionWindSpeed tests wind speed unit conversions (mph to m/s)
 func TestUnitConversionWindSpeed(t *testing.T) {
 	evaluator := NewEvaluator()
-	
+
 	tests := []struct {
 		name      string
 		condition string
@@ -144,7 +144,7 @@ func TestUnitConversionWindSpeed(t *testing.T) {
 			windMS:    5.0, // 5 m/s = ~11.2 mph
 			expected:  true,
 		},
-		
+
 		// Explicit m/s (no conversion needed)
 		{
 			name:      "10m/s explicit",
@@ -164,7 +164,7 @@ func TestUnitConversionWindSpeed(t *testing.T) {
 			windMS:    11.0,
 			expected:  true,
 		},
-		
+
 		// No unit suffix (assumed m/s)
 		{
 			name:      "No unit suffix defaults to m/s",
@@ -172,7 +172,7 @@ func TestUnitConversionWindSpeed(t *testing.T) {
 			windMS:    11.0,
 			expected:  true,
 		},
-		
+
 		// Complex conditions
 		{
 			name:      "Compound condition with mph and m/s",
@@ -187,14 +187,14 @@ func TestUnitConversionWindSpeed(t *testing.T) {
 			expected:  true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			obs := &weather.Observation{
 				WindAvg:  tt.windMS,
 				WindGust: tt.windMS,
 			}
-			
+
 			result, err := evaluator.Evaluate(tt.condition, obs)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
@@ -210,7 +210,7 @@ func TestUnitConversionWindSpeed(t *testing.T) {
 // TestParseValueWithUnits tests the unit parsing function directly
 func TestParseValueWithUnits(t *testing.T) {
 	evaluator := NewEvaluator()
-	
+
 	tests := []struct {
 		name     string
 		value    string
@@ -226,7 +226,7 @@ func TestParseValueWithUnits(t *testing.T) {
 		{"30C explicit", "30C", "temperature", 30.0, false},
 		{"30c lowercase", "30c", "temp", 30.0, false},
 		{"25 no unit", "25", "temperature", 25.0, false},
-		
+
 		// Wind speed conversions
 		{"25mph to m/s", "25mph", "wind_speed", 11.176, false},
 		{"50mph to m/s", "50mph", "wind_gust", 22.352, false},
@@ -235,33 +235,33 @@ func TestParseValueWithUnits(t *testing.T) {
 		{"10M/S uppercase", "10M/S", "wind_gust", 10.0, false},
 		{"10ms no slash", "10ms", "wind_speed", 10.0, false},
 		{"15 no unit", "15", "wind_speed", 15.0, false},
-		
+
 		// Other fields (no conversion)
 		{"humidity no unit", "80", "humidity", 80.0, false},
 		{"pressure no unit", "1013.25", "pressure", 1013.25, false},
-		
+
 		// Error cases
 		{"invalid number", "abc", "temperature", 0, true},
 		{"invalid F", "abcF", "temperature", 0, true},
 		{"invalid mph", "abcmph", "wind_speed", 0, true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := evaluator.parseValueWithUnits(tt.value, tt.field)
-			
+
 			if tt.hasError {
 				if err == nil {
 					t.Errorf("Expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 				return
 			}
-			
+
 			// Use delta comparison for floating point
 			delta := 0.001
 			if result < tt.expected-delta || result > tt.expected+delta {
@@ -275,7 +275,7 @@ func TestParseValueWithUnits(t *testing.T) {
 // TestRealWorldScenarios tests practical alarm conditions
 func TestRealWorldScenarios(t *testing.T) {
 	evaluator := NewEvaluator()
-	
+
 	tests := []struct {
 		name      string
 		condition string
@@ -333,7 +333,7 @@ func TestRealWorldScenarios(t *testing.T) {
 			expected: true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := evaluator.Evaluate(tt.condition, tt.obs)

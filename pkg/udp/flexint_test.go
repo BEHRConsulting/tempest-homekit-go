@@ -48,12 +48,12 @@ func TestFlexIntParsing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var msg UDPMessage
 			err := json.Unmarshal([]byte(tt.jsonData), &msg)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("json.Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if !tt.wantErr {
 				if int(msg.FirmwareRevision) != tt.wantVal {
 					t.Errorf("FirmwareRevision = %d, want %d", msg.FirmwareRevision, tt.wantVal)
@@ -82,13 +82,13 @@ func TestFlexIntInvalidValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var msg UDPMessage
 			err := json.Unmarshal([]byte(tt.jsonData), &msg)
-			
+
 			// Should not error, just use 0 for invalid values
 			if err != nil {
 				t.Errorf("json.Unmarshal() unexpected error = %v", err)
 				return
 			}
-			
+
 			// Invalid values should default to 0
 			if int(msg.FirmwareRevision) != 0 {
 				t.Errorf("FirmwareRevision = %d, want 0 for invalid value", msg.FirmwareRevision)

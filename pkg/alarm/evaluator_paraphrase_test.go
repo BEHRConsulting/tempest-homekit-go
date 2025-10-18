@@ -8,9 +8,9 @@ func TestParaphrase(t *testing.T) {
 	evaluator := NewEvaluator()
 
 	tests := []struct {
-		name       string
-		condition  string
-		expected   string
+		name      string
+		condition string
+		expected  string
 	}{
 		{
 			name:      "Simple temperature comparison (F)",

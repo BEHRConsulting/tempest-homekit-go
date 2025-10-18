@@ -1507,6 +1507,7 @@ func (ws *WebServer) getDashboardHTML() string {
                 <div class="card-header">
                     <span class="card-icon">🌤️</span>
                     <span class="card-title">Tempest Station</span>
+                    <button class="compact-toggle" id="tempest-compact-toggle" title="Toggle compact/detailed view">⚙️</button>
                 </div>
                 <div class="card-content">
                     <!-- General Status -->
@@ -1545,71 +1546,90 @@ func (ws *WebServer) getDashboardHTML() string {
                     
                     <!-- Device Status -->
                     <div class="status-section">
-                        <div class="section-header">📡 Device Status</div>
-                        <div class="info-row">
-                            <span class="info-label">Battery Level:</span>
-                            <span class="info-value" id="tempest-battery">--</span>
+                        <div class="info-row clickable" id="device-status-row">
+                            <span class="info-label section-header">📡 Device Status</span>
+                            <span class="expand-icon" id="device-status-expand-icon">▶</span>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">Device Uptime:</span>
-                            <span class="info-value" id="tempest-device-uptime">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Network Status:</span>
-                            <span class="info-value" id="tempest-device-network">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Signal Strength:</span>
-                            <span class="info-value" id="tempest-device-signal">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Last Observation:</span>
-                            <span class="info-value" id="tempest-device-last-obs">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Serial Number:</span>
-                            <span class="info-value" id="tempest-device-serial">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Firmware:</span>
-                            <span class="info-value" id="tempest-device-firmware">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Sensor Status:</span>
-                            <span class="info-value" id="tempest-sensor-status">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Battery Status:</span>
-                            <span class="info-value" id="tempest-battery-status">--</span>
+                        <div class="status-expanded hidden" id="device-status-expanded">
+                            <div class="info-row">
+                                <span class="info-label">Battery Level:</span>
+                                <span class="info-value">
+                                    <span class="battery-indicator" id="tempest-battery-indicator"></span>
+                                    <span id="tempest-battery">--</span>
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Device Uptime:</span>
+                                <span class="info-value" id="tempest-device-uptime">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Network Status:</span>
+                                <span class="info-value" id="tempest-device-network">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Signal Strength:</span>
+                                <span class="info-value">
+                                    <span class="signal-bars" id="tempest-device-signal-bars"></span>
+                                    <span id="tempest-device-signal">--</span>
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Last Observation:</span>
+                                <span class="info-value" id="tempest-device-last-obs">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Serial Number:</span>
+                                <span class="info-value" id="tempest-device-serial">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Firmware:</span>
+                                <span class="info-value" id="tempest-device-firmware">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Sensor Status:</span>
+                                <span class="info-value" id="tempest-sensor-status">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Battery Status:</span>
+                                <span class="info-value" id="tempest-battery-status">--</span>
+                            </div>
                         </div>
                     </div>
                     
                     <!-- Hub Status -->
                     <div class="status-section">
-                        <div class="section-header">🏠 Hub Status</div>
-                        <div class="info-row">
-                            <span class="info-label">Hub Uptime:</span>
-                            <span class="info-value" id="tempest-hub-uptime">--</span>
+                        <div class="info-row clickable" id="hub-status-row">
+                            <span class="info-label section-header">🏠 Hub Status</span>
+                            <span class="expand-icon" id="hub-status-expand-icon">▶</span>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">Network Status:</span>
-                            <span class="info-value" id="tempest-hub-network">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">WiFi Signal:</span>
-                            <span class="info-value" id="tempest-hub-wifi">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Last Status:</span>
-                            <span class="info-value" id="tempest-hub-last-status">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Serial Number:</span>
-                            <span class="info-value" id="tempest-hub-serial">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Firmware:</span>
-                            <span class="info-value" id="tempest-hub-firmware">--</span>
+                        <div class="status-expanded hidden" id="hub-status-expanded">
+                            <div class="info-row">
+                                <span class="info-label">Hub Uptime:</span>
+                                <span class="info-value" id="tempest-hub-uptime">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Network Status:</span>
+                                <span class="info-value" id="tempest-hub-network">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">WiFi Signal:</span>
+                                <span class="info-value">
+                                    <span class="signal-bars" id="tempest-hub-signal-bars"></span>
+                                    <span id="tempest-hub-wifi">--</span>
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Last Status:</span>
+                                <span class="info-value" id="tempest-hub-last-status">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Serial Number:</span>
+                                <span class="info-value" id="tempest-hub-serial">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Firmware:</span>
+                                <span class="info-value" id="tempest-hub-firmware">--</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1621,9 +1641,14 @@ func (ws *WebServer) getDashboardHTML() string {
                     <span class="card-title">HomeKit Bridge</span>
                 </div>
                 <div class="card-content">
+                    <!-- General Status -->
                     <div class="info-row">
                         <span class="info-label">Status:</span>
                         <span class="info-value" id="homekit-status">Inactive</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Bridge Name:</span>
+                        <span class="info-value" id="homekit-bridge">--</span>
                     </div>
                     <div class="info-row clickable" id="accessories-row">
                         <span class="info-label">Accessories:</span>
@@ -1635,13 +1660,85 @@ func (ws *WebServer) getDashboardHTML() string {
                             <!-- Accessories will be populated here -->
                         </div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Bridge:</span>
-                        <span class="info-value" id="homekit-bridge">--</span>
+                    
+                    <!-- Connection Info -->
+                    <div class="status-section">
+                        <div class="info-row clickable" id="homekit-connection-row">
+                            <span class="info-label section-header">🔗 Connection Info</span>
+                            <span class="expand-icon" id="homekit-connection-expand-icon">▶</span>
+                        </div>
+                        <div class="status-expanded hidden" id="homekit-connection-expanded">
+                            <div class="info-row">
+                                <span class="info-label">Setup PIN:</span>
+                                <span class="info-value" id="homekit-pin">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Setup Code:</span>
+                                <span class="info-value" id="homekit-setup-code">--</span>
+                            </div>
+                            <div class="info-row" style="flex-direction: column; align-items: center; padding: 10px 0;">
+                                <span class="info-label" style="margin-bottom: 10px;">Setup QR Code:</span>
+                                <canvas id="homekit-qr-code" style="border: 2px solid #ddd; border-radius: 8px; padding: 10px; background: white;"></canvas>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Paired Devices:</span>
+                                <span class="info-value" id="homekit-paired-devices">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Reachability:</span>
+                                <span class="info-value" id="homekit-reachability">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Last Request:</span>
+                                <span class="info-value" id="homekit-last-request">--</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">PIN:</span>
-                        <span class="info-value" id="homekit-pin">--</span>
+                    
+                    <!-- Technical Details -->
+                    <div class="status-section">
+                        <div class="info-row clickable" id="homekit-technical-row">
+                            <span class="info-label section-header">⚙️ Technical Details</span>
+                            <span class="expand-icon" id="homekit-technical-expand-icon">▶</span>
+                        </div>
+                        <div class="status-expanded hidden" id="homekit-technical-expanded">
+                            <div class="info-row">
+                                <span class="info-label">Bridge ID:</span>
+                                <span class="info-value" id="homekit-bridge-id">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Manufacturer:</span>
+                                <span class="info-value" id="homekit-manufacturer">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Model:</span>
+                                <span class="info-value" id="homekit-model">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Firmware:</span>
+                                <span class="info-value" id="homekit-firmware">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Bridge Port:</span>
+                                <span class="info-value" id="homekit-port">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">HAP Version:</span>
+                                <span class="info-value" id="homekit-hap-version">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Configuration #:</span>
+                                <span class="info-value" id="homekit-config-number">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Category:</span>
+                                <span class="info-value" id="homekit-category">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Uptime (Paired):</span>
+                                <span class="info-value" id="homekit-paired-uptime">--</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

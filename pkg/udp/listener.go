@@ -120,13 +120,13 @@ type DeviceStatus struct {
 
 // HubStatus holds hub status information
 type HubStatus struct {
-	Timestamp      time.Time
-	FirmwareRev    string
-	Uptime         int
-	RSSI           int
-	ResetFlags     string
-	Seq            int
-	SerialNumber   string
+	Timestamp    time.Time
+	FirmwareRev  string
+	Uptime       int
+	RSSI         int
+	ResetFlags   string
+	Seq          int
+	SerialNumber string
 }
 
 // NewUDPListener creates a new UDP listener
@@ -535,13 +535,13 @@ func (l *UDPListener) processDeviceStatus(msg UDPMessage) {
 // processHubStatus processes hub status messages
 func (l *UDPListener) processHubStatus(msg UDPMessage) {
 	status := &HubStatus{
-		Timestamp:      time.Unix(msg.Timestamp, 0),
-		FirmwareRev:    fmt.Sprintf("%d", msg.FirmwareRevision),
-		Uptime:         msg.Uptime,
-		RSSI:           msg.RSSI,
-		ResetFlags:     msg.ResetFlags,
-		Seq:            msg.Seq,
-		SerialNumber:   msg.SerialNumber,
+		Timestamp:    time.Unix(msg.Timestamp, 0),
+		FirmwareRev:  fmt.Sprintf("%d", msg.FirmwareRevision),
+		Uptime:       msg.Uptime,
+		RSSI:         msg.RSSI,
+		ResetFlags:   msg.ResetFlags,
+		Seq:          msg.Seq,
+		SerialNumber: msg.SerialNumber,
 	}
 
 	l.mu.Lock()

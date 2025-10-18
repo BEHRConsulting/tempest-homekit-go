@@ -1103,23 +1103,79 @@ The application supports configuration via environment variables, which can be s
 
 #### Available Environment Variables
 
+**Core Configuration:**
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `TEMPEST_TOKEN` | *(see below)* | WeatherFlow API token |
 | `TEMPEST_STATION_NAME` | *(required)* | Your station name from WeatherFlow |
 | `HOMEKIT_PIN` | `00102003` | HomeKit pairing PIN |
-| `SENSORS` | `temp,lux,humidity,uv` | Enabled sensors |
+| `SENSORS` | `temp,lux,humidity,uv` | Enabled sensors (comma-delimited) |
 | `WEB_PORT` | `8080` | Web console port |
 | `UNITS` | `imperial` | Unit system (imperial/metric/sae) |
 | `UNITS_PRESSURE` | `inHg` | Pressure units (inHg/mb/hpa) |
 | `HISTORY_POINTS` | `1000` | Data points to store (min 10) |
 | `CHART_HISTORY_HOURS` | `24` | Hours to display in charts (0=all) |
-| `UDP_STREAM` | `false` | Enable UDP mode (true/false) |
-| `DISABLE_INTERNET` | `false` | Offline mode (true/false) |
 | `LOG_LEVEL` | `error` | Logging level (error/warn/warning/info/debug) |
 | `LOG_FILTER` | *(empty)* | Filter log messages |
+| `ENV_FILE` | `.env` | Custom environment file to load |
+
+**Data Source Options:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `READ_HISTORY` | `false` | Preload historical data from API (true/false) |
+| `STATION_URL` | *(empty)* | Custom station URL (overrides Tempest API) |
+| `UDP_STREAM` | `false` | Enable UDP mode for offline operation (true/false) |
+| `DISABLE_INTERNET` | `false` | Disable all internet access (true/false) |
+| `GENERATE_WEATHER_PATH` | `/api/generate-weather` | Path for generated weather endpoint |
+
+**Alarm & Notification (Email):**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ALARMS` | *(empty)* | Alarm configuration: @filename.json or inline JSON |
+| `ALARMS_EDIT` | *(empty)* | Run alarm editor for specified config file |
+| `ALARMS_EDIT_PORT` | `8081` | Port for alarm editor web UI |
+| `SMTP_HOST` | *(empty)* | SMTP server hostname |
+| `SMTP_PORT` | `587` | SMTP server port |
+| `SMTP_USERNAME` | *(empty)* | SMTP authentication username |
+| `SMTP_PASSWORD` | *(empty)* | SMTP authentication password |
+| `SMTP_FROM_ADDRESS` | *(empty)* | Email sender address |
+| `SMTP_FROM_NAME` | *(empty)* | Email sender name |
+| `SMTP_USE_TLS` | `true` | Use TLS for SMTP connection (true/false) |
+| `MS365_CLIENT_ID` | *(empty)* | Microsoft 365 OAuth2 client ID |
+| `MS365_CLIENT_SECRET` | *(empty)* | Microsoft 365 OAuth2 client secret |
+| `MS365_TENANT_ID` | *(empty)* | Microsoft 365 tenant ID |
+| `MS365_FROM_ADDRESS` | *(empty)* | Microsoft 365 sender address |
+
+**Alarm & Notification (SMS):**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TWILIO_ACCOUNT_SID` | *(empty)* | Twilio account SID |
+| `TWILIO_AUTH_TOKEN` | *(empty)* | Twilio authentication token |
+| `TWILIO_FROM_NUMBER` | *(empty)* | Twilio sender phone number (E.164 format) |
+| `AWS_ACCESS_KEY_ID` | *(empty)* | AWS access key for SNS |
+| `AWS_SECRET_ACCESS_KEY` | *(empty)* | AWS secret key for SNS |
+| `AWS_REGION` | *(empty)* | AWS region for SNS |
+| `AWS_SNS_TOPIC_ARN` | *(empty)* | AWS SNS topic ARN |
+
+**Alarm & Notification (Syslog):**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SYSLOG_ADDRESS` | *(empty)* | Syslog server address |
+| `SYSLOG_NETWORK` | *(empty)* | Syslog network protocol (tcp/udp) |
+| `SYSLOG_PRIORITY` | `warning` | Syslog priority level |
+| `SYSLOG_TAG` | `tempest-weather` | Syslog message tag |
 
 **Note:** Command-line flags always override environment variables.
+
+**Overriding .env Boolean Values**: To disable a boolean flag that's set to `true` in your `.env` file, explicitly pass `--flag=false` on the command line. For example, if your `.env` contains `USE_HISTORY=true`, you can disable it with:
+```bash
+./tempest-homekit-go --use-history=false
+```
 
 #### Example .env Configurations
 
