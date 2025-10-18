@@ -32,12 +32,44 @@ const (
 	TypeHubStatus      MessageType = "hub_status"
 )
 
+// FlexInt is a type that can unmarshal from either int or string.
+// This is needed because Tempest UDP broadcasts sometimes send firmware_revision
+// as an integer (e.g., 35) and sometimes as a string (e.g., "35").
+type FlexInt int
+
+// UnmarshalJSON implements json.Unmarshaler for FlexInt.
+// It handles both integer and string representations of numbers.
+func (fi *FlexInt) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal as int first
+	var i int
+	if err := json.Unmarshal(data, &i); err == nil {
+		*fi = FlexInt(i)
+		return nil
+	}
+
+	// Try to unmarshal as string
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		// Try to parse string as int
+		var parsed int
+		if _, err := fmt.Sscanf(s, "%d", &parsed); err == nil {
+			*fi = FlexInt(parsed)
+			return nil
+		}
+		// If it's not a valid number, just use 0
+		*fi = FlexInt(0)
+		return nil
+	}
+
+	return fmt.Errorf("firmware_revision must be int or string")
+}
+
 // UDPMessage represents the generic structure of all UDP broadcast messages
 type UDPMessage struct {
 	SerialNumber     string          `json:"serial_number"`
 	Type             MessageType     `json:"type"`
 	HubSN            string          `json:"hub_sn"`
-	FirmwareRevision int             `json:"firmware_revision,omitempty"`
+	FirmwareRevision FlexInt         `json:"firmware_revision,omitempty"`
 	Obs              [][]interface{} `json:"obs,omitempty"`
 	Ob               []interface{}   `json:"ob,omitempty"`  // For rapid_wind
 	Evt              []interface{}   `json:"evt,omitempty"` // For events
@@ -72,6 +104,7 @@ type UDPListener struct {
 	observationChan chan weather.Observation
 	stopChan        chan struct{}
 	running         bool
+	packetCallback  func([]byte) // Callback for raw packet data
 }
 
 // DeviceStatus holds device status information
@@ -113,6 +146,14 @@ func NewUDPListener(maxHistorySize int) *UDPListener {
 		observationChan: make(chan weather.Observation, 100),
 		stopChan:        make(chan struct{}),
 	}
+}
+
+// SetPacketCallback sets a callback function that will be called for each received packet
+// The callback receives the raw packet data
+func (l *UDPListener) SetPacketCallback(callback func([]byte)) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.packetCallback = callback
 }
 
 // Start begins listening for UDP broadcasts
@@ -203,10 +244,107 @@ func (l *UDPListener) listen() {
 	}
 }
 
+// PrettyPrintMessage formats a UDP message for human-readable output
+func PrettyPrintMessage(data []byte) string {
+	var msg UDPMessage
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return fmt.Sprintf("❌ Failed to parse: %v", err)
+	}
+
+	ts := time.Now().Format("15:04:05")
+	switch msg.Type {
+	case TypeObservationST:
+		if len(msg.Obs) > 0 && len(msg.Obs[0]) >= 18 {
+			obs := msg.Obs[0]
+			temp := obs[7].(float64)
+			humidity := obs[8].(float64)
+			pressure := obs[6].(float64)
+			windAvg := obs[2].(float64)
+			windGust := obs[3].(float64)
+			windDir := obs[4].(float64)
+			rain := obs[12].(float64)
+			uv := int(obs[10].(float64))
+			lux := obs[9].(float64)
+			lightningCount := int(obs[15].(float64))
+			lightningDist := obs[14].(float64)
+			battery := obs[16].(float64)
+			return fmt.Sprintf("[%s] 🌡️  obs_st | Temp: %.1f°C | Humidity: %.0f%% | Pressure: %.1fmb | Wind: %.1f/%.1fm/s@%.0f° | UV: %d | Lux: %.0f | Rain: %.2fmm | Lightning: %d@%.0fkm | Battery: %.2fV | Serial: %s",
+				ts, temp, humidity, pressure, windAvg, windGust, windDir, uv, lux, rain, lightningCount, lightningDist, battery, msg.SerialNumber)
+		}
+	case TypeObservationAir:
+		if len(msg.Obs) > 0 && len(msg.Obs[0]) >= 8 {
+			obs := msg.Obs[0]
+			temp := obs[2].(float64)
+			humidity := obs[3].(float64)
+			pressure := obs[1].(float64)
+			lightningCount := int(obs[4].(float64))
+			lightningDist := obs[5].(float64)
+			battery := obs[6].(float64)
+			return fmt.Sprintf("[%s] 🌡️  obs_air | Temp: %.1f°C | Humidity: %.0f%% | Pressure: %.1fmb | Lightning: %d@%.0fkm | Battery: %.2fV | Serial: %s",
+				ts, temp, humidity, pressure, lightningCount, lightningDist, battery, msg.SerialNumber)
+		}
+	case TypeObservationSky:
+		if len(msg.Obs) > 0 && len(msg.Obs[0]) >= 14 {
+			obs := msg.Obs[0]
+			windAvg := obs[5].(float64)
+			windGust := obs[6].(float64)
+			windDir := obs[7].(float64)
+			rain := obs[3].(float64)
+			uv := int(obs[2].(float64))
+			lux := obs[1].(float64)
+			solar := obs[10].(float64)
+			battery := obs[8].(float64)
+			return fmt.Sprintf("[%s] ☀️  obs_sky | Wind: %.1f/%.1fm/s@%.0f° | UV: %d | Lux: %.0f | Solar: %.0fW/m² | Rain: %.2fmm | Battery: %.2fV | Serial: %s",
+				ts, windAvg, windGust, windDir, uv, lux, solar, rain, battery, msg.SerialNumber)
+		}
+	case TypeRapidWind:
+		if len(msg.Ob) >= 3 {
+			windSpeed := msg.Ob[1].(float64)
+			windDir := int(msg.Ob[2].(float64))
+			return fmt.Sprintf("[%s] 💨 rapid_wind | Speed: %.1fm/s | Direction: %d° | Serial: %s",
+				ts, windSpeed, windDir, msg.SerialNumber)
+		}
+	case TypeRainStart:
+		if len(msg.Evt) > 0 {
+			timestamp := int64(msg.Evt[0].(float64))
+			return fmt.Sprintf("[%s] 🌧️  evt_precip | Rain started at %s | Serial: %s",
+				ts, time.Unix(timestamp, 0).Format("15:04:05"), msg.SerialNumber)
+		}
+	case TypeLightning:
+		if len(msg.Evt) >= 3 {
+			timestamp := int64(msg.Evt[0].(float64))
+			distance := msg.Evt[1].(float64)
+			energy := msg.Evt[2].(float64)
+			return fmt.Sprintf("[%s] ⚡ evt_strike | Distance: %.1fkm | Energy: %.0f | Time: %s | Serial: %s",
+				ts, distance, energy, time.Unix(timestamp, 0).Format("15:04:05"), msg.SerialNumber)
+		}
+	case TypeDeviceStatus:
+		return fmt.Sprintf("[%s] 📊 device_status | Uptime: %ds | Battery: %.2fV | RSSI: %ddBm | Hub RSSI: %ddBm | Sensor Status: 0x%X | Serial: %s",
+			ts, msg.Uptime, msg.Voltage, msg.RSSI, msg.HubRSSI, msg.SensorStatus, msg.SerialNumber)
+	case TypeHubStatus:
+		return fmt.Sprintf("[%s] 🔌 hub_status | Uptime: %ds | RSSI: %ddBm | Firmware: %d | Reset Flags: %s | Seq: %d | Serial: %s",
+			ts, msg.Uptime, msg.RSSI, msg.FirmwareRevision, msg.ResetFlags, msg.Seq, msg.SerialNumber)
+	default:
+		return fmt.Sprintf("[%s] ❓ %s | Serial: %s", ts, msg.Type, msg.SerialNumber)
+	}
+	return fmt.Sprintf("[%s] ⚠️  %s (incomplete data) | Serial: %s", ts, msg.Type, msg.SerialNumber)
+}
+
 // processMessage parses and processes a UDP message
 func (l *UDPListener) processMessage(data []byte) {
-	// Log raw packet data when debug logging is enabled
-	logger.Debug("UDP Packet received (%d bytes): %s", len(data), string(data))
+	// Call packet callback if set (for --test-udp mode)
+	l.mu.RLock()
+	callback := l.packetCallback
+	l.mu.RUnlock()
+
+	if callback != nil {
+		callback(data)
+	}
+
+	// Pretty print packet if debug logging is enabled
+	if logger.IsDebugEnabled() {
+		fmt.Println(PrettyPrintMessage(data))
+	}
 
 	var msg UDPMessage
 	if err := json.Unmarshal(data, &msg); err != nil {

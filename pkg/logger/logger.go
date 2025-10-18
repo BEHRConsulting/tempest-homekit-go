@@ -104,3 +104,8 @@ func Alarm(format string, v ...interface{}) {
 		log.Printf("🚨 ALARM: %s", message)
 	}
 }
+
+// IsDebugEnabled returns true if debug logging is currently enabled
+func IsDebugEnabled() bool {
+	return currentLogLevel == LogLevelDebug
+}

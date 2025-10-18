@@ -272,7 +272,12 @@ func runUDPTest(cfg *config.Config, seconds int) {
 	fmt.Printf("=== UDP Broadcast Listener Test (%d seconds) ===\n\n", seconds)
 
 	udpListener := udp.NewUDPListener(100)
-	
+
+	// Set up packet callback for real-time pretty printing
+	udpListener.SetPacketCallback(func(data []byte) {
+		fmt.Println(udp.PrettyPrintMessage(data))
+	})
+
 	fmt.Println("📡 Starting UDP listener on port 50222...")
 	if err := udpListener.Start(); err != nil {
 		log.Fatalf("❌ Failed to start UDP listener: %v", err)
@@ -283,6 +288,7 @@ func runUDPTest(cfg *config.Config, seconds int) {
 	fmt.Printf("⏱️  Listening for %d seconds...\n\n", seconds)
 	fmt.Println("Waiting for UDP broadcasts from Tempest station...")
 	fmt.Println("(Make sure your station is on the same network and broadcasting)")
+	fmt.Println("\n--- Live Packet Stream ---")
 	fmt.Println()
 
 	// Create ticker for periodic stats
@@ -293,12 +299,14 @@ func runUDPTest(cfg *config.Config, seconds int) {
 	timeout := time.After(time.Duration(seconds) * time.Second)
 
 	startTime := time.Now()
+	lastPacketCount := int64(0)
+
 	for {
 		select {
 		case <-timeout:
 			elapsed := time.Since(startTime)
 			fmt.Printf("\n⏱️  Test completed after %v\n", elapsed)
-			
+
 			// Get final stats
 			packetCount, lastPacket, stationIP, serialNumber := udpListener.GetStats()
 			fmt.Println("\n=== Final Statistics ===")
@@ -307,7 +315,7 @@ func runUDPTest(cfg *config.Config, seconds int) {
 				fmt.Printf("Station IP: %s\n", stationIP)
 				fmt.Printf("Serial Number: %s\n", serialNumber)
 				fmt.Printf("Last packet: %v\n", lastPacket.Format("2006-01-02 15:04:05"))
-				
+
 				// Get latest observation
 				if obs := udpListener.GetLatestObservation(); obs != nil {
 					fmt.Println("\n=== Latest Observation ===")
@@ -324,7 +332,7 @@ func runUDPTest(cfg *config.Config, seconds int) {
 						fmt.Printf("Lightning: %d strikes, avg %.1f km away\n", obs.LightningStrikeCount, obs.LightningStrikeAvg)
 					}
 				}
-				
+
 				fmt.Println("\n✅ UDP broadcast test completed successfully!")
 			} else {
 				fmt.Println("\n⚠️  No packets received. Possible issues:")
@@ -336,13 +344,16 @@ func runUDPTest(cfg *config.Config, seconds int) {
 			return
 
 		case <-ticker.C:
-			packetCount, lastPacket, stationIP, _ := udpListener.GetStats()
-			if packetCount > 0 {
-				fmt.Printf("📊 Packets received: %d | Last: %v | Station: %s\n",
-					packetCount, lastPacket.Format("15:04:05"), stationIP)
-			} else {
-				elapsed := time.Since(startTime)
-				fmt.Printf("⏳ Waiting... (%d seconds elapsed, no packets yet)\n", int(elapsed.Seconds()))
+			// Show periodic statistics
+			packetCount, _, stationIP, serialNumber := udpListener.GetStats()
+			if packetCount > lastPacketCount {
+				newPackets := packetCount - lastPacketCount
+				elapsed := time.Since(startTime).Truncate(time.Second)
+				fmt.Printf("\n📊 [%v elapsed] Total: %d packets | New: %d | Station: %s | Serial: %s\n\n", elapsed, packetCount, newPackets, stationIP, serialNumber)
+				lastPacketCount = packetCount
+			} else if packetCount == 0 {
+				elapsed := time.Since(startTime).Truncate(time.Second)
+				fmt.Printf("⏳ [%v elapsed] Still waiting for packets...\n", elapsed)
 			}
 		}
 	}
@@ -459,19 +470,19 @@ func runAlarmTest(cfg *config.Config) {
 	// Create a test observation that will trigger the alarm
 	fmt.Println("Creating test observation to trigger alarm...")
 	testObs := weather.Observation{
-		Timestamp:          time.Now().Unix(),
-		AirTemperature:     25.0,  // Default values
-		RelativeHumidity:   60.0,
-		StationPressure:    1013.25,
-		WindAvg:            5.0,
-		WindGust:           10.0,
-		WindDirection:      180.0,
-		UV:                 5,
-		Illuminance:        50000.0,
-		RainAccumulated:    0.0,
-		RainDailyTotal:     0.0,
+		Timestamp:            time.Now().Unix(),
+		AirTemperature:       25.0, // Default values
+		RelativeHumidity:     60.0,
+		StationPressure:      1013.25,
+		WindAvg:              5.0,
+		WindGust:             10.0,
+		WindDirection:        180.0,
+		UV:                   5,
+		Illuminance:          50000.0,
+		RainAccumulated:      0.0,
+		RainDailyTotal:       0.0,
 		LightningStrikeCount: 0,
-		LightningStrikeAvg:  0.0,
+		LightningStrikeAvg:   0.0,
 	}
 
 	// Create alarm manager
@@ -486,7 +497,7 @@ func runAlarmTest(cfg *config.Config) {
 	// Force the alarm to fire by temporarily setting condition to always true
 	// This is a test, so we modify the condition
 	originalCondition := targetAlarm.Condition
-	targetAlarm.Condition = "temperature > 0"  // Always true condition
+	targetAlarm.Condition = "temperature > 0" // Always true condition
 
 	// Send the observation
 	manager.ProcessObservation(&testObs)

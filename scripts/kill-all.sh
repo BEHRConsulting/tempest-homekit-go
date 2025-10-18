@@ -2,6 +2,7 @@
 
 # kill-all.sh
 # Kills all running tempest-homekit-go processes on the system
+# Also frees up UDP port 50222 used by --stream-udp mode
 #
 # Usage:
 #   ./scripts/kill-all.sh           # Kill with SIGTERM (graceful)
@@ -74,6 +75,18 @@ if [ -z "$REMAINING" ]; then
     if [ $FAILED -gt 0 ]; then
         echo -e "  ${YELLOW}Already gone:${NC} $FAILED"
     fi
+    
+    # Check if UDP port 50222 is still in use
+    PORT_CHECK=$(lsof -i :50222 2>/dev/null || true)
+    if [ -n "$PORT_CHECK" ]; then
+        echo ""
+        echo -e "${YELLOW}⚠${NC}  UDP port 50222 still in use by another process:"
+        lsof -i :50222 2>/dev/null || true
+        echo -e "${BLUE}Tip: Kill it with: kill <PID>${NC}"
+    else
+        echo -e "  ${GREEN}UDP port 50222:${NC} Free"
+    fi
+    
     exit 0
 else
     REMAINING_COUNT=$(echo "$REMAINING" | wc -l | tr -d ' ')

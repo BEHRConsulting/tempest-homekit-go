@@ -774,11 +774,16 @@ Tests all WeatherFlow API endpoints:
 
 # Listen for custom duration
 ./tempest-homekit-go --test-udp 30
+
+# With debug logging for detailed packet info
+./tempest-homekit-go --test-udp 60 --loglevel debug
 ```
 Tests UDP broadcast reception:
 - Listens on port 50222 for Tempest station broadcasts
-- Displays real-time packet statistics every 5 seconds
+- **Pretty-prints packets in real-time** as they arrive (obs_st, obs_air, obs_sky, rapid_wind, evt_precip, evt_strike, device_status, hub_status)
+- Displays periodic statistics every 5 seconds (total packets, new packets, station info)
 - Shows latest observation data when complete
+- With `--loglevel debug`, shows detailed packet information
 - Helps diagnose network/firewall issues
 
 #### Notification Delivery Testing

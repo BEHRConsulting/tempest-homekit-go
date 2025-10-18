@@ -153,20 +153,20 @@ func TestTestFlagsInConfig(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	tests := []struct {
-		name            string
-		envVars         map[string]string
-		args            []string
-		checkTestEmail  bool
-		expectedEmail   string
-		checkTestSMS    bool
-		expectedSMS     string
-		checkConsole    bool
-		expectedConsole bool
-		checkSyslog     bool
-		expectedSyslog  bool
-		checkOSLog      bool
-		expectedOSLog   bool
-		checkEventLog   bool
+		name             string
+		envVars          map[string]string
+		args             []string
+		checkTestEmail   bool
+		expectedEmail    string
+		checkTestSMS     bool
+		expectedSMS      string
+		checkConsole     bool
+		expectedConsole  bool
+		checkSyslog      bool
+		expectedSyslog   bool
+		checkOSLog       bool
+		expectedOSLog    bool
+		checkEventLog    bool
 		expectedEventLog bool
 	}{
 		{
