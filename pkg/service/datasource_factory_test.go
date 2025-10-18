@@ -69,6 +69,14 @@ func (m *mockUDPListener) IsReceivingData() bool {
 	return len(m.observations) > 0
 }
 
+func (m *mockUDPListener) GetDeviceStatus() interface{} {
+	return nil
+}
+
+func (m *mockUDPListener) GetHubStatus() interface{} {
+	return nil
+}
+
 // mockStation creates a test station
 func mockStation() *weather.Station {
 	return &weather.Station{

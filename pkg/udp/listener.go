@@ -120,12 +120,13 @@ type DeviceStatus struct {
 
 // HubStatus holds hub status information
 type HubStatus struct {
-	Timestamp   time.Time
-	FirmwareRev string
-	Uptime      int
-	RSSI        int
-	ResetFlags  string
-	Seq         int
+	Timestamp      time.Time
+	FirmwareRev    string
+	Uptime         int
+	RSSI           int
+	ResetFlags     string
+	Seq            int
+	SerialNumber   string
 }
 
 // NewUDPListener creates a new UDP listener
@@ -534,12 +535,13 @@ func (l *UDPListener) processDeviceStatus(msg UDPMessage) {
 // processHubStatus processes hub status messages
 func (l *UDPListener) processHubStatus(msg UDPMessage) {
 	status := &HubStatus{
-		Timestamp:   time.Unix(msg.Timestamp, 0),
-		FirmwareRev: fmt.Sprintf("%d", msg.FirmwareRevision),
-		Uptime:      msg.Uptime,
-		RSSI:        msg.RSSI,
-		ResetFlags:  msg.ResetFlags,
-		Seq:         msg.Seq,
+		Timestamp:      time.Unix(msg.Timestamp, 0),
+		FirmwareRev:    fmt.Sprintf("%d", msg.FirmwareRevision),
+		Uptime:         msg.Uptime,
+		RSSI:           msg.RSSI,
+		ResetFlags:     msg.ResetFlags,
+		Seq:            msg.Seq,
+		SerialNumber:   msg.SerialNumber,
 	}
 
 	l.mu.Lock()
@@ -601,26 +603,39 @@ func (l *UDPListener) GetStats() (packetCount int64, lastPacket time.Time, stati
 	return l.packetCount, l.lastPacketTime, l.stationIP, l.serialNumber
 }
 
-// GetDeviceStatus returns the latest device status
-func (l *UDPListener) GetDeviceStatus() *DeviceStatus {
+// GetDeviceStatus returns the latest device status as a map (for interface compatibility)
+func (l *UDPListener) GetDeviceStatus() interface{} {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	if l.deviceStatus == nil {
 		return nil
 	}
-	status := *l.deviceStatus
-	return &status
+	return map[string]interface{}{
+		"timestamp":     l.deviceStatus.Timestamp.Unix(),
+		"uptime":        l.deviceStatus.Uptime,
+		"voltage":       l.deviceStatus.Voltage,
+		"rssi":          l.deviceStatus.RSSI,
+		"hub_rssi":      l.deviceStatus.HubRSSI,
+		"sensor_status": l.deviceStatus.SensorStatus,
+		"serial_number": l.serialNumber,
+	}
 }
 
-// GetHubStatus returns the latest hub status
-func (l *UDPListener) GetHubStatus() *HubStatus {
+// GetHubStatus returns the latest hub status as a map (for interface compatibility)
+func (l *UDPListener) GetHubStatus() interface{} {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	if l.hubStatus == nil {
 		return nil
 	}
-	status := *l.hubStatus
-	return &status
+	return map[string]interface{}{
+		"timestamp":     l.hubStatus.Timestamp.Unix(),
+		"firmware_rev":  l.hubStatus.FirmwareRev,
+		"uptime":        l.hubStatus.Uptime,
+		"rssi":          l.hubStatus.RSSI,
+		"reset_flags":   l.hubStatus.ResetFlags,
+		"serial_number": l.hubStatus.SerialNumber,
+	}
 }
 
 // ObservationChannel returns the channel for receiving new observations

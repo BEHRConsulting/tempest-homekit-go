@@ -302,6 +302,17 @@ func StartService(cfg *config.Config, version string) error {
 	}
 	defer dataSource.Stop()
 
+	// Wire up status manager for UDP data source if web server is enabled
+	if webServer != nil && cfg.UDPStream {
+		if udpDataSource, ok := dataSource.(*weather.UDPDataSource); ok {
+			statusManager := webServer.GetStatusManager()
+			if statusManager != nil {
+				udpDataSource.SetStatusManager(statusManager)
+				logger.Info("Status manager connected to UDP data source")
+			}
+		}
+	}
+
 	// Start the data source
 	logger.Info("Starting data source: %s", dataSource.GetType())
 	obsChan, err := dataSource.Start()

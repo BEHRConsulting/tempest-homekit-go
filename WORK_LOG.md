@@ -26,6 +26,7 @@ These are approximate times aggregated across the development sessions that prod
 - Alarm change detection state persistence fix: ~2 hours
 - Microsoft 365 OAuth2 email implementation: ~3-4 hours
 - AWS SNS SMS notifications implementation (v1.8.0): ~4-6 hours
+- UDP status integration for web console (v1.8.1): ~3-4 hours
 
 Major Design Changes
 --------------------
@@ -67,6 +68,15 @@ Major Design Changes
   - Complete unit test suite covering configuration, templating, and error handling
   - Enhanced `.gitignore` to protect all `.env` variants and backups
   - Full documentation with IAM setup, security best practices, and production considerations
+- UDP Status Integration (v1.8.1):
+  - Integrated UDP device_status and hub_status broadcasts into web console status display
+  - Added StatusManager connectivity to UDPDataSource via service layer wiring
+  - Periodic status updates (30-second interval) to catch status-only packets without observations
+  - Automatic status formatting: battery voltage with Good/Fair/Low indicators, uptime as "Xd Xh Xm Xs", RSSI as signal quality with dBm
+  - Web console shows `"dataSource": "udp"` when status populated from UDP broadcasts
+  - Eliminates need for `--use-web-status` web scraping when using `--udp-stream`
+  - Test fixes for interface changes: updated all mock UDP listeners to return maps instead of structs
+  - Fixed Twilio test expectations from "not yet implemented" to "credentials missing"
 
 Best & Worst Prompts (AI-assisted development)
 ----------------------------------------------

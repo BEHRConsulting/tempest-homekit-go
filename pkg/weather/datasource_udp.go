@@ -17,14 +17,17 @@ type UDPListener interface {
 	GetObservations() []Observation
 	IsReceivingData() bool
 	ObservationChannel() <-chan Observation
+	GetDeviceStatus() interface{}
+	GetHubStatus() interface{}
 }
 
 // UDPDataSource implements DataSource for local UDP broadcast listening
 type UDPDataSource struct {
-	listener   UDPListener
-	noInternet bool
-	stationID  int
-	token      string
+	listener      UDPListener
+	noInternet    bool
+	stationID     int
+	token         string
+	statusManager *StatusManager
 
 	mu                sync.RWMutex
 	latestObservation *Observation
@@ -154,17 +157,32 @@ func (u *UDPDataSource) GetType() DataSourceType {
 	return DataSourceUDP
 }
 
+// SetStatusManager sets the status manager for UDP status updates
+func (u *UDPDataSource) SetStatusManager(sm *StatusManager) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	u.statusManager = sm
+}
+
 // forwardLoop forwards observations from UDP listener to the data source channel
 func (u *UDPDataSource) forwardLoop() {
-	logger.Info("Starting UDP observation forwarding loop")
+	logger.Info("Starting UDP observation forwarding loop with periodic status updates (30s interval)")
 
 	udpChan := u.listener.ObservationChannel()
+	
+	// Create ticker for periodic status updates (every 30 seconds)
+	statusTicker := time.NewTicker(30 * time.Second)
+	defer statusTicker.Stop()
 
 	for {
 		select {
 		case <-u.stopChan:
 			logger.Info("UDP forwarding loop stopped")
 			return
+
+		case <-statusTicker.C:
+			// Periodic status update check
+			u.updateStatusFromUDP()
 
 		case obs, ok := <-udpChan:
 			if !ok {
@@ -177,6 +195,9 @@ func (u *UDPDataSource) forwardLoop() {
 			u.mu.Lock()
 			u.latestObservation = &obs
 			u.mu.Unlock()
+
+			// Update status manager with latest UDP status
+			u.updateStatusFromUDP()
 
 			// Forward to data source channel (non-blocking)
 			select {
@@ -202,12 +223,64 @@ func (u *UDPDataSource) forecastLoop() {
 	for {
 		select {
 		case <-u.stopChan:
-			logger.Info("Forecast polling loop stopped")
+			logger.Debug("Forecast polling loop stopped")
 			return
 
 		case <-ticker.C:
 			u.fetchForecast()
 		}
+	}
+}
+
+// updateStatusFromUDP retrieves device and hub status from UDP listener and updates status manager
+func (u *UDPDataSource) updateStatusFromUDP() {
+	u.mu.RLock()
+	statusManager := u.statusManager
+	listener := u.listener
+	u.mu.RUnlock()
+
+	if statusManager == nil || listener == nil {
+		return
+	}
+
+	var deviceStatus *UDPDeviceStatus
+	var hubStatus *UDPHubStatus
+
+	// Get device status from UDP listener
+	if ds := listener.GetDeviceStatus(); ds != nil {
+		// Convert from udp.DeviceStatus to weather.UDPDeviceStatus
+		if dsMap, ok := ds.(map[string]interface{}); ok {
+			deviceStatus = &UDPDeviceStatus{
+				Timestamp:    getMapInt64(dsMap, "timestamp"),
+				Uptime:       getMapInt(dsMap, "uptime"),
+				Voltage:      getMapFloat64(dsMap, "voltage"),
+				RSSI:         getMapInt(dsMap, "rssi"),
+				HubRSSI:      getMapInt(dsMap, "hub_rssi"),
+				SensorStatus: getMapInt(dsMap, "sensor_status"),
+				SerialNumber: getMapString(dsMap, "serial_number"),
+			}
+		}
+	}
+
+	// Get hub status from UDP listener
+	if hs := listener.GetHubStatus(); hs != nil {
+		// Convert from udp.HubStatus to weather.UDPHubStatus
+		if hsMap, ok := hs.(map[string]interface{}); ok {
+			hubStatus = &UDPHubStatus{
+				Timestamp:      getMapInt64(hsMap, "timestamp"),
+				FirmwareRev:    getMapString(hsMap, "firmware_rev"),
+				Uptime:         getMapInt(hsMap, "uptime"),
+				RSSI:           getMapInt(hsMap, "rssi"),
+				ResetFlags:     getMapString(hsMap, "reset_flags"),
+				SerialNumber:   getMapString(hsMap, "serial_number"),
+			}
+		}
+	}
+
+	// Update status manager with UDP data
+	if deviceStatus != nil || hubStatus != nil {
+		statusManager.UpdateFromUDP(deviceStatus, hubStatus)
+		logger.Debug("Updated status manager from UDP: device=%v, hub=%v", deviceStatus != nil, hubStatus != nil)
 	}
 }
 
@@ -230,5 +303,59 @@ func (u *UDPDataSource) fetchForecast() {
 	u.latestForecast = forecast
 	u.mu.Unlock()
 
-	logger.Debug("Successfully fetched forecast data")
+		logger.Debug("Successfully fetched forecast data")
 }
+
+// Helper functions for converting map values (prefixed to avoid name conflicts)
+func getMapInt64(m map[string]interface{}, key string) int64 {
+	if v, ok := m[key]; ok {
+		switch val := v.(type) {
+		case int64:
+			return val
+		case int:
+			return int64(val)
+		case float64:
+			return int64(val)
+		}
+	}
+	return 0
+}
+
+func getMapInt(m map[string]interface{}, key string) int {
+	if v, ok := m[key]; ok {
+		switch val := v.(type) {
+		case int:
+			return val
+		case int64:
+			return int(val)
+		case float64:
+			return int(val)
+		}
+	}
+	return 0
+}
+
+func getMapFloat64(m map[string]interface{}, key string) float64 {
+	if v, ok := m[key]; ok {
+		switch val := v.(type) {
+		case float64:
+			return val
+		case int:
+			return float64(val)
+		case int64:
+			return float64(val)
+		}
+	}
+	return 0
+}
+
+func getMapString(m map[string]interface{}, key string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+

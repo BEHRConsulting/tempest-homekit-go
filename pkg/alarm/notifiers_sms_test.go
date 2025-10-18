@@ -49,12 +49,16 @@ func TestSMSNotifier(t *testing.T) {
 			errorContains: "AWS SNS credentials missing",
 		},
 		{
-			name:          "twilio not implemented",
-			provider:      "twilio",
-			setupEnv:      func() {},
-			cleanupEnv:    func() {},
+			name:     "twilio missing credentials",
+			provider: "twilio",
+			setupEnv: func() {
+				os.Unsetenv("TWILIO_ACCOUNT_SID")
+				os.Unsetenv("TWILIO_AUTH_TOKEN")
+				os.Unsetenv("TWILIO_FROM_NUMBER")
+			},
+			cleanupEnv: func() {},
 			expectError:   true,
-			errorContains: "not yet implemented",
+			errorContains: "Twilio credentials missing",
 		},
 		{
 			name:          "unsupported provider",

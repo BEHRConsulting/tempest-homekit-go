@@ -49,6 +49,8 @@ func (f *fakeListener) GetStats() (int64, time.Time, string, string) {
 func (f *fakeListener) GetObservations() []Observation         { return f.obs }
 func (f *fakeListener) IsReceivingData() bool                  { return true }
 func (f *fakeListener) ObservationChannel() <-chan Observation { return f.ch }
+func (f *fakeListener) GetDeviceStatus() interface{}           { return nil }
+func (f *fakeListener) GetHubStatus() interface{}              { return nil }
 
 func TestUDPDataSource_Forwarding(t *testing.T) {
 	f := &fakeListener{ch: make(chan Observation, 10), obs: []Observation{}}

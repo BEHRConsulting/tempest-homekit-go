@@ -656,13 +656,14 @@ When your internet connection goes down, the WeatherFlow API becomes unavailable
 # Add historical data preloading from API
 ./tempest-homekit-go --udp-stream --read-history --token "your-token"  # preloads up to HISTORY_POINTS observations
 
-# Include web scraping for detailed device status
-./tempest-homekit-go --udp-stream --use-web-status --token "your-token"
+# Enable UDP status updates in web console (battery, RSSI, uptime, firmware)
+./tempest-homekit-go --udp-stream --token "your-token"
 ```
 - ✅ Real-time UDP observations every 60 seconds
 - ✅ Forecast data from WeatherFlow API
 - ✅ Historical data preloading available
-- ✅ Optional web scraping for battery/RSSI status
+- ✅ Device/hub status from UDP broadcasts (battery, signal strength, uptime, firmware)
+- ℹ️ Status updates checked every 30 seconds from UDP data
 
 **2. Full Offline Mode (UDP Only)**
 ```bash
@@ -673,9 +674,10 @@ When your internet connection goes down, the WeatherFlow API becomes unavailable
 ./tempest-homekit-go --udp-stream --disable-internet --sensors "temp,humidity,lux,wind" --loglevel debug
 ```
 - ✅ Real-time UDP observations only
+- ✅ Device/hub status from UDP broadcasts (battery, signal, uptime, firmware)
 - ❌ No forecast data
 - ❌ No historical data preloading (`--read-history` not allowed)
-- ❌ No web scraping (`--use-web-status` not allowed)
+- ❌ No web scraping (`--use-web-status` not allowed - but UDP status still works)
 - ✅ Zero internet dependency - works during complete outages
 - ℹ️ API token (`--token`) still required but not used for network calls
 
@@ -729,6 +731,14 @@ ERROR: --read-history cannot be used with --disable-internet (requires WeatherFl
 **Network Topology:**
 - Both devices on same subnet (hub broadcasts to 255.255.255.255)
 - No special router configuration needed for standard LAN setups
+
+**UDP Status Integration:**
+When `--udp-stream` is enabled, device and hub status is automatically populated from UDP broadcasts:
+- **Device Status**: Battery voltage (with Good/Fair/Low indicators), uptime, RSSI signal strength, sensor status, serial number
+- **Hub Status**: Firmware version, uptime, WiFi RSSI, reset flags, serial number
+- **Update Frequency**: Status checked every 30 seconds from UDP data
+- **Web Console**: Status API shows `"dataSource": "udp"` when populated from UDP broadcasts
+- **No Web Scraping Needed**: UDP provides real-time status without `--use-web-status` flag
 
 **Status API Response with UDP Stream:**
 ```json

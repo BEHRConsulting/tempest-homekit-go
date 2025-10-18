@@ -235,3 +235,140 @@ func (sm *StatusManager) UpdateBatteryFromObservation(obs *Observation) {
 		}
 	}
 }
+
+// UDPDeviceStatus represents device status from UDP broadcasts
+type UDPDeviceStatus struct {
+	Timestamp    int64
+	Uptime       int
+	Voltage      float64
+	RSSI         int
+	HubRSSI      int
+	SensorStatus int
+	SerialNumber string
+}
+
+// UDPHubStatus represents hub status from UDP broadcasts
+type UDPHubStatus struct {
+	Timestamp      int64
+	FirmwareRev    string
+	Uptime         int
+	RSSI           int
+	ResetFlags     string
+	SerialNumber   string
+}
+
+// UpdateFromUDP updates the cached status with data from UDP broadcasts
+func (sm *StatusManager) UpdateFromUDP(deviceStatus *UDPDeviceStatus, hubStatus *UDPHubStatus) {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+
+	if sm.cachedStatus == nil {
+		return
+	}
+
+	// Only update if not using web scraping or if scraping failed
+	if sm.cachedStatus.DataSource == "api" || sm.cachedStatus.DataSource == "fallback" {
+		if deviceStatus != nil {
+			// Update battery voltage and status
+			if deviceStatus.Voltage > 0 {
+				sm.cachedStatus.BatteryVoltage = fmt.Sprintf("%.2fV", deviceStatus.Voltage)
+				if deviceStatus.Voltage >= 2.5 {
+					sm.cachedStatus.BatteryStatus = "Good"
+				} else if deviceStatus.Voltage >= 2.3 {
+					sm.cachedStatus.BatteryStatus = "Fair"
+				} else {
+					sm.cachedStatus.BatteryStatus = "Low"
+				}
+			}
+
+			// Update device uptime
+			if deviceStatus.Uptime > 0 {
+				days := deviceStatus.Uptime / 86400
+				hours := (deviceStatus.Uptime % 86400) / 3600
+				minutes := (deviceStatus.Uptime % 3600) / 60
+				seconds := deviceStatus.Uptime % 60
+				sm.cachedStatus.DeviceUptime = fmt.Sprintf("%dd %dh %dm %ds", days, hours, minutes, seconds)
+			}
+
+			// Update device signal (RSSI)
+			if deviceStatus.RSSI != 0 {
+				if deviceStatus.RSSI >= -60 {
+					sm.cachedStatus.DeviceSignal = fmt.Sprintf("Excellent (%d)", deviceStatus.RSSI)
+				} else if deviceStatus.RSSI >= -70 {
+					sm.cachedStatus.DeviceSignal = fmt.Sprintf("Good (%d)", deviceStatus.RSSI)
+				} else if deviceStatus.RSSI >= -80 {
+					sm.cachedStatus.DeviceSignal = fmt.Sprintf("Fair (%d)", deviceStatus.RSSI)
+				} else {
+					sm.cachedStatus.DeviceSignal = fmt.Sprintf("Poor (%d)", deviceStatus.RSSI)
+				}
+				sm.cachedStatus.DeviceNetworkStatus = "Connected"
+			}
+
+			// Update sensor status
+			if deviceStatus.SensorStatus == 0 {
+				sm.cachedStatus.SensorStatus = "All OK"
+			} else {
+				sm.cachedStatus.SensorStatus = fmt.Sprintf("0x%X", deviceStatus.SensorStatus)
+			}
+
+			// Update device serial number
+			if deviceStatus.SerialNumber != "" {
+				sm.cachedStatus.DeviceSerialNumber = deviceStatus.SerialNumber
+			}
+
+			// Update device last observation time
+			if deviceStatus.Timestamp > 0 {
+				sm.cachedStatus.DeviceLastObs = time.Unix(deviceStatus.Timestamp, 0).Format("2006-01-02 15:04:05")
+			}
+		}
+
+		if hubStatus != nil {
+			// Update hub uptime
+			if hubStatus.Uptime > 0 {
+				days := hubStatus.Uptime / 86400
+				hours := (hubStatus.Uptime % 86400) / 3600
+				minutes := (hubStatus.Uptime % 3600) / 60
+				seconds := hubStatus.Uptime % 60
+				sm.cachedStatus.HubUptime = fmt.Sprintf("%dd %dh %dm %ds", days, hours, minutes, seconds)
+			}
+
+			// Update hub WiFi signal (RSSI)
+			if hubStatus.RSSI != 0 {
+				if hubStatus.RSSI >= -60 {
+					sm.cachedStatus.HubWiFiSignal = fmt.Sprintf("Excellent (%d)", hubStatus.RSSI)
+				} else if hubStatus.RSSI >= -70 {
+					sm.cachedStatus.HubWiFiSignal = fmt.Sprintf("Good (%d)", hubStatus.RSSI)
+				} else if hubStatus.RSSI >= -80 {
+					sm.cachedStatus.HubWiFiSignal = fmt.Sprintf("Fair (%d)", hubStatus.RSSI)
+				} else {
+					sm.cachedStatus.HubWiFiSignal = fmt.Sprintf("Poor (%d)", hubStatus.RSSI)
+				}
+				sm.cachedStatus.HubNetworkStatus = "Connected"
+			}
+
+			// Update hub firmware
+			if hubStatus.FirmwareRev != "" {
+				sm.cachedStatus.HubFirmware = "v" + hubStatus.FirmwareRev
+			}
+
+			// Update hub serial number
+			if hubStatus.SerialNumber != "" {
+				sm.cachedStatus.HubSerialNumber = hubStatus.SerialNumber
+			}
+
+			// Update hub last status time
+			if hubStatus.Timestamp > 0 {
+				sm.cachedStatus.HubLastStatus = time.Unix(hubStatus.Timestamp, 0).Format("2006-01-02 15:04:05")
+			}
+		}
+
+		// Update data source metadata
+		sm.cachedStatus.DataSource = "udp"
+		sm.cachedStatus.LastScraped = time.Now().UTC().Format(time.RFC3339)
+
+		if sm.logLevel == "debug" {
+			logger.Debug("Updated status from UDP - Battery: %s, DeviceUptime: %s, HubUptime: %s",
+				sm.cachedStatus.BatteryVoltage, sm.cachedStatus.DeviceUptime, sm.cachedStatus.HubUptime)
+		}
+	}
+}

@@ -562,6 +562,13 @@ func (ws *WebServer) SetAlarmManager(manager AlarmManagerInterface) {
 	logger.Info("Alarm manager connected to web server")
 }
 
+// GetStatusManager returns the status manager for external use
+func (ws *WebServer) GetStatusManager() *weather.StatusManager {
+	ws.mu.RLock()
+	defer ws.mu.RUnlock()
+	return ws.statusManager
+}
+
 // UpdateBatteryFromObservation updates the status manager with battery data from the latest observation
 func (ws *WebServer) UpdateBatteryFromObservation(obs *weather.Observation) {
 	if ws.statusManager != nil {
