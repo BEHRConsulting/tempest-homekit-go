@@ -333,3 +333,230 @@ func TestMultipleTestFlags(t *testing.T) {
 		t.Error("Expected TestSyslog=true")
 	}
 }
+
+// TestTestUDPFlag tests the --test-udp flag with integer values
+func TestTestUDPFlag(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		expected int
+	}{
+		{
+			name:     "default value (0 means use default 120)",
+			args:     []string{},
+			expected: 0,
+		},
+		{
+			name:     "custom value 30 seconds",
+			args:     []string{"-test-udp", "30"},
+			expected: 30,
+		},
+		{
+			name:     "custom value 300 seconds",
+			args:     []string{"-test-udp", "300"},
+			expected: 300,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := flag.NewFlagSet("test", flag.ContinueOnError)
+			testUDP := fs.Int("test-udp", 0, "Test UDP for N seconds")
+
+			err := fs.Parse(tt.args)
+			if err != nil {
+				t.Fatalf("Failed to parse flags: %v", err)
+			}
+
+			if *testUDP != tt.expected {
+				t.Errorf("Expected TestUDP=%d, got %d", tt.expected, *testUDP)
+			}
+		})
+	}
+}
+
+// TestTestHomeKitFlag tests the --test-homekit flag
+func TestTestHomeKitFlag(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		expected bool
+	}{
+		{
+			name:     "flag present",
+			args:     []string{"-test-homekit"},
+			expected: true,
+		},
+		{
+			name:     "flag absent",
+			args:     []string{},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := flag.NewFlagSet("test", flag.ContinueOnError)
+			testHomeKit := fs.Bool("test-homekit", false, "Test HomeKit")
+
+			err := fs.Parse(tt.args)
+			if err != nil {
+				t.Fatalf("Failed to parse flags: %v", err)
+			}
+
+			if *testHomeKit != tt.expected {
+				t.Errorf("Expected TestHomeKit=%v, got %v", tt.expected, *testHomeKit)
+			}
+		})
+	}
+}
+
+// TestTestWebStatusFlag tests the --test-web-status flag
+func TestTestWebStatusFlag(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		expected bool
+	}{
+		{
+			name:     "flag present",
+			args:     []string{"-test-web-status"},
+			expected: true,
+		},
+		{
+			name:     "flag absent",
+			args:     []string{},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := flag.NewFlagSet("test", flag.ContinueOnError)
+			testWebStatus := fs.Bool("test-web-status", false, "Test web status")
+
+			err := fs.Parse(tt.args)
+			if err != nil {
+				t.Fatalf("Failed to parse flags: %v", err)
+			}
+
+			if *testWebStatus != tt.expected {
+				t.Errorf("Expected TestWebStatus=%v, got %v", tt.expected, *testWebStatus)
+			}
+		})
+	}
+}
+
+// TestTestAlarmFlag tests the --test-alarm flag
+func TestTestAlarmFlag(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		expected string
+	}{
+		{
+			name:     "alarm name provided",
+			args:     []string{"-test-alarm", "high-temperature"},
+			expected: "high-temperature",
+		},
+		{
+			name:     "alarm name with hyphens",
+			args:     []string{"-test-alarm", "lightning-nearby"},
+			expected: "lightning-nearby",
+		},
+		{
+			name:     "no alarm name",
+			args:     []string{},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := flag.NewFlagSet("test", flag.ContinueOnError)
+			testAlarm := fs.String("test-alarm", "", "Test alarm name")
+
+			err := fs.Parse(tt.args)
+			if err != nil {
+				t.Fatalf("Failed to parse flags: %v", err)
+			}
+
+			if *testAlarm != tt.expected {
+				t.Errorf("Expected TestAlarm=%s, got %s", tt.expected, *testAlarm)
+			}
+		})
+	}
+}
+
+// TestNewTestFlagsInConfig tests that new test flags are loaded into Config
+func TestNewTestFlagsInConfig(t *testing.T) {
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	os.Setenv("TEMPEST_TOKEN", "test-token")
+	os.Setenv("TEMPEST_STATION_NAME", "TestStation")
+	os.Setenv("HOMEKIT_PIN", "12345678")
+	defer os.Unsetenv("TEMPEST_TOKEN")
+	defer os.Unsetenv("TEMPEST_STATION_NAME")
+	defer os.Unsetenv("HOMEKIT_PIN")
+
+	tests := []struct {
+		name              string
+		args              []string
+		checkUDP          bool
+		expectedUDP       int
+		checkHomeKit      bool
+		expectedHomeKit   bool
+		checkWebStatus    bool
+		expectedWebStatus bool
+		checkAlarm        bool
+		expectedAlarm     string
+	}{
+		{
+			name:        "test-udp with custom value",
+			args:        []string{"cmd", "-test-udp", "60"},
+			checkUDP:    true,
+			expectedUDP: 60,
+		},
+		{
+			name:            "test-homekit",
+			args:            []string{"cmd", "-test-homekit"},
+			checkHomeKit:    true,
+			expectedHomeKit: true,
+		},
+		{
+			name:              "test-web-status",
+			args:              []string{"cmd", "-test-web-status"},
+			checkWebStatus:    true,
+			expectedWebStatus: true,
+		},
+		{
+			name:          "test-alarm",
+			args:          []string{"cmd", "-test-alarm", "high-temperature"},
+			checkAlarm:    true,
+			expectedAlarm: "high-temperature",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Args = tt.args
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+			cfg := LoadConfig()
+
+			if tt.checkUDP && cfg.TestUDP != tt.expectedUDP {
+				t.Errorf("Expected TestUDP=%d, got %d", tt.expectedUDP, cfg.TestUDP)
+			}
+			if tt.checkHomeKit && cfg.TestHomeKit != tt.expectedHomeKit {
+				t.Errorf("Expected TestHomeKit=%v, got %v", tt.expectedHomeKit, cfg.TestHomeKit)
+			}
+			if tt.checkWebStatus && cfg.TestWebStatus != tt.expectedWebStatus {
+				t.Errorf("Expected TestWebStatus=%v, got %v", tt.expectedWebStatus, cfg.TestWebStatus)
+			}
+			if tt.checkAlarm && cfg.TestAlarm != tt.expectedAlarm {
+				t.Errorf("Expected TestAlarm=%s, got %s", tt.expectedAlarm, cfg.TestAlarm)
+			}
+		})
+	}
+}

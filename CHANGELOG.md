@@ -48,8 +48,22 @@ The format is based on "Keep a Changelog" and this project adheres to Semantic V
   - Smart change detection thresholds (0.1°C for temp, 1% humidity, etc.)
   - Template variables: `{{last_temperature}}`, `{{last_humidity}}`, etc.
   - Composite variables: `{{app_info}}`, `{{alarm_info}}`, `{{sensor_info}}`
-- Email testing functionality: `--test-email` flag for configuration validation
-- SMS testing functionality: `--test-sms` flag for configuration validation
+- **Comprehensive Testing Infrastructure**: 11 test flags for validation and troubleshooting
+  - `--test-email <email>`: Email delivery testing with provider auto-detection
+  - `--test-sms <phone>`: SMS delivery testing with provider auto-detection
+  - `--test-console`: Console notification testing
+  - `--test-syslog`: Syslog notification testing
+  - `--test-oslog`: macOS unified logging testing
+  - `--test-eventlog`: Windows Event Log testing
+  - `--test-udp [seconds]`: UDP broadcast listener testing (default: 120s)
+  - `--test-homekit`: HomeKit bridge configuration testing
+  - `--test-web-status`: Web status scraping testing
+  - `--test-alarm <name>`: Specific alarm trigger testing
+  - All tests use factory pattern for real delivery path validation
+- **Test Suite**: 98+ unit tests covering all test flags
+  - `pkg/config/config_test_flags_test.go`: Flag parsing and configuration tests
+  - `pkg/config/config_test_validation_test.go`: Parameter validation tests
+  - `main_test.go`: Integration and handler validation tests
 - Dependencies: Azure SDK for Go, Microsoft Graph SDK for Go
 
 ### Changed

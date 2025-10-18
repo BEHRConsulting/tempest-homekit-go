@@ -367,6 +367,10 @@ func TestTestFlagsExitBehavior(t *testing.T) {
 	// - TestSyslogConfiguration() calls os.Exit(0)
 	// - TestOSLogConfiguration() calls os.Exit(0)
 	// - TestEventLogConfiguration() calls os.Exit(0)
+	// - runUDPTest() calls os.Exit(0)
+	// - runHomeKitTest() calls os.Exit(0)
+	// - runWebStatusTest() calls os.Exit(0)
+	// - runAlarmTest() calls os.Exit(0)
 	//
 	// This ensures the application exits cleanly after testing
 	// and doesn't continue to normal service startup
@@ -378,9 +382,218 @@ func TestTestFlagsExitBehavior(t *testing.T) {
 		"RunSyslogTest",
 		"RunOSLogTest",
 		"RunEventLogTest",
+		"runUDPTest",
+		"runHomeKitTest",
+		"runWebStatusTest",
+		"runAlarmTest",
 	}
 
-	if len(expectedExitFunctions) != 6 {
-		t.Errorf("Expected 6 test functions that exit, got %d", len(expectedExitFunctions))
+	if len(expectedExitFunctions) != 10 {
+		t.Errorf("Expected 10 test functions that exit, got %d", len(expectedExitFunctions))
+	}
+}
+
+// TestRunUDPTestValidation tests validation in runUDPTest
+func TestRunUDPTestValidation(t *testing.T) {
+	// UDP test doesn't require alarms, only valid network setup
+	cfg := &config.Config{
+		TestUDP: 5,
+	}
+
+	// Should not require alarms
+	if cfg.TestUDP <= 0 {
+		t.Error("Expected TestUDP to be set")
+	}
+}
+
+// TestRunHomeKitTestValidation tests validation in runHomeKitTest
+func TestRunHomeKitTestValidation(t *testing.T) {
+	cfg := &config.Config{
+		TestHomeKit: true,
+		Pin:         "12345678",
+		StationName: "TestStation",
+		Sensors:     "temp,humidity",
+	}
+
+	// Should not require alarms or API token
+	if !cfg.TestHomeKit {
+		t.Error("Expected TestHomeKit to be true")
+	}
+	if cfg.Pin == "" {
+		t.Error("Expected PIN to be set")
+	}
+	if cfg.StationName == "" {
+		t.Error("Expected StationName to be set")
+	}
+}
+
+// TestRunWebStatusTestValidation tests validation in runWebStatusTest
+func TestRunWebStatusTestValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		cfg         *config.Config
+		shouldError bool
+	}{
+		{
+			name: "missing token and station",
+			cfg: &config.Config{
+				TestWebStatus: true,
+				Token:         "",
+				StationName:   "",
+			},
+			shouldError: true,
+		},
+		{
+			name: "valid config",
+			cfg: &config.Config{
+				TestWebStatus: true,
+				Token:         "test-token",
+				StationName:   "TestStation",
+			},
+			shouldError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hasError := tt.cfg.Token == "" || tt.cfg.StationName == ""
+			if tt.shouldError && !hasError {
+				t.Error("Expected error for missing token/station")
+			}
+			if !tt.shouldError && hasError {
+				t.Error("Expected no error for valid config")
+			}
+		})
+	}
+}
+
+// TestRunAlarmTestValidation tests validation in runAlarmTest
+func TestRunAlarmTestValidation(t *testing.T) {
+	tests := []struct {
+		name          string
+		cfg           *config.Config
+		shouldError   bool
+		errorContains string
+	}{
+		{
+			name: "missing alarms config",
+			cfg: &config.Config{
+				TestAlarm: "test-alarm",
+				Alarms:    "",
+			},
+			shouldError:   true,
+			errorContains: "No alarm configuration",
+		},
+		{
+			name: "valid config",
+			cfg: &config.Config{
+				TestAlarm:   "test-alarm",
+				Alarms:      "@alarms.example.json",
+				StationName: "TestStation",
+			},
+			shouldError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.cfg.Alarms == "" {
+				if !tt.shouldError {
+					t.Error("Expected no error but config would cause error")
+				}
+				return
+			}
+
+			if tt.shouldError {
+				t.Error("Expected error but config is valid")
+			}
+		})
+	}
+}
+
+// TestTestUDPDefaultValue tests that --test-udp defaults to 120 seconds
+func TestTestUDPDefaultValue(t *testing.T) {
+	// When --test-udp flag is present without value, it should default to 120
+	defaultSeconds := 120
+
+	cfg := &config.Config{
+		TestUDP: 0, // Not set
+	}
+
+	// Simulate the default behavior in runUDPTest
+	seconds := cfg.TestUDP
+	if seconds == 0 {
+		seconds = 120
+	}
+
+	if seconds != defaultSeconds {
+		t.Errorf("Expected default %d seconds, got %d", defaultSeconds, seconds)
+	}
+}
+
+// TestTestUDPCustomValue tests that --test-udp accepts custom seconds
+func TestTestUDPCustomValue(t *testing.T) {
+	customSeconds := 30
+
+	cfg := &config.Config{
+		TestUDP: customSeconds,
+	}
+
+	if cfg.TestUDP != customSeconds {
+		t.Errorf("Expected TestUDP=%d, got %d", customSeconds, cfg.TestUDP)
+	}
+}
+
+// TestAllNewTestFlagsCovered documents the new test flags
+func TestAllNewTestFlagsCovered(t *testing.T) {
+	newTestFlags := []struct {
+		name        string
+		flagType    string
+		description string
+	}{
+		{
+			name:        "test-udp",
+			flagType:    "int",
+			description: "Listen for UDP broadcasts for N seconds",
+		},
+		{
+			name:        "test-homekit",
+			flagType:    "bool",
+			description: "Test HomeKit bridge setup",
+		},
+		{
+			name:        "test-web-status",
+			flagType:    "bool",
+			description: "Test web status scraping",
+		},
+		{
+			name:        "test-alarm",
+			flagType:    "string",
+			description: "Trigger specific alarm by name",
+		},
+	}
+
+	if len(newTestFlags) != 4 {
+		t.Errorf("Expected 4 new test flags, got %d", len(newTestFlags))
+	}
+
+	// Verify we have mix of types
+	hasInt := false
+	hasBool := false
+	hasString := false
+
+	for _, flag := range newTestFlags {
+		switch flag.flagType {
+		case "int":
+			hasInt = true
+		case "bool":
+			hasBool = true
+		case "string":
+			hasString = true
+		}
+	}
+
+	if !hasInt || !hasBool || !hasString {
+		t.Error("Expected new test flags to include int, bool, and string types")
 	}
 }

@@ -198,12 +198,43 @@ go test -v ./pkg/alarm/...
 go test -run TestEvaluator ./pkg/alarm/...
 ```
 
-### Email Configuration Test
+### Notification Testing
 
-Test your email configuration before deploying:
+Test your notification configurations before deploying:
 
+#### Email Testing
 ```bash
 ./tempest-homekit-go --test-email user@example.com --alarms @alarms.json
+```
+
+#### SMS Testing
+```bash
+./tempest-homekit-go --test-sms +15555551234 --alarms @alarms.json
+```
+
+#### Console Testing
+```bash
+./tempest-homekit-go --test-console --alarms @alarms.json
+```
+
+#### Syslog Testing
+```bash
+./tempest-homekit-go --test-syslog --alarms @alarms.json
+```
+
+#### OSLog Testing (macOS)
+```bash
+./tempest-homekit-go --test-oslog --alarms @alarms.json
+```
+
+#### Event Log Testing (Windows)
+```bash
+./tempest-homekit-go --test-eventlog --alarms @alarms.json
+```
+
+#### Alarm Trigger Testing
+```bash
+./tempest-homekit-go --test-alarm "high-temperature" --alarms @alarms.json --station "Test"
 ```
 
 **What it tests:**

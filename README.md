@@ -749,6 +749,123 @@ ERROR: --read-history cannot be used with --disable-internet (requires WeatherFl
 - Historical data limited to observations received since startup
 - Requires hub on local network (won't work remotely)
 
+## Testing
+
+The application includes comprehensive testing flags for validating configurations and troubleshooting issues before deployment.
+
+### Testing Flags
+
+#### API and Data Source Testing
+
+**Test WeatherFlow API Endpoints** (`--test-api`)
+```bash
+./tempest-homekit-go --test-api
+```
+Tests all WeatherFlow API endpoints:
+- Station discovery and details
+- Current observations
+- Historical data retrieval
+- Performance metrics
+
+**Test UDP Broadcast Listener** (`--test-udp [seconds]`)
+```bash
+# Listen for 120 seconds (default)
+./tempest-homekit-go --test-udp
+
+# Listen for custom duration
+./tempest-homekit-go --test-udp 30
+```
+Tests UDP broadcast reception:
+- Listens on port 50222 for Tempest station broadcasts
+- Displays real-time packet statistics every 5 seconds
+- Shows latest observation data when complete
+- Helps diagnose network/firewall issues
+
+#### Notification Delivery Testing
+
+**Test Email Delivery** (`--test-email <email>`)
+```bash
+./tempest-homekit-go --test-email user@example.com --alarms @alarms.json
+```
+Tests email notification delivery:
+- Auto-detects provider (Microsoft 365 OAuth2 or SMTP)
+- Validates credentials from environment variables
+- Sends test email with weather data
+- Uses real delivery path (factory pattern)
+
+**Test SMS Delivery** (`--test-sms <phone>`)
+```bash
+./tempest-homekit-go --test-sms +15555551234 --alarms @alarms.json
+```
+Tests SMS notification delivery:
+- Auto-detects provider (Twilio or AWS SNS)
+- Validates credentials from environment variables
+- Sends test SMS with weather data
+- Uses real delivery path (factory pattern)
+
+**Test Console Notifications** (`--test-console`)
+```bash
+./tempest-homekit-go --test-console --alarms @alarms.json
+```
+Tests console/stdout notification delivery.
+
+**Test Syslog Notifications** (`--test-syslog`)
+```bash
+./tempest-homekit-go --test-syslog --alarms @alarms.json
+```
+Tests syslog notification delivery (local or remote).
+
+**Test OSLog Notifications** (`--test-oslog`) - macOS only
+```bash
+./tempest-homekit-go --test-oslog --alarms @alarms.json
+```
+Tests macOS unified logging system integration.
+
+**Test Event Log Notifications** (`--test-eventlog`) - Windows only
+```bash
+./tempest-homekit-go --test-eventlog --alarms @alarms.json
+```
+Tests Windows Event Log integration.
+
+#### Service Testing
+
+**Test HomeKit Bridge** (`--test-homekit`)
+```bash
+./tempest-homekit-go --test-homekit
+```
+Tests HomeKit bridge configuration:
+- Displays sensor configuration
+- Shows pairing instructions
+- Validates PIN and station settings
+- Dry-run mode (doesn't start actual bridge)
+
+**Test Web Status Scraping** (`--test-web-status`)
+```bash
+./tempest-homekit-go --test-web-status
+```
+Tests web status scraping capability:
+- Validates Chrome/Chromium availability
+- Provides setup guidance
+- Placeholder for future headless browser implementation
+
+**Test Specific Alarm** (`--test-alarm <name>`)
+```bash
+./tempest-homekit-go --test-alarm "high-temperature" --alarms @alarms.json --station "Test"
+```
+Tests a specific alarm trigger:
+- Validates alarm exists and is enabled
+- Sends test observation to trigger alarm
+- Tests entire notification delivery pipeline
+- Shows notification results for all channels
+
+### Testing Best Practices
+
+1. **Test in order**: Start with `--test-api` to validate connectivity
+2. **Test notifications**: Use test flags before deploying alarm configurations
+3. **Use factory pattern**: All notification tests use the real delivery path
+4. **Check credentials**: Test flags validate environment variables are correct
+5. **Validate network**: Use `--test-udp` to diagnose UDP broadcast issues
+
 ## HomeKit Setup
 
 1. Start the application with your WeatherFlow API token

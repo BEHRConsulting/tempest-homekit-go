@@ -36,6 +36,10 @@ type Config struct {
 	TestSyslog          bool    // Send test syslog notification and exit
 	TestOSLog           bool    // Send test oslog notification and exit
 	TestEventLog        bool    // Send test eventlog notification and exit
+	TestUDP             int     // Listen for UDP broadcasts for N seconds and display received data (default: 120)
+	TestHomeKit         bool    // Test HomeKit bridge setup and pairing without starting service
+	TestWebStatus       bool    // Test web status scraping and exit
+	TestAlarm           string  // Trigger a specific alarm by name for testing
 	UseWebStatus        bool    // Enable headless browser scraping of TempestWX status
 	UseGeneratedWeather bool    // Use generated weather data for testing instead of Tempest API
 	UDPStream           bool    // Listen for UDP broadcasts from local Tempest station
@@ -139,12 +143,16 @@ LOGGING & DEBUG OPTIONS:
 
 TESTING OPTIONS:
   --test-api                    Test WeatherFlow API endpoints and exit
-  --test-email <email>          Send a test email to the specified address and exit
-  --test-sms <phone>            Send a test SMS to the specified phone number (E.164 format) and exit
-  --test-console                Send a test console notification and exit
-  --test-syslog                 Send a test syslog notification and exit
-  --test-oslog                  Send a test oslog notification and exit (macOS only)
-  --test-eventlog               Send a test eventlog notification and exit (Windows only)
+  --test-email <email>          Send test email to specified address and exit
+  --test-sms <phone>            Send test SMS to specified phone number and exit
+  --test-console                Send test console notification and exit
+  --test-syslog                 Send test syslog notification and exit
+  --test-oslog                  Send test oslog notification and exit (macOS only)
+  --test-eventlog               Send test eventlog notification and exit (Windows only)
+  --test-udp [seconds]          Listen for UDP broadcasts for N seconds (default: 120) and exit
+  --test-homekit                Test HomeKit bridge setup and pairing info, then exit
+  --test-web-status             Test web status scraping from TempestWX and exit
+  --test-alarm <name>           Trigger a specific alarm by name for testing and exit
 
 OTHER OPTIONS:
   --version                     Show version information and exit
@@ -239,6 +247,10 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.TestSyslog, "test-syslog", false, "Send a test syslog notification and exit")
 	flag.BoolVar(&cfg.TestOSLog, "test-oslog", false, "Send a test oslog notification and exit (macOS only)")
 	flag.BoolVar(&cfg.TestEventLog, "test-eventlog", false, "Send a test eventlog notification and exit (Windows only)")
+	flag.IntVar(&cfg.TestUDP, "test-udp", 0, "Listen for UDP broadcasts for N seconds (default: 120) and exit")
+	flag.BoolVar(&cfg.TestHomeKit, "test-homekit", false, "Test HomeKit bridge setup and pairing info, then exit")
+	flag.BoolVar(&cfg.TestWebStatus, "test-web-status", false, "Test web status scraping from TempestWX and exit")
+	flag.StringVar(&cfg.TestAlarm, "test-alarm", "", "Trigger a specific alarm by name for testing and exit")
 	flag.BoolVar(&cfg.UseWebStatus, "use-web-status", false, "Enable headless browser scraping of TempestWX status page every 15 minutes")
 	flag.StringVar(&cfg.StationURL, "station-url", cfg.StationURL, "Custom station URL for weather data (e.g., http://localhost:8080/api/generate-weather). Overrides Tempest API. Can also be set via STATION_URL environment variable")
 	flag.BoolVar(&cfg.UseGeneratedWeather, "use-generated-weather", false, "Use generated weather data for UI testing instead of Tempest API")

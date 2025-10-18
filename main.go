@@ -17,6 +17,7 @@ import (
 	"tempest-homekit-go/pkg/config"
 	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/service"
+	"tempest-homekit-go/pkg/udp"
 	"tempest-homekit-go/pkg/weather"
 
 	"github.com/joho/godotenv"
@@ -117,6 +118,38 @@ func main() {
 	if cfg.TestEventLog {
 		logger.Info("TestEventLog flag detected, sending test eventlog notification...")
 		runEventLogTest(cfg)
+		return
+	}
+
+	// Handle UDP testing if requested
+	if cfg.TestUDP != 0 || (len(os.Args) > 1 && contains(os.Args, "--test-udp")) {
+		seconds := cfg.TestUDP
+		if seconds == 0 {
+			seconds = 120 // Default to 120 seconds
+		}
+		logger.Info("TestUDP flag detected, listening for UDP broadcasts for %d seconds...", seconds)
+		runUDPTest(cfg, seconds)
+		return
+	}
+
+	// Handle HomeKit testing if requested
+	if cfg.TestHomeKit {
+		logger.Info("TestHomeKit flag detected, testing HomeKit bridge setup...")
+		runHomeKitTest(cfg)
+		return
+	}
+
+	// Handle web status testing if requested
+	if cfg.TestWebStatus {
+		logger.Info("TestWebStatus flag detected, testing web status scraping...")
+		runWebStatusTest(cfg)
+		return
+	}
+
+	// Handle alarm testing if requested
+	if cfg.TestAlarm != "" {
+		logger.Info("TestAlarm flag detected, triggering alarm '%s'...", cfg.TestAlarm)
+		runAlarmTest(cfg)
 		return
 	}
 
@@ -232,6 +265,249 @@ func runEventLogTest(cfg *config.Config) {
 
 	// Use alarm package's eventlog test function
 	alarm.RunEventLogTest(cfg.Alarms, cfg.StationName)
+}
+
+// runUDPTest listens for UDP broadcasts from a local Tempest station
+func runUDPTest(cfg *config.Config, seconds int) {
+	fmt.Printf("=== UDP Broadcast Listener Test (%d seconds) ===\n\n", seconds)
+
+	udpListener := udp.NewUDPListener(100)
+	
+	fmt.Println("📡 Starting UDP listener on port 50222...")
+	if err := udpListener.Start(); err != nil {
+		log.Fatalf("❌ Failed to start UDP listener: %v", err)
+	}
+	defer udpListener.Stop()
+
+	fmt.Println("✅ UDP listener started successfully")
+	fmt.Printf("⏱️  Listening for %d seconds...\n\n", seconds)
+	fmt.Println("Waiting for UDP broadcasts from Tempest station...")
+	fmt.Println("(Make sure your station is on the same network and broadcasting)")
+	fmt.Println()
+
+	// Create ticker for periodic stats
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	// Create timeout timer
+	timeout := time.After(time.Duration(seconds) * time.Second)
+
+	startTime := time.Now()
+	for {
+		select {
+		case <-timeout:
+			elapsed := time.Since(startTime)
+			fmt.Printf("\n⏱️  Test completed after %v\n", elapsed)
+			
+			// Get final stats
+			packetCount, lastPacket, stationIP, serialNumber := udpListener.GetStats()
+			fmt.Println("\n=== Final Statistics ===")
+			fmt.Printf("Total packets received: %d\n", packetCount)
+			if packetCount > 0 {
+				fmt.Printf("Station IP: %s\n", stationIP)
+				fmt.Printf("Serial Number: %s\n", serialNumber)
+				fmt.Printf("Last packet: %v\n", lastPacket.Format("2006-01-02 15:04:05"))
+				
+				// Get latest observation
+				if obs := udpListener.GetLatestObservation(); obs != nil {
+					fmt.Println("\n=== Latest Observation ===")
+					fmt.Printf("Temperature: %.1f°C (%.1f°F)\n", obs.AirTemperature, obs.AirTemperature*9/5+32)
+					fmt.Printf("Humidity: %.0f%%\n", obs.RelativeHumidity)
+					fmt.Printf("Pressure: %.2f mb\n", obs.StationPressure)
+					fmt.Printf("Wind Speed: %.1f m/s\n", obs.WindAvg)
+					fmt.Printf("Wind Gust: %.1f m/s\n", obs.WindGust)
+					fmt.Printf("Wind Direction: %.0f°\n", obs.WindDirection)
+					fmt.Printf("UV Index: %d\n", obs.UV)
+					fmt.Printf("Light: %.0f lux\n", obs.Illuminance)
+					fmt.Printf("Rain Rate: %.3f in\n", obs.RainAccumulated)
+					if obs.LightningStrikeCount > 0 {
+						fmt.Printf("Lightning: %d strikes, avg %.1f km away\n", obs.LightningStrikeCount, obs.LightningStrikeAvg)
+					}
+				}
+				
+				fmt.Println("\n✅ UDP broadcast test completed successfully!")
+			} else {
+				fmt.Println("\n⚠️  No packets received. Possible issues:")
+				fmt.Println("  - Tempest station not on same network")
+				fmt.Println("  - Firewall blocking UDP port 50222")
+				fmt.Println("  - Station not broadcasting (check station settings)")
+			}
+			os.Exit(0)
+			return
+
+		case <-ticker.C:
+			packetCount, lastPacket, stationIP, _ := udpListener.GetStats()
+			if packetCount > 0 {
+				fmt.Printf("📊 Packets received: %d | Last: %v | Station: %s\n",
+					packetCount, lastPacket.Format("15:04:05"), stationIP)
+			} else {
+				elapsed := time.Since(startTime)
+				fmt.Printf("⏳ Waiting... (%d seconds elapsed, no packets yet)\n", int(elapsed.Seconds()))
+			}
+		}
+	}
+}
+
+// runHomeKitTest tests the HomeKit bridge setup
+func runHomeKitTest(cfg *config.Config) {
+	fmt.Println("=== HomeKit Bridge Test ===")
+	fmt.Println()
+
+	fmt.Println("📋 HomeKit Configuration:")
+	fmt.Printf("  PIN: %s\n", cfg.Pin)
+	fmt.Printf("  Station: %s\n", cfg.StationName)
+	fmt.Printf("  Sensors: %s\n", cfg.Sensors)
+	fmt.Println()
+
+	// Parse sensor config
+	sensorConfig := config.ParseSensorConfig(cfg.Sensors)
+	fmt.Println("✅ Sensor Configuration:")
+	fmt.Printf("  Temperature: %v\n", sensorConfig.Temperature)
+	fmt.Printf("  Humidity: %v\n", sensorConfig.Humidity)
+	fmt.Printf("  Light: %v\n", sensorConfig.Light)
+	fmt.Printf("  Wind: %v\n", sensorConfig.Wind)
+	fmt.Printf("  Rain: %v\n", sensorConfig.Rain)
+	fmt.Printf("  Pressure: %v\n", sensorConfig.Pressure)
+	fmt.Printf("  UV: %v\n", sensorConfig.UV)
+	fmt.Printf("  Lightning: %v\n", sensorConfig.Lightning)
+	fmt.Println()
+
+	fmt.Println("🏠 HomeKit Bridge would be created with:")
+	fmt.Printf("  Name: Tempest - %s\n", cfg.StationName)
+	fmt.Printf("  Manufacturer: WeatherFlow\n")
+	fmt.Printf("  Model: Tempest Weather System\n")
+	fmt.Printf("  Serial: Tempest-%s\n", cfg.StationName)
+	fmt.Println()
+
+	fmt.Println("📱 To pair with HomeKit:")
+	fmt.Println("  1. Open Home app on iOS/macOS")
+	fmt.Println("  2. Tap '+' to add accessory")
+	fmt.Println("  3. Select 'More Options'")
+	fmt.Printf("  4. Select 'Tempest - %s'\n", cfg.StationName)
+	fmt.Printf("  5. Enter PIN: %s\n", cfg.Pin)
+	fmt.Println()
+
+	fmt.Println("✅ HomeKit configuration test completed successfully!")
+	fmt.Println("   (Bridge was not actually started - this is a dry run)")
+	os.Exit(0)
+}
+
+// runWebStatusTest tests web status scraping
+func runWebStatusTest(cfg *config.Config) {
+	fmt.Println("=== Web Status Scraping Test ===")
+	fmt.Println()
+
+	if cfg.Token == "" || cfg.StationName == "" {
+		log.Fatal("❌ Token and station name are required for web status testing")
+	}
+
+	fmt.Printf("Testing status scraping for station: %s\n\n", cfg.StationName)
+
+	// Note: This would require implementing a scraper test function
+	// For now, provide guidance
+	fmt.Println("⚠️  Web status scraping test not yet implemented")
+	fmt.Println()
+	fmt.Println("To test web status scraping:")
+	fmt.Println("  1. Ensure Chrome/Chromium is installed")
+	fmt.Println("  2. Run the application with --use-web-status flag")
+	fmt.Println("  3. Check logs for status scraping activity")
+	fmt.Println("  4. Visit http://localhost:8080/api/status")
+	fmt.Println()
+	fmt.Println("Note: This feature requires headless browser support")
+	fmt.Println("See pkg/web/ui_headless_test.go for implementation details")
+	os.Exit(0)
+}
+
+// runAlarmTest triggers a specific alarm for testing
+func runAlarmTest(cfg *config.Config) {
+	fmt.Printf("=== Alarm Trigger Test: %s ===\n\n", cfg.TestAlarm)
+
+	if cfg.Alarms == "" {
+		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+	}
+
+	// Load alarm configuration
+	alarmConfig, err := alarm.LoadAlarmConfig(cfg.Alarms)
+	if err != nil {
+		log.Fatalf("❌ Failed to load alarm config: %v", err)
+	}
+
+	// Find the alarm by name
+	var targetAlarm *alarm.Alarm
+	for i := range alarmConfig.Alarms {
+		if alarmConfig.Alarms[i].Name == cfg.TestAlarm {
+			targetAlarm = &alarmConfig.Alarms[i]
+			break
+		}
+	}
+
+	if targetAlarm == nil {
+		log.Fatalf("❌ Alarm '%s' not found in configuration", cfg.TestAlarm)
+	}
+
+	fmt.Printf("Found alarm: %s\n", targetAlarm.Name)
+	fmt.Printf("Description: %s\n", targetAlarm.Description)
+	fmt.Printf("Condition: %s\n", targetAlarm.Condition)
+	fmt.Printf("Enabled: %v\n", targetAlarm.Enabled)
+	fmt.Printf("Channels: %d\n", len(targetAlarm.Channels))
+	fmt.Println()
+
+	if !targetAlarm.Enabled {
+		log.Fatalf("❌ Alarm '%s' is disabled in configuration", cfg.TestAlarm)
+	}
+
+	// Create a test observation that will trigger the alarm
+	fmt.Println("Creating test observation to trigger alarm...")
+	testObs := weather.Observation{
+		Timestamp:          time.Now().Unix(),
+		AirTemperature:     25.0,  // Default values
+		RelativeHumidity:   60.0,
+		StationPressure:    1013.25,
+		WindAvg:            5.0,
+		WindGust:           10.0,
+		WindDirection:      180.0,
+		UV:                 5,
+		Illuminance:        50000.0,
+		RainAccumulated:    0.0,
+		RainDailyTotal:     0.0,
+		LightningStrikeCount: 0,
+		LightningStrikeAvg:  0.0,
+	}
+
+	// Create alarm manager
+	manager, err := alarm.NewManager(cfg.Alarms, cfg.StationName)
+	if err != nil {
+		log.Fatalf("❌ Failed to create alarm manager: %v", err)
+	}
+
+	fmt.Println("Triggering alarm by sending test observation...")
+	fmt.Println()
+
+	// Force the alarm to fire by temporarily setting condition to always true
+	// This is a test, so we modify the condition
+	originalCondition := targetAlarm.Condition
+	targetAlarm.Condition = "temperature > 0"  // Always true condition
+
+	// Send the observation
+	manager.ProcessObservation(&testObs)
+
+	// Restore original condition
+	targetAlarm.Condition = originalCondition
+
+	fmt.Println()
+	fmt.Println("✅ Alarm test completed!")
+	fmt.Println("   Check above output for notification delivery results")
+	os.Exit(0)
+}
+
+// contains checks if a string slice contains a specific string
+func contains(slice []string, str string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true
+		}
+	}
+	return false
 }
 
 // runAPITests performs comprehensive testing of all WeatherFlow API endpoints

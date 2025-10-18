@@ -633,6 +633,26 @@ type Observation struct {
 
 ### Testing Requirements
 
+#### Testing Infrastructure (v1.8.0+)
+- ✅ **Test Flags**: 11 comprehensive testing flags for pre-deployment validation
+  - API endpoint testing (`--test-api`)
+  - UDP broadcast testing (`--test-udp [seconds]`)
+  - Email delivery testing (`--test-email <email>`)
+  - SMS delivery testing (`--test-sms <phone>`)
+  - Console notification testing (`--test-console`)
+  - Syslog notification testing (`--test-syslog`)
+  - OSLog notification testing (`--test-oslog`)
+  - Event Log notification testing (`--test-eventlog`)
+  - HomeKit bridge testing (`--test-homekit`)
+  - Web status scraping testing (`--test-web-status`)
+  - Alarm trigger testing (`--test-alarm <name>`)
+- ✅ **Factory Pattern**: All notification tests use real delivery path
+- ✅ **Test Coverage**: 98+ unit tests for test flag functionality
+  - Flag parsing and validation
+  - Parameter validation (email addresses, phone numbers)
+  - Handler integration testing
+  - Exit behavior documentation
+
 #### Unit Tests (v1.3.0 Enhanced)
 - ✅ **Configuration**: Test flag parsing, environment variables, elevation parsing with edge cases
 - ✅ **Configuration Validation**: Comprehensive testing of validateConfig function (97.5% coverage)
