@@ -229,7 +229,7 @@ SMTP_FROM_ADDRESS=alerts@example.com
 
 Test your email configuration:
 ```bash
-./tempest-homekit-go --email-test
+./tempest-homekit-go --test-email user@example.com
 ```
 
 This will:

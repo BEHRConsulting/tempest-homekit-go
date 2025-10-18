@@ -14,7 +14,7 @@
   "_comment13": "     If omitted, SMS will be sent directly to phone numbers",
   "_comment14": "     AWS_SNS_TOPIC_ARN=arn:aws:sns:us-east-1:123456789012:tempest-alerts",
   "_comment15": "",
-  "_comment16": "  3. Set SMS provider in alarm config below to 'aws_sns', 'sns', or 'aws'",
+  "_comment16": "  3. SMS provider is auto-detected from .env (AWS if AWS_ACCESS_KEY_ID is set)",
   "_comment17": "",
   "_comment18": "  4. Run: ./tempest-homekit-go --alarms @alarms-aws.example.json",
   "_comment19": "",

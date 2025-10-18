@@ -48,7 +48,8 @@ The format is based on "Keep a Changelog" and this project adheres to Semantic V
   - Smart change detection thresholds (0.1°C for temp, 1% humidity, etc.)
   - Template variables: `{{last_temperature}}`, `{{last_humidity}}`, etc.
   - Composite variables: `{{app_info}}`, `{{alarm_info}}`, `{{sensor_info}}`
-- Email testing functionality: `--email-test` flag for configuration validation
+- Email testing functionality: `--test-email` flag for configuration validation
+- SMS testing functionality: `--test-sms` flag for configuration validation
 - Dependencies: Azure SDK for Go, Microsoft Graph SDK for Go
 
 ### Changed

@@ -4,8 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"log/syslog"
+	"net/http"
 	"net/smtp"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -478,7 +481,8 @@ func (n *SMSNotifier) sendAWSSNS(smsConfig *SMSConfig, message string) error {
 	logger.Debug("  Region: %s", region)
 	logger.Debug("  To: %v", smsConfig.To)
 
-	// Create AWS config with credentials
+	// Create AWS config with ONLY the credentials from .env (no OS credentials)
+	// Using StaticCredentialsProvider prevents fallback to ~/.aws/credentials or IAM roles
 	ctx := context.Background()
 	cfg, err := awsconfig.LoadDefaultConfig(ctx,
 		awsconfig.WithRegion(region),
@@ -541,10 +545,76 @@ func (n *SMSNotifier) sendAWSSNS(smsConfig *SMSConfig, message string) error {
 }
 
 func (n *SMSNotifier) sendTwilio(smsConfig *SMSConfig, message string) error {
-	// TODO: Implement Twilio SMS sending
-	logger.Info("SMS Notification [Twilio]: To=%v, Message=%s", smsConfig.To, message)
-	logger.Warn("Twilio SMS sending not yet implemented")
-	return fmt.Errorf("Twilio SMS provider not yet implemented")
+	// Get credentials from config (with environment variable expansion)
+	accountSID := os.ExpandEnv(n.config.AccountSID)
+	authToken := os.ExpandEnv(n.config.AuthToken)
+	fromNumber := os.ExpandEnv(n.config.FromNumber)
+
+	if accountSID == "" || authToken == "" || fromNumber == "" {
+		return fmt.Errorf("Twilio credentials missing (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER required)")
+	}
+
+	logger.Debug("Sending SMS via Twilio")
+	logger.Debug("  Account SID: %s", accountSID[:10]+"...")
+	logger.Debug("  From: %s", fromNumber)
+	logger.Debug("  To: %v", smsConfig.To)
+
+	// Twilio API endpoint
+	urlStr := fmt.Sprintf("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json", accountSID)
+
+	// Send to each recipient
+	var lastErr error
+	successCount := 0
+
+	for _, phoneNumber := range smsConfig.To {
+		// Prepare form data
+		data := url.Values{}
+		data.Set("To", phoneNumber)
+		data.Set("From", fromNumber)
+		data.Set("Body", message)
+
+		// Create HTTP request
+		req, err := http.NewRequest("POST", urlStr, strings.NewReader(data.Encode()))
+		if err != nil {
+			lastErr = err
+			logger.Error("Failed to create Twilio request: %v", err)
+			continue
+		}
+
+		// Set authentication and headers
+		req.SetBasicAuth(accountSID, authToken)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		// Send request
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = err
+			logger.Error("Failed to send SMS to %s via Twilio: %v", phoneNumber, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		// Check response
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			successCount++
+			logger.Info("SMS sent successfully via Twilio to [%s]", phoneNumber)
+		} else {
+			body, _ := io.ReadAll(resp.Body)
+			lastErr = fmt.Errorf("Twilio API error (status %d): %s", resp.StatusCode, string(body))
+			logger.Error("Failed to send SMS to %s via Twilio: %v", phoneNumber, lastErr)
+		}
+	}
+
+	if successCount == 0 && lastErr != nil {
+		return fmt.Errorf("failed to send any SMS via Twilio: %w", lastErr)
+	}
+
+	if successCount < len(smsConfig.To) {
+		logger.Warn("Sent %d/%d SMS messages successfully", successCount, len(smsConfig.To))
+	}
+
+	return nil
 }
 
 // formatAppInfo returns formatted application information

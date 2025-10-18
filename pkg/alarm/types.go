@@ -9,16 +9,20 @@ import (
 	"time"
 )
 
-// AlarmConfig represents the complete alarm configuration
+// AlarmConfig represents the alarm system configuration.
+// This structure contains ONLY alarm rules. All credentials (email, SMS, syslog)
+// are loaded exclusively from .env file via environment variables.
+// See LoadConfigFromEnv() for credential loading from SMTP_*, MS365_*, TWILIO_*, AWS_*, SYSLOG_*
 type AlarmConfig struct {
-	// Global email settings
-	Email *EmailGlobalConfig `json:"email,omitempty"`
-	// Global SMS settings
-	SMS *SMSGlobalConfig `json:"sms,omitempty"`
-	// Global syslog settings
-	Syslog *SyslogConfig `json:"syslog,omitempty"`
 	// List of alarm rules
 	Alarms []Alarm `json:"alarms"`
+
+	// Internal: Global email settings (loaded from .env, not JSON)
+	Email *EmailGlobalConfig `json:"-"`
+	// Internal: Global SMS settings (loaded from .env, not JSON)
+	SMS *SMSGlobalConfig `json:"-"`
+	// Internal: Global syslog settings (loaded from .env, not JSON)
+	Syslog *SyslogConfig `json:"-"`
 }
 
 // EmailGlobalConfig contains global email configuration
@@ -96,7 +100,10 @@ type SMSConfig struct {
 	Message string   `json:"message"` // Template string
 }
 
-// LoadConfigFromEnv loads email/SMS configuration from environment variables
+// LoadConfigFromEnv loads email/SMS configuration from environment variables.
+// All credentials must be explicitly set in .env file - no fallback to OS credentials.
+// For AWS SNS: Requires AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION in .env
+// (Does NOT use ~/.aws/credentials or IAM roles)
 func LoadConfigFromEnv() (*AlarmConfig, error) {
 	config := &AlarmConfig{}
 
@@ -239,18 +246,12 @@ func LoadAlarmConfig(input string) (*AlarmConfig, error) {
 		return nil, fmt.Errorf("failed to parse alarm config from JSON string: %w\nEnsure your JSON matches the AlarmConfig structure", err)
 	}
 
-	// Load config from environment variables and merge (env takes precedence)
+	// Load credentials from environment variables (ONLY source for Email/SMS/Syslog config)
+	// JSON files should contain ONLY alarm rules, never credentials
 	envConfig, _ := LoadConfigFromEnv()
-	if envConfig.Email != nil {
-		config.Email = envConfig.Email
-	}
-	if envConfig.SMS != nil {
-		config.SMS = envConfig.SMS
-	}
-	if envConfig.Syslog != nil && config.Syslog == nil {
-		// Only use env syslog if not defined in JSON
-		config.Syslog = envConfig.Syslog
-	}
+	config.Email = envConfig.Email
+	config.SMS = envConfig.SMS
+	config.Syslog = envConfig.Syslog
 
 	// Validate config
 	if err := config.Validate(); err != nil {

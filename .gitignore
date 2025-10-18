@@ -45,21 +45,15 @@ tempest-homekit-go-windows
 /*.sqlite
 /*.sqlite3
 
-# Environment files (including backups and variants)
+# Environment variables and sensitive configuration
 .env
-.env.local
-.env.*.local
-.env.production
-.env.development
-.env.test
-.env.bak
-.env.backup
-.env.old
-*.env.bak
-*.env.backup
-*.env.old
-
-# But ALLOW .env.example (template file with no secrets)
+.env.*
+.env.bak*
+.env.backup*
+.env.old*
+*.env.bak*
+*.env.backup*
+*.env.old*
 !.env.example
 
 # IDE files

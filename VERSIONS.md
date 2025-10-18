@@ -16,7 +16,8 @@ This file tracks released versions and the notable changes implemented in each r
 - Previous sensor values tracking and display in notifications
 - Smart change detection with row highlighting in sensor tables
 - Composite template variables ({{app_info}}, {{alarm_info}}, {{sensor_info}})
-- Email testing functionality with --email-test flag
+- Email testing functionality with --test-email flag
+- SMS testing functionality with --test-sms flag
 
 ## v1.6.0
 - Alarm system with rule-based weather alerting

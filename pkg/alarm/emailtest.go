@@ -113,10 +113,9 @@ func TestEmailConfiguration(alarmsJSON, stationName string) error {
 		fmt.Println()
 	}
 
-	// Prompt for test email recipient
-	fmt.Print("Enter test email recipient address: ")
-	var recipientEmail string
-	if _, err := fmt.Scanln(&recipientEmail); err != nil || recipientEmail == "" {
+	// Recipient email comes from command line parameter
+	recipientEmail := os.Getenv("TEST_EMAIL_RECIPIENT")
+	if recipientEmail == "" {
 		return fmt.Errorf("no recipient email provided")
 	}
 
@@ -129,19 +128,17 @@ func TestEmailConfiguration(alarmsJSON, stationName string) error {
 	fmt.Printf("Sending test email to %s...\n", recipientEmail)
 	fmt.Println()
 
-	// Create email notifier with environment-based configuration
-	emailConfig := &EmailGlobalConfig{
-		Provider:     provider,
-		FromAddress:  fromAddress,
-		FromName:     fromName,
-		ClientID:     "${MS365_CLIENT_ID}",
-		ClientSecret: "${MS365_CLIENT_SECRET}",
-		TenantID:     "${MS365_TENANT_ID}",
-		UseOAuth2:    provider == "microsoft365", // Enable OAuth2 for MS365
+	// Load alarm configuration to use the factory (tests real delivery path)
+	config, err := LoadAlarmConfig(alarmsJSON)
+	if err != nil {
+		return fmt.Errorf("failed to load alarm configuration: %w", err)
 	}
 
-	notifier := &EmailNotifier{
-		config: emailConfig,
+	// Create email notifier using factory (same path as real alarms)
+	factory := NewNotifierFactory(config)
+	notifier, err := factory.GetNotifier("email")
+	if err != nil {
+		return fmt.Errorf("failed to create email notifier: %w", err)
 	}
 
 	// Get command line args
@@ -199,8 +196,7 @@ Current Weather Data:
 	}
 
 	// Send test email
-	err := notifier.Send(testAlarm, channel, testObs, stationName)
-	if err != nil {
+	if err = notifier.Send(testAlarm, channel, testObs, stationName); err != nil {
 		return fmt.Errorf("failed to send test email: %w", err)
 	}
 
@@ -232,4 +228,5 @@ func RunEmailTest(alarmsJSON, stationName string) {
 	if err := TestEmailConfiguration(alarmsJSON, stationName); err != nil {
 		log.Fatalf("❌ Email test failed: %v", err)
 	}
+	os.Exit(0)
 }

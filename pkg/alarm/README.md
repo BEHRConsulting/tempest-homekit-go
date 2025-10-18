@@ -203,7 +203,7 @@ go test -run TestEvaluator ./pkg/alarm/...
 Test your email configuration before deploying:
 
 ```bash
-./tempest-homekit-go --email-test --alarms @alarms.json
+./tempest-homekit-go --test-email user@example.com --alarms @alarms.json
 ```
 
 **What it tests:**

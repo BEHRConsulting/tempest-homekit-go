@@ -30,7 +30,12 @@ type Config struct {
 	Sensors             string
 	ReadHistory         bool
 	TestAPI             bool
-	EmailTest           bool    // Send test email and exit
+	TestEmail           string  // Send test email to this address and exit
+	TestSMS             string  // Send test SMS to this phone number and exit
+	TestConsole         bool    // Send test console notification and exit
+	TestSyslog          bool    // Send test syslog notification and exit
+	TestOSLog           bool    // Send test oslog notification and exit
+	TestEventLog        bool    // Send test eventlog notification and exit
 	UseWebStatus        bool    // Enable headless browser scraping of TempestWX status
 	UseGeneratedWeather bool    // Use generated weather data for testing instead of Tempest API
 	UDPStream           bool    // Listen for UDP broadcasts from local Tempest station
@@ -131,9 +136,15 @@ LOGGING & DEBUG OPTIONS:
                                 Env: LOG_LEVEL
   --logfilter <string>          Filter log messages (case-insensitive substring match)
                                 Env: LOG_FILTER
-  TESTING OPTIONS:
+
+TESTING OPTIONS:
   --test-api                    Test WeatherFlow API endpoints and exit
-  --email-test                  Send a test email using configured email settings and exit
+  --test-email <email>          Send a test email to the specified address and exit
+  --test-sms <phone>            Send a test SMS to the specified phone number (E.164 format) and exit
+  --test-console                Send a test console notification and exit
+  --test-syslog                 Send a test syslog notification and exit
+  --test-oslog                  Send a test oslog notification and exit (macOS only)
+  --test-eventlog               Send a test eventlog notification and exit (Windows only)
 
 OTHER OPTIONS:
   --version                     Show version information and exit
@@ -222,7 +233,12 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.DisableHomeKit, "disable-homekit", false, "Disable HomeKit services and run web console only")
 	flag.BoolVar(&cfg.ReadHistory, "read-history", cfg.ReadHistory, "Preload historical observations from Tempest API up to HISTORY_POINTS")
 	flag.BoolVar(&cfg.TestAPI, "test-api", false, "Test WeatherFlow API endpoints and data points")
-	flag.BoolVar(&cfg.EmailTest, "email-test", false, "Send a test email using configured email settings and exit")
+	flag.StringVar(&cfg.TestEmail, "test-email", "", "Send a test email to the specified address and exit")
+	flag.StringVar(&cfg.TestSMS, "test-sms", "", "Send a test SMS to the specified phone number (E.164 format) and exit")
+	flag.BoolVar(&cfg.TestConsole, "test-console", false, "Send a test console notification and exit")
+	flag.BoolVar(&cfg.TestSyslog, "test-syslog", false, "Send a test syslog notification and exit")
+	flag.BoolVar(&cfg.TestOSLog, "test-oslog", false, "Send a test oslog notification and exit (macOS only)")
+	flag.BoolVar(&cfg.TestEventLog, "test-eventlog", false, "Send a test eventlog notification and exit (Windows only)")
 	flag.BoolVar(&cfg.UseWebStatus, "use-web-status", false, "Enable headless browser scraping of TempestWX status page every 15 minutes")
 	flag.StringVar(&cfg.StationURL, "station-url", cfg.StationURL, "Custom station URL for weather data (e.g., http://localhost:8080/api/generate-weather). Overrides Tempest API. Can also be set via STATION_URL environment variable")
 	flag.BoolVar(&cfg.UseGeneratedWeather, "use-generated-weather", false, "Use generated weather data for UI testing instead of Tempest API")

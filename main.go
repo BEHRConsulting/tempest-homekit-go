@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -70,9 +71,52 @@ func main() {
 	}
 
 	// Handle email testing if requested
-	if cfg.EmailTest {
-		logger.Info("EmailTest flag detected, sending test email...")
+	if cfg.TestEmail != "" {
+		// Validate email address doesn't look like a flag
+		if strings.HasPrefix(cfg.TestEmail, "-") {
+			log.Fatalf("Invalid email address: %s. Usage: --test-email user@example.com", cfg.TestEmail)
+		}
+		logger.Info("TestEmail flag detected, sending test email to %s...", cfg.TestEmail)
 		runEmailTest(cfg)
+		return
+	}
+
+	// Handle SMS testing if requested
+	if cfg.TestSMS != "" {
+		// Validate phone number doesn't look like a flag
+		if strings.HasPrefix(cfg.TestSMS, "-") && !strings.HasPrefix(cfg.TestSMS, "+") {
+			log.Fatalf("Invalid phone number: %s. Usage: --test-sms +15555551234", cfg.TestSMS)
+		}
+		logger.Info("TestSMS flag detected, sending test SMS to %s...", cfg.TestSMS)
+		runSMSTest(cfg)
+		return
+	}
+
+	// Handle console testing if requested
+	if cfg.TestConsole {
+		logger.Info("TestConsole flag detected, sending test console notification...")
+		runConsoleTest(cfg)
+		return
+	}
+
+	// Handle syslog testing if requested
+	if cfg.TestSyslog {
+		logger.Info("TestSyslog flag detected, sending test syslog notification...")
+		runSyslogTest(cfg)
+		return
+	}
+
+	// Handle oslog testing if requested
+	if cfg.TestOSLog {
+		logger.Info("TestOSLog flag detected, sending test oslog notification...")
+		runOSLogTest(cfg)
+		return
+	}
+
+	// Handle eventlog testing if requested
+	if cfg.TestEventLog {
+		logger.Info("TestEventLog flag detected, sending test eventlog notification...")
+		runEventLogTest(cfg)
 		return
 	}
 
@@ -115,8 +159,79 @@ func runEmailTest(cfg *config.Config) {
 		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
 	}
 
+	// Set recipient via environment variable for test function
+	os.Setenv("TEST_EMAIL_RECIPIENT", cfg.TestEmail)
+
 	// Use alarm package's email test function
 	alarm.RunEmailTest(cfg.Alarms, cfg.StationName)
+}
+
+// runSMSTest sends a test SMS using the configured SMS settings
+func runSMSTest(cfg *config.Config) {
+	fmt.Println("=== SMS Configuration Test ===")
+	fmt.Println()
+
+	if cfg.Alarms == "" {
+		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+	}
+
+	// Set recipient via environment variable for test function
+	os.Setenv("TEST_SMS_RECIPIENT", cfg.TestSMS)
+
+	// Use alarm package's SMS test function
+	alarm.RunSMSTest(cfg.Alarms, cfg.StationName)
+}
+
+// runConsoleTest sends a test console notification
+func runConsoleTest(cfg *config.Config) {
+	fmt.Println("=== Console Notification Test ===")
+	fmt.Println()
+
+	if cfg.Alarms == "" {
+		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+	}
+
+	// Use alarm package's console test function
+	alarm.RunConsoleTest(cfg.Alarms, cfg.StationName)
+}
+
+// runSyslogTest sends a test syslog notification
+func runSyslogTest(cfg *config.Config) {
+	fmt.Println("=== Syslog Notification Test ===")
+	fmt.Println()
+
+	if cfg.Alarms == "" {
+		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+	}
+
+	// Use alarm package's syslog test function
+	alarm.RunSyslogTest(cfg.Alarms, cfg.StationName)
+}
+
+// runOSLogTest sends a test oslog notification
+func runOSLogTest(cfg *config.Config) {
+	fmt.Println("=== OSLog Notification Test ===")
+	fmt.Println()
+
+	if cfg.Alarms == "" {
+		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+	}
+
+	// Use alarm package's oslog test function
+	alarm.RunOSLogTest(cfg.Alarms, cfg.StationName)
+}
+
+// runEventLogTest sends a test eventlog notification
+func runEventLogTest(cfg *config.Config) {
+	fmt.Println("=== EventLog Notification Test ===")
+	fmt.Println()
+
+	if cfg.Alarms == "" {
+		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+	}
+
+	// Use alarm package's eventlog test function
+	alarm.RunEventLogTest(cfg.Alarms, cfg.StationName)
 }
 
 // runAPITests performs comprehensive testing of all WeatherFlow API endpoints

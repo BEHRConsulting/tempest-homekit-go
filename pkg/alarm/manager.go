@@ -263,18 +263,11 @@ func (m *Manager) reloadConfig() error {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	// Load config from environment variables and merge (env takes precedence)
+	// Load credentials from environment variables (ONLY source)
 	envConfig, _ := LoadConfigFromEnv()
-	if envConfig.Email != nil {
-		newConfig.Email = envConfig.Email
-	}
-	if envConfig.SMS != nil {
-		newConfig.SMS = envConfig.SMS
-	}
-	if envConfig.Syslog != nil && newConfig.Syslog == nil {
-		// Only use env syslog if not defined in JSON
-		newConfig.Syslog = envConfig.Syslog
-	}
+	newConfig.Email = envConfig.Email
+	newConfig.SMS = envConfig.SMS
+	newConfig.Syslog = envConfig.Syslog
 
 	if err := newConfig.Validate(); err != nil {
 		return fmt.Errorf("invalid config: %w", err)

@@ -199,18 +199,34 @@ The alarm system enables rule-based weather alerting with multiple notification 
 Before deploying alarms in production, test your email configuration:
 
 ```bash
-./tempest-homekit-go --email-test --alarms @alarms.json
+./tempest-homekit-go --test-email user@example.com --alarms @alarms.json
 ```
 
 The email test will:
 1. Validate email provider configuration (Microsoft 365 OAuth2 or SMTP)
 2. Check all required credentials from `.env` file
-3. Prompt for a recipient email address
-4. Send a test email with:
+3. Send a test email to the specified address with:
    - Application name and version
    - Timestamp and command line options
    - Email configuration details
    - Current weather data from your station
+5. Provide troubleshooting guidance if delivery fails
+
+### Testing SMS Configuration
+
+Before deploying SMS alarms in production, test your SMS configuration:
+
+```bash
+./tempest-homekit-go --test-sms +15555551234 --alarms @alarms.json
+```
+
+The SMS test will:
+1. Validate SMS provider configuration (Twilio or AWS SNS)
+2. Check all required credentials from `.env` file
+3. Send a test SMS to the specified phone number with:
+   - Application name and version
+   - Timestamp
+   - SMS provider information
 5. Provide troubleshooting guidance if delivery fails
 
 **Microsoft 365 Setup:**
@@ -240,6 +256,23 @@ For AWS SNS configuration (recommended for production SMS), see detailed setup i
    - Send test SMS for verification
 
 **Important**: The AWS credentials in `.env` are for the **application runtime user** (limited permissions). The setup script uses your **admin AWS CLI credentials** from `~/.aws/credentials` or `aws configure`.
+
+**Twilio SMS Setup:**
+For Twilio SMS configuration (great for development and moderate volume), see detailed setup instructions in `.env.example`. Quick setup:
+1. Sign up for Twilio: https://www.twilio.com/try-twilio (get $15 trial credit)
+2. Get credentials from Twilio Console: https://console.twilio.com/
+   - Account SID (starts with "AC")
+   - Auth Token (click "Show" to reveal)
+3. Purchase a phone number with SMS capability from the Twilio Console
+4. Configure in `.env`: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` (E.164 format: +1XXXXXXXXXX)
+5. Test configuration: `./tempest-homekit-go --test-sms +15555551234 --alarms @alarms.json`
+
+**Note**: Trial accounts can only send to verified phone numbers. To verify a number:
+1. Go to Twilio Console → Phone Numbers → Verified Caller IDs
+2. Click "+" to add a new number
+3. Enter the number and verify via SMS or call
+
+**Pricing**: ~$0.0079 per message (US), ~$1/month for phone number. Upgrade to paid account for unrestricted sending.
 
 ### Using the Alarm Editor
 
