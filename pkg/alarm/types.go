@@ -75,29 +75,38 @@ type Alarm struct {
 	triggerContext map[string]float64 // Internal: field values at time of trigger (for notification display)
 }
 
-// Channel represents a notification channel configuration
+// Channel represents a notification channel
 type Channel struct {
-	Type     string            `json:"type"`               // "console", "email", "sms", "syslog", "eventlog"
-	Template string            `json:"template,omitempty"` // For console, syslog, eventlog, sms
-	Email    *EmailConfig      `json:"email,omitempty"`
-	SMS      *SMSConfig        `json:"sms,omitempty"`
-	Metadata map[string]string `json:"metadata,omitempty"` // Additional channel-specific settings
+	Type     string         `json:"type"`
+	Template string         `json:"template,omitempty"`
+	Email    *EmailConfig   `json:"email,omitempty"`
+	SMS      *SMSConfig     `json:"sms,omitempty"`
+	Webhook  *WebhookConfig `json:"webhook,omitempty"`
 }
 
-// EmailConfig for alarm-specific email settings
+// EmailConfig holds email-specific configuration for a channel
 type EmailConfig struct {
-	To      []string `json:"to"`
+	Subject string   `json:"subject,omitempty"`
+	Body    string   `json:"body,omitempty"`
+	To      []string `json:"to,omitempty"`
 	CC      []string `json:"cc,omitempty"`
 	BCC     []string `json:"bcc,omitempty"`
-	Subject string   `json:"subject"`
-	Body    string   `json:"body"`           // Template string
-	Html    bool     `json:"html,omitempty"` // Send as HTML email
+	Html    bool     `json:"html,omitempty"`
 }
 
-// SMSConfig for alarm-specific SMS settings
+// SMSConfig holds SMS-specific configuration for a channel
 type SMSConfig struct {
-	To      []string `json:"to"`      // Phone numbers
-	Message string   `json:"message"` // Template string
+	Message string   `json:"message,omitempty"`
+	To      []string `json:"to,omitempty"`
+}
+
+// WebhookConfig holds webhook-specific configuration for a channel
+type WebhookConfig struct {
+	URL         string            `json:"url,omitempty"`
+	Method      string            `json:"method,omitempty"`
+	Headers     map[string]string `json:"headers,omitempty"`
+	Body        string            `json:"body,omitempty"`
+	ContentType string            `json:"content_type,omitempty"`
 }
 
 // LoadConfigFromEnv loads email/SMS configuration from environment variables.
@@ -305,10 +314,11 @@ func (c *Channel) Validate() error {
 		"syslog":   true,
 		"oslog":    true,
 		"eventlog": true,
+		"webhook":  true,
 	}
 
 	if !validTypes[c.Type] {
-		return fmt.Errorf("invalid channel type: %s (must be console, email, sms, syslog, oslog, or eventlog)", c.Type)
+		return fmt.Errorf("invalid channel type: %s (must be console, email, sms, syslog, oslog, eventlog, or webhook)", c.Type)
 	}
 
 	switch c.Type {
@@ -338,6 +348,22 @@ func (c *Channel) Validate() error {
 		}
 		if c.SMS.Message == "" {
 			return fmt.Errorf("message template is required for sms channel")
+		}
+	case "webhook":
+		if c.Webhook == nil {
+			return fmt.Errorf("webhook configuration is required for webhook channel")
+		}
+		if c.Webhook.URL == "" {
+			return fmt.Errorf("url is required for webhook channel")
+		}
+		if c.Webhook.Body == "" {
+			return fmt.Errorf("body template is required for webhook channel")
+		}
+		if c.Webhook.Method == "" {
+			c.Webhook.Method = "POST" // Default to POST
+		}
+		if c.Webhook.ContentType == "" {
+			c.Webhook.ContentType = "application/json" // Default content type
 		}
 	}
 

@@ -263,6 +263,7 @@ function toggleMessageSections() {
     const eventlogChecked = document.getElementById('deliveryEventlog').checked;
     const emailChecked = document.getElementById('deliveryEmail').checked;
     const smsChecked = document.getElementById('deliverySMS').checked;
+    const webhookChecked = document.getElementById('deliveryWebhook').checked;
     
     // Message sections for each delivery method
     document.getElementById('consoleMessageSection').style.display = consoleChecked ? 'block' : 'none';
@@ -271,6 +272,7 @@ function toggleMessageSections() {
     document.getElementById('eventlogMessageSection').style.display = eventlogChecked ? 'block' : 'none';
     document.getElementById('emailMessageSection').style.display = emailChecked ? 'block' : 'none';
     document.getElementById('smsMessageSection').style.display = smsChecked ? 'block' : 'none';
+    document.getElementById('webhookMessageSection').style.display = webhookChecked ? 'block' : 'none';
 }
 
 function showCreateModal() {
@@ -289,6 +291,7 @@ function showCreateModal() {
     document.getElementById('deliveryEventlog').checked = false;
     document.getElementById('deliveryEmail').checked = false;
     document.getElementById('deliverySMS').checked = false;
+    document.getElementById('deliveryWebhook').checked = false;
     
     // Set default messages with nice formatting
     // Console: Simple, clean terminal output
@@ -363,6 +366,41 @@ Sensor Data:
     document.getElementById('smsTo').value = '';
     document.getElementById('smsMessage').value = `⚠️ {{alarm_name}} at {{station}} - {{timestamp}}. {{alarm_description}}`;
     
+    // Webhook: JSON payload with alarm and sensor data
+    document.getElementById('webhookUrl').value = '';
+    document.getElementById('webhookMethod').value = 'POST';
+    document.getElementById('webhookHeaders').value = `{
+  "Content-Type": "application/json",
+  "User-Agent": "Tempest-HomeKit-Alarm"
+}`;
+    document.getElementById('webhookBody').value = `{
+  "alarm": {
+    "name": "{{alarm_name}}",
+    "description": "{{alarm_description}}",
+    "condition": "{{alarm_condition}}",
+    "tags": "{{alarm_tags}}"
+  },
+  "station": "{{station}}",
+  "timestamp": "{{timestamp}}",
+  "sensors": {
+    "temperature_c": {{temperature}},
+    "temperature_f": {{temperature_f}},
+    "humidity": {{humidity}},
+    "pressure_mb": {{pressure}},
+    "wind_speed_ms": {{wind_speed}},
+    "wind_gust_ms": {{wind_gust}},
+    "wind_direction_deg": {{wind_direction}},
+    "illuminance_lux": {{lux}},
+    "uv_index": {{uv}},
+    "rain_rate_mmh": {{rain_rate}},
+    "rain_daily_mm": {{rain_daily}},
+    "lightning_count": {{lightning_count}},
+    "lightning_distance_km": {{lightning_distance}}
+  },
+  "app_info": "{{app_info}}"
+}`;
+    document.getElementById('webhookContentType').value = 'application/json';
+    
     selectedTags = [];
     renderSelectedTags();
     document.getElementById('tagSearchInput').value = '';
@@ -418,6 +456,7 @@ function editAlarm(name) {
     document.getElementById('deliveryEventlog').checked = channelTypes.includes('eventlog');
     document.getElementById('deliveryEmail').checked = channelTypes.includes('email');
     document.getElementById('deliverySMS').checked = channelTypes.includes('sms');
+    document.getElementById('deliveryWebhook').checked = channelTypes.includes('webhook');
     
     // Load messages from channels
     channels.forEach(channel => {
@@ -437,6 +476,12 @@ function editAlarm(name) {
         } else if (channel.type === 'sms' && channel.sms) {
             document.getElementById('smsTo').value = (channel.sms.to || []).join(', ');
             document.getElementById('smsMessage').value = channel.sms.message || '';
+        } else if (channel.type === 'webhook' && channel.webhook) {
+            document.getElementById('webhookUrl').value = channel.webhook.url || '';
+            document.getElementById('webhookMethod').value = channel.webhook.method || 'POST';
+            document.getElementById('webhookHeaders').value = channel.webhook.headers ? JSON.stringify(channel.webhook.headers, null, 2) : '';
+            document.getElementById('webhookBody').value = channel.webhook.body || '';
+            document.getElementById('webhookContentType').value = channel.webhook.content_type || 'application/json';
         }
     });
     
@@ -602,6 +647,34 @@ async function handleSubmit(e) {
             sms: {
                 to: smsTo ? smsTo.split(',').map(p => p.trim()).filter(p => p) : ['+1234567890'],
                 message: smsMessage || 'ALARM: {{alarm_name}} at {{timestamp}}'
+            }
+        });
+    }
+    if (document.getElementById('deliveryWebhook').checked) {
+        const webhookUrl = document.getElementById('webhookUrl').value;
+        const webhookMethod = document.getElementById('webhookMethod').value || 'POST';
+        const webhookHeadersStr = document.getElementById('webhookHeaders').value;
+        const webhookBody = document.getElementById('webhookBody').value;
+        const webhookContentType = document.getElementById('webhookContentType').value || 'application/json';
+        
+        let webhookHeaders = {};
+        if (webhookHeadersStr.trim()) {
+            try {
+                webhookHeaders = JSON.parse(webhookHeadersStr);
+            } catch (e) {
+                showNotification('Invalid JSON in webhook headers', 'error');
+                return;
+            }
+        }
+        
+        channels.push({ 
+            type: 'webhook',
+            webhook: {
+                url: webhookUrl,
+                method: webhookMethod,
+                headers: webhookHeaders,
+                body: webhookBody,
+                content_type: webhookContentType
             }
         });
     }

@@ -4,8 +4,12 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -93,6 +97,17 @@ func main() {
 		return
 	}
 
+	// Handle webhook testing if requested
+	if cfg.TestWebhook != "" {
+		// Validate URL doesn't look like a flag
+		if strings.HasPrefix(cfg.TestWebhook, "-") {
+			log.Fatalf("Invalid URL: %s. Usage: --test-webhook https://example.com/webhook", cfg.TestWebhook)
+		}
+		logger.Info("TestWebhook flag detected, sending test webhook to %s...", cfg.TestWebhook)
+		runWebhookTest(cfg)
+		return
+	}
+
 	// Handle console testing if requested
 	if cfg.TestConsole {
 		logger.Info("TestConsole flag detected, sending test console notification...")
@@ -170,6 +185,17 @@ func main() {
 		return
 	}
 
+	// Handle webhook listener if requested
+	if cfg.WebhookListenerSet || cfg.WebhookPortSet {
+		port := cfg.WebhookListenPort
+		if port == "" {
+			port = "8082" // Default to 8082
+		}
+		logger.Info("WebhookListen flag detected, starting webhook listener on port %s...", port)
+		runWebhookListener(port)
+		return
+	}
+
 	logger.Info("Starting service with config: WebPort=%s, LogLevel=%s", cfg.WebPort, cfg.LogLevel)
 	err := service.StartService(cfg, "1.8.0")
 	if err != nil {
@@ -213,6 +239,22 @@ func runSMSTest(cfg *config.Config) {
 
 	// Use alarm package's SMS test function
 	alarm.RunSMSTest(cfg.Alarms, cfg.StationName)
+}
+
+// runWebhookTest sends a test webhook using the configured webhook settings
+func runWebhookTest(cfg *config.Config) {
+	fmt.Println("=== Webhook Configuration Test ===")
+	fmt.Println()
+
+	if cfg.Alarms == "" {
+		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+	}
+
+	// Set recipient via environment variable for test function
+	os.Setenv("TEST_WEBHOOK_URL", cfg.TestWebhook)
+
+	// Use alarm package's webhook test function
+	alarm.RunWebhookTest(cfg.Alarms, cfg.StationName)
 }
 
 // runConsoleTest sends a test console notification
@@ -519,6 +561,405 @@ func contains(slice []string, str string) bool {
 		}
 	}
 	return false
+}
+
+// runWebhookListener starts an HTTP server to listen for incoming webhook requests
+func runWebhookListener(port string) {
+	logger.Info("Starting webhook listener server on port %s", port)
+	logger.Info("Webhook endpoints: POST /webhook, GET /health, GET /")
+
+	// Create HTTP server
+	mux := http.NewServeMux()
+
+	// Webhook endpoint
+	mux.HandleFunc("/webhook", func(w http.ResponseWriter, r *http.Request) {
+		// Only accept POST requests
+		if r.Method != http.MethodPost {
+			logger.Error("Webhook endpoint received invalid method: %s from %s", r.Method, r.RemoteAddr)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Read the request body
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			logger.Error("Failed to read webhook request body from %s: %v", r.RemoteAddr, err)
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
+
+		// Log webhook reception at INFO level
+		logger.Info("Webhook received from %s (%d bytes)", r.RemoteAddr, len(body))
+
+		// Try to parse and format alarm data like console notifications
+		if formattedMessage := formatWebhookAlarmMessage(body); formattedMessage != "" {
+			logger.Alarm("%s", formattedMessage)
+		}
+
+		// Log detailed information at DEBUG level
+		logger.Debug("Webhook details - Method: %s, URL: %s, Content-Type: %s",
+			r.Method, r.URL.String(), r.Header.Get("Content-Type"))
+
+		// Log headers at DEBUG level
+		if len(r.Header) > 0 {
+			headers := make([]string, 0, len(r.Header))
+			for key, values := range r.Header {
+				headers = append(headers, fmt.Sprintf("%s=%s", key, strings.Join(values, ",")))
+			}
+			logger.Debug("Webhook headers: %s", strings.Join(headers, "; "))
+		}
+
+		// Log body content at DEBUG level
+		if len(body) > 0 {
+			// Try to parse and pretty print as JSON
+			var jsonData interface{}
+			if err := json.Unmarshal(body, &jsonData); err == nil {
+				// Pretty print JSON
+				prettyJSON, _ := json.MarshalIndent(jsonData, "", "  ")
+				logger.Debug("Webhook body (JSON):\n%s", string(prettyJSON))
+			} else {
+				// Not JSON, log as string
+				logger.Debug("Webhook body (text):\n%s", string(body))
+			}
+		} else {
+			logger.Debug("Webhook body: (empty)")
+		}
+
+		// Send success response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok","message":"Webhook received successfully"}`))
+	})
+
+	// Health check endpoint
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		logger.Debug("Health check request from %s", r.RemoteAddr)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok","service":"webhook-listener"}`))
+	})
+
+	// Root endpoint with instructions
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		logger.Debug("Root endpoint request from %s", r.RemoteAddr)
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		response := fmt.Sprintf(`Webhook Listener Server
+
+This server listens for incoming webhook requests.
+
+Endpoints:
+  POST /webhook  - Receive webhook payloads (logs to console)
+  GET  /health   - Health check endpoint
+
+Send webhooks to: http://localhost:%s/webhook
+
+Server started at: %s
+`, port, time.Now().Format("2006-01-02 15:04:05"))
+		w.Write([]byte(response))
+	})
+
+	// Start the server
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: mux,
+	}
+
+	// Channel to listen for interrupt signal
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	// Start server in a goroutine
+	go func() {
+		logger.Info("Webhook listener server started successfully on http://localhost:%s", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("Failed to start webhook listener server: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	sig := <-c
+	logger.Info("Received signal %v, shutting down webhook listener server", sig)
+
+	// Graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Error("Webhook listener server forced to shutdown: %v", err)
+	} else {
+		logger.Info("Webhook listener server shut down gracefully")
+	}
+
+	os.Exit(0)
+}
+
+// WebhookAlarmPayload represents the structure of incoming webhook payloads
+type WebhookAlarmPayload struct {
+	Alarm struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Condition   string `json:"condition"`
+		Tags        string `json:"tags"`
+	} `json:"alarm"`
+	Station  string                 `json:"station"`
+	Timestamp string                `json:"timestamp"`
+	Sensors  map[string]interface{} `json:"sensors"`
+	AppInfo  string                 `json:"app_info"`
+}
+
+// formatWebhookAlarmMessage parses webhook payload and formats it like console notifications
+func formatWebhookAlarmMessage(body []byte) string {
+	var payload WebhookAlarmPayload
+	if err := json.Unmarshal(body, &payload); err != nil {
+		// Not a valid alarm webhook payload, return empty string
+		return ""
+	}
+
+	// Check if this looks like an alarm webhook (has alarm and sensors fields)
+	if payload.Alarm.Name == "" || len(payload.Sensors) == 0 {
+		return ""
+	}
+
+	// Create alarm struct from payload
+	alarm := &alarm.Alarm{
+		Name:        payload.Alarm.Name,
+		Description: payload.Alarm.Description,
+		Condition:   payload.Alarm.Condition,
+		Enabled:     true, // Assume enabled if we're receiving it
+	}
+
+	// Parse tags if present
+	if payload.Alarm.Tags != "" {
+		alarm.Tags = strings.Split(payload.Alarm.Tags, ",")
+		for i, tag := range alarm.Tags {
+			alarm.Tags[i] = strings.TrimSpace(tag)
+		}
+	}
+
+	// Create observation from sensors data
+	obs := &weather.Observation{}
+
+	// Parse timestamp
+	if payload.Timestamp != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05 MST", payload.Timestamp); err == nil {
+			obs.Timestamp = t.Unix()
+		} else if t, err := time.Parse(time.RFC3339, payload.Timestamp); err == nil {
+			obs.Timestamp = t.Unix()
+		} else {
+			// Use current time if parsing fails
+			obs.Timestamp = time.Now().Unix()
+		}
+	} else {
+		obs.Timestamp = time.Now().Unix()
+	}
+
+	// Parse sensor values
+	if val, ok := payload.Sensors["temperature_c"].(float64); ok {
+		obs.AirTemperature = val
+	}
+	if val, ok := payload.Sensors["humidity"].(float64); ok {
+		obs.RelativeHumidity = val
+	}
+	if val, ok := payload.Sensors["pressure_mb"].(float64); ok {
+		obs.StationPressure = val
+	}
+	if val, ok := payload.Sensors["wind_speed_ms"].(float64); ok {
+		obs.WindAvg = val
+	}
+	if val, ok := payload.Sensors["wind_gust_ms"].(float64); ok {
+		obs.WindGust = val
+	}
+	if val, ok := payload.Sensors["wind_direction_deg"].(float64); ok {
+		obs.WindDirection = val
+	}
+	if val, ok := payload.Sensors["illuminance_lux"].(float64); ok {
+		obs.Illuminance = val
+	}
+	if val, ok := payload.Sensors["uv_index"].(float64); ok {
+		obs.UV = int(val)
+	}
+	if val, ok := payload.Sensors["rain_rate_mmh"].(float64); ok {
+		obs.RainAccumulated = val
+	}
+	if val, ok := payload.Sensors["rain_daily_mm"].(float64); ok {
+		obs.RainDailyTotal = val
+	}
+	if val, ok := payload.Sensors["lightning_count"].(float64); ok {
+		obs.LightningStrikeCount = int(val)
+	}
+	if val, ok := payload.Sensors["lightning_distance_km"].(float64); ok {
+		obs.LightningStrikeAvg = val
+	}
+
+	// Format the message like console notifications
+	alarmInfo := formatAlarmInfo(alarm, false)
+	sensorInfo := formatSensorInfoWithAlarm(obs, alarm, false)
+
+	message := fmt.Sprintf("🔔 WEBHOOK ALARM: %s\n%s\n\n📊 Current Conditions:\n%s",
+		payload.Alarm.Name, alarmInfo, sensorInfo)
+
+	return message
+}
+
+// formatAlarmInfo returns formatted alarm information
+func formatAlarmInfo(alarm *alarm.Alarm, isHTML bool) string {
+	enabledStr := "enabled"
+	if !alarm.Enabled {
+		enabledStr = "disabled"
+	}
+
+	cooldownStr := fmt.Sprintf("%d seconds", alarm.Cooldown)
+	if alarm.Cooldown >= 3600 {
+		cooldownStr = fmt.Sprintf("%d hours", alarm.Cooldown/3600)
+	} else if alarm.Cooldown >= 60 {
+		cooldownStr = fmt.Sprintf("%d minutes", alarm.Cooldown/60)
+	}
+
+	tagsStr := "none"
+	if len(alarm.Tags) > 0 {
+		tagsStr = strings.Join(alarm.Tags, ", ")
+	}
+
+	if isHTML {
+		return fmt.Sprintf(`<table style="border-collapse: collapse; width: 100%%;">
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Alarm:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Description:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Condition:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Status:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Cooldown:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Tags:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+		</table>`,
+			alarm.Name, alarm.Description, alarm.Condition, enabledStr, cooldownStr, tagsStr)
+	}
+
+	return fmt.Sprintf("Alarm: %s\nDescription: %s\nCondition: %s\nStatus: %s\nCooldown: %s\nTags: %s",
+		alarm.Name, alarm.Description, alarm.Condition, enabledStr, cooldownStr, tagsStr)
+}
+
+// formatSensorInfoWithAlarm returns formatted sensor information with alarm context
+func formatSensorInfoWithAlarm(obs *weather.Observation, alarm *alarm.Alarm, isHTML bool) string {
+	tempF := obs.AirTemperature*9/5 + 32
+	windSpeedMph := obs.WindAvg * 2.23694
+	windGustMph := obs.WindGust * 2.23694
+	rainDaily := obs.RainDailyTotal / 25.4 // Convert mm to inches
+
+	// Wind direction cardinal
+	dir := obs.WindDirection
+	cardinal := "N"
+	switch {
+	case dir >= 337.5 || dir < 22.5:
+		cardinal = "N"
+	case dir >= 22.5 && dir < 67.5:
+		cardinal = "NE"
+	case dir >= 67.5 && dir < 112.5:
+		cardinal = "E"
+	case dir >= 112.5 && dir < 157.5:
+		cardinal = "SE"
+	case dir >= 157.5 && dir < 202.5:
+		cardinal = "S"
+	case dir >= 202.5 && dir < 247.5:
+		cardinal = "SW"
+	case dir >= 247.5 && dir < 292.5:
+		cardinal = "W"
+	case dir >= 292.5 && dir < 337.5:
+		cardinal = "NW"
+	}
+
+	// Helper to get previous value with proper formatting
+	getPrevValue := func(key string, _ /* current */ float64, format string) string {
+		if alarm == nil {
+			return "N/A"
+		}
+		if prev, ok := alarm.GetTriggerValue(key); ok {
+			return fmt.Sprintf(format, prev)
+		}
+		if prev, ok := alarm.GetPreviousValue(key); ok {
+			return fmt.Sprintf(format, prev)
+		}
+		return "N/A"
+	}
+
+	// Special handler for illuminance which needs number formatting
+	getPrevLux := func() string {
+		if alarm == nil {
+			return "N/A"
+		}
+		if prev, ok := alarm.GetTriggerValue("lux"); ok {
+			return formatNumber(prev)
+		}
+		if prev, ok := alarm.GetPreviousValue("lux"); ok {
+			return formatNumber(prev)
+		}
+		return "N/A"
+	}
+
+	if isHTML {
+		return fmt.Sprintf(`<table style="border-collapse: collapse; width: 100%%;">
+			<tr style="background: #f0f0f0;"><th style="padding: 5px; border: 1px solid #ddd;">Sensor</th><th style="padding: 5px; border: 1px solid #ddd;">Current</th><th style="padding: 5px; border: 1px solid #ddd;">Last</th></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Temperature:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f°F (%.1f°C)</td><td style="padding: 5px; border: 1px solid #ddd;">%s°C</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Humidity:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.0f%%</td><td style="padding: 5px; border: 1px solid #ddd;">%s%%</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Pressure:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f mb</td><td style="padding: 5px; border: 1px solid #ddd;">%s mb</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Speed:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f mph (%.1f m/s)</td><td style="padding: 5px; border: 1px solid #ddd;">%s m/s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Gust:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f mph (%.1f m/s)</td><td style="padding: 5px; border: 1px solid #ddd;">%s m/s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Wind Direction:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.0f° (%s)</td><td style="padding: 5px; border: 1px solid #ddd;">%s°</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>UV Index:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%d</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Illuminance:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%s lux</td><td style="padding: 5px; border: 1px solid #ddd;">%s lux</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Rain Rate:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f mm/hr</td><td style="padding: 5px; border: 1px solid #ddd;">%s mm/hr</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Daily Rain:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f in (%.1f mm)</td><td style="padding: 5px; border: 1px solid #ddd;">%s mm</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd;"><strong>Lightning:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%d strikes</td><td style="padding: 5px; border: 1px solid #ddd;">%s strikes</td></tr>
+		</table>`,
+			tempF, obs.AirTemperature, getPrevValue("temperature", obs.AirTemperature, "%.1f"),
+			obs.RelativeHumidity, getPrevValue("humidity", obs.RelativeHumidity, "%.0f"),
+			obs.StationPressure, getPrevValue("pressure", obs.StationPressure, "%.2f"),
+			windSpeedMph, obs.WindAvg, getPrevValue("wind_speed", obs.WindAvg, "%.1f"),
+			windGustMph, obs.WindGust, getPrevValue("wind_gust", obs.WindGust, "%.1f"),
+			obs.WindDirection, cardinal, getPrevValue("wind_direction", obs.WindDirection, "%.0f"),
+			obs.UV, getPrevValue("uv", float64(obs.UV), "%.0f"),
+			formatNumber(obs.Illuminance), getPrevLux(),
+			obs.RainAccumulated, getPrevValue("rain_rate", obs.RainAccumulated, "%.2f"),
+			rainDaily, obs.RainDailyTotal, getPrevValue("rain_daily", obs.RainDailyTotal, "%.1f"),
+			obs.LightningStrikeCount, getPrevValue("lightning_count", float64(obs.LightningStrikeCount), "%.0f"))
+	}
+
+	return fmt.Sprintf(`Temperature: %.1f°F (%.1f°C) [Last: %s°C]
+Humidity: %.0f%% [Last: %s%%]
+Pressure: %.2f mb [Last: %s mb]
+Wind Speed: %.1f mph (%.1f m/s) [Last: %s m/s]
+Wind Gust: %.1f mph (%.1f m/s) [Last: %s m/s]
+Wind Direction: %.0f° (%s) [Last: %s°]
+UV Index: %d [Last: %s]
+Illuminance: %s lux [Last: %s lux]
+Rain Rate: %.2f mm/hr [Last: %s mm/hr]
+Daily Rain: %.2f in (%.1f mm) [Last: %s mm]
+Lightning: %d strikes [Last: %s strikes]`,
+		tempF, obs.AirTemperature, getPrevValue("temperature", obs.AirTemperature, "%.1f"),
+		obs.RelativeHumidity, getPrevValue("humidity", obs.RelativeHumidity, "%.0f"),
+		obs.StationPressure, getPrevValue("pressure", obs.StationPressure, "%.2f"),
+		windSpeedMph, obs.WindAvg, getPrevValue("wind_speed", obs.WindAvg, "%.1f"),
+		windGustMph, obs.WindGust, getPrevValue("wind_gust", obs.WindGust, "%.1f"),
+		obs.WindDirection, cardinal, getPrevValue("wind_direction", obs.WindDirection, "%.0f"),
+		obs.UV, getPrevValue("uv", float64(obs.UV), "%.0f"),
+		formatNumber(obs.Illuminance), getPrevLux(),
+		obs.RainAccumulated, getPrevValue("rain_rate", obs.RainAccumulated, "%.2f"),
+		rainDaily, obs.RainDailyTotal, getPrevValue("rain_daily", obs.RainDailyTotal, "%.1f"),
+		obs.LightningStrikeCount, getPrevValue("lightning_count", float64(obs.LightningStrikeCount), "%.0f"))
+}
+
+// formatNumber formats a number with thousands separator
+func formatNumber(n float64) string {
+	s := fmt.Sprintf("%.0f", n)
+	if len(s) <= 3 {
+		return s
+	}
+
+	var result strings.Builder
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			result.WriteString(",")
+		}
+		result.WriteRune(c)
+	}
+	return result.String()
 }
 
 // runAPITests performs comprehensive testing of all WeatherFlow API endpoints

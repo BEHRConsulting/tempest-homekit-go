@@ -1,13 +1,14 @@
 {
   "alarms": [
     {
-      "name": "Wind Change",
-      "description": "Trigger on any wind change",
+      "name": "Wind Change console",
+      "description": "Trigger on any wind change and send a console message",
       "tags": [
         "wind",
-        "rapid-change"
+        "rapid-change",
+        "console"
       ],
-      "enabled": true,
+      "enabled": false,
       "condition": "* wind_speed",
       "cooldown": 300,
       "channels": [
@@ -21,19 +22,47 @@
       "name": "Wind Change sms",
       "tags": [
         "wind",
-        "rapid-change"
+        "rapid-change",
+        "sms"
       ],
       "enabled": false,
       "condition": "* wind_speed",
-      "cooldown": 1800,
+      "cooldown": 300,
       "channels": [
         {
           "type": "sms",
           "sms": {
+            "message": "⚠️ {{alarm_name}} at {{station}} - {{timestamp}}. {{alarm_description}}",
             "to": [
               "+19516422747"
-            ],
-            "message": "⚠️ {{alarm_name}} at {{station}} - {{timestamp}}. {{alarm_description}}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wind Change webhook",
+      "description": "Trigger on any wind change and send a webhook",
+      "tags": [
+        "wind",
+        "rapid-change",
+        "webhook"
+      ],
+      "enabled": true,
+      "condition": "* wind_direction",
+      "cooldown": 30,
+      "channels": [
+        {
+          "type": "webhook",
+          "webhook": {
+            "url": "http://localhost:8082",
+            "method": "POST",
+            "headers": {
+              "Content-Type": "application/json",
+              "User-Agent": "Tempest-HomeKit-Alarm"
+            },
+            "body": "{\n  \"alarm\": {\n    \"name\": \"{{alarm_name}}\",\n    \"description\": \"{{alarm_description}}\",\n    \"condition\": \"{{alarm_condition}}\",\n    \"tags\": \"{{alarm_tags}}\"\n  },\n  \"station\": \"{{station}}\",\n  \"timestamp\": \"{{timestamp}}\",\n  \"sensors\": {\n    \"temperature_c\": {{temperature}},\n    \"temperature_f\": {{temperature_f}},\n    \"humidity\": {{humidity}},\n    \"pressure_mb\": {{pressure}},\n    \"wind_speed_ms\": {{wind_speed}},\n    \"wind_gust_ms\": {{wind_gust}},\n    \"wind_direction_deg\": {{wind_direction}},\n    \"illuminance_lux\": {{lux}},\n    \"uv_index\": {{uv}},\n    \"rain_rate_mmh\": {{rain_rate}},\n    \"rain_daily_mm\": {{rain_daily}},\n    \"lightning_count\": {{lightning_count}},\n    \"lightning_distance_km\": {{lightning_distance}}\n  },\n  \"app_info\": \"{{app_info}}\"\n}",
+            "content_type": "application/json"
           }
         }
       ]

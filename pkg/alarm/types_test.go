@@ -199,6 +199,17 @@ func TestChannelValidate(t *testing.T) {
 			wantError: false,
 		},
 		{
+			name: "valid webhook channel",
+			channel: Channel{
+				Type: "webhook",
+				Webhook: &WebhookConfig{
+					URL:  "https://example.com/webhook",
+					Body: `{"alert": "{{alarm_name}}", "message": "{{condition}}"}`,
+				},
+			},
+			wantError: false,
+		},
+		{
 			name:      "valid eventlog channel",
 			channel:   Channel{Type: "eventlog", Template: "Tempest-Alarm: {{condition}}"},
 			wantError: false,
@@ -216,6 +227,31 @@ func TestChannelValidate(t *testing.T) {
 		{
 			name:      "sms without config",
 			channel:   Channel{Type: "sms"},
+			wantError: true,
+		},
+		{
+			name:      "webhook without config",
+			channel:   Channel{Type: "webhook"},
+			wantError: true,
+		},
+		{
+			name: "webhook without url",
+			channel: Channel{
+				Type: "webhook",
+				Webhook: &WebhookConfig{
+					Body: "test body",
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "webhook without body",
+			channel: Channel{
+				Type: "webhook",
+				Webhook: &WebhookConfig{
+					URL: "https://example.com",
+				},
+			},
 			wantError: true,
 		},
 		{

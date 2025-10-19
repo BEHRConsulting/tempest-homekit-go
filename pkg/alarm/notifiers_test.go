@@ -196,6 +196,11 @@ func TestNotifierFactory(t *testing.T) {
 			want:    true,
 		},
 		{
+			name:    "webhook notifier",
+			channel: "webhook",
+			want:    true,
+		},
+		{
 			name:    "invalid notifier",
 			channel: "invalid",
 			want:    false,

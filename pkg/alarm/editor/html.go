@@ -114,6 +114,10 @@ const indexHTML = `<!DOCTYPE html>
                             <input type="checkbox" id="deliverySMS" onchange="toggleMessageSections()" />
                             <span>📱 SMS</span>
                         </label>
+                        <label class="delivery-method">
+                            <input type="checkbox" id="deliveryWebhook" onchange="toggleMessageSections()" />
+                            <span>🌐 Webhook</span>
+                        </label>
                     </div>
                     <small>Select at least one delivery method. Each method will show its configuration below with defaults pre-populated.</small>
                 </div>
@@ -124,27 +128,27 @@ const indexHTML = `<!DOCTYPE html>
                             <label>📟 Console Message</label>
                             <select onchange="insertVariable('consoleMessage')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
-                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
-                                <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
-                                <option value="{{"{{"}}alarm_condition}}">{{"{{"}}alarm_condition}} - Alarm condition</option>
-                                <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
-                                <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
-                                <option value="{{"{{"}}temperature}}">{{"{{"}}temperature}} - Temperature °C (current)</option>
-                                <option value="{{"{{"}}temperature_f}}">{{"{{"}}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{"{{"}}humidity}}">{{"{{"}}humidity}} - Humidity % (current)</option>
-                                <option value="{{"{{"}}pressure}}">{{"{{"}}pressure}} - Pressure mb (current)</option>
-                                <option value="{{"{{"}}wind_speed}}">{{"{{"}}wind_speed}} - Wind Speed m/s (current)</option>
-                                <option value="{{"{{"}}wind_gust}}">{{"{{"}}wind_gust}} - Wind Gust m/s (current)</option>
-                                <option value="{{"{{"}}wind_direction}}">{{"{{"}}wind_direction}} - Wind Direction° (current)</option>
-                                <option value="{{"{{"}}lux}}">{{"{{"}}lux}} - Light Lux (current)</option>
-                                <option value="{{"{{"}}uv}}">{{"{{"}}uv}} - UV Index (current)</option>
-                                <option value="{{"{{"}}rain_rate}}">{{"{{"}}rain_rate}} - Rain Rate mm (current)</option>
-                                <option value="{{"{{"}}rain_daily}}">{{"{{"}}rain_daily}} - Daily Rain mm (current)</option>
-                                <option value="{{"{{"}}lightning_count}}">{{"{{"}}lightning_count}} - Lightning Strikes (current)</option>
-                                <option value="{{"{{"}}lightning_distance}}">{{"{{"}}lightning_distance}} - Lightning Distance km (current)</option>
+                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
+                                <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
+                                <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
+                                <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
+                                <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
+                                <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
+                                <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
+                                <option value="{{ "{{" }}wind_gust}}">{{ "{{" }}wind_gust}} - Wind Gust m/s (current)</option>
+                                <option value="{{ "{{" }}wind_direction}}">{{ "{{" }}wind_direction}} - Wind Direction° (current)</option>
+                                <option value="{{ "{{" }}lux}}">{{ "{{" }}lux}} - Light Lux (current)</option>
+                                <option value="{{ "{{" }}uv}}">{{ "{{" }}uv}} - UV Index (current)</option>
+                                <option value="{{ "{{" }}rain_rate}}">{{ "{{" }}rain_rate}} - Rain Rate mm (current)</option>
+                                <option value="{{ "{{" }}rain_daily}}">{{ "{{" }}rain_daily}} - Daily Rain mm (current)</option>
+                                <option value="{{ "{{" }}lightning_count}}">{{ "{{" }}lightning_count}} - Lightning Strikes (current)</option>
+                                <option value="{{ "{{" }}lightning_distance}}">{{ "{{" }}lightning_distance}} - Lightning Distance km (current)</option>
                             </select>
                         </div>
                         <textarea id="consoleMessage" rows="5" placeholder="Console-specific message..."></textarea>
@@ -155,19 +159,19 @@ const indexHTML = `<!DOCTYPE html>
                             <label>📋 Syslog Message</label>
                             <select onchange="insertVariable('syslogMessage')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
-                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
-                                <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
-                                <option value="{{"{{"}}alarm_condition}}">{{"{{"}}alarm_condition}} - Alarm condition</option>
-                                <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
-                                <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
-                                <option value="{{"{{"}}temperature}}">{{"{{"}}temperature}} - Temperature °C (current)</option>
-                                <option value="{{"{{"}}temperature_f}}">{{"{{"}}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{"{{"}}humidity}}">{{"{{"}}humidity}} - Humidity % (current)</option>
-                                <option value="{{"{{"}}pressure}}">{{"{{"}}pressure}} - Pressure mb (current)</option>
-                                <option value="{{"{{"}}wind_speed}}">{{"{{"}}wind_speed}} - Wind Speed m/s (current)</option>
+                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
+                                <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
+                                <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
+                                <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
+                                <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
+                                <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
+                                <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
                             </select>
                         </div>
                         <textarea id="syslogMessage" rows="5" placeholder="Syslog-specific message..."></textarea>
@@ -178,11 +182,11 @@ const indexHTML = `<!DOCTYPE html>
                             <label>🍎 OSLog Message (macOS Unified Logging)</label>
                             <select onchange="insertVariable('oslogMessage')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
-                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
-                                <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
+                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
                             </select>
                         </div>
                         <textarea id="oslogMessage" rows="5" placeholder="OSLog-specific message (visible in Console.app and log command)..."></textarea>
@@ -193,11 +197,11 @@ const indexHTML = `<!DOCTYPE html>
                             <label>📊 Event Log Message</label>
                             <select onchange="insertVariable('eventlogMessage')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
-                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
-                                <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
+                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
                             </select>
                         </div>
                         <textarea id="eventlogMessage" rows="5" placeholder="Event log-specific message..."></textarea>
@@ -208,19 +212,19 @@ const indexHTML = `<!DOCTYPE html>
                             <label>✉️ Email Configuration</label>
                             <select onchange="insertVariable('emailBody')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
-                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
-                                <option value="{{"{{"}}alarm_description}}">{{"{{"}}alarm_description}} - Alarm description</option>
-                                <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
-                                <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
+                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
                             </select>
                         </div>
                         <label for="emailTo" style="font-weight: 600;">To: <span style="color: red;">*</span></label>
                         <input type="text" id="emailTo" placeholder="recipient@example.com (comma-separated for multiple)" />
                         <label for="emailSubject" style="margin-top: 10px; font-weight: 600;">Subject:</label>
-                        <input type="text" id="emailSubject" placeholder="Tempest Alert: {{"{{"}}alarm_name}}" />
+                        <input type="text" id="emailSubject" placeholder="Tempest Alert: {{ "{{" }}alarm_name{{ "}}" }}" />
                         <label style="margin-top: 10px;">
                             <input type="checkbox" id="emailHtml" />
                             Send as HTML formatted email
@@ -235,18 +239,63 @@ const indexHTML = `<!DOCTYPE html>
                             <label>📱 SMS Configuration</label>
                             <select onchange="insertVariable('smsMessage')" class="variable-dropdown">
                                 <option value="">📋 Insert Variable...</option>
-                                <option value="{{"{{"}}app_info}}">{{"{{"}}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{"{{"}}alarm_info}}">{{"{{"}}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{"{{"}}sensor_info}}">{{"{{"}}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{"{{"}}alarm_name}}">{{"{{"}}alarm_name}} - Alarm name</option>
-                                <option value="{{"{{"}}station}}">{{"{{"}}station}} - Station name</option>
-                                <option value="{{"{{"}}timestamp}}">{{"{{"}}timestamp}} - Current time</option>
+                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
                             </select>
                         </div>
                         <label for="smsTo" style="font-weight: 600;">To: <span style="color: red;">*</span></label>
                         <input type="text" id="smsTo" placeholder="Phone number(s) (comma-separated)" />
                         <label for="smsMessage" style="margin-top: 10px; font-weight: 600;">Message:</label>
                         <textarea id="smsMessage" rows="3" placeholder="SMS message (keep it short)..."></textarea>
+                    </div>
+                    
+                    <div id="webhookMessageSection" class="form-group message-input-section" style="display:none;">
+                        <div class="message-header">
+                            <label>🌐 Webhook Configuration</label>
+                            <select onchange="insertVariable('webhookBody')" class="variable-dropdown">
+                                <option value="">📋 Insert Variable...</option>
+                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
+                                <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
+                                <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
+                                <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
+                                <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
+                                <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
+                                <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
+                                <option value="{{ "{{" }}wind_gust}}">{{ "{{" }}wind_gust}} - Wind Gust m/s (current)</option>
+                                <option value="{{ "{{" }}wind_direction}}">{{ "{{" }}wind_direction}} - Wind Direction° (current)</option>
+                                <option value="{{ "{{" }}lux}}">{{ "{{" }}lux}} - Light Lux (current)</option>
+                                <option value="{{ "{{" }}uv}}">{{ "{{" }}uv}} - UV Index (current)</option>
+                                <option value="{{ "{{" }}rain_rate}}">{{ "{{" }}rain_rate}} - Rain Rate mm (current)</option>
+                                <option value="{{ "{{" }}rain_daily}}">{{ "{{" }}rain_daily}} - Daily Rain mm (current)</option>
+                                <option value="{{ "{{" }}lightning_count}}">{{ "{{" }}lightning_count}} - Lightning Strikes (current)</option>
+                                <option value="{{ "{{" }}lightning_distance}}">{{ "{{" }}lightning_distance}} - Lightning Distance km (current)</option>
+                            </select>
+                        </div>
+                        <label for="webhookUrl" style="font-weight: 600;">URL: <span style="color: red;">*</span></label>
+                        <input type="url" id="webhookUrl" placeholder="https://api.example.com/webhooks/alert" />
+                        <label for="webhookMethod" style="margin-top: 10px; font-weight: 600;">Method:</label>
+                        <select id="webhookMethod">
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="PATCH">PATCH</option>
+                        </select>
+                        <label for="webhookHeaders" style="margin-top: 10px; font-weight: 600;">Headers (JSON):</label>
+                        <textarea id="webhookHeaders" rows="3" placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'></textarea>
+                        <label for="webhookBody" style="margin-top: 10px; font-weight: 600;">Body:</label>
+                        <textarea id="webhookBody" rows="8" placeholder="Webhook body (JSON or plain text)..."></textarea>
+                        <label for="webhookContentType" style="margin-top: 10px; font-weight: 600;">Content Type:</label>
+                        <input type="text" id="webhookContentType" value="application/json" placeholder="application/json" />
+                        <small>Headers should be valid JSON. Body supports template variables like &#123;&#123;alarm_name&#125;&#125;. Content type defaults to application/json.</small>
                     </div>
                 </div>
                 

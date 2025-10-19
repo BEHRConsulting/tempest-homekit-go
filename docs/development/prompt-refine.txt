@@ -126,10 +126,16 @@
 [x] Lets implment the alarms email (smtp) notifications
 
 [] for popout graphs, the data line should be solid, no data point indicator, with all the points, it looks like a dotted line confusing it with the avg line.
- 
+
 [] Lets add delivery methods csv and json files. The config section for these should include at least path and max number of days in the file. maintain the file as a FIFO queue. if the file can not me opened, generate a warning log and create a temp file (also shown in the warning log) to hold the alarms until the file can be opened. This is to catch files already opened or permission issues. create nice default messages when selected.
 
-[] Lets add a per-alarm scheduling system
+[] Lets add deleivery method web hook. add to alarm editor. add --test-webhook. document usage showing a golang server and example in a documentation file. add to readme.md and other .md files as needed.
+
+[] if the command line parameter --webhook-listener <port to listen to> is speicfied, start a standalone http server on <port to listen to, default 8082> that will listen for the webhook. the feature is to help test webhooks and should not run any other part of the application. Report nicely to the console as it receives them, pretty printing the json body. update usage and readme.md with --webhook-listener and --test-webhook. 
+
+[] Lets add a per-alarm scheduling system. daily by hour, sunrise, sunset, days per week, start time, end time. Any other standard scheduled options? I.e.: (1) Every date from sunrise to sunset. (2) Monday through Friday from 10:00-20:00. (3) No schedule defaults to Everyday, all day.
+
+[] Lets add deleivery method to add a JSON record to local/remote Maria/MySQL database using a secure protocol. Add checkbox to allow fallback to plain text. Use a uuid primary key, index timestamp, alarm name, then json blob that contains all weather sensors. .env should have database host, database, user, password. Add --test-db. In the readme.md create a section with example database create command and sample data. Show that the db server should be run with --require_secure_transport or equivalent. The user should be created with the min permissions to insert a record.
 
 [] Request this every 3-4 major changes or monthly:
 "Perform a comprehensive documentation audit comparing REQUIREMENTS.md, README.md, and CODE_REVIEW.md against the current codebase. 

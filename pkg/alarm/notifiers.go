@@ -62,6 +62,8 @@ func (f *NotifierFactory) GetNotifier(channelType string) (Notifier, error) {
 		return &EmailNotifier{config: f.config.Email}, nil
 	case "sms":
 		return &SMSNotifier{config: f.config.SMS}, nil
+	case "webhook":
+		return &WebhookNotifier{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported notifier type: %s", channelType)
 	}
@@ -614,6 +616,49 @@ func (n *SMSNotifier) sendTwilio(smsConfig *SMSConfig, message string) error {
 		logger.Warn("Sent %d/%d SMS messages successfully", successCount, len(smsConfig.To))
 	}
 
+	return nil
+}
+
+// WebhookNotifier sends webhook notifications
+type WebhookNotifier struct{}
+
+func (n *WebhookNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observation, stationName string) error {
+	if channel.Webhook == nil {
+		return fmt.Errorf("webhook configuration missing for channel")
+	}
+
+	// Expand the body template
+	body := expandTemplate(channel.Webhook.Body, alarm, obs, stationName)
+
+	// Create HTTP request
+	req, err := http.NewRequest(channel.Webhook.Method, channel.Webhook.URL, strings.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to create webhook request: %w", err)
+	}
+
+	// Set content type
+	req.Header.Set("Content-Type", channel.Webhook.ContentType)
+
+	// Set custom headers
+	for key, value := range channel.Webhook.Headers {
+		req.Header.Set(key, value)
+	}
+
+	// Send request
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send webhook request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("webhook request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	logger.Info("Webhook sent successfully to %s", channel.Webhook.URL)
 	return nil
 }
 

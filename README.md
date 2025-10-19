@@ -161,6 +161,7 @@ The alarm system enables rule-based weather alerting with multiple notification 
 - **OSLog**: macOS unified logging system (os_log API via CGO)
 - **Email**: SMTP or Microsoft 365 OAuth2
 - **SMS**: ✅ **AWS SNS** (fully implemented) | ⏳ Twilio (coming soon)
+- **Webhook**: HTTP POST with JSON payload and template expansion
 - **EventLog**: System event log (Windows) or syslog (Unix)
 
 **Features:**
@@ -274,6 +275,41 @@ For Twilio SMS configuration (great for development and moderate volume), see de
 
 **Pricing**: ~$0.0079 per message (US), ~$1/month for phone number. Upgrade to paid account for unrestricted sending.
 
+### Testing Webhook Configuration
+
+Before deploying webhook alarms in production, test your webhook configuration:
+
+```bash
+./tempest-homekit-go --test-webhook https://webhook.site/your-test-url --alarms @alarms.json
+```
+
+The webhook test will:
+1. Validate webhook URL format and accessibility
+2. Send a test HTTP POST request with JSON payload
+3. Include application metadata, timestamp, and current weather data
+4. Display response status and troubleshooting guidance if delivery fails
+
+**Webhook Payload Example:**
+```json
+{
+  "test": true,
+  "timestamp": "2025-01-20T15:30:45Z",
+  "application": "tempest-homekit-go",
+  "version": "1.0.0",
+  "station": "Chino Hills",
+  "weather": {
+    "temperature": 72.5,
+    "humidity": 65,
+    "wind_speed": 5.2,
+    "wind_direction": "SW",
+    "pressure": 29.92,
+    "uv_index": 3,
+    "lightning_distance": 25,
+    "rain_rate": 0.0
+  }
+}
+```
+
 ### Using the Alarm Editor
 
 The alarm editor provides a modern web interface for managing alarm configurations:
@@ -315,7 +351,7 @@ When running the main service with alarms enabled, the web dashboard (`http://lo
 - **Active Alarms List**: Details for each enabled alarm:
   - Alarm name and condition
   - Last triggered timestamp (or "Never")
-  - Delivery channels (console, syslog, oslog, email, SMS, eventlog)
+  - Delivery channels (console, syslog, oslog, email, SMS, webhook, eventlog)
 
 The alarm status refreshes automatically every 10 seconds, providing real-time visibility into your alarm system without needing to open the alarm editor or check log files.
 
@@ -464,6 +500,7 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `--use-generated-weather`: Use simulated weather data for testing (automatically sets station-url)
 - `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome, incompatible with `--disable-internet`)
 - `--version`: Show version information and exit
+- `--webhook-listener`: Start webhook listener server on port 8082 (or custom port) to receive and inspect webhook requests
 - `--web-port`: Web dashboard port (default: "8080")
 
 #### Environment Variables
@@ -808,14 +845,14 @@ Tests email notification delivery:
 - Sends test email with weather data
 - Uses real delivery path (factory pattern)
 
-**Test SMS Delivery** (`--test-sms <phone>`)
+**Test Webhook Delivery** (`--test-webhook <url>`)
 ```bash
-./tempest-homekit-go --test-sms +15555551234 --alarms @alarms.json
+./tempest-homekit-go --test-webhook https://webhook.site/your-test-url --alarms @alarms.json
 ```
-Tests SMS notification delivery:
-- Auto-detects provider (Twilio or AWS SNS)
-- Validates credentials from environment variables
-- Sends test SMS with weather data
+Tests webhook notification delivery:
+- Validates webhook URL and configuration
+- Sends test HTTP POST request with JSON payload
+- Includes weather data and alarm information
 - Uses real delivery path (factory pattern)
 
 **Test Console Notifications** (`--test-console`)
@@ -841,6 +878,31 @@ Tests macOS unified logging system integration.
 ./tempest-homekit-go --test-eventlog --alarms @alarms.json
 ```
 Tests Windows Event Log integration.
+
+**Webhook Listener Server** (`--webhook-listener [port]`)
+```bash
+# Start webhook listener on default port 8082
+./tempest-homekit-go --webhook-listener
+
+# Start webhook listener on custom port
+./tempest-homekit-go --webhook-listener 9000
+
+# Start webhook listener with debug logging
+./tempest-homekit-go --webhook-listener --loglevel debug
+```
+Starts an HTTP server to receive and inspect webhook requests:
+- **Default port**: 8082 (configurable with `--webhook-listener <port>`)
+- **Endpoints**:
+  - `POST /webhook`: Receives webhook payloads and pretty-prints JSON to console
+  - `GET /health`: Health check endpoint returning server status
+  - `GET /`: Usage instructions and endpoint documentation
+- **Features**:
+  - Pretty-printed JSON output for incoming webhook payloads
+  - Request metadata logging (method, URL, headers, timestamp)
+  - Automatic JSON detection and formatting
+  - Graceful shutdown with SIGINT/SIGTERM handling
+  - Real-time console output for webhook inspection and debugging
+- **Use Cases**: Testing webhook integrations, debugging webhook payloads, monitoring webhook delivery
 
 #### Service Testing
 
@@ -945,6 +1007,9 @@ Access the modern web dashboard at `http://localhost:8080` (or your configured p
 - `GET /pkg/web/static/script.js`: External JavaScript file with cache-busting timestamps
 - `GET /api/weather`: JSON weather data with pressure analysis
 - `GET /api/status`: Service and HomeKit status with optional TempestWX device status
+- `POST /webhook`: Receives webhook payloads and displays formatted alarm data in console (webhook listener mode)
+- `GET /health`: Health check endpoint returning server status (webhook listener mode)
+- `GET /`: Usage instructions and endpoint documentation (webhook listener mode)
 
 ## Architecture
 
@@ -1514,6 +1579,7 @@ This project was developed using various technologies, libraries, and tools. Bel
 - **[ALARM_LOGGING.md](ALARM_LOGGING.md)** - ⭐ Alarm logging behavior (always visible regardless of log level)
 - **[ALARM_COOLDOWN_STATUS.md](ALARM_COOLDOWN_STATUS.md)** - Real-time cooldown status display in web console
 - **[OSLOG_NOTIFIER.md](OSLOG_NOTIFIER.md)** - macOS unified logging integration for alarms
+- **[docs/webhook-delivery.md](docs/webhook-delivery.md)** - Complete webhook delivery method documentation with Go server example
 - **[CHANGE_DETECTION_OPERATORS.md](CHANGE_DETECTION_OPERATORS.md)** - Complete technical reference for change detection operators (*field, >field, <field)
 - **[CHANGE_DETECTION_QUICKREF.md](CHANGE_DETECTION_QUICKREF.md)** - Quick reference guide with examples
 - **[CHANGE_DETECTION_VISUAL.md](CHANGE_DETECTION_VISUAL.md)** - Visual diagrams and state transition timelines

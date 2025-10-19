@@ -151,6 +151,7 @@ This document presents the technical requirements and implementation results for
 - **Syslog**: Local or remote syslog servers
 - **OSLog**: macOS unified logging system (macOS only, via CGO)
 - **EventLog**: Windows event log or Unix syslog fallback
+- **Webhook**: HTTP POST with JSON payload and template expansion
 - **Email**: 
   - Microsoft 365 OAuth2 with Graph API (v1.7.0+)
   - SMTP with TLS support
@@ -249,7 +250,8 @@ This document presents the technical requirements and implementation results for
 - ✅ `--version`: Display version information and exit
 - ✅ `--alarms`: Enable alarm system with configuration file or inline JSON (e.g., `@alarms.json` or JSON string)
 - ✅ `--alarms-edit`: Run alarm editor for configuration file in standalone mode (e.g., `@alarms.json`)
-- ✅ `--alarms-edit-port`: Port for alarm editor web UI (default: "8081")
+- ✅ `--webhook-listener`: Start webhook listener server to receive and inspect webhook requests
+- ✅ `--webhook-listener-port`: Port for webhook listener server (default: "8082")
 
 #### Comprehensive Validation (v1.3.0)
 - ✅ **Required Token Validation**: Clear error messages for missing WeatherFlow API token
@@ -440,6 +442,9 @@ This document presents the technical requirements and implementation results for
   - `GET /api/status`: JSON service and HomeKit status endpoint
   - `POST /api/regenerate-weather`: Regenerate weather data for testing
   - `GET /api/generate-weather`: Mock Tempest API endpoint for generated weather
+  - `POST /webhook`: Receives webhook payloads and displays formatted alarm data in console (webhook listener mode)
+  - `GET /health`: Health check endpoint returning server status (webhook listener mode)
+  - `GET /`: Usage instructions and endpoint documentation (webhook listener mode)
 - ✅ **CORS Support**: Allow cross-origin requests for API endpoints
 - ✅ **Content Types**: Serve HTML, JSON, and static assets appropriately
 

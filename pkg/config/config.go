@@ -32,6 +32,7 @@ type Config struct {
 	TestAPI             bool
 	TestEmail           string  // Send test email to this address and exit
 	TestSMS             string  // Send test SMS to this phone number and exit
+	TestWebhook         string  // Send test webhook to this URL and exit
 	TestConsole         bool    // Send test console notification and exit
 	TestSyslog          bool    // Send test syslog notification and exit
 	TestOSLog           bool    // Send test oslog notification and exit
@@ -60,6 +61,12 @@ type Config struct {
 	Alarms         string // Alarm configuration: @filename.json or inline JSON
 	AlarmsEdit     string // Alarm editor mode: @filename.json to edit
 	AlarmsEditPort string // Port for alarm editor (default: 8081)
+
+	// Webhook listener
+	WebhookListener    bool   // Enable webhook listener server (default port: 8082)
+	WebhookListenPort  string // Port for webhook listener server (default: 8082)
+	WebhookListenerSet bool   // Track if webhook-listener flag was explicitly set
+	WebhookPortSet     bool   // Track if webhook-listener-port flag was explicitly set
 
 	// Environment file
 	EnvFile string // Custom environment file (default: .env)
@@ -134,6 +141,11 @@ ALARM OPTIONS:
                                 Env: ALARMS_EDIT
   --alarms-edit-port <port>     Port for alarm editor web UI (default: 8081)
                                 Env: ALARMS_EDIT_PORT
+  --webhook-listener            Start webhook listener server (standalone mode)
+                                Uses default port 8082
+                                Env: WEBHOOK_LISTENER=true
+  --webhook-listener-port <port> Port for webhook listener server (default: 8082)
+                                Env: WEBHOOK_LISTEN_PORT
 
 LOGGING & DEBUG OPTIONS:
   --loglevel <level>            Log level: error (default), warn/warning, info, debug
@@ -145,6 +157,7 @@ TESTING OPTIONS:
   --test-api                    Test WeatherFlow API endpoints and exit
   --test-email <email>          Send test email to specified address and exit
   --test-sms <phone>            Send test SMS to specified phone number and exit
+  --test-webhook <url>          Send test webhook to specified URL and exit
   --test-console                Send test console notification and exit
   --test-syslog                 Send test syslog notification and exit
   --test-oslog                  Send test oslog notification and exit (macOS only)
@@ -189,6 +202,9 @@ EXAMPLES:
   # Edit alarm configuration (standalone)
   tempest-homekit-go --alarms-edit @alarms.json --alarms-edit-port 8081
 
+  # Start webhook listener (standalone)
+  tempest-homekit-go --webhook-listener
+
 ENVIRONMENT VARIABLES:
   All flags can also be set via environment variables (see individual flag descriptions above).
   Command-line flags take precedence over environment variables.
@@ -221,6 +237,8 @@ func LoadConfig() *Config {
 		Alarms:               getEnvOrDefault("ALARMS", ""),
 		AlarmsEdit:           getEnvOrDefault("ALARMS_EDIT", ""),
 		AlarmsEditPort:       getEnvOrDefault("ALARMS_EDIT_PORT", "8081"),
+		WebhookListener:      getEnvOrDefault("WEBHOOK_LISTENER", "") == "true",
+		WebhookListenPort:    getEnvOrDefault("WEBHOOK_LISTEN_PORT", "8082"),
 		EnvFile:              getEnvOrDefault("ENV_FILE", ".env"),
 	}
 
@@ -243,6 +261,7 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.TestAPI, "test-api", false, "Test WeatherFlow API endpoints and data points")
 	flag.StringVar(&cfg.TestEmail, "test-email", "", "Send a test email to the specified address and exit")
 	flag.StringVar(&cfg.TestSMS, "test-sms", "", "Send a test SMS to the specified phone number (E.164 format) and exit")
+	flag.StringVar(&cfg.TestWebhook, "test-webhook", "", "Send a test webhook to the specified URL and exit")
 	flag.BoolVar(&cfg.TestConsole, "test-console", false, "Send a test console notification and exit")
 	flag.BoolVar(&cfg.TestSyslog, "test-syslog", false, "Send a test syslog notification and exit")
 	flag.BoolVar(&cfg.TestOSLog, "test-oslog", false, "Send a test oslog notification and exit (macOS only)")
@@ -265,6 +284,8 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.Alarms, "alarms", cfg.Alarms, "Alarm configuration: @filename.json or inline JSON string")
 	flag.StringVar(&cfg.AlarmsEdit, "alarms-edit", cfg.AlarmsEdit, "Run alarm editor for specified config file: @filename.json")
 	flag.StringVar(&cfg.AlarmsEditPort, "alarms-edit-port", cfg.AlarmsEditPort, "Port for alarm editor web UI (default: 8081)")
+	flag.BoolVar(&cfg.WebhookListener, "webhook-listener", cfg.WebhookListener, "Start webhook listener server (default port: 8082)")
+	flag.StringVar(&cfg.WebhookListenPort, "webhook-listener-port", cfg.WebhookListenPort, "Port for webhook listener server (default: 8082)")
 	flag.StringVar(&cfg.EnvFile, "env", cfg.EnvFile, "Custom environment file to load (default: .env)")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
 
@@ -291,6 +312,12 @@ func LoadConfig() *Config {
 	flag.Visit(func(f *flag.Flag) {
 		if f.Name == "elevation" {
 			elevationProvided = true
+		}
+		if f.Name == "webhook-listener" {
+			cfg.WebhookListenerSet = true
+		}
+		if f.Name == "webhook-listener-port" {
+			cfg.WebhookPortSet = true
 		}
 	})
 
@@ -392,6 +419,13 @@ func validateConfig(cfg *Config) error {
 	// Validate web port is numeric
 	if _, err := strconv.Atoi(cfg.WebPort); err != nil {
 		return fmt.Errorf("invalid web port '%s'. Port must be a number", cfg.WebPort)
+	}
+
+	// Validate webhook listen port is numeric
+	if cfg.WebhookListenPort != "" {
+		if _, err := strconv.Atoi(cfg.WebhookListenPort); err != nil {
+			return fmt.Errorf("invalid webhook listen port '%s'. Port must be a number", cfg.WebhookListenPort)
+		}
 	}
 
 	// Validate HomeKit PIN format (8 digits)
