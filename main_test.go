@@ -102,8 +102,7 @@ func TestRunSMSTestValidation(t *testing.T) {
 // TestRunConsoleTestValidation tests validation in runConsoleTest
 func TestRunConsoleTestValidation(t *testing.T) {
 	cfg := &config.Config{
-		TestConsole: true,
-		Alarms:      "",
+		Alarms: "",
 	}
 
 	// Should error if alarms is empty
@@ -320,10 +319,7 @@ func TestAllTestFlagsRequireAlarms(t *testing.T) {
 // TestTestAPIDoesNotRequireAlarms tests that --test-api doesn't need alarms
 func TestTestAPIDoesNotRequireAlarms(t *testing.T) {
 	cfg := &config.Config{
-		TestAPI:     true,
-		Token:       "test-token",
-		StationName: "TestStation",
-		Alarms:      "", // TestAPI doesn't need alarms
+		Alarms: "", // TestAPI doesn't need alarms
 	}
 
 	// TestAPI should work without alarms config
@@ -342,7 +338,6 @@ func TestMultipleTestFlagsBehavior(t *testing.T) {
 		TestEmail:   "test@example.com",
 		TestSMS:     "+15555551234",
 		TestConsole: true,
-		Alarms:      "@alarms.example.json",
 	}
 
 	// Document that only TestEmail would execute (first in chain)
@@ -412,7 +407,6 @@ func TestRunHomeKitTestValidation(t *testing.T) {
 		TestHomeKit: true,
 		Pin:         "12345678",
 		StationName: "TestStation",
-		Sensors:     "temp,humidity",
 	}
 
 	// Should not require alarms or API token

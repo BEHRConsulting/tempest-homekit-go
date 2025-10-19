@@ -63,12 +63,7 @@ WEB_PORT=9090
 
 	// Test that the EnvFile field can be set to point to custom file
 	cfg := &Config{
-		EnvFile:     customEnvFile,
-		Token:       getEnvOrDefault("TEMPEST_TOKEN", ""),
-		StationName: getEnvOrDefault("TEMPEST_STATION_NAME", ""),
-		Pin:         getEnvOrDefault("HOMEKIT_PIN", "00102003"),
-		LogLevel:    getEnvOrDefault("LOG_LEVEL", "error"),
-		WebPort:     getEnvOrDefault("WEB_PORT", "8080"),
+		EnvFile: customEnvFile,
 	}
 
 	if cfg.EnvFile != customEnvFile {
@@ -116,9 +111,6 @@ func TestEnvFileWithOtherConfig(t *testing.T) {
 		EnvFile:     "/custom/path/production.env",
 		Token:       "test-token",
 		StationName: "TestStation",
-		Pin:         "12345678",
-		LogLevel:    "debug",
-		WebPort:     "8080",
 	}
 
 	// Verify EnvFile doesn't interfere with other fields

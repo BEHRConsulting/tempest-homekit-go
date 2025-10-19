@@ -61,7 +61,8 @@ func TestEmailConfiguration(alarmsJSON, stationName string) error {
 	fmt.Println()
 
 	// Validate provider-specific configuration
-	if provider == "microsoft365" {
+	switch provider {
+	case "microsoft365":
 		fmt.Println("Validating Microsoft 365 OAuth2 configuration...")
 
 		if clientID == "" {
@@ -83,7 +84,7 @@ func TestEmailConfiguration(alarmsJSON, stationName string) error {
 		}
 		fmt.Printf("✓ Tenant ID: %s\n", tenantID)
 		fmt.Println()
-	} else if provider == "smtp" {
+	case "smtp":
 		fmt.Println("Validating SMTP configuration...")
 
 		smtpHost := os.Getenv("SMTP_HOST")

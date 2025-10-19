@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	th "tempest-homekit-go/pkg/testhelpers"
 	"tempest-homekit-go/pkg/weather"
 
 	cpruntime "github.com/chromedp/cdproto/runtime"
@@ -89,6 +90,15 @@ func TestHeadlessDashboard(t *testing.T) {
 
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
+
+	// Seed data for all chart types using shared test helper with deterministic seed
+	// Do this immediately after server start so dashboard loads with seeded data.
+	chartTypes := []string{"temperature", "humidity", "rain", "pressure", "wind", "light", "uv"}
+	th.SeedObservationsWithOptions(t, ws.UpdateWeather, chartTypes, time.Now(), th.SeedOptions{
+		Points:   6,
+		Season:   "summer",
+		RandSeed: 42,
+	})
 
 	// Prepare chromedp
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -258,13 +268,13 @@ func TestHeadlessDashboard(t *testing.T) {
 	// Wait for Chart global to be available (loaded from remote CDN or injected)
 	chartReady := false
 	var chartType string
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 60; i++ { // extended wait
 		_ = chromedp.Run(browserCtx, chromedp.Evaluate(`typeof Chart`, &chartType))
 		if chartType == "function" || chartType == "object" {
 			chartReady = true
 			break
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(150 * time.Millisecond)
 	}
 	if !chartReady {
 		t.Fatalf("Chart.js not available in page (typeof Chart=%s)", chartType)
@@ -303,13 +313,13 @@ func TestHeadlessDashboard(t *testing.T) {
 
 	// Wait for explicit dashboard readiness flag if available
 	var dashboardReady bool
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 100; i++ { // extended wait
 		_ = chromedp.Run(browserCtx, chromedp.Evaluate(`Boolean(window.__dashboardReady === true)`, &dashboardReady))
 		if dashboardReady {
 			break
 		}
 		// small sleep before trying again
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(150 * time.Millisecond)
 	}
 	if !dashboardReady {
 		// Not fatal; log and continue with previous heuristics
@@ -319,7 +329,7 @@ func TestHeadlessDashboard(t *testing.T) {
 	// Poll the DOM for key card values to become populated (not the placeholder "--")
 	var rainTextVal, pressureTextVal, illumTextVal, uvTextVal string
 	populated := false
-	attempts := 60 // ~12 seconds with 200ms sleeps
+	attempts := 100 // extended (~20s with 200ms sleeps)
 	for i := 0; i < attempts; i++ {
 		if err := chromedp.Run(browserCtx, chromedp.Tasks{
 			chromedp.Evaluate(`document.getElementById('rain') ? document.getElementById('rain').textContent : ''`, &rainTextVal),
@@ -1158,4 +1168,249 @@ func TestChartPopoutOpensAndRenders(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestPopoutDatasetOrdering navigates to a real popout page (/chart/temperature)
+// with an encoded config built from the dashboard and asserts the popout's
+// dataset ordering: main data at datasets[0], average at datasets[1] (dashed
+// two-point horizontal line). This guards against regressions in dataset
+// ordering/indexing.
+func TestPopoutDatasetOrdering(t *testing.T) {
+	ws := testNewWebServer(t)
+
+	// Chart types to validate. We include temperature, humidity, rain,
+	// pressure, wind, light, and uv.
+	chartTypes := []string{"temperature", "humidity", "rain", "pressure", "wind", "light", "uv"}
+
+	// seed weather and a couple history points
+	now := time.Now()
+	obs := weather.Observation{
+		Timestamp:        now.Unix(),
+		AirTemperature:   20.0,
+		RelativeHumidity: 50,
+		WindAvg:          3.0,
+		WindGust:         4.0,
+		WindDirection:    180,
+		StationPressure:  1012,
+		Illuminance:      500,
+		UV:               2,
+		RainAccumulated:  0.0,
+		Battery:          3.9,
+	}
+	ws.UpdateWeather(&obs)
+	older := obs
+	older.Timestamp = now.Add(-5 * time.Minute).Unix()
+	older.AirTemperature = 19.5
+	ws.UpdateWeather(&older)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", ws.handleDashboard)
+	mux.HandleFunc("/api/weather", ws.handleWeatherAPI)
+	mux.HandleFunc("/api/status", ws.handleStatusAPI)
+
+	// serve static assets (chart.html etc.)
+	_, thisFileStatic, _, _ := gruntime.Caller(0)
+	staticDir := filepath.Join(filepath.Dir(thisFileStatic), "static")
+	mux.Handle("/pkg/web/static/", http.StripPrefix("/pkg/web/static/", http.FileServer(http.Dir(staticDir))))
+
+	// serve chart.html
+	_, thisFile, _, _ := gruntime.Caller(0)
+	chartPath := filepath.Join(filepath.Dir(thisFile), "static", "chart.html")
+	mux.HandleFunc("/chart/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, chartPath)
+	})
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// chromedp setup
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx,
+		chromedp.Headless,
+		chromedp.DisableGPU,
+		chromedp.NoFirstRun,
+		chromedp.NoSandbox,
+	)
+	defer allocCancel()
+	browserCtx, browserCancel := chromedp.NewContext(allocCtx)
+	defer browserCancel()
+
+	// capture console events for diagnostics
+	var consoleErrors []string
+	chromedp.ListenTarget(browserCtx, func(ev interface{}) {
+		switch ev := ev.(type) {
+		case *cpruntime.EventExceptionThrown:
+			consoleErrors = append(consoleErrors, ev.ExceptionDetails.Text)
+		case *cpruntime.EventConsoleAPICalled:
+			for _, arg := range ev.Args {
+				if arg.Value != nil {
+					s, _ := json.Marshal(arg.Value)
+					consoleErrors = append(consoleErrors, string(s))
+				}
+			}
+		}
+	})
+
+	// Navigate dashboard, inject scripts and init
+	if err := chromedp.Run(browserCtx, chromedp.Tasks{
+		chromedp.Navigate(ts.URL),
+		chromedp.WaitVisible(`#status`, chromedp.ByID),
+		chromedp.Sleep(150 * time.Millisecond),
+	}); err != nil {
+		t.Fatalf("navigate dashboard failed: %v", err)
+	}
+
+	// Inject vendored Chart.js if needed (reuse pattern from other tests)
+	var scriptsJSON string
+	_ = chromedp.Run(browserCtx, chromedp.Evaluate(`(function(){ return JSON.stringify(Array.from(document.scripts).map(s => s.src || '')); })()`, &scriptsJSON))
+	var scriptURLs []string
+	_ = json.Unmarshal([]byte(scriptsJSON), &scriptURLs)
+	var chartSrc string
+	for _, u := range scriptURLs {
+		if u == "" {
+			continue
+		}
+		if chartSrc == "" && (strings.Contains(u, "chart.js") || strings.Contains(u, "chart.umd.js")) {
+			chartSrc = u
+		}
+	}
+	fetchText := func(url string) (string, error) {
+		if url == "" {
+			return "", nil
+		}
+		resp, err := http.Get(url)
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			return "", fmt.Errorf("status %d", resp.StatusCode)
+		}
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	}
+	if chartSrc != "" {
+		if txt, err := fetchText(chartSrc); err == nil && txt != "" {
+			lit := fmt.Sprintf("%q", txt)
+			inj := fmt.Sprintf(`(function(){ var s=document.createElement('script'); s.type='text/javascript'; s.text = %s; document.head.appendChild(s); })()`, lit)
+			_ = chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(inj, nil))
+			time.Sleep(80 * time.Millisecond)
+		}
+	} else {
+		// fallback: inject vendored chart.umd.js from disk
+		_, thisFileChart, _, _ := gruntime.Caller(0)
+		chartFile := filepath.Join(filepath.Dir(thisFileChart), "static", "chart.umd.js")
+		if b, err := os.ReadFile(chartFile); err == nil {
+			lit := fmt.Sprintf("%q", string(b))
+			inj := fmt.Sprintf(`(function(){ var s=document.createElement('script'); s.type='text/javascript'; s.text = %s; document.head.appendChild(s); })()`, lit)
+			_ = chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(inj, nil))
+			time.Sleep(80 * time.Millisecond)
+		}
+	}
+
+	// Inject local script.js from disk to ensure same logic as dashboard
+	_, thisFile2, _, _ := gruntime.Caller(0)
+	injectedFrom := filepath.Join(filepath.Dir(thisFile2), "static", "script.js")
+	localBytes, err := os.ReadFile(injectedFrom)
+	if err != nil {
+		t.Fatalf("failed to read local script.js: %v", err)
+	}
+	localText := string(localBytes)
+	inj := fmt.Sprintf("(function(){ var s=document.createElement('script'); s.type='text/javascript'; s.text = %q; document.head.appendChild(s); })()", localText)
+	if err := chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(inj, nil)); err != nil {
+		t.Fatalf("failed to inject local script: %v", err)
+	}
+	time.Sleep(120 * time.Millisecond)
+
+	// call initCharts and fetch data
+	_ = chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(`typeof initCharts === 'function' && initCharts()`, nil))
+	_ = chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(`(async function(){ try { await fetchWeather(); await fetchStatus(); return 'ok'; } catch(e){ return 'err:'+e.toString(); } })()`, nil))
+
+	// Wait for charts.temperature to be initialized (reuse readiness loop from other tests)
+	ready := false
+	for i := 0; i < 80; i++ {
+		var typeofCharts string
+		_ = chromedp.Run(browserCtx, chromedp.Evaluate(`typeof charts`, &typeofCharts))
+		var typeofTemp string
+		_ = chromedp.Run(browserCtx, chromedp.Evaluate(`typeof (charts && charts.temperature)`, &typeofTemp))
+		var datasetsLen int
+		_ = chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(`(function(){ try { return (charts && charts.temperature && charts.temperature.data && charts.temperature.data.datasets) ? charts.temperature.data.datasets.length : 0; } catch(e) { return 0; } })()`, &datasetsLen))
+		var rect string
+		_ = chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(`(function(){ try { var el = document.getElementById('temperature-chart'); if (!el) return ''; var r = el.getBoundingClientRect(); return JSON.stringify({w: r.width, h: r.height}); } catch(e) { return ''; } })()`, &rect))
+
+		if typeofCharts == "object" && typeofTemp == "object" {
+			if datasetsLen > 0 {
+				ready = true
+				break
+			}
+			if rect != "" {
+				var rectObj struct {
+					W float64 `json:"w"`
+					H float64 `json:"h"`
+				}
+				_ = json.Unmarshal([]byte(rect), &rectObj)
+				if rectObj.W > 0 && rectObj.H > 0 {
+					ready = true
+					break
+				}
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if !ready {
+		t.Logf("warning: charts.temperature not fully ready after wait; proceeding to read dataset length")
+	}
+
+	// Continue to per-chart validation. Each chart will poll its own dashboard dataset
+	// length and fail with diagnostics if empty. Avoid failing early based on /api/status
+	// since headless page initialization may not surface history the same way.
+
+	for _, ct := range chartTypes {
+		// Small sleep between iterations to give the page time to stabilize
+		time.Sleep(80 * time.Millisecond)
+
+		// Determine expected dashboard dataset length from server-side /api/status
+		// This is more reliable in headless runs than relying on the page's Chart instances.
+		var dashLenCt int
+		for i := 0; i < 10; i++ {
+			resp, err := http.Get(ts.URL + "/api/status")
+			if err == nil {
+				b, _ := io.ReadAll(resp.Body)
+				resp.Body.Close()
+				var statusObj map[string]interface{}
+				if err := json.Unmarshal(b, &statusObj); err == nil {
+					if dh, ok := statusObj["dataHistory"].([]interface{}); ok {
+						dashLenCt = len(dh)
+					}
+				}
+			}
+			if dashLenCt > 0 {
+				break
+			}
+			time.Sleep(150 * time.Millisecond)
+		}
+		if dashLenCt == 0 {
+			// Fallback: try a short client-side read for diagnostics, then fail
+			var datasetsLen int
+			_ = chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(fmt.Sprintf(`(function(){ try { return (charts && charts.%s && charts.%s.data && charts.%s.data.datasets && charts.%s.data.datasets[0] && charts.%s.data.datasets[0].data) ? charts.%s.data.datasets[0].data.length : 0; } catch(e){ return 0; } })()`, ct, ct, ct, ct, ct, ct), &datasetsLen))
+			t.Fatalf("dashboard %s dataset unexpectedly empty after wait: len=0 (server/dataHistory=%d client/datasets=%d)", ct, dashLenCt, datasetsLen)
+		}
+
+		// Capture diagnostics (config & charts) immediately before invoking the helper
+		var lastCfg string
+		var chartsSnap string
+		var simPop string
+		_ = chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(`(function(){ try { return JSON.stringify(window.__lastPopoutConfig || null); } catch(e){ return 'err:'+e.toString(); } })()`, &lastCfg))
+		_ = chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(`(function(){ try { return JSON.stringify(window.charts || {}); } catch(e){ return 'err:'+e.toString(); } })()`, &chartsSnap))
+		_ = chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(`(function(){ try { return JSON.stringify(window.__simPopChart || null); } catch(e){ return 'err:'+e.toString(); } })()`, &simPop))
+		t.Logf("pre-popout diagnostics for %s: __lastPopoutConfig=%s; charts=%s; __simPopChart=%s", ct, firstN(lastCfg, 2000), firstN(chartsSnap, 2000), firstN(simPop, 2000))
+
+		// Call the reusable helper which navigates to the popout and asserts ordering
+		th.AssertPopoutDatasetOrdering(t, browserCtx, ts, ct, dashLenCt)
+	}
+
 }

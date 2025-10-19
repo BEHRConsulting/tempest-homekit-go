@@ -6,6 +6,145 @@ import (
 	"tempest-homekit-go/pkg/weather"
 )
 
+func approxEqual(a, b, tol float64) bool {
+	if a > b {
+		return a-b <= tol
+	}
+	return b-a <= tol
+}
+
+func TestParseValueWithUnits_TemperatureF(t *testing.T) {
+	e := NewEvaluator()
+	v, err := e.parseValueWithUnits("80F", "temperature")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// 80F -> 26.666... C
+	if !approxEqual(v, 26.6666667, 0.0001) {
+		t.Fatalf("unexpected conversion value: %v", v)
+	}
+}
+
+func TestParseValueWithUnits_WindMPH(t *testing.T) {
+	e := NewEvaluator()
+	v, err := e.parseValueWithUnits("10mph", "wind")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !approxEqual(v, 4.4704, 1e-4) {
+		t.Fatalf("unexpected mph->m/s conversion: %v", v)
+	}
+}
+
+func TestEvaluate_SimpleAndCompound(t *testing.T) {
+	e := NewEvaluator()
+	obs := &weather.Observation{AirTemperature: 20.0, RelativeHumidity: 40}
+
+	ok, err := e.Evaluate("temperature > 15", obs)
+	if err != nil || !ok {
+		t.Fatalf("expected true for temperature > 15: err=%v ok=%v", err, ok)
+	}
+
+	ok, err = e.Evaluate("temperature > 15 && humidity < 80", obs)
+	if err != nil || !ok {
+		t.Fatalf("expected true for compound AND: err=%v ok=%v", err, ok)
+	}
+
+	ok, err = e.Evaluate("temperature < 15 || humidity == 40", obs)
+	if err != nil || !ok {
+		t.Fatalf("expected true for compound OR: err=%v ok=%v", err, ok)
+	}
+}
+
+func TestEvaluate_InvalidFormatAndUnknownField(t *testing.T) {
+	e := NewEvaluator()
+	obs := &weather.Observation{AirTemperature: 10}
+
+	_, err := e.Evaluate("temperature 10", obs)
+	if err == nil {
+		t.Fatalf("expected error for invalid format")
+	}
+
+	_, err = e.Evaluate("foobar > 1", obs)
+	if err == nil {
+		t.Fatalf("expected error for unknown field")
+	}
+}
+
+func TestChangeDetection_IncreaseAndAnyChange(t *testing.T) {
+	e := NewEvaluator()
+	a := &Alarm{Enabled: true}
+
+	// First evaluation establishes baseline and should not trigger
+	obs1 := &weather.Observation{AirTemperature: 10}
+	triggered, err := e.EvaluateWithAlarm(">temperature", obs1, a)
+	if err != nil || triggered {
+		t.Fatalf("expected no trigger on first evaluation: err=%v triggered=%v", err, triggered)
+	}
+
+	// Increase temperature -> should trigger
+	obs2 := &weather.Observation{AirTemperature: 12}
+	triggered, err = e.EvaluateWithAlarm(">temperature", obs2, a)
+	if err != nil || !triggered {
+		t.Fatalf("expected trigger on increase: err=%v triggered=%v", err, triggered)
+	}
+
+	// Test any-change operator
+	// baseline set already for temperature; changing to same value should not trigger
+	obs3 := &weather.Observation{AirTemperature: 12}
+	triggered, err = e.EvaluateWithAlarm("*temperature", obs3, a)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if triggered {
+		t.Fatalf("expected no trigger when value unchanged for * operator")
+	}
+	// change value
+	obs4 := &weather.Observation{AirTemperature: 13}
+	triggered, err = e.EvaluateWithAlarm("*temperature", obs4, a)
+	if err != nil || !triggered {
+		t.Fatalf("expected trigger on any change: err=%v triggered=%v", err, triggered)
+	}
+	// ensure trigger context contains previous value
+	if v, ok := a.GetTriggerValue("temperature"); !ok || v != 12 {
+		t.Fatalf("expected trigger context previous value 12, got %v ok=%v", v, ok)
+	}
+}
+
+func TestParaphraseAndAvailableFields(t *testing.T) {
+	e := NewEvaluator()
+	p := e.Paraphrase("temperature > 80F")
+	if p == "" {
+		t.Fatalf("expected paraphrase text")
+	}
+	// should include Fahrenheit symbol through formatValue
+	if !(len(p) > 0 && (containsRune(p, 'F') || containsRune(p, '°'))) {
+		t.Fatalf("expected paraphrase to include unit, got: %s", p)
+	}
+
+	fields := e.GetAvailableFields()
+	found := false
+	for _, f := range fields {
+		if f == "temperature" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected temperature in available fields")
+	}
+}
+
+// helper to check rune presence
+func containsRune(s string, r rune) bool {
+	for _, c := range s {
+		if c == r {
+			return true
+		}
+	}
+	return false
+}
+
 func TestEvaluatorSimpleConditions(t *testing.T) {
 	obs := &weather.Observation{
 		AirTemperature:       30.0,

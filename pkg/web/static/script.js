@@ -2529,8 +2529,8 @@ function updateCharts() {
         // Determine which data to show based on the chart type stored during initialization
         let popoutValue = 0;
         const chartType = charts.popoutType || 'temperature';
-        // Main data is always the last dataset in popout charts
-        const datasetIndex = charts.popout.data.datasets.length - 1;
+        // Main data is the first dataset in popout charts (drawn underneath)
+        const datasetIndex = 0;
         
         switch(chartType) {
             case 'temperature':
@@ -2552,8 +2552,8 @@ function updateCharts() {
                 popoutValue = illuminanceValue;
                 break;
             case 'uv':
-                const uvValue = (typeof weatherData.uv === 'number' && Number.isFinite(weatherData.uv)) ? weatherData.uv : 0;
-                popoutValue = uvValue;
+                const uvVal = (typeof weatherData.uv === 'number' && Number.isFinite(weatherData.uv)) ? weatherData.uv : 0;
+                popoutValue = uvVal;
                 break;
             default:
                 popoutValue = tempValue;
@@ -2564,7 +2564,7 @@ function updateCharts() {
             charts.popout.data.datasets[datasetIndex].data.shift();
         }
         
-        // Update average line (dataset[0]) - skip for light and UV
+        // Update average line (dataset[1]) - skip for light and UV
         const mainData = charts.popout.data.datasets[datasetIndex].data;
         if (mainData.length > 0) {
             const firstX = mainData[0].x;
@@ -2581,37 +2581,40 @@ function updateCharts() {
                     }
                 }
                 const avg = count > 0 ? sum / count : 0;
-                charts.popout.data.datasets[0].data = [
-                    { x: firstX, y: avg },
-                    { x: lastX, y: avg }
-                ];
-            }
-            
-            // Update trend line for pressure (dataset[1])
-            if (chartType === 'pressure' && charts.popout.data.datasets[1]) {
-                const trendData = calculateTrendLine(mainData);
-                charts.popout.data.datasets[1].data = trendData;
-            }
-            
-            // Update accumulated and today total lines for rain (datasets 1 and 2)
-            if (chartType === 'rain') {
-                // Update accumulated line (dataset 1)
                 if (charts.popout.data.datasets[1]) {
+                    charts.popout.data.datasets[1].data = [
+                        { x: firstX, y: avg },
+                        { x: lastX, y: avg }
+                    ];
+                }
+            }
+            
+            // Update trend line for pressure (dataset[2])
+            // popout dataset order: main(0), average(1), trend/accum/total (2+)
+            if (chartType === 'pressure' && charts.popout.data.datasets[2]) {
+                const trendData = calculateTrendLine(mainData);
+                charts.popout.data.datasets[2].data = trendData;
+            }
+            
+            // Update accumulated and today total lines for rain (datasets 2 and 3)
+            if (chartType === 'rain') {
+                // Update accumulated line (dataset 2)
+                if (charts.popout.data.datasets[2]) {
                     let cumulativeSum = 0;
                     const accumulatedData = mainData.map(point => {
                         cumulativeSum += (point.y || 0);
                         return { x: point.x, y: cumulativeSum };
                     });
-                    charts.popout.data.datasets[1].data = accumulatedData;
+                    charts.popout.data.datasets[2].data = accumulatedData;
                 }
                 
-                // Update today total line (dataset 2)
-                if (charts.popout.data.datasets[2] && weatherData && weatherData.rainDailyTotal !== undefined) {
+                // Update today total line (dataset 3)
+                if (charts.popout.data.datasets[3] && weatherData && weatherData.rainDailyTotal !== undefined) {
                     let dailyTotal = weatherData.rainDailyTotal;
                     if (units.rain === 'mm') {
                         dailyTotal = inchesToMm(dailyTotal);
                     }
-                    charts.popout.data.datasets[2].data = [
+                    charts.popout.data.datasets[3].data = [
                         { x: firstX, y: dailyTotal },
                         { x: lastX, y: dailyTotal }
                     ];
@@ -2625,8 +2628,8 @@ function updateCharts() {
                 type: chartType, 
                 value: popoutValue,
                 dataPoints: mainData.length,
-                avgPoints: charts.popout.data.datasets[0].data.length,
-                trendPoints: (chartType === 'pressure' && charts.popout.data.datasets[1]) ? charts.popout.data.datasets[1].data.length : 0
+                avgPoints: charts.popout.data.datasets[1] ? charts.popout.data.datasets[1].data.length : 0,
+                trendPoints: (chartType === 'pressure' && charts.popout.data.datasets[2]) ? charts.popout.data.datasets[2].data.length : 0
             });
         } catch (e) { 
             debugLog(logLevels.ERROR, 'Popout chart update failed', { error: e.message }); 
@@ -2895,10 +2898,11 @@ async function loadHistoricalDataForPopout() {
         
         debugLog(logLevels.INFO, `Loaded ${history.length} historical data points for popout chart`);
         
-        // Process each historical observation and add to chart
-        const chartType = charts.popoutType;
-        // Main data is always the last dataset in popout charts
-        const datasetIndex = charts.popout.data.datasets.length - 1;
+    // Process each historical observation and add to chart
+    const chartType = charts.popoutType;
+    // Main data is the first dataset in popout charts (drawn underneath);
+    // average/trend/accumulated lines are appended after it.
+    const datasetIndex = 0;
         
         history.forEach(obs => {
             if (!obs || !obs.timestamp) return;
@@ -2947,7 +2951,7 @@ async function loadHistoricalDataForPopout() {
             charts.popout.data.datasets[datasetIndex].data.push({ x: timestamp, y: value });
         });
         
-        // Calculate and populate average line (dataset[0]) - skip for light and UV
+        // Calculate and populate average line (dataset 1) - skip for light and UV
         const mainData = charts.popout.data.datasets[datasetIndex].data;
         if (mainData.length > 0) {
             const firstX = mainData[0].x;
@@ -2964,28 +2968,33 @@ async function loadHistoricalDataForPopout() {
                     }
                 }
                 const avg = count > 0 ? sum / count : 0;
-                charts.popout.data.datasets[0].data = [
+                // average is dataset index 1 when present
+                if (charts.popout.data.datasets[1]) {
+                    charts.popout.data.datasets[1].data = [
                     { x: firstX, y: avg },
                     { x: lastX, y: avg }
-                ];
+                    ];
+                }
             }
             
             // Calculate trend line for pressure (dataset[1])
-            if (chartType === 'pressure' && charts.popout.data.datasets[1]) {
+            // pressure: main(0), average(1), trend(2)
+            if (chartType === 'pressure' && charts.popout.data.datasets[2]) {
                 const trendData = calculateTrendLine(mainData);
-                charts.popout.data.datasets[1].data = trendData;
+                charts.popout.data.datasets[2].data = trendData;
             }
             
             // Calculate accumulated line for rain (dataset[1]) and today total (dataset[2])
             if (chartType === 'rain') {
                 // Calculate accumulated line (cumulative sum of rain)
-                if (charts.popout.data.datasets[1]) {
+                // popout dataset order: main(0), average(1), window total(2), today total(3)
+                if (charts.popout.data.datasets[2]) {
                     let cumulativeSum = 0;
                     const accumulatedData = mainData.map(point => {
                         cumulativeSum += (point.y || 0);
                         return { x: point.x, y: cumulativeSum };
                     });
-                    charts.popout.data.datasets[1].data = accumulatedData;
+                    charts.popout.data.datasets[2].data = accumulatedData;
                     debugLog(logLevels.INFO, 'Rain accumulated line calculated for popout', {
                         dataPoints: accumulatedData.length,
                         mainDataPoints: mainData.length,
@@ -2995,9 +3004,9 @@ async function loadHistoricalDataForPopout() {
                         samplePoints: mainData.slice(0, 5).map(p => p.y)
                     });
                 }
-                
-                // Fetch current weather data to get today's rain total for dataset[2]
-                if (charts.popout.data.datasets[2]) {
+
+                // Fetch current weather data to get today's rain total for dataset[3]
+                if (charts.popout.data.datasets[3]) {
                     try {
                         const weatherResponse = await fetch('/api/weather');
                         if (weatherResponse.ok) {
@@ -3009,7 +3018,7 @@ async function loadHistoricalDataForPopout() {
                                 }
                                 const firstX = mainData[0].x;
                                 const lastX = mainData[mainData.length - 1].x;
-                                charts.popout.data.datasets[2].data = [
+                                charts.popout.data.datasets[3].data = [
                                     { x: firstX, y: dailyTotal },
                                     { x: lastX, y: dailyTotal }
                                 ];
@@ -3032,13 +3041,15 @@ async function loadHistoricalDataForPopout() {
             const debugInfo = {
                 chartType: chartType,
                 dataPoints: mainData.length,
-                avgPoints: charts.popout.data.datasets[0].data.length,
-                trendPoints: (chartType === 'pressure' && charts.popout.data.datasets[1]) ? charts.popout.data.datasets[1].data.length : 0,
+                // avgPoints lives at index 1 when present
+                avgPoints: charts.popout.data.datasets[1] ? charts.popout.data.datasets[1].data.length : 0,
+                // trend (pressure) lives at index 2 when present
+                trendPoints: (chartType === 'pressure' && charts.popout.data.datasets[2]) ? charts.popout.data.datasets[2].data.length : 0,
                 totalDatasets: charts.popout.data.datasets.length
             };
             if (chartType === 'rain') {
-                debugInfo.accumulatedPoints = charts.popout.data.datasets[1] ? charts.popout.data.datasets[1].data.length : 0;
-                debugInfo.todayTotalPoints = charts.popout.data.datasets[2] ? charts.popout.data.datasets[2].data.length : 0;
+                debugInfo.accumulatedPoints = charts.popout.data.datasets[2] ? charts.popout.data.datasets[2].data.length : 0;
+                debugInfo.todayTotalPoints = charts.popout.data.datasets[3] ? charts.popout.data.datasets[3].data.length : 0;
                 debugInfo.dataset0_length = charts.popout.data.datasets[0] ? charts.popout.data.datasets[0].data.length : 0;
                 debugInfo.dataset1_length = charts.popout.data.datasets[1] ? charts.popout.data.datasets[1].data.length : 0;
                 debugInfo.dataset2_length = charts.popout.data.datasets[2] ? charts.popout.data.datasets[2].data.length : 0;

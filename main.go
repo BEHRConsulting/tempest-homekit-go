@@ -268,7 +268,7 @@ func runEventLogTest(cfg *config.Config) {
 }
 
 // runUDPTest listens for UDP broadcasts from a local Tempest station
-func runUDPTest(cfg *config.Config, seconds int) {
+func runUDPTest(_ *config.Config, seconds int) {
 	fmt.Printf("=== UDP Broadcast Listener Test (%d seconds) ===\n\n", seconds)
 
 	udpListener := udp.NewUDPListener(100)

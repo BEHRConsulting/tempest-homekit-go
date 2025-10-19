@@ -113,15 +113,25 @@
 
 [x] when editing an alarm, add a validate condition button to validate the condition and paraphrase. always validate on save, but paraphase is not needed.
 
-[] Lets implment the alarms email (smtp) notifications
-
 [x] Lets implement the alarms sms (AWS SNS) notifications 
-
-[] Lets implement the alarms sms (Twilio) notifications
 
 [x] Add a command line parameter --env <filename> that overrides .env. 
 
-[x] Request this every 3-4 major changes or monthly:
+[-] Bring test coverage back yo >70%
+
+[x] In all the popout charts, the data line should be solid and behind the average dashed line.
+
+[-] Lets implement the alarms sms (Twilio) notifications
+
+[x] Lets implment the alarms email (smtp) notifications
+
+[] for popout graphs, the data line should be solid, no data point indicator, with all the points, it looks like a dotted line confusing it with the avg line.
+ 
+[] Lets add delivery methods csv and json files. The config section for these should include at least path and max number of days in the file. maintain the file as a FIFO queue. if the file can not me opened, generate a warning log and create a temp file (also shown in the warning log) to hold the alarms until the file can be opened. This is to catch files already opened or permission issues. create nice default messages when selected.
+
+[] Lets add a per-alarm scheduling system
+
+[] Request this every 3-4 major changes or monthly:
 "Perform a comprehensive documentation audit comparing REQUIREMENTS.md, README.md, and CODE_REVIEW.md against the current codebase. 
 
 1. **REQUIREMENTS.md**: Verify every section can be used to recreate the app

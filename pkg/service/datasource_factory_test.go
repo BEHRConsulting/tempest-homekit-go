@@ -8,6 +8,41 @@ import (
 	"tempest-homekit-go/pkg/weather"
 )
 
+// dummy type to satisfy weather.UDPListener interface used in CreateDataSource tests
+type fakeUDPListener struct{}
+
+func (f fakeUDPListener) GetLatestObservation() *weather.Observation { return nil }
+
+func TestCreateDataSource_UDPRequiresListener(t *testing.T) {
+	cfg := &config.Config{UDPStream: true}
+	_, err := CreateDataSource(cfg, nil, nil)
+	if err == nil {
+		t.Fatalf("expected error when UDPStream enabled but listener is nil")
+	}
+}
+
+func TestCreateDataSource_CustomStationURL(t *testing.T) {
+	cfg := &config.Config{StationURL: "https://example.com/foo", DisableInternet: false}
+	ds, err := CreateDataSource(cfg, &weather.Station{StationID: 42, StationName: "S"}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating API data source: %v", err)
+	}
+	if ds == nil {
+		t.Fatalf("expected non-nil datasource for custom StationURL")
+	}
+}
+
+func TestCreateDataSource_GeneratedWeatherDefaults(t *testing.T) {
+	cfg := &config.Config{UseGeneratedWeather: true}
+	ds, err := CreateDataSource(cfg, &weather.Station{StationID: 1, StationName: "S"}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating generated weather data source: %v", err)
+	}
+	if ds == nil {
+		t.Fatalf("expected non-nil datasource for generated weather")
+	}
+}
+
 // mockUDPListener implements the weather.UDPListener interface for testing
 type mockUDPListener struct {
 	started      bool

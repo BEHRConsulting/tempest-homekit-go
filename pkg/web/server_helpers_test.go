@@ -51,7 +51,7 @@ func TestGetPressureTrendAndForecast(t *testing.T) {
 	}
 }
 
-func TestCalculateDailyRainForTime(t *testing.T) {
+func TestCalculateDailyRainForTime_Basic(t *testing.T) {
 	ws := &WebServer{}
 	// create history for today with increasing rain accumulation
 	now := time.Now()
