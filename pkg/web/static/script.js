@@ -313,6 +313,7 @@ function initCharts() {
             const datasets = [];
             
             // Main data line is always first (drawn underneath)
+            // For popout charts we want a solid data line with no point markers
             datasets.push({ 
                 data: [], 
                 label: config.label,
@@ -321,14 +322,15 @@ function initCharts() {
                 fill: false,
                 tension: 0.4,
                 borderWidth: 3,
-                pointRadius: 2,
+                // Hide point markers on the main data series for clarity in popouts
+                pointRadius: 0,
                 pointHoverRadius: 6,
                 pointBackgroundColor: config.color,
                 pointBorderColor: '#fff',
-                pointBorderWidth: 2,
+                pointBorderWidth: 0,
                 pointHoverBackgroundColor: config.color,
                 pointHoverBorderColor: '#fff',
-                pointHoverBorderWidth: 3
+                pointHoverBorderWidth: 2
             });
             
             if (chartType !== 'light' && chartType !== 'uv') {
@@ -470,11 +472,12 @@ function initCharts() {
                         }
                     },
                     elements: {
+                        // Default to no visible points on popout data lines; hover still highlights
                         point: { 
-                            radius: 2, 
+                            radius: 0, 
                             hoverRadius: 6, 
                             backgroundColor: config.color, 
-                            borderWidth: 2,
+                            borderWidth: 0,
                             borderColor: '#fff'
                         },
                         line: { 
