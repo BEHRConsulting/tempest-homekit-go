@@ -896,6 +896,7 @@ type AlarmStatus struct {
 	Cooldown          int      `json:"cooldown"`
 	CooldownRemaining int      `json:"cooldownRemaining"` // Seconds remaining in cooldown (0 if ready)
 	InCooldown        bool     `json:"inCooldown"`        // True if currently in cooldown
+	TriggeredCount    int      `json:"triggeredCount"`
 }
 
 func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request) {
@@ -954,6 +955,7 @@ func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request
 			Cooldown:          alm.Cooldown,
 			CooldownRemaining: cooldownRemaining,
 			InCooldown:        inCooldown,
+			TriggeredCount:    alm.TriggeredCount,
 		})
 	}
 

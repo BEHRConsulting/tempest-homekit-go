@@ -10,17 +10,17 @@ TODO: Maintain this file; add new prompts and short outcomes when used. (Task: M
 Prompts (paraphrased)
 ---------------------
 
-- [2025-09-10] "Make popout charts deterministic and match small-card visuals exactly (per-dataset styles, units) and add headless tests verifying parity." — Outcome: compact config encoding for popout charts and headless tests.
+- [2025-09-10] "Make popout charts deterministic and match small-card visuals exactly (per-dataset styles, units) and add headless tests verifying parity." — Outcome: compact config encoding for popout charts and headless tests. (related commits: `c5171b7` 2025-10-02, `520c7d6` 2025-10-13)
 
-- [2025-09-12] "Harden headless tests to avoid CDN timing flakiness by injecting vendored Chart.js and exposing in-page test hooks." — Outcome: vendored dependencies and in-page hooks for robust chromedp tests.
+- [2025-09-12] "Harden headless tests to avoid CDN timing flakiness by injecting vendored Chart.js and exposing in-page test hooks." — Outcome: vendored dependencies and in-page hooks for robust chromedp tests. (see chart commits `c5171b7` 2025-10-02)
 
-- [2025-09-18] "The alarm 'Lux Change' is not triggering after these observations; here's the logs — find and fix the bug." — Outcome: fixed state persistence bug in ProcessObservation().
+- [2025-09-18] "The alarm 'Lux Change' is not triggering after these observations; here's the logs — find and fix the bug." — Outcome: fixed state persistence bug in ProcessObservation(). (fixes and alarm work present in commits `bbee062` 2025-10-09 and `aefb75c` 2025-10-11)
 
 - [2025-09-25] "Remove provider credentials from example alarm JSON files; store provider config in .env and update docs." — Outcome: canonical `docs/ALARM_CONFIGURATION.md` (rules-only), `.env` usage clarified, and docs updated accordingly.
 
 - [2025-10-10] "Normalize documentation style: remove emoji and unicode icons from docs, trim trailing whitespace, and run a link-check to ensure internal cross-references are valid." — Outcome: normalization script added and many Markdown files cleaned; internal md links validated.
 
-- [2025-08-22] "Implement AWS SNS SMS notifications with environment-first credential handling and setup script." — Outcome: AWS SNS implementation, `scripts/setup-aws-sns.sh`, docs updated.
+- [2025-08-22] "Implement AWS SNS SMS notifications with environment-first credential handling and setup script." — Outcome: AWS SNS implementation, `scripts/setup-aws-sns.sh`, docs updated. (related commit: `04fdccd` 2025-10-15)
 
 - [2025-08-29] "Add Microsoft 365 OAuth2 email support, with Azure AD setup docs and fallback to SMTP when credentials are missing." — Outcome: O365 email implementation, docs, and example configs.
 

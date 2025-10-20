@@ -349,6 +349,8 @@ func (m *Manager) ProcessObservation(obs *weather.Observation) {
 		if triggered {
 			logger.Info("🚨 Alarm triggered: %s (condition: %s)", alarm.Name, alarm.Condition)
 			m.sendNotifications(alarm, obs)
+			// Increment triggered count and mark as fired
+			alarm.TriggeredCount++
 			alarm.MarkFired()
 		}
 

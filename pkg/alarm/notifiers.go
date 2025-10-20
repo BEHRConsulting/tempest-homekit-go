@@ -714,13 +714,14 @@ func formatAlarmInfo(alarm *Alarm, isHTML bool) string {
 			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Condition:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
 			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Status:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
 			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Cooldown:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
+			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Triggered:</td><td style="padding: 5px; border: 1px solid #ddd;">%d</td></tr>
 			<tr><td style="padding: 5px; border: 1px solid #ddd; font-weight: bold;">Tags:</td><td style="padding: 5px; border: 1px solid #ddd;">%s</td></tr>
 		</table>`,
-			alarm.Name, alarm.Description, alarm.Condition, enabledStr, cooldownStr, tagsStr)
+			alarm.Name, alarm.Description, alarm.Condition, enabledStr, cooldownStr, alarm.TriggeredCount, tagsStr)
 	}
 
-	return fmt.Sprintf("Alarm: %s\nDescription: %s\nCondition: %s\nStatus: %s\nCooldown: %s\nTags: %s",
-		alarm.Name, alarm.Description, alarm.Condition, enabledStr, cooldownStr, tagsStr)
+	return fmt.Sprintf("Alarm: %s\nDescription: %s\nCondition: %s\nStatus: %s\nCooldown: %s\nTriggered: %d\nTags: %s",
+		alarm.Name, alarm.Description, alarm.Condition, enabledStr, cooldownStr, alarm.TriggeredCount, tagsStr)
 }
 
 // formatSensorInfo returns formatted sensor information

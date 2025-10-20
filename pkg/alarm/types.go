@@ -70,6 +70,8 @@ type Alarm struct {
 	Condition      string             `json:"condition"`          // e.g., "temperature > 85", "humidity > 80 && temperature > 35", "*lightning_count"
 	Cooldown       int                `json:"cooldown,omitempty"` // Seconds between repeated notifications
 	Channels       []Channel          `json:"channels"`
+	// TriggeredCount tracks how many times this alarm has been triggered since process start
+	TriggeredCount int                `json:"triggered_count,omitempty"`
 	lastFired      time.Time          // Internal: last trigger time
 	previousValue  map[string]float64 // Internal: previous field values for change detection
 	triggerContext map[string]float64 // Internal: field values at time of trigger (for notification display)
