@@ -180,6 +180,42 @@ body {
     position: relative;
 }
 
+/* Alarm header controls: tag selector container */
+.alarm-header-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+    font-size: 0.95rem;
+    color: var(--card-text-light);
+}
+
+.alarm-header-controls label {
+    color: var(--card-text-light);
+}
+
+/* Tag select styling */
+.alarm-tag-select {
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 4px;
+    background: var(--card-bg);
+    padding: 4px 8px;
+    font-size: 0.9rem;
+    color: var(--card-text);
+}
+
+/* Small badges inside alarm items */
+.alarm-item-tags, .alarm-item-triggered-count {
+    display: inline-block;
+    margin-top: 6px;
+    margin-right: 8px;
+    padding: 3px 6px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.03);
+    color: var(--card-text-light);
+    font-size: 0.85rem;
+}
+
 .card-icon {
     font-size: 2rem;
     margin-right: 10px;
