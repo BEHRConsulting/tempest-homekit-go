@@ -4,7 +4,7 @@
 
 The alarm editor now prominently displays the **active JSON configuration file** that is being watched and edited. This provides clear visibility into which file is being monitored for changes.
 
-## 🎨 Visual Display
+##  Visual Display
 
 ### Header Display
 
@@ -12,25 +12,25 @@ The alarm editor header shows the config file path in a styled box:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ ⚡ Tempest Alarm Editor                                 │
-│ Create and manage weather alarms with real-time         │
-│ monitoring                                               │
-│                                                          │
+│ Tempest Alarm Editor │
+│ Create and manage weather alarms with real-time │
+│ monitoring │
+│ │
 │ ┌─────────────────────────────────────────────────────┐│
-│ │ 📁 Watching: /path/to/alarms.json                   ││
+│ │ Watching: /path/to/alarms.json ││
 │ └─────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────┘
 ```
 
 ### Styling Features
 
-- **File icon (📁):** Visual indicator for file path
+- **File indicator:** Visual indicator for file path
 - **Monospace font:** Easy to read full file paths
 - **Light background:** Stands out from header
 - **Rounded corners:** Modern, polished appearance
 - **Full path display:** Shows complete file system path
 
-## 📂 File Watching Behavior
+## File Watching Behavior
 
 ### Automatic Reload
 
@@ -43,20 +43,16 @@ The alarm manager watches the config file for changes:
 
 ### What Triggers Reload
 
-✅ **Saves from editor:** Changes made in web UI  
-✅ **External edits:** Manual edits with text editor  
-✅ **File replacement:** Replacing the file entirely  
-✅ **Backup restoration:** Restoring from backup  
-
+**Saves from editor:** Changes made in web UI **External edits:** Manual edits with text editor **File replacement:** Replacing the file entirely **Backup restoration:** Restoring from backup
 ### Platform Support
 
 | Platform | File Watching | Notes |
 |----------|--------------|-------|
-| **Linux** | ✅ inotify | Native file watching |
-| **macOS** | ✅ FSEvents | Native file watching |
-| **Windows** | ✅ ReadDirectoryChangesW | Native file watching |
+| **Linux** | inotify | Native file watching |
+| **macOS** | FSEvents | Native file watching |
+| **Windows** | ReadDirectoryChangesW | Native file watching |
 
-## 🔍 Configuration Path Sources
+## Configuration Path Sources
 
 ### From Command Line
 
@@ -66,9 +62,9 @@ The alarm manager watches the config file for changes:
 
 # Full example
 ./tempest-homekit-go \
-  --token your-token \
-  --station-id 12345 \
-  --alarm-config @/home/user/alarms.json
+ --token your-token \
+ --station-id 12345 \
+ --alarm-config @/home/user/alarms.json
 ```
 
 ### From Environment
@@ -85,14 +81,14 @@ If no path specified:
 - Linux/macOS: `~/.config/tempest-homekit/alarms.json`
 - Windows: `%APPDATA%\tempest-homekit\alarms.json`
 
-## 📊 Use Cases
+## Use Cases
 
 ### Use Case 1: Development
 
 **Scenario:** Testing alarm configurations
 
 ```
-📁 Watching: /Users/developer/projects/weather/test-alarms.json
+Watching: /Users/developer/projects/weather/test-alarms.json
 ```
 
 **Benefits:**
@@ -105,7 +101,7 @@ If no path specified:
 **Scenario:** Running production alarms
 
 ```
-📁 Watching: /etc/tempest-homekit/production-alarms.json
+Watching: /etc/tempest-homekit/production-alarms.json
 ```
 
 **Benefits:**
@@ -118,9 +114,9 @@ If no path specified:
 **Scenario:** Managing multiple weather stations
 
 ```
-Station 1: 📁 Watching: /configs/station-backyard.json
-Station 2: 📁 Watching: /configs/station-front.json
-Station 3: 📁 Watching: /configs/station-roof.json
+Station 1: Watching: /configs/station-backyard.json
+Station 2: Watching: /configs/station-front.json
+Station 3: Watching: /configs/station-roof.json
 ```
 
 **Benefits:**
@@ -133,7 +129,7 @@ Station 3: 📁 Watching: /configs/station-roof.json
 **Scenario:** Team managing alarms
 
 ```
-📁 Watching: /shared/weather/team-alarms.json
+Watching: /shared/weather/team-alarms.json
 ```
 
 **Benefits:**
@@ -141,7 +137,7 @@ Station 3: 📁 Watching: /configs/station-roof.json
 - No confusion about file locations
 - Centralized configuration
 
-## 🛠️ Technical Implementation
+## Technical Implementation
 
 ### Server-Side
 
@@ -149,18 +145,17 @@ The alarm editor server tracks the config path:
 
 ```go
 type Server struct {
-    configPath string  // Full path to alarm config file
-    port       string
+ configPath string // Full path to alarm config file
+ port string
 }
 
 func NewServer(configPath, port string) (*Server, error) {
-    // Remove @ prefix if present
-    path := strings.TrimPrefix(configPath, "@")
-    
-    return &Server{
-        configPath: path,
-        port:       port,
-    }, nil
+ // Remove @ prefix if present
+ path := strings.TrimPrefix(configPath, "@")
+  return &Server{
+ configPath: path,
+ port: port,
+ }, nil
 }
 ```
 
@@ -170,7 +165,7 @@ Config path is passed to the HTML template:
 
 ```go
 data := map[string]interface{}{
-    "ConfigPath": s.configPath,
+ "ConfigPath": s.configPath,
 }
 ```
 
@@ -180,8 +175,8 @@ The path is displayed in the header:
 
 ```html
 <div class="config-path-display">
-    <span class="label">📁 Watching:</span>
-    <span class="path">{{.ConfigPath}}</span>
+ <span class="label">Watching:</span>
+ <span class="path">{{.ConfigPath}}</span>
 </div>
 ```
 
@@ -189,39 +184,36 @@ The path is displayed in the header:
 
 ```css
 .config-path-display {
-    background: rgba(255,255,255,0.15);
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-top: 15px;
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border: 1px solid rgba(255,255,255,0.2);
+ background: rgba(255,255,255,0.15);
+ padding: 12px 16px;
+ border-radius: 8px;
+ margin-top: 15px;
+ font-family: 'Courier New', monospace;
+ font-size: 13px;
+ display: flex;
+ align-items: center;
+ gap: 10px;
+ border: 1px solid rgba(255,255,255,0.2);
 }
 ```
 
-## 🔄 File Watching Details
+##  File Watching Details
 
 ### Manager Setup
 
 ```go
 func (m *Manager) setupFileWatcher() error {
-    watcher, err := fsnotify.NewWatcher()
-    if err != nil {
-        return err
-    }
-    
-    // Watch the directory (not file directly)
-    configDir := filepath.Dir(m.configPath)
-    watcher.Add(configDir)
-    
-    // Start watching in background
-    go m.watchConfigFile()
-    
-    logger.Info("Watching alarm config file: %s", m.configPath)
-    return nil
+ watcher, err := fsnotify.NewWatcher()
+ if err != nil {
+ return err
+ }
+  // Watch the directory (not file directly)
+ configDir := filepath.Dir(m.configPath)
+ watcher.Add(configDir)
+  // Start watching in background
+ go m.watchConfigFile()
+  logger.Info("Watching alarm config file: %s", m.configPath)
+ return nil
 }
 ```
 
@@ -229,20 +221,20 @@ func (m *Manager) setupFileWatcher() error {
 
 ```go
 func (m *Manager) watchConfigFile() {
-    for {
-        select {
-        case event := <-m.watcher.Events:
-            if event.Name == m.configPath {
-                if event.Op&fsnotify.Write == fsnotify.Write {
-                    m.reloadConfig()
-                }
-            }
-        }
-    }
+ for {
+ select {
+ case event := <-m.watcher.Events:
+ if event.Name == m.configPath {
+ if event.Op&fsnotify.Write == fsnotify.Write {
+ m.reloadConfig()
+ }
+ }
+ }
+ }
 }
 ```
 
-## 📝 Logging
+## Logging
 
 ### Startup Logging
 
@@ -273,7 +265,7 @@ When editing via web UI:
 2025-10-09 12:30:15 INFO: Saved alarm configuration to: /path/to/alarms.json
 ```
 
-## 🎯 Benefits
+##  Benefits
 
 ### For Users
 
@@ -296,7 +288,7 @@ When editing via web UI:
 3. **Testing:** Verify correct file is loaded in tests
 4. **Configuration:** Easy to document requirements
 
-## 🔒 Security Considerations
+## Security Considerations
 
 ### File Path Display
 
@@ -322,47 +314,38 @@ chmod 755 /path/to/config-dir/
 chown tempest:tempest /path/to/alarms.json
 ```
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Path Not Showing
 
-**Problem:** Config path displays as empty  
-**Check:** Verify server was initialized with config path  
-**Solution:** Pass config path when creating alarm editor server
+**Problem:** Config path displays as empty **Check:** Verify server was initialized with config path **Solution:** Pass config path when creating alarm editor server
 
 ### Wrong Path Displayed
 
-**Problem:** Shows unexpected file path  
-**Check:** Command line args or environment variables  
-**Solution:** Verify --alarm-config flag is set correctly
+**Problem:** Shows unexpected file path **Check:** Command line args or environment variables **Solution:** Verify --alarm-config flag is set correctly
 
 ### File Not Updating
 
-**Problem:** Changes to file not reflected in alarms  
-**Check:** File watcher logs for errors  
-**Solution:** 
-1. Verify file permissions
+**Problem:** Changes to file not reflected in alarms **Check:** File watcher logs for errors **Solution:** 1. Verify file permissions
 2. Check file watcher is active
 3. Restart service if needed
 
 ### Path Too Long in UI
 
-**Problem:** Very long paths wrapping awkwardly  
-**Workaround:** Use shorter paths or symlinks  
-**Future:** Add truncation with tooltip
+**Problem:** Very long paths wrapping awkwardly **Workaround:** Use shorter paths or symlinks **Future:** Add truncation with tooltip
 
-## 💡 Tips & Tricks
+## Tips & Tricks
 
 ### Use Descriptive Paths
 
-✅ Good:
+Good:
 ```
 /etc/tempest/backyard-station-alarms.json
 /configs/production/weather-alarms.json
 /home/user/weather/dev-alarms.json
 ```
 
-❌ Avoid:
+Avoid:
 ```
 /tmp/a.json
 /x/y/z/config.json
@@ -398,40 +381,34 @@ ln -s /actual/path/to/alarms.json /etc/tempest/alarms.json
 ```bash
 # Automated backup with timestamp
 cp /path/to/alarms.json \
-   /path/to/backups/alarms-$(date +%Y%m%d-%H%M%S).json
+ /path/to/backups/alarms-$(date +%Y%m%d-%H%M%S).json
 
 # Keep last 30 backups
 find /path/to/backups/ -name "alarms-*.json" \
-     -mtime +30 -delete
+ -mtime +30 -delete
 ```
 
-## 📚 Related Features
+## Related Features
 
 - **File Watching:** Automatic config reload on changes
 - **JSON Viewer:** View full config in editor UI
 - **Alarm Validation:** Real-time validation before save
 - **Tag Management:** Global tag system across all alarms
 
-## 🎉 Summary
+##  Summary
 
 ### What You See
 
 ```
-📁 Watching: /path/to/your/alarms.json
+Watching: /path/to/your/alarms.json
 ```
 
 ### What It Tells You
 
-✅ Exact file path being monitored  
-✅ File that will be updated on save  
-✅ File to backup for disaster recovery  
-✅ File that affects active alarms  
-
+Exact file path being monitored File that will be updated on save File to backup for disaster recovery File that affects active alarms
 ### What You Get
 
-✅ **Visibility:** Always know which file is active  
-✅ **Confidence:** Verify correct configuration loaded  
-✅ **Documentation:** Clear reference for operations  
-✅ **Troubleshooting:** Quick path reference for debugging  
+**Visibility:** Always know which file is active **Confidence:** Verify correct configuration loaded **Documentation:** Clear reference for operations **Troubleshooting:** Quick path reference for debugging
+The config file path display makes alarm management transparent and professional.
 
-The config file path display makes alarm management transparent and professional! 🚀
+Watching: /path/to/your/alarms.json

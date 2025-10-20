@@ -5,8 +5,7 @@ Implemented a comprehensive theme system for the Tempest HomeKit web console wit
 
 ## Themes Available
 
-### 1. **Default (Purple Gradient)** 
-- Original design with purple gradient background
+### 1. **Default (Purple Gradient)** - Original design with purple gradient background
 - High contrast, modern look
 - Colors: Purple/violet gradient (#667eea → #764ba2)
 
@@ -47,38 +46,38 @@ Implemented a comprehensive theme system for the Tempest HomeKit web console wit
 ### Files Created/Modified
 
 1. **`pkg/web/static/themes.css`** (NEW)
-   - Contains all theme definitions using CSS variables
-   - 7 theme variations using `[data-theme="name"]` selectors
-   - Theme selector styling
+ - Contains all theme definitions using CSS variables
+ - 7 theme variations using `[data-theme="name"]` selectors
+ - Theme selector styling
 
 2. **`pkg/web/static/styles.css`** (MODIFIED)
-   - Added CSS variables for themeable properties
-   - Updated all color references to use variables
-   - Maintains backward compatibility
+ - Added CSS variables for themeable properties
+ - Updated all color references to use variables
+ - Maintains backward compatibility
 
 3. **`pkg/web/server.go`** (MODIFIED)
-   - Added theme selector dropdown in footer
-   - Added themes.css to static file serving
-   - Added themes.css link in HTML head
+ - Added theme selector dropdown in footer
+ - Added themes.css to static file serving
+ - Added themes.css link in HTML head
 
 4. **`pkg/web/static/script.js`** (MODIFIED)
-   - Theme switching JavaScript (70+ lines)
-   - Saves theme preference to localStorage
-   - Updates chart colors for dark themes
-   - Applies theme on page load
+ - Theme switching JavaScript (70+ lines)
+ - Saves theme preference to localStorage
+ - Updates chart colors for dark themes
+ - Applies theme on page load
 
 5. **`pkg/web/static/chart.html`** (MODIFIED)
-   - Added theme support for popout charts
-   - Syncs theme with main dashboard
-   - Updates chart grid/text colors for dark mode
+ - Added theme support for popout charts
+ - Syncs theme with main dashboard
+ - Updates chart grid/text colors for dark mode
 
 ## Features
 
 ### User Experience
-- 🎨 Theme dropdown in footer with descriptive names
-- 💾 Theme preference saved to browser localStorage
-- 🔄 Instant theme switching without page reload
-- 📊 Chart colors automatically adjust for dark themes
+-  Theme dropdown in footer with descriptive names
+-  Theme preference saved to browser localStorage
+-  Instant theme switching without page reload
+-  Chart colors automatically adjust for dark themes
 - 🪟 Popout charts inherit theme from main dashboard
 
 ### Technical Features
@@ -92,27 +91,27 @@ Implemented a comprehensive theme system for the Tempest HomeKit web console wit
 
 Each theme defines these variables:
 ```css
---bg-gradient-start      /* Background gradient start color */
---bg-gradient-end        /* Background gradient end color */
---card-bg                /* Card background */
---card-text              /* Main text color */
---card-text-light        /* Secondary text color */
---card-title             /* Card title color */
---header-text            /* Header text color */
---footer-text            /* Footer text color */
---status-bg              /* Status banner background */
---status-text            /* Status banner text */
---shadow-color           /* Card shadow color */
---shadow-hover           /* Card hover shadow */
---link-color             /* Link and accent color */
---chart-grid             /* Chart grid line color */
+--bg-gradient-start /* Background gradient start color */
+--bg-gradient-end /* Background gradient end color */
+--card-bg /* Card background */
+--card-text /* Main text color */
+--card-text-light /* Secondary text color */
+--card-title /* Card title color */
+--header-text /* Header text color */
+--footer-text /* Footer text color */
+--status-bg /* Status banner background */
+--status-text /* Status banner text */
+--shadow-color /* Card shadow color */
+--shadow-hover /* Card hover shadow */
+--link-color /* Link and accent color */
+--chart-grid /* Chart grid line color */
 ```
 
 ## Usage
 
 1. Open web dashboard at `http://localhost:8080`
 2. Scroll to footer
-3. Click "🎨 Theme:" dropdown
+3. Click " Theme:" dropdown
 4. Select desired theme
 5. Theme applies instantly and is saved
 
@@ -148,8 +147,8 @@ Possible additions:
 
 ## Code Quality
 
-- ✅ No hardcoded colors (all use variables)
-- ✅ Clean separation (themes.css separate from styles.css)
-- ✅ Maintainable (add new themes easily)
-- ✅ Performant (CSS variables, no JavaScript color manipulation except charts)
-- ✅ Accessible (good contrast ratios in all themes)
+- No hardcoded colors (all use variables)
+- Clean separation (themes.css separate from styles.css)
+- Maintainable (add new themes easily)
+- Performant (CSS variables, no JavaScript color manipulation except charts)
+- Accessible (good contrast ratios in all themes)

@@ -18,21 +18,21 @@ To use the oslog channel, add it to your alarm configuration:
 
 ```json
 {
-  "alarms": [
-    {
-      "name": "Wind Change",
-      "description": "Alert when wind speed changes",
-      "enabled": true,
-      "condition": "*wind_speed",
-      "cooldown": 60,
-      "channels": [
-        {
-          "type": "oslog",
-          "template": "🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nWind: {{wind_speed}} m/s (was {{last_wind_speed}})"
-        }
-      ]
-    }
-  ]
+ "alarms": [
+ {
+ "name": "Wind Change",
+ "description": "Alert when wind speed changes",
+ "enabled": true,
+ "condition": "*wind_speed",
+ "cooldown": 60,
+ "channels": [
+ {
+ "type": "oslog",
+ "template": "ALARM: {{alarm_name}}\nStation: {{station}}\nWind: {{wind_speed}} m/s (was {{last_wind_speed}})"
+ }
+ ]
+ }
+ ]
 }
 ```
 
@@ -41,8 +41,8 @@ To use the oslog channel, add it to your alarm configuration:
 ### Using Console.app (GUI)
 1. Open **Console.app** (Applications > Utilities)
 2. In the search bar, filter by:
-   - **Subsystem**: `com.behr.tempest-homekit`
-   - **Category**: `alarm`
+ - **Subsystem**: `com.behr.tempest-homekit`
+ - **Category**: `alarm`
 3. Messages will appear in real-time
 
 ### Using Terminal (log command)
@@ -96,20 +96,20 @@ Note: The `--read-history`/`READ_HISTORY` option controls whether the service pr
 
 ```json
 {
-  "channels": [
-    {
-      "type": "console",
-      "template": "🚨 {{alarm_name}}: {{alarm_description}}"
-    },
-    {
-      "type": "oslog",
-      "template": "🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}"
-    },
-    {
-      "type": "syslog",
-      "template": "ALARM: {{alarm_name}} - {{alarm_description}}"
-    }
-  ]
+ "channels": [
+ {
+ "type": "console",
+ "template": " {{alarm_name}}: {{alarm_description}}"
+ },
+ {
+ "type": "oslog",
+ "template": "ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}"
+ },
+ {
+ "type": "syslog",
+ "template": "ALARM: {{alarm_name}} - {{alarm_description}}"
+ }
+ ]
 }
 ```
 
@@ -141,8 +141,8 @@ The oslog notifier uses CGO to call the native macOS `os_log_create` and `os_log
 #include <os/log.h>
 
 void log_message(const char *subsystem, const char *category, const char *message) {
-    os_log_t log = os_log_create(subsystem, category);
-    os_log_with_type(log, OS_LOG_TYPE_DEFAULT, "%{public}s", message);
+ os_log_t log = os_log_create(subsystem, category);
+ os_log_with_type(log, OS_LOG_TYPE_DEFAULT, "%{public}s", message);
 }
 ```
 
@@ -159,5 +159,5 @@ oslog notification type is only supported on macOS
 
 ## Related Documentation
 - [Alarm System Overview](README.md)
-- [Template Variables](../../ALARM_EDITOR_VARIABLES.md)
+- [Template Variables](../../pkg/alarm/docs/ALARM_EDITOR_VARIABLES.md)
 - [Apple's Unified Logging Documentation](https://developer.apple.com/documentation/os/logging)

@@ -100,7 +100,7 @@ The `web` package provides a comprehensive HTTP server and modern web dashboard 
 
 ### Interactive Features
 - **Unit Conversions**: Click any card to toggle units (persistent via localStorage)
-- **Information Tooltips**: Click ℹ️ icons for detailed sensor information
+- **Information Tooltips**: Click Info icons for detailed sensor information
 - **Historical Charts**: Interactive Chart.js charts with zoom and pan capabilities
 - **HomeKit Status**: Real-time display of HomeKit bridge and accessory status
 - **Connection Status**: Live connection status to Tempest station
@@ -137,15 +137,15 @@ GET /api/weather
 **Response:**
 ```json
 {
-  "temperature": 24.4,
-  "humidity": 66.0,
-  "windSpeed": 0.3,
-  "windDirection": 241,
-  "rainAccum": 0.0,
-  "pressure": 979.7,
-  "uv": 2,
-  "illuminance": 15000,
-  "lastUpdate": "2025-09-15T17:30:00Z"
+ "temperature": 24.4,
+ "humidity": 66.0,
+ "windSpeed": 0.3,
+ "windDirection": 241,
+ "rainAccum": 0.0,
+ "pressure": 979.7,
+ "uv": 2,
+ "illuminance": 15000,
+ "lastUpdate": "2025-09-15T17:30:00Z"
 }
 ```
 
@@ -156,14 +156,14 @@ GET /api/status
 **Response:**
 ```json
 {
-  "connected": true,
-  "lastUpdate": "2025-09-15T17:30:00Z",
-  "uptime": "2h30m45s",
-  "homekit": {
-    "bridge": true,
-    "accessories": 11,
-    "pin": "00102003"
-  }
+ "connected": true,
+ "lastUpdate": "2025-09-15T17:30:00Z",
+ "uptime": "2h30m45s",
+ "homekit": {
+ "bridge": true,
+ "accessories": 11,
+ "pin": "00102003"
+ }
 }
 ```
 

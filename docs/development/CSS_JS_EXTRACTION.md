@@ -10,8 +10,8 @@ Successfully extracted inline CSS and JavaScript from the alarm editor HTML temp
 
 ```
 pkg/alarm/editor/static/
-├── styles.css    (581 lines)
-└── script.js     (406 lines)
+├── styles.css (581 lines)
+└── script.js (406 lines)
 ```
 
 This matches the pattern in `pkg/web/static/` used by the main web console.
@@ -21,27 +21,27 @@ This matches the pattern in `pkg/web/static/` used by the main web console.
 #### styles.css
 - **Source**: Extracted from `<style>` block in `pkg/alarm/editor/html.go` (lines 9-591)
 - **Content**: All CSS styling for the alarm editor UI including:
-  - Reset styles
-  - Layout and containers
-  - Header and toolbars
-  - Buttons and forms
-  - Modal dialogs
-  - Tag selector (recently fixed)
-  - Notifications
-  - JSON viewer
+ - Reset styles
+ - Layout and containers
+ - Header and toolbars
+ - Buttons and forms
+ - Modal dialogs
+ - Tag selector (recently fixed)
+ - Notifications
+ - JSON viewer
 - **Size**: 581 lines
 - **Location**: `pkg/alarm/editor/static/styles.css`
 
 #### script.js
 - **Source**: Extracted from `<script>` block in `pkg/alarm/editor/html.go` (lines 728-1135)
 - **Content**: All JavaScript functionality including:
-  - Initialization and state management
-  - CRUD operations for alarms
-  - Tag management
-  - Modal handling
-  - JSON viewing
-  - Form validation
-  - API interactions
+ - Initialization and state management
+ - CRUD operations for alarms
+ - Tag management
+ - Modal handling
+ - JSON viewing
+ - Form validation
+ - API interactions
 - **Size**: 406 lines
 - **Location**: `pkg/alarm/editor/static/script.js`
 
@@ -52,32 +52,32 @@ Modified `pkg/alarm/editor/html.go` to reference external files:
 **Before (inline):**
 ```html
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alarm Configuration Editor</title>
-    <style>
-        /* 580+ lines of CSS */
-    </style>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Alarm Configuration Editor</title>
+ <style>
+ /* 580+ lines of CSS */
+ </style>
 </head>
 <body>
-    <!-- HTML content -->
-    <script>
-        /* 400+ lines of JavaScript */
-    </script>
+ <!-- HTML content -->
+ <script>
+ /* 400+ lines of JavaScript */
+ </script>
 </body>
 ```
 
 **After (external):**
 ```html
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alarm Configuration Editor</title>
-    <link rel="stylesheet" href="/alarm-editor/static/styles.css">
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Alarm Configuration Editor</title>
+ <link rel="stylesheet" href="/alarm-editor/static/styles.css">
 </head>
 <body>
-    <!-- HTML content -->
-    <script src="/alarm-editor/static/script.js"></script>
+ <!-- HTML content -->
+ <script src="/alarm-editor/static/script.js"></script>
 </body>
 ```
 
@@ -91,25 +91,21 @@ mux.HandleFunc("/alarm-editor/static/", s.handleStaticFiles)
 
 // New method
 func (s *Server) handleStaticFiles(w http.ResponseWriter, r *http.Request) {
-    // Extract filename from URL path
-    filename := strings.TrimPrefix(r.URL.Path, "/alarm-editor/static/")
-    
-    logger.Debug("Static file request: %s (path: %s)", filename, r.URL.Path)
-    
-    // Serve the file from the physical directory
-    filePath := "./pkg/alarm/editor/static/" + filename
-    
-    // Set appropriate content type
-    switch {
-    case strings.HasSuffix(filename, ".css"):
-        w.Header().Set("Content-Type", "text/css")
-        w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-    case strings.HasSuffix(filename, ".js"):
-        w.Header().Set("Content-Type", "application/javascript")
-        w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-    }
-    
-    http.ServeFile(w, r, filePath)
+ // Extract filename from URL path
+ filename := strings.TrimPrefix(r.URL.Path, "/alarm-editor/static/")
+  logger.Debug("Static file request: %s (path: %s)", filename, r.URL.Path)
+  // Serve the file from the physical directory
+ filePath := "./pkg/alarm/editor/static/" + filename
+  // Set appropriate content type
+ switch {
+ case strings.HasSuffix(filename, ".css"):
+ w.Header().Set("Content-Type", "text/css")
+ w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+ case strings.HasSuffix(filename, ".js"):
+ w.Header().Set("Content-Type", "application/javascript")
+ w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+ }
+  http.ServeFile(w, r, filePath)
 }
 ```
 
@@ -145,10 +141,10 @@ func (s *Server) handleStaticFiles(w http.ResponseWriter, r *http.Request) {
 ## Verification
 
 ### Build Status
-✅ All builds successful
+All builds successful
 
 ### Test Status
-✅ All tests passing (82 tests total)
+All tests passing (82 tests total)
 - 36 original alarm tests
 - 46 unit conversion tests
 
@@ -156,12 +152,12 @@ func (s *Server) handleStaticFiles(w http.ResponseWriter, r *http.Request) {
 ```
 pkg/alarm/editor/
 ├── README.md
-├── html.go              (1134 lines - reduced from 1142)
-├── server.go            (404 lines - added static handler)
+├── html.go (1134 lines - reduced from 1142)
+├── server.go (404 lines - added static handler)
 ├── server_test.go
-└── static/              (NEW)
-    ├── styles.css       (581 lines)
-    └── script.js        (406 lines)
+└── static/ (NEW)
+ ├── styles.css (581 lines)
+ └── script.js (406 lines)
 ```
 
 ## Technical Details
@@ -169,32 +165,32 @@ pkg/alarm/editor/
 ### Extraction Process
 
 1. **Created static directory:**
-   ```bash
-   mkdir -p pkg/alarm/editor/static
-   ```
+ ```bash
+ mkdir -p pkg/alarm/editor/static
+ ```
 
 2. **Extracted CSS:**
-   ```bash
-   sed -n '/<style>/,/<\/style>/p' pkg/alarm/editor/html.go | sed '1d;$d' > pkg/alarm/editor/static/styles.css
-   sed 's/^        //' pkg/alarm/editor/static/styles.css > pkg/alarm/editor/static/styles.css.tmp
-   mv pkg/alarm/editor/static/styles.css.tmp pkg/alarm/editor/static/styles.css
-   ```
+ ```bash
+ sed -n '/<style>/,/<\/style>/p' pkg/alarm/editor/html.go | sed '1d;$d' > pkg/alarm/editor/static/styles.css
+ sed 's/^ //' pkg/alarm/editor/static/styles.css > pkg/alarm/editor/static/styles.css.tmp
+ mv pkg/alarm/editor/static/styles.css.tmp pkg/alarm/editor/static/styles.css
+ ```
 
 3. **Extracted JavaScript:**
-   ```bash
-   sed -n '/<script>/,/<\/script>/p' pkg/alarm/editor/html.go | sed '1d;$d' > pkg/alarm/editor/static/script.js
-   sed 's/^        //' pkg/alarm/editor/static/script.js > pkg/alarm/editor/static/script.js.tmp
-   mv pkg/alarm/editor/static/script.js.tmp pkg/alarm/editor/static/script.js
-   ```
+ ```bash
+ sed -n '/<script>/,/<\/script>/p' pkg/alarm/editor/html.go | sed '1d;$d' > pkg/alarm/editor/static/script.js
+ sed 's/^ //' pkg/alarm/editor/static/script.js > pkg/alarm/editor/static/script.js.tmp
+ mv pkg/alarm/editor/static/script.js.tmp pkg/alarm/editor/static/script.js
+ ```
 
 4. **Updated HTML template:**
-   - Replaced inline `<style>` block with external `<link>` reference
-   - Replaced inline `<script>` block with external `<script src>` reference
+ - Replaced inline `<style>` block with external `<link>` reference
+ - Replaced inline `<script>` block with external `<script src>` reference
 
 5. **Added server handler:**
-   - Created `handleStaticFiles()` method
-   - Registered handler for `/alarm-editor/static/` path
-   - Set appropriate content types and cache headers
+ - Created `handleStaticFiles()` method
+ - Registered handler for `/alarm-editor/static/` path
+ - Set appropriate content types and cache headers
 
 ### URL Paths
 
@@ -209,48 +205,44 @@ pkg/alarm/editor/
 
 ## Related Documentation
 
-- [Main Web Console Static Files](pkg/web/static/README.md)
-- [Config File Watching](CONFIG_FILE_WATCHING.md)
-- [Unit Conversion Support](UNIT_CONVERSION_SUPPORT.md)
-- [Tag Selector Fix](TAG_SELECTOR_FIX.md)
 
-## Testing the Changes
+ [Main Web Console Static Files](../../pkg/web/static/README.md)
 
 To test the extracted files work correctly:
 
 1. **Build the project:**
-   ```bash
-   go build
-   ```
+ ```bash
+ go build
+ ```
 
 2. **Run the alarm editor:**
-   ```bash
-   ./tempest-homekit-go --alarm-editor config/alarms.json --port 8081
-   ```
+ ```bash
+ ./tempest-homekit-go --alarm-editor config/alarms.json --port 8081
+ ```
 
 3. **Open browser:**
-   ```
-   http://localhost:8081
-   ```
+ ```
+ http://localhost:8081
+ ```
 
 4. **Verify in browser dev tools:**
-   - Check Network tab for `/alarm-editor/static/styles.css` (200 OK)
-   - Check Network tab for `/alarm-editor/static/script.js` (200 OK)
-   - Verify page styling renders correctly
-   - Verify JavaScript functionality works (create/edit/delete alarms)
+ - Check Network tab for `/alarm-editor/static/styles.css` (200 OK)
+ - Check Network tab for `/alarm-editor/static/script.js` (200 OK)
+ - Verify page styling renders correctly
+ - Verify JavaScript functionality works (create/edit/delete alarms)
 
 5. **Check browser console:**
-   - No 404 errors for static files
-   - No JavaScript errors
-   - All functionality working as before
+ - No 404 errors for static files
+ - No JavaScript errors
+ - All functionality working as before
 
 ## Conclusion
 
-✅ Successfully extracted inline CSS and JavaScript to separate static files
-✅ Follows established project patterns (main web console)
-✅ All builds and tests passing
-✅ Improved code organization and maintainability
-✅ Better development experience with proper syntax highlighting
-✅ Browser caching support for better performance
+Successfully extracted inline CSS and JavaScript to separate static files
+Follows established project patterns (main web console)
+All builds and tests passing
+Improved code organization and maintainability
+Better development experience with proper syntax highlighting
+Browser caching support for better performance
 
 The alarm editor now follows the same architecture as the main web console, making the codebase more consistent and maintainable.

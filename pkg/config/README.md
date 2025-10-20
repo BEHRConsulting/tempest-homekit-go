@@ -16,14 +16,14 @@ The `config` package handles all configuration management for the Tempest HomeKi
 **Configuration Structure:**
 ```go
 type Config struct {
-    Token           string  // WeatherFlow API token
-    StationName     string  // Tempest station name
-    Pin             string  // HomeKit pairing PIN
-    WebPort         string  // Web dashboard port
-    LogLevel        string  // Logging verbosity (error/info/debug)
-    Elevation       float64 // Station elevation in meters
-    ReadHistory     bool    // Load historical weather data
-    ClearDB         bool    // Reset HomeKit database
+ Token string // WeatherFlow API token
+ StationName string // Tempest station name
+ Pin string // HomeKit pairing PIN
+ WebPort string // Web dashboard port
+ LogLevel string // Logging verbosity (error/info/debug)
+ Elevation float64 // Station elevation in meters
+ ReadHistory bool // Load historical weather data
+ ClearDB bool // Reset HomeKit database
 }
 ```
 
@@ -70,7 +70,7 @@ fmt.Printf("Elevation: %.2f meters\n", cfg.Elevation)
 // Parse elevation with units
 elevation, err := config.ParseElevation("1200ft")
 if err != nil {
-    log.Fatal(err)
+ log.Fatal(err)
 }
 fmt.Printf("Elevation: %.2f meters\n", elevation) // Output: 365.76 meters
 

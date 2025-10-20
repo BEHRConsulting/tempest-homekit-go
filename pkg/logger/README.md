@@ -55,9 +55,9 @@ Filter logs to show only messages containing a specific string (case-insensitive
 logger.SetLogFilter("udp")
 
 // Now only messages containing "udp" (case-insensitive) will be output
-logger.Info("UDP packet received")  // ✓ Shown
-logger.Info("API call completed")    // ✗ Hidden
-logger.Debug("Processing UDP data")  // ✓ Shown
+logger.Info("UDP packet received") //  Shown
+logger.Info("API call completed") //  Hidden
+logger.Debug("Processing UDP data") //  Shown
 ```
 
 ### Command-Line Usage
@@ -106,10 +106,10 @@ The filter performs a case-insensitive substring match on the formatted message:
 
 ```go
 func shouldLog(message string) bool {
-    if logFilter == "" {
-        return true  // No filter, show all
-    }
-    return strings.Contains(strings.ToLower(message), logFilter)
+ if logFilter == "" {
+ return true // No filter, show all
+ }
+ return strings.Contains(strings.ToLower(message), logFilter)
 }
 ```
 
@@ -170,7 +170,7 @@ Logs an error message (always shown)
 #### `Alarm(format string, v ...interface{})`
 Logs an alarm notification (always shown, bypasses log level filtering)
 
-**Note**: The `Alarm()` function is specifically designed for weather alarm notifications and always outputs regardless of the configured log level. This ensures critical alarm messages are never suppressed. See [ALARM_LOGGING.md](../../ALARM_LOGGING.md) for details.
+**Note**: The `Alarm()` function is specifically designed for weather alarm notifications and always outputs regardless of the configured log level. This ensures critical alarm messages are never suppressed. See [ALARM_LOGGING.md](../../pkg/alarm/docs/ALARM_LOGGING.md) for details.
 
 ## Testing
 
@@ -178,13 +178,11 @@ Logs an alarm notification (always shown, bypasses log level filtering)
 import "testing"
 
 func TestLogFilter(t *testing.T) {
-    logger.SetLogLevel("debug")
-    logger.SetLogFilter("test")
-    
-    // This would be shown
-    logger.Info("Testing feature")
-    
-    // This would be hidden
-    logger.Info("Production data")
+ logger.SetLogLevel("debug")
+ logger.SetLogFilter("test")
+  // This would be shown
+ logger.Info("Testing feature")
+  // This would be hidden
+ logger.Info("Production data")
 }
 ```

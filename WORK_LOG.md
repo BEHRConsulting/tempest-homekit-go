@@ -31,63 +31,69 @@ These are approximate times aggregated across the development sessions that prod
 Major Design Changes
 --------------------
 - Web UI architecture:
-  - Centralized frontend logic placed in `pkg/web/static/script.js` and static popout template in `pkg/web/static/chart.html` to keep HTML minimal.
-  - Charts use vendored Chart.js and date adapters for deterministic rendering.
+ - Centralized frontend logic placed in `pkg/web/static/script.js` and static popout template in `pkg/web/static/chart.html` to keep HTML minimal.
+ - Charts use vendored Chart.js and date adapters for deterministic rendering.
 - Deterministic Popout Configuration:
-  - Chart popouts now receive a compact encoded `config` payload containing per-dataset metadata and `incomingUnits`. This ensures the popout graph closely matches small-card visuals (colors, dashes, fills).
+ - Chart popouts now receive a compact encoded `config` payload containing per-dataset metadata and `incomingUnits`. This ensures the popout graph closely matches small-card visuals (colors, dashes, fills).
 - Headless Tests and Determinism:
-  - Headless chromedp tests were hardened to prefer in-page hooks (e.g., `window.__dashboardReady`, `window.__lastStatusRaw`) and to inject vendored Chart.js and local scripts to avoid CDN flakiness.
+ - Headless chromedp tests were hardened to prefer in-page hooks (e.g., `window.__dashboardReady`, `window.__lastStatusRaw`) and to inject vendored Chart.js and local scripts to avoid CDN flakiness.
 - Unit and Label Handling:
-  - Unit label helpers (`prettyUnitLabel`) were restored and harmonized between the dashboard and popout so both show consistent units.
+ - Unit label helpers (`prettyUnitLabel`) were restored and harmonized between the dashboard and popout so both show consistent units.
 - Release Automation:
-  - Drafted a GitHub Actions `release.yml` to build cross-platform binaries and upload assets when an annotated tag is pushed. (Push of workflow file may require additional permissions.)
+ - Drafted a GitHub Actions `release.yml` to build cross-platform binaries and upload assets when an annotated tag is pushed. (Push of workflow file may require additional permissions.)
 - Accessibility / UI polish:
-  - Tempest Station link label was truncated to 15 characters for card layout with full URL in `title` and `aria-label` for hover and screen readers.
+ - Tempest Station link label was truncated to 15 characters for card layout with full URL in `title` and `aria-label` for hover and screen readers.
 - Alarm System Architecture:
-  - Implemented comprehensive alarm system with change-detection operators (`*field`, `>field`, `<field`)
-  - Warning log level added (warn/warning aliases) between info and error
-  - Alarm editor web UI with template variable system (18 variables including `alarm_description`)
-  - JSON validation with line/column error reporting and helpful hints for missing @ prefix
-  - Enhanced debug logging with pretty JSON output and detailed evaluation traces
-  - **Critical Fix**: Changed `ProcessObservation()` to work with original alarms instead of copies, preserving `previousValue` state between calls. This fixed change-detection operators that were resetting state on every observation.
+ - Implemented comprehensive alarm system with change-detection operators (`*field`, `>field`, `<field`)
+ - Warning log level added (warn/warning aliases) between info and error
+ - Alarm editor web UI with template variable system (18 variables including `alarm_description`)
+ - JSON validation with line/column error reporting and helpful hints for missing @ prefix
+ - Enhanced debug logging with pretty JSON output and detailed evaluation traces
+ - **Critical Fix**: Changed `ProcessObservation()` to work with original alarms instead of copies, preserving `previousValue` state between calls. This fixed change-detection operators that were resetting state on every observation.
 - Microsoft 365 Email Integration:
-  - Implemented OAuth2 authentication for Microsoft 365/Exchange using Azure AD app credentials
-  - Uses Microsoft Graph API for secure email delivery via `/users/{id}/sendMail` endpoint
-  - Supports client credentials flow (server-to-server, no user interaction required)
-  - Added dependencies: Azure SDK for Go, Microsoft Graph SDK for Go, golang.org/x/oauth2
-  - Provider detection for "microsoft365", "o365", and "exchange" keywords
-  - Automatic fallback to SMTP if OAuth2 credentials are missing
-  - Full documentation with Azure AD setup instructions, permissions guide, and troubleshooting
-  - Example alarm configuration with 6 realistic weather alert scenarios
+ - Implemented OAuth2 authentication for Microsoft 365/Exchange using Azure AD app credentials
+ - Uses Microsoft Graph API for secure email delivery via `/users/{id}/sendMail` endpoint
+ - Supports client credentials flow (server-to-server, no user interaction required)
+ - Added dependencies: Azure SDK for Go, Microsoft Graph SDK for Go, golang.org/x/oauth2
+ - Provider detection for "microsoft365", "o365", and "exchange" keywords
+ - Automatic fallback to SMTP if OAuth2 credentials are missing
+ - Full documentation with Azure AD setup instructions, permissions guide, and troubleshooting
+ - Example alarm configuration with 6 realistic weather alert scenarios
 - AWS SNS SMS Integration (v1.8.0):
-  - Implemented complete AWS SNS SMS notification delivery using AWS SDK v2
-  - Support for both direct SMS to phone numbers and SNS topic broadcasting
-  - Two-tier credential system: admin credentials for setup, runtime credentials for sending
-  - Comprehensive setup automation script (`scripts/setup-aws-sns.sh`) with interactive configuration
-  - Environment-first architecture: all provider credentials in `.env`, alarm rules in JSON
-  - Complete unit test suite covering configuration, templating, and error handling
-  - Enhanced `.gitignore` to protect all `.env` variants and backups
-  - Full documentation with IAM setup, security best practices, and production considerations
+ - Implemented complete AWS SNS SMS notification delivery using AWS SDK v2
+ - Support for both direct SMS to phone numbers and SNS topic broadcasting
+ - Two-tier credential system: admin credentials for setup, runtime credentials for sending
+ - Comprehensive setup automation script (`scripts/setup-aws-sns.sh`) with interactive configuration
+ - Environment-first architecture: all provider credentials in `.env`, alarm rules in JSON
+ - Complete unit test suite covering configuration, templating, and error handling
+ - Enhanced `.gitignore` to protect all `.env` variants and backups
+ - Full documentation with IAM setup, security best practices, and production considerations
 - UDP Status Integration (v1.8.1):
-  - Integrated UDP device_status and hub_status broadcasts into web console status display
-  - Added StatusManager connectivity to UDPDataSource via service layer wiring
-  - Periodic status updates (30-second interval) to catch status-only packets without observations
-  - Automatic status formatting: battery voltage with Good/Fair/Low indicators, uptime as "Xd Xh Xm Xs", RSSI as signal quality with dBm
-  - Web console shows `"dataSource": "udp"` when status populated from UDP broadcasts
-  - Eliminates need for `--use-web-status` web scraping when using `--udp-stream`
-  - Test fixes for interface changes: updated all mock UDP listeners to return maps instead of structs
-  - Fixed Twilio test expectations from "not yet implemented" to "credentials missing"
+ - Integrated UDP device_status and hub_status broadcasts into web console status display
+ - Added StatusManager connectivity to UDPDataSource via service layer wiring
+ - Periodic status updates (30-second interval) to catch status-only packets without observations
+ - Automatic status formatting: battery voltage with Good/Fair/Low indicators, uptime as "Xd Xh Xm Xs", RSSI as signal quality with dBm
+ - Web console shows `"dataSource": "udp"` when status populated from UDP broadcasts
+ - Eliminates need for `--use-web-status` web scraping when using `--udp-stream`
+ - Test fixes for interface changes: updated all mock UDP listeners to return maps instead of structs
+ - Fixed Twilio test expectations from "not yet implemented" to "credentials missing"
 
 Best & Worst Prompts (AI-assisted development)
 ----------------------------------------------
 - Best prompts (helpful):
-  - "Make popout charts deterministic and match small-card visuals exactly (per-dataset styles, units) and add headless tests verifying parity." — This prompt led to compact, testable config encoding and robust headless tests.
-  - "Harden headless tests to avoid CDN timing flakiness by injecting vendored Chart.js and exposing in-page test hooks." — This improved reliability in CI.
-  - "The alarm 'Lux Change' is not triggering after these observations..." with full log output — Provided concrete reproduction case that led to discovering the state persistence bug in `ProcessObservation()`.
+ - "Make popout charts deterministic and match small-card visuals exactly (per-dataset styles, units) and add headless tests verifying parity." — This prompt led to compact, testable config encoding and robust headless tests.
+ - "Harden headless tests to avoid CDN timing flakiness by injecting vendored Chart.js and exposing in-page test hooks." — This improved reliability in CI.
+ - "The alarm 'Lux Change' is not triggering after these observations..." with full log output — Provided concrete reproduction case that led to discovering the state persistence bug in `ProcessObservation()`.
 
 - Worst/ambiguous prompts (costly):
-  - Broad requests like "Add release automation" without specifying how to handle GitHub token permissions led to local-only workflow drafts and a failed push due to token scope restrictions. Lesson: explicitly mention token policy or request a PR instead of direct pushes.
-  - Vague UI change requests without specifying exact truncation length or accessibility expectations required follow-up decisions.
+ - Broad requests like "Add release automation" without specifying how to handle GitHub token permissions led to local-only workflow drafts and a failed push due to token scope restrictions. Lesson: explicitly mention token policy or request a PR instead of direct pushes.
+ - Vague UI change requests without specifying exact truncation length or accessibility expectations required follow-up decisions.
+
+Prompt history
+--------------
+This repository now includes `PROMPT_HISTORY.md` which tracks paraphrased prompts used to guide AI-assisted edits and feature work. Please keep that file current — add paraphrases and outcomes when prompts are used to change the codebase.
+
+TODO: Maintain `PROMPT_HISTORY.md` with new prompts and outcomes (see top-level todo list).
 
 Notable Files and Where Changes Happened
 ----------------------------------------

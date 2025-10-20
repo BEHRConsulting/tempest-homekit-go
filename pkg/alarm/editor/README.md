@@ -76,8 +76,8 @@ The editor is structured as:
 
 ```
 pkg/alarm/editor/
-├── server.go    # HTTP server and API handlers
-└── html.go      # Embedded HTML template
+├── server.go # HTTP server and API handlers
+└── html.go # Embedded HTML template
 ```
 
 ### Key Components
@@ -107,10 +107,10 @@ The editor is designed to be:
 2. Open browser to `http://localhost:8081`
 3. Click "New Alarm" to create an alarm
 4. Fill in the form:
-   - Name: "High Temperature"
-   - Condition: `temperature > 85`
-   - Tags: `temperature, heat`
-   - Cooldown: `3600`
+ - Name: "High Temperature"
+ - Condition: `temperature > 85`
+ - Tags: `temperature, heat`
+ - Cooldown: `3600`
 5. Click "Save Alarm"
 6. Changes are automatically saved to `alarms.json`
 

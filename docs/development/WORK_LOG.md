@@ -28,36 +28,36 @@ These are approximate times aggregated across the development sessions that prod
 Major Design Changes
 --------------------
 - Web UI architecture:
-  - Centralized frontend logic placed in `pkg/web/static/script.js` and static popout template in `pkg/web/static/chart.html` to keep HTML minimal.
-  - Charts use vendored Chart.js and date adapters for deterministic rendering.
+ - Centralized frontend logic placed in `pkg/web/static/script.js` and static popout template in `pkg/web/static/chart.html` to keep HTML minimal.
+ - Charts use vendored Chart.js and date adapters for deterministic rendering.
 - Deterministic Popout Configuration:
-  - Chart popouts now receive a compact encoded `config` payload containing per-dataset metadata and `incomingUnits`. This ensures the popout graph closely matches small-card visuals (colors, dashes, fills).
+ - Chart popouts now receive a compact encoded `config` payload containing per-dataset metadata and `incomingUnits`. This ensures the popout graph closely matches small-card visuals (colors, dashes, fills).
 - Headless Tests and Determinism:
-  - Headless chromedp tests were hardened to prefer in-page hooks (e.g., `window.__dashboardReady`, `window.__lastStatusRaw`) and to inject vendored Chart.js and local scripts to avoid CDN flakiness.
+ - Headless chromedp tests were hardened to prefer in-page hooks (e.g., `window.__dashboardReady`, `window.__lastStatusRaw`) and to inject vendored Chart.js and local scripts to avoid CDN flakiness.
 - Unit and Label Handling:
-  - Unit label helpers (`prettyUnitLabel`) were restored and harmonized between the dashboard and popout so both show consistent units.
+ - Unit label helpers (`prettyUnitLabel`) were restored and harmonized between the dashboard and popout so both show consistent units.
 - Release Automation:
-  - Drafted a GitHub Actions `release.yml` to build cross-platform binaries and upload assets when an annotated tag is pushed. (Push of workflow file may require additional permissions.)
+ - Drafted a GitHub Actions `release.yml` to build cross-platform binaries and upload assets when an annotated tag is pushed. (Push of workflow file may require additional permissions.)
 - Accessibility / UI polish:
-  - Tempest Station link label was truncated to 15 characters for card layout with full URL in `title` and `aria-label` for hover and screen readers.
+ - Tempest Station link label was truncated to 15 characters for card layout with full URL in `title` and `aria-label` for hover and screen readers.
 - Alarm System Architecture:
-  - Implemented comprehensive alarm system with change-detection operators (`*field`, `>field`, `<field`)
-  - Warning log level added (warn/warning aliases) between info and error
-  - Alarm editor web UI with template variable system (18 variables including `alarm_description`)
-  - JSON validation with line/column error reporting and helpful hints for missing @ prefix
-  - Enhanced debug logging with pretty JSON output and detailed evaluation traces
-  - **Critical Fix**: Changed `ProcessObservation()` to work with original alarms instead of copies, preserving `previousValue` state between calls. This fixed change-detection operators that were resetting state on every observation.
+ - Implemented comprehensive alarm system with change-detection operators (`*field`, `>field`, `<field`)
+ - Warning log level added (warn/warning aliases) between info and error
+ - Alarm editor web UI with template variable system (18 variables including `alarm_description`)
+ - JSON validation with line/column error reporting and helpful hints for missing @ prefix
+ - Enhanced debug logging with pretty JSON output and detailed evaluation traces
+ - **Critical Fix**: Changed `ProcessObservation()` to work with original alarms instead of copies, preserving `previousValue` state between calls. This fixed change-detection operators that were resetting state on every observation.
 
 Best & Worst Prompts (AI-assisted development)
 ----------------------------------------------
 - Best prompts (helpful):
-  - "Make popout charts deterministic and match small-card visuals exactly (per-dataset styles, units) and add headless tests verifying parity." — This prompt led to compact, testable config encoding and robust headless tests.
-  - "Harden headless tests to avoid CDN timing flakiness by injecting vendored Chart.js and exposing in-page test hooks." — This improved reliability in CI.
-  - "The alarm 'Lux Change' is not triggering after these observations..." with full log output — Provided concrete reproduction case that led to discovering the state persistence bug in `ProcessObservation()`.
+ - "Make popout charts deterministic and match small-card visuals exactly (per-dataset styles, units) and add headless tests verifying parity." — This prompt led to compact, testable config encoding and robust headless tests.
+ - "Harden headless tests to avoid CDN timing flakiness by injecting vendored Chart.js and exposing in-page test hooks." — This improved reliability in CI.
+ - "The alarm 'Lux Change' is not triggering after these observations..." with full log output — Provided concrete reproduction case that led to discovering the state persistence bug in `ProcessObservation()`.
 
 - Worst/ambiguous prompts (costly):
-  - Broad requests like "Add release automation" without specifying how to handle GitHub token permissions led to local-only workflow drafts and a failed push due to token scope restrictions. Lesson: explicitly mention token policy or request a PR instead of direct pushes.
-  - Vague UI change requests without specifying exact truncation length or accessibility expectations required follow-up decisions.
+ - Broad requests like "Add release automation" without specifying how to handle GitHub token permissions led to local-only workflow drafts and a failed push due to token scope restrictions. Lesson: explicitly mention token policy or request a PR instead of direct pushes.
+ - Vague UI change requests without specifying exact truncation length or accessibility expectations required follow-up decisions.
 
 Notable Files and Where Changes Happened
 ----------------------------------------

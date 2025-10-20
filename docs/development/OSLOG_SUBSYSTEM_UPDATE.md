@@ -1,8 +1,6 @@
 # OSLog Subsystem Update
 
-**Date**: October 10, 2025  
-**Change**: Updated OSLog subsystem identifier  
-**Status**: ✅ **COMPLETE**
+**Date**: October 10, 2025 **Change**: Updated OSLog subsystem identifier **Status**: **COMPLETE**
 
 ---
 
@@ -31,8 +29,7 @@ subsystem := C.CString("com.bci.tempest-homekit")
 
 Updated all references to the subsystem:
 - Overview section
-- Configuration examples  
-- Viewing commands (`log stream`, `log show`)
+- Configuration examples - Viewing commands (`log stream`, `log show`)
 - Testing instructions
 - Export examples
 
@@ -60,13 +57,13 @@ Note: The `--read-history`/`READ_HISTORY` option controls whether the service pr
 ### Build Status
 ```bash
 $ go build
-✅ Success - no errors
+Success - no errors
 ```
 
 ### Alarm Configuration
 ```
 Wind Change alarm configured with oslog channel:
-  channels=['console', 'oslog']
+ channels=['console', 'oslog']
 ```
 
 ### Usage Instructions
@@ -87,7 +84,7 @@ log stream --predicate 'subsystem == "com.bci.tempest-homekit"'
 
 ## Backward Compatibility
 
-⚠️ **Note**: This is a breaking change for monitoring scripts.
+Warning: **Note**: This is a breaking change for monitoring scripts.
 
 **Impact:**
 - Any existing scripts using the old subsystem will need to be updated
@@ -122,14 +119,14 @@ log show --predicate 'subsystem CONTAINS "tempest-homekit"' --last 7d
 ### Manual Test
 
 1. Start application with OSLog alarm:
-   ```bash
-   ./tempest-homekit-go --loglevel warning --alarms @tempest-alarms.json
-   ```
+ ```bash
+ ./tempest-homekit-go --loglevel warning --alarms @tempest-alarms.json
+ ```
 
 2. In another terminal, monitor logs:
-   ```bash
-   log stream --predicate 'subsystem == "com.bci.tempest-homekit"'
-   ```
+ ```bash
+ log stream --predicate 'subsystem == "com.bci.tempest-homekit"'
+ ```
 
 3. Wait for Wind Change alarm to trigger
 
@@ -140,17 +137,14 @@ log show --predicate 'subsystem CONTAINS "tempest-homekit"' --last 7d
 ## Related Documentation
 
 - **[OSLOG_NOTIFIER.md](OSLOG_NOTIFIER.md)** - Complete OSLog documentation (updated)
-- **[ALARM_LOGGING.md](ALARM_LOGGING.md)** - Alarm logging behavior
-- **[tempest-alarms.json](tempest-alarms.json)** - Alarm configuration file
+ - **[OSLOG_NOTIFIER.md](OSLOG_NOTIFIER.md)** - Complete OSLog documentation (updated)
+ - **[ALARM_LOGGING.md](../../pkg/alarm/docs/ALARM_LOGGING.md)** - Alarm logging behavior
+- **[tempest-alarms.json](../../tempest-alarms.json)** - Alarm configuration file
 
 ---
 
 ## Summary
 
-✅ Subsystem changed: `com.behr.tempest-homekit` → `com.bci.tempest-homekit`  
-✅ Code updated in `notifier_oslog_darwin.go`  
-✅ All documentation updated with new commands  
-✅ Build successful  
-✅ Ready for deployment
+Subsystem changed: `com.behr.tempest-homekit` → `com.bci.tempest-homekit` Code updated in `notifier_oslog_darwin.go` All documentation updated with new commands Build successful Ready for deployment
 
 **Action Required**: Update any monitoring scripts or Console.app filters to use the new subsystem identifier.

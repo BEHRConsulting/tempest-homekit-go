@@ -701,10 +701,10 @@ type WebhookAlarmPayload struct {
 		Condition   string `json:"condition"`
 		Tags        string `json:"tags"`
 	} `json:"alarm"`
-	Station  string                 `json:"station"`
-	Timestamp string                `json:"timestamp"`
-	Sensors  map[string]interface{} `json:"sensors"`
-	AppInfo  string                 `json:"app_info"`
+	Station   string                 `json:"station"`
+	Timestamp string                 `json:"timestamp"`
+	Sensors   map[string]interface{} `json:"sensors"`
+	AppInfo   string                 `json:"app_info"`
 }
 
 // formatWebhookAlarmMessage parses webhook payload and formats it like console notifications

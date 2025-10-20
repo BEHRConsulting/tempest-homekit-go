@@ -48,16 +48,16 @@ listener := udp.NewUDPListener()
 
 // Start listening for broadcasts
 if err := listener.Start(); err != nil {
-    log.Fatal(err)
+ log.Fatal(err)
 }
 defer listener.Stop()
 
 // Subscribe to observations
 obsChan := listener.ObservationChannel()
 for obs := range obsChan {
-    fmt.Printf("Temperature: %.1f°C\n", obs.AirTemperature)
-    fmt.Printf("Humidity: %.0f%%\n", obs.RelativeHumidity)
-    // Process observation...
+ fmt.Printf("Temperature: %.1f°C\n", obs.AirTemperature)
+ fmt.Printf("Humidity: %.0f%%\n", obs.RelativeHumidity)
+ // Process observation...
 }
 ```
 
@@ -66,7 +66,7 @@ for obs := range obsChan {
 ```go
 // Get most recent observation
 if obs := listener.GetLatestObservation(); obs != nil {
-    fmt.Printf("Latest temperature: %.1f°C\n", obs.AirTemperature)
+ fmt.Printf("Latest temperature: %.1f°C\n", obs.AirTemperature)
 }
 
 // Get all historical observations
@@ -79,9 +79,9 @@ fmt.Printf("Have %d observations in history\n", len(observations))
 ```go
 // Check if receiving data
 if listener.IsReceivingData() {
-    fmt.Println("Receiving UDP broadcasts")
+ fmt.Println("Receiving UDP broadcasts")
 } else {
-    fmt.Println("No UDP packets detected")
+ fmt.Println("No UDP packets detected")
 }
 
 // Get statistics
@@ -94,14 +94,14 @@ fmt.Printf("Packets: %d, IP: %s, Serial: %s\n", packetCount, stationIP, serial)
 ```go
 // Get device status (battery, RSSI, etc.)
 if status := listener.GetDeviceStatus(); status != nil {
-    fmt.Printf("Battery: %.2fV\n", status.Voltage)
-    fmt.Printf("Signal: %ddBm\n", status.RSSI)
+ fmt.Printf("Battery: %.2fV\n", status.Voltage)
+ fmt.Printf("Signal: %ddBm\n", status.RSSI)
 }
 
 // Get hub status
 if status := listener.GetHubStatus(); status != nil {
-    fmt.Printf("Hub firmware: %s\n", status.FirmwareRev)
-    fmt.Printf("Hub uptime: %ds\n", status.Uptime)
+ fmt.Printf("Hub firmware: %s\n", status.FirmwareRev)
+ fmt.Printf("Hub uptime: %ds\n", status.Uptime)
 }
 ```
 
@@ -133,11 +133,11 @@ UDP messages are JSON-formatted. Example Tempest observation:
 
 ```json
 {
-  "serial_number": "ST-00000512",
-  "type": "obs_st",
-  "hub_sn": "HB-00013030",
-  "obs": [[1588948614,0.18,0.22,0.27,144,6,1017.57,22.37,50.26,328,0.03,3,0.000000,0,0,0,2.410,1]],
-  "firmware_revision": 129
+ "serial_number": "ST-00000512",
+ "type": "obs_st",
+ "hub_sn": "HB-00013030",
+ "obs": [[1588948614,0.18,0.22,0.27,144,6,1017.57,22.37,50.26,328,0.03,3,0.000000,0,0,0,2.410,1]],
+ "firmware_revision": 129
 }
 ```
 

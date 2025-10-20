@@ -20,23 +20,23 @@ This directory contains all frontend assets for the Tempest HomeKit Go web dashb
 ```javascript
 // Real-time data fetching
 function fetchWeatherData() {
-    fetch('/api/weather')
-        .then(response => response.json())
-        .then(data => updateDisplay(data));
+ fetch('/api/weather')
+ .then(response => response.json())
+ .then(data => updateDisplay(data));
 }
 
 // Unit conversion system
 function toggleUnit(sensorType) {
-    // Toggle between metric/imperial
-    // Save preference to localStorage
-    // Update display immediately
+ // Toggle between metric/imperial
+ // Save preference to localStorage
+ // Update display immediately
 }
 
 // Chart management
 function updateCharts(weatherData) {
-    // Update Chart.js charts with new data
-    // Handle historical data points
-    // Maintain chart performance
+ // Update Chart.js charts with new data
+ // Handle historical data points
+ // Maintain chart performance
 }
 ```
 
@@ -61,26 +61,26 @@ function updateCharts(weatherData) {
 ```css
 /* Responsive grid system */
 .weather-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+ gap: 20px;
 }
 
 /* Weather card styling */
 .weather-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 15px;
-    padding: 20px;
-    transition: transform 0.3s ease;
+ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+ border-radius: 15px;
+ padding: 20px;
+ transition: transform 0.3s ease;
 }
 
 /* Tooltip system */
 .tooltip {
-    position: absolute;
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    border-radius: 6px;
-    z-index: 1000;
+ position: absolute;
+ background: rgba(0, 0, 0, 0.9);
+ color: white;
+ border-radius: 6px;
+ z-index: 1000;
 }
 ```
 
@@ -97,16 +97,16 @@ function updateCharts(weatherData) {
 ```javascript
 // Chart.js configuration with date-fns adapter
 const chartConfig = {
-    scales: {
-        x: {
-            type: 'time',
-            adapters: {
-                date: {
-                    library: dateFns
-                }
-            }
-        }
-    }
+ scales: {
+ x: {
+ type: 'time',
+ adapters: {
+ date: {
+ library: dateFns
+ }
+ }
+ }
+ }
 };
 ```
 
@@ -173,7 +173,7 @@ Users can click any weather card to toggle units:
 - **Persistence**: Settings saved in browser localStorage
 
 ### Information Tooltips
-Each sensor has an ℹ️ icon that displays detailed information:
+Each sensor has an Info icon that displays detailed information:
 - **Lux Reference**: Illuminance levels and real-world examples
 - **Pressure Analysis**: Weather forecasting methodology
 - **UV Index**: EPA risk categories and protection recommendations

@@ -9,51 +9,51 @@ This directory contains all the Go packages that comprise the Tempest HomeKit Go
 - Handles command-line flags, environment variables, and application configuration
 - Provides elevation parsing (feet/meters), database paths, and service settings
 - **Files:**
-  - `config.go` - Main configuration structure and loading logic
-  - `config_test.go` - Comprehensive unit tests with 66.4% coverage
+ - `config.go` - Main configuration structure and loading logic
+ - `config_test.go` - Comprehensive unit tests with 66.4% coverage
 
 ### `homekit/`
 **Apple HomeKit Integration Package**
 - Manages HomeKit bridge and accessories setup
 - Creates custom weather sensors with unique service UUIDs
 - **Files:**
-  - `modern_setup.go` - Modern HomeKit accessory setup using brutella/hap library
-  - `custom_characteristics.go` - Custom weather sensor characteristics and service definitions
+ - `modern_setup.go` - Modern HomeKit accessory setup using brutella/hap library
+ - `custom_characteristics.go` - Custom weather sensor characteristics and service definitions
 
 ### `service/`
 **Service Orchestration Package**
 - Main service coordination and lifecycle management
 - Handles graceful startup/shutdown and error recovery
 - **Files:**
-  - `service.go` - Service orchestration, polling loops, and signal handling
-  - `service_test.go` - Unit tests for service functions (3.6% coverage)
+ - `service.go` - Service orchestration, polling loops, and signal handling
+ - `service_test.go` - Unit tests for service functions (3.6% coverage)
 
 ### `weather/`
 **WeatherFlow API Client Package**
 - Communicates with WeatherFlow Tempest API
 - Handles station discovery, data parsing, and API error management
 - **Files:**
-  - `client.go` - WeatherFlow API client implementation
-  - `client_test.go` - Unit tests for API functions (16.2% coverage)
+ - `client.go` - WeatherFlow API client implementation
+ - `client_test.go` - Unit tests for API functions (16.2% coverage)
 
 ### `web/`
 **Web Dashboard Package**
 - HTTP server and web dashboard implementation
 - Serves real-time weather data via REST API
 - **Files:**
-  - `server.go` - HTTP server, dashboard HTML, pressure analysis, and API endpoints
-  - `server_test.go` - Unit tests for web server (50.5% coverage)
-  - `static/` - Frontend assets (JavaScript, CSS, external libraries)
+ - `server.go` - HTTP server, dashboard HTML, pressure analysis, and API endpoints
+ - `server_test.go` - Unit tests for web server (50.5% coverage)
+ - `static/` - Frontend assets (JavaScript, CSS, external libraries)
 
 ## Package Dependencies
 
 ```
 main.go
-├── pkg/config     (Configuration)
-├── pkg/service    (Service Orchestration)
-    ├── pkg/weather    (WeatherFlow API)
-    ├── pkg/homekit    (HomeKit Integration)
-    └── pkg/web        (Web Dashboard)
+├── pkg/config (Configuration)
+├── pkg/service (Service Orchestration)
+ ├── pkg/weather (WeatherFlow API)
+ ├── pkg/homekit (HomeKit Integration)
+ └── pkg/web (Web Dashboard)
 ```
 
 ## Development

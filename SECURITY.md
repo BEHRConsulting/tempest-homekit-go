@@ -10,17 +10,17 @@ This document explains how to handle sensitive data (API tokens, station names) 
 The following files were updated to remove hardcoded sensitive data:
 
 1. **pkg/config/config.go**
-   - Changed default token from hardcoded value to empty string
-   - Changed default station name from "Chino Hills" to empty string
-   - Updated help text to indicate these are required fields
+ - Changed default token from hardcoded value to empty string
+ - Changed default station name from "Chino Hills" to empty string
+ - Updated help text to indicate these are required fields
 
 2. **.env and .env.example**
-   - Replaced actual token with placeholder: `your-token-here`
-   - Replaced station name with placeholder: `Your Station Name`
+ - Replaced actual token with placeholder: `your-token-here`
+ - Replaced station name with placeholder: `Your Station Name`
 
 3. **README.md**
-   - Updated documentation to show fields as required
-   - Removed examples with real station names
+ - Updated documentation to show fields as required
+ - Removed examples with real station names
 
 ### Protected Files
 The following files are in `.gitignore` to prevent accidental commits:
@@ -75,7 +75,7 @@ make install
 # Install in this repo
 cd /path/to/tempest-homekit-go
 git secrets --install
-git secrets --register-aws  # Optional: AWS patterns
+git secrets --register-aws # Optional: AWS patterns
 
 # Add custom patterns for this project
 git secrets --add 'TEMPEST_TOKEN=[A-Za-z0-9-]+'
@@ -87,31 +87,31 @@ git secrets --add '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}'
 If this will be a public repository:
 
 1. **Revoke the exposed token:**
-   - Go to https://tempestwx.com/settings/tokens
-   - Delete the old token: `b88edc78-6261-414e-8042-86a4d4f9ba15`
-   - Generate a new token
+ - Go to https://tempestwx.com/settings/tokens
+ - Delete the old token: `b88edc78-6261-414e-8042-86a4d4f9ba15`
+ - Generate a new token
 
 2. **Update your local .env:**
-   ```bash
-   # Edit your local .env file
-   nano .env
-   # Replace with new token
-   TEMPEST_TOKEN=new-token-here
-   ```
+ ```bash
+ # Edit your local .env file
+ nano .env
+ # Replace with new token
+ TEMPEST_TOKEN=new-token-here
+ ```
 
 3. **Accept that old commits contain the old token:**
-   - Since you've revoked it, it's no longer a security risk
-   - Future commits won't contain sensitive data
-   - Document this in your README
+ - Since you've revoked it, it's no longer a security risk
+ - Future commits won't contain sensitive data
+ - Document this in your README
 
 ### Option 4: Keep as Example/Test Repo
 
 If this token was always meant for examples:
 
 1. **Document it clearly:**
-   - Add note in README that token is for testing/examples only
-   - Clarify it's not a real production token
-   - Add warning about not using example credentials
+ - Add note in README that token is for testing/examples only
+ - Clarify it's not a real production token
+ - Add warning about not using example credentials
 
 2. **No action needed** - Just update documentation
 
@@ -119,11 +119,11 @@ If this token was always meant for examples:
 
 ### Files Protected by .gitignore
 ```
-.env                 # Your personal config
-.env.local          # Local overrides
-.env.*.local        # Environment-specific
-db/                 # HomeKit database
-*.log               # Log files
+.env # Your personal config
+.env.local # Local overrides
+.env.*.local # Environment-specific
+db/ # HomeKit database
+*.log # Log files
 ```
 
 ### Configuration Priority
@@ -156,7 +156,7 @@ Check that sensitive data is not in current code:
 git grep "b88edc78-6261-414e-8042-86a4d4f9ba15" -- '*.go' '*.md'
 
 # Verify .env is in .gitignore
-git check-ignore .env  # Should output: .env
+git check-ignore .env # Should output: .env
 
 # Check what would be committed
 git status --ignored

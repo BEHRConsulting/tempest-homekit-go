@@ -1,270 +1,158 @@
-# Alarm Configuration Architecture
+# Alarm Configuration
 
-## Overview
+This document describes the structure and purpose of alarm JSON files used by the application.
 
-The alarm system uses a **clean separation of concerns** between alarm rules and provider credentials:
+Important: alarm JSON files must contain only alarm rules and per-alarm notification preferences. They must not include provider credentials, secrets, or other runtime configuration. All runtime/provider configuration belongs in the repository root `.env` file or as environment variables. Use `.env.example` as the canonical template for which variables to set.
 
-- **Alarm JSON files** (`alarms.json`) → Contains ONLY alarm rules and notification preferences
-- **Environment variables** (`.env` file) → Contains ALL email/SMS provider credentials
+## Alarm JSON structure
 
-This design provides:
-- ✅ **Security**: Credentials never stored in version control
-- ✅ **Simplicity**: One place to configure providers, many alarm files can reference them
-- ✅ **Flexibility**: Switch providers by changing `.env` without modifying alarm rules
+Alarm files contain a single top-level `alarms` array. Each alarm entry describes the rule, metadata, and the channels used for notifications.
 
-## Configuration Flow
-
-```
-┌─────────────────┐
-│   .env file     │
-│                 │
-│ SMTP_HOST=...   │
-│ SMTP_PASSWORD=..│
-│ TWILIO_SID=...  │
-└────────┬────────┘
-         │
-         │ LoadConfigFromEnv()
-         ↓
-┌─────────────────┐        ┌──────────────────┐
-│ Environment     │        │  alarms.json     │
-│ Config Object   │ ←merge─┤                  │
-│                 │        │  {               │
-│ Email:  {...}   │        │    "alarms": [   │
-│ SMS:    {...}   │        │      {...}       │
-│ Syslog: {...}   │        │    ]             │
-└────────┬────────┘        │  }               │
-         │                 └──────────────────┘
-         │
-         ↓
-┌─────────────────┐
-│ AlarmConfig     │
-│                 │
-│ • Email config  │
-│ • SMS config    │
-│ • Alarm rules   │
-└─────────────────┘
-```
-
-## Configuration Precedence
-
-**Environment variables ALWAYS take precedence over JSON configuration.**
-
-If you have email config in both `.env` and `alarms.json`, the `.env` values are used:
-
-```go
-// Environment config overrides JSON config
-envConfig, _ := LoadConfigFromEnv()
-if envConfig.Email != nil {
-    config.Email = envConfig.Email  // Environment wins
-}
-```
-
-## Supported Providers
-
-### Email Providers
-
-**1. Generic SMTP** (Gmail, Office 365 SMTP, SendGrid, Mailgun, etc.)
-```bash
-# .env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-SMTP_FROM_ADDRESS=alerts@example.com
-SMTP_FROM_NAME=Weather Alerts
-SMTP_USE_TLS=true
-```
-
-**2. Microsoft 365 OAuth2** (Enterprise, more secure)
-```bash
-# .env
-MS365_CLIENT_ID=your-client-id
-MS365_CLIENT_SECRET=your-client-secret
-MS365_TENANT_ID=your-tenant-id
-MS365_FROM_ADDRESS=alerts@yourdomain.com
-SMTP_FROM_NAME=Weather Alerts
-```
-
-### SMS Providers
-
-**1. Twilio**
-```bash
-# .env
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=your-auth-token
-TWILIO_FROM_NUMBER=+15555551234
-```
-
-**2. Amazon SNS**
-```bash
-# .env
-AWS_ACCESS_KEY_ID=AKIAXXXXXXXX
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_REGION=us-east-1
-AWS_SNS_TOPIC_ARN=arn:aws:sns:us-east-1:123456789012:topic
-```
-
-### Syslog (Optional)
-
-```bash
-# .env
-SYSLOG_NETWORK=tcp
-SYSLOG_ADDRESS=localhost:514
-SYSLOG_PRIORITY=warning
-SYSLOG_TAG=tempest-weather
-```
-
-## Alarm JSON File Structure
-
-Alarm JSON files contain **ONLY** alarm rules, no credentials:
+Example (rules-only):
 
 ```json
 {
-  "alarms": [
-    {
-      "name": "high-temperature",
-      "description": "Alert when temperature exceeds 85°F",
-      "tags": ["temperature", "heat"],
-      "enabled": true,
-      "condition": "temperature > 85F",
-      "cooldown": 1800,
-      "channels": [
-        {
-          "type": "console",
-          "template": "🌡️ Temperature: {{temperature}}°F"
-        },
-        {
-          "type": "email",
-          "email": {
-            "to": ["admin@example.com"],
-            "subject": "High Temperature: {{temperature}}°F",
-            "body": "{{alarm_info}}\n\n{{sensor_info}}",
-            "html": true
-          }
-        },
-        {
-          "type": "sms",
-          "sms": {
-            "to": ["+15555551234"],
-            "message": "High temp: {{temperature}}°F"
-          }
-        }
-      ]
-    }
-  ]
+ "alarms": [
+ {
+ "name": "high-temperature",
+ "description": "Alert when temperature exceeds threshold",
+ "tags": ["temperature", "heat"],
+ "enabled": true,
+ "condition": "temperature > 85F",
+ "cooldown": 1800,
+ "channels": [
+ {
+ "type": "console",
+ "template": "Temperature: Temperature: {{temperature}}°F"
+ },
+ {
+ "type": "email",
+ "email": {
+ "to": ["admin@example.com"],
+ "subject": "High Temperature: {{temperature}}°F",
+ "body": "{{alarm_info}}\\n\\n{{sensor_info}}",
+ "html": true
+ }
+ }
+ ]
+ }
+ ]
 }
 ```
 
-## Example Files
+Common fields:
+- `name` (string) — unique identifier for the alarm
+- `description` (string) — human-friendly description
+- `tags` (array) — optional tags useful for grouping
+- `enabled` (boolean) — whether the alarm is active
+- `condition` (string) — expression evaluated against sensor data
+- `cooldown` (seconds) — minimum time between successive notifications
+- `channels` (array) — notification channels and their per-alarm templates/recipients
 
-The repository includes three example alarm files:
+## Where to put provider configuration
 
-1. **`alarms.example.json`** - Basic examples, works with any provider
-2. **`alarms-ms365.example.json`** - Same alarms, with MS365 setup notes
-3. **`alarms-aws.example.json`** - Same alarms, with AWS SNS setup notes
+- DO store SMTP, MS365, Twilio, AWS SNS, syslog, webhook listener ports, and similar credentials or runtime options in `.env` (or as real environment variables).
+- DO NOT store secrets or provider credentials in `alarms.json`.
+- Use `.env.example` in the repository as the canonical template for which variables to set.
 
-All three files have identical alarm rules. The only difference is the setup instructions in the comments showing which environment variables to configure.
+## Migrating legacy alarm files
 
-## Migration Guide
+If your alarm JSON files currently embed provider settings:
 
-### If you have old alarm files with embedded credentials:
+1. Extract credentials from the alarm JSON.
+2. Add those values to your `.env` (or environment variables) using `.env.example` as a guide.
+3. Remove the provider-specific sections from the alarm JSON so it contains only the `alarms` array.
+4. Restart the application and verify alarms trigger correctly.
 
-**Before** (old format - DON'T use):
-```json
-{
-  "email": {
-    "provider": "smtp",
-    "smtp_host": "smtp.example.com",
-    "smtp_port": 587,
-    "username": "user@example.com",
-    "password": "secret-password",
-    "from_address": "alerts@example.com"
-  },
-  "alarms": [...]
-}
-```
+## Testing and troubleshooting
 
-**After** (new format - DO use):
+- Use the application's test helpers to validate provider configuration, e.g. `./tempest-homekit-go --test-email <recipient>`.
+- If you see an error stating "No email configuration found", confirm required variables are set in `.env` or the environment.
 
-`.env` file:
-```bash
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USERNAME=user@example.com
-SMTP_PASSWORD=secret-password
-SMTP_FROM_ADDRESS=alerts@example.com
-```
+## References
 
-`alarms.json` file:
-```json
-{
-  "alarms": [...]
-}
-```
+- `.env.example` — canonical list of runtime/provider variables
+- `pkg/alarm/types.go` — configuration loading helpers
+- `pkg/alarm/notifiers.go` — notifier factory implementation
+- `pkg/alarm/emailtest.go` — helper used by `--test-email`
 
-### Migration Steps:
+## Version history
 
-1. **Extract credentials from your alarm JSON file**
-2. **Add them to your `.env` file** (or set as environment variables)
-3. **Remove the `email`, `sms`, and `syslog` sections from your alarm JSON**
-4. **Keep only the `alarms` array**
-5. **Test**: `./tempest-homekit-go --alarms @alarms.json`
+- v1.7.0+: provider credentials are loaded from environment variables by default
+ - `cooldown` (seconds) — minimum time between successive notifications
+ - `channels` (array) — notification channels and their per-alarm templates/recipients
 
-## Security Best Practices
+ ## Where to put provider configuration
 
-✅ **DO:**
-- Store credentials in `.env` file
-- Add `.env` to `.gitignore`
-- Use `.env.example` as a template (with fake values)
-- Use environment-specific files (`.env.production`, `.env.staging`)
-- Rotate credentials regularly
+ - DO store SMTP, MS365, Twilio, AWS SNS, syslog, webhook listener ports, and similar credentials or runtime options in `.env` (or as real environment variables).
+ - DO NOT store secrets or provider credentials in `alarms.json`.
+ - Use `.env.example` in the repository as the canonical template for which variables to set.
 
-❌ **DON'T:**
-- Put credentials in alarm JSON files
-- Commit `.env` to version control
-- Share credentials in documentation
-- Use production credentials in examples
+ ## Migrating legacy alarm files
 
-## Testing
+ If your alarm JSON files currently embed provider settings, migrate as follows:
 
-Test your email configuration:
-```bash
-./tempest-homekit-go --test-email user@example.com
-```
+ 1. Extract credentials from the alarm JSON.
+ 2. Add those values to your `.env` (or environment variables) using `.env.example` as a guide.
+ 3. Remove the provider-specific sections from the alarm JSON so it contains only the `alarms` array.
+ 4. Restart the application and verify alarms trigger correctly.
 
-This will:
-1. Load email config from `.env`
-2. Validate all required credentials
-3. Prompt for a test recipient
-4. Send a test email
+ ## Testing and troubleshooting
 
-## Troubleshooting
+ - Use the application's test helpers to validate provider configuration, e.g. `./tempest-homekit-go --test-email <recipient>`.
+ - If you see an error stating "No email configuration found", confirm required variables are set in `.env` or the environment.
 
-### "No email configuration found"
+ ## References
 
-**Cause**: Neither SMTP nor MS365 credentials are set in environment variables.
+ - `.env.example` — canonical list of runtime/provider variables
+ - `pkg/alarm/types.go` — configuration loading helpers
+ - `pkg/alarm/notifiers.go` — notifier factory implementation
+ - `pkg/alarm/emailtest.go` — helper used by `--test-email`
 
-**Solution**: Set either SMTP_* or MS365_* variables in your `.env` file.
+ ## Version history
 
-### "Email config in alarms.json is ignored"
+ - v1.7.0+: provider credentials are loaded from environment variables by default
+ }
+ ]
+ }
+ ```
 
-**Expected behavior**: Environment variables always take precedence. If you have email config in your `.env` file, any email config in the JSON is ignored. This is by design for security.
+ Fields you will commonly use:
+ - `name` (string) — unique identifier for the alarm
+ - `description` (string) — human-friendly description
+ - `tags` (array) — optional tags useful for grouping
+ - `enabled` (boolean) — whether the alarm is active
+ - `condition` (string) — expression evaluated against sensor data
+ - `cooldown` (seconds) — minimum time between successive notifications
+ - `channels` (array) — notification channels and their per-alarm templates/recipients
 
-### "Want to use different providers for different alarms"
+ ## Where to put provider configuration
 
-**Not supported**: The system uses one email provider and one SMS provider globally. All alarms use the same providers. This is intentional to keep configuration simple and secure.
+ - DO store SMTP, MS365, Twilio, AWS SNS, syslog, webhook listener ports, and similar credentials or runtime options in `.env` (or as real environment variables).
+ - DO NOT store secrets or provider credentials in `alarms.json`.
+ - Use `.env.example` in the repository as the canonical template for which variables to set.
 
-**Workaround**: Run multiple instances of the application with different `.env` files and alarm configurations.
+ ## Migrating legacy alarm files
 
-## Code References
+ If your alarm JSON files currently embed provider settings, migrate as follows:
 
-- **Configuration Loading**: `pkg/alarm/types.go` - `LoadConfigFromEnv()`
-- **Environment Override**: `pkg/alarm/types.go` - `LoadAlarmConfig()`
-- **Notifier Factory**: `pkg/alarm/notifiers.go` - `NewNotifierFactory()`
-- **Email Test**: `pkg/alarm/emailtest.go` - `TestEmail()`
+ 1. Extract credentials from the alarm JSON.
+ 2. Add those values to your `.env` (or environment variables) using `.env.example` as a guide.
+ 3. Remove the provider-specific sections from the alarm JSON so it contains only the `alarms` array.
+ 4. Restart the application and verify alarms trigger correctly.
 
-## Version History
+ ## Testing and troubleshooting
 
-- **v1.7.0+**: Credentials loaded from environment variables by default
-- **v1.6.x**: Credentials could be in alarm JSON or environment
-- **Earlier**: Only supported credentials in alarm JSON
+ - Use the application's test helpers to validate provider configuration, e.g. `./tempest-homekit-go --test-email <recipient>`.
+ - If you see an error stating "No email configuration found", confirm required variables are set in `.env` or the environment.
+
+ ## References
+
+ - `.env.example` — canonical list of runtime/provider variables
+ - `pkg/alarm/types.go` — configuration loading helpers
+ - `pkg/alarm/notifiers.go` — notifier factory implementation
+ - `pkg/alarm/emailtest.go` — helper used by `--test-email`
+
+ ## Version history
+
+ - v1.7.0+: provider credentials are loaded from environment variables by default

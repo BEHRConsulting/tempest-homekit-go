@@ -2,15 +2,13 @@
 
 ## Feature Summary
 
-**Date**: October 9, 2025  
-**Purpose**: Display alarm status and configuration in the web console dashboard
+**Date**: October 9, 2025 **Purpose**: Display alarm status and configuration in the web console dashboard
 
 ## Overview
 
 Added a new "Alarm Status" card to the web console dashboard that displays:
 - Alarm system status (enabled/disabled)
-- Configuration file information  
-- Last configuration read timestamp
+- Configuration file information - Last configuration read timestamp
 - Count of total and enabled alarms
 - Detailed list of active alarms with their conditions, last triggered times, and delivery channels
 
@@ -23,9 +21,9 @@ Added a new "Alarm Status" card to the web console dashboard that displays:
 **Added AlarmManagerInterface**:
 ```go
 type AlarmManagerInterface interface {
-    GetConfig() *alarm.AlarmConfig
-    GetAlarmCount() int
-    GetEnabledAlarmCount() int
+ GetConfig() *alarm.AlarmConfig
+ GetAlarmCount() int
+ GetEnabledAlarmCount() int
 }
 ```
 
@@ -44,23 +42,23 @@ alarmManager AlarmManagerInterface // alarm manager for status display
 **Response Structure**:
 ```json
 {
-  "enabled": true,
-  "configPath": "Configured",
-  "lastReadTime": "2025-10-09 22:13:20",
-  "totalAlarms": 2,
-  "enabledAlarms": 2,
-  "alarms": [
-    {
-      "name": "Hot outside",
-      "description": "Set when temp is > 85F",
-      "enabled": true,
-      "condition": "temp > 85",
-      "tags": ["hot"],
-      "channels": ["console", "syslog"],
-      "lastTriggered": "Never",
-      "cooldown": 1800
-    }
-  ]
+ "enabled": true,
+ "configPath": "Configured",
+ "lastReadTime": "2025-10-09 22:13:20",
+ "totalAlarms": 2,
+ "enabledAlarms": 2,
+ "alarms": [
+ {
+ "name": "Hot outside",
+ "description": "Set when temp is > 85F",
+ "enabled": true,
+ "condition": "temp > 85",
+ "tags": ["hot"],
+ "channels": ["console", "syslog"],
+ "lastTriggered": "Never",
+ "cooldown": 1800
+ }
+ ]
 }
 ```
 
@@ -78,7 +76,7 @@ Returns the timestamp when an alarm was last triggered. Used by the web console 
 **Connected alarm manager to web server**:
 ```go
 if alarmManager != nil && webServer != nil {
-    webServer.SetAlarmManager(alarmManager)
+ webServer.SetAlarmManager(alarmManager)
 }
 ```
 
@@ -91,21 +89,21 @@ This enables the web console to access alarm status without creating dependencie
 **Added Alarm Status Card**:
 ```html
 <div class="card" id="alarm-card">
-    <div class="card-header">
-        <span class="card-icon">🚨</span>
-        <span class="card-title">Alarm Status</span>
-    </div>
-    <div class="alarm-status-content">
-        <div class="alarm-info-row">
-            <span class="alarm-label">Status:</span>
-            <span class="alarm-value" id="alarm-status">Loading...</span>
-        </div>
-        <!-- More info rows -->
-        <div class="alarm-list" id="alarm-list">
-            <div class="alarm-list-header">Active Alarms:</div>
-            <!-- Alarm items populated by JavaScript -->
-        </div>
-    </div>
+ <div class="card-header">
+ <span class="card-icon"> </span>
+ <span class="card-title">Alarm Status</span>
+ </div>
+ <div class="alarm-status-content">
+ <div class="alarm-info-row">
+ <span class="alarm-label">Status:</span>
+ <span class="alarm-value" id="alarm-status">Loading...</span>
+ </div>
+ <!-- More info rows -->
+ <div class="alarm-list" id="alarm-list">
+ <div class="alarm-list-header">Active Alarms:</div>
+ <!-- Alarm items populated by JavaScript -->
+ </div>
+ </div>
 </div>
 ```
 
@@ -122,7 +120,7 @@ This enables the web console to access alarm status without creating dependencie
 
 **`updateAlarmStatus(data)`**:
 - Updates all alarm status display elements
-- Shows status indicator (✅ Active / ⚠️ Not Configured)
+- Shows status indicator (Active / Warning: Not Configured)
 - Displays config path and last read time
 - Shows alarm counts (enabled/total)
 - Populates alarm list with details
@@ -131,17 +129,17 @@ This enables the web console to access alarm status without creating dependencie
 - Only shows **enabled** alarms in the list
 - Displays "No active alarms configured" when empty
 - Each alarm item shows:
-  - 🔔 Alarm name
-  - Condition expression
-  - Last triggered timestamp
-  - Delivery channels (comma-separated)
+ - Alert: Alarm name
+ - Condition expression
+ - Last triggered timestamp
+ - Delivery channels (comma-separated)
 
 **Polling Integration**:
 ```javascript
 setInterval(() => {
-    fetchWeather();
-    fetchStatus();
-    fetchAlarmStatus(); // Added
+ fetchWeather();
+ fetchStatus();
+ fetchAlarmStatus(); // Added
 }, 10000);
 ```
 
@@ -150,7 +148,7 @@ setInterval(() => {
 **Card Layout**:
 ```css
 #alarm-card {
-    grid-column: span 2; /* Spans 2 columns */
+ grid-column: span 2; /* Spans 2 columns */
 }
 ```
 
@@ -174,13 +172,13 @@ setInterval(() => {
 ### Status Display
 
 **When Alarms Enabled**:
-- ✅ **Status**: Active (green color)
+- **Status**: Active (green color)
 - **Config**: "Configured"
 - **Last Read**: Timestamp of last config read
 - **Alarm Counts**: "2 / 2 enabled" format
 
 **When Alarms Disabled**:
-- ⚠️ **Status**: Not Configured (orange color)
+- Warning: **Status**: Not Configured (orange color)
 - **Config**: "Not configured"
 - **Last Read**: N/A
 - **Alarm Counts**: 0 / 0 enabled
@@ -188,14 +186,14 @@ setInterval(() => {
 ### Alarm List
 
 **Shows for Each Alarm**:
-1. **Name** with 🔔 icon
+1. **Name** with Alert: icon
 2. **Condition** - The expression being evaluated
 3. **Last Triggered** - Timestamp or "Never"
 4. **Channels** - Comma-separated list of delivery methods
 
 **Example Display**:
 ```
-🔔 Hot outside
+Alert: Hot outside
 Condition: temp > 85
 Last: Never
 Channels: console, syslog
@@ -211,23 +209,23 @@ Channels: console, syslog
 ### Viewing Alarm Status
 
 1. **Start the service with alarms**:
-   ```bash
-   ./tempest-homekit-go --token "your-token" --alarms="@tempest-alarms.json"
-   ```
+ ```bash
+ ./tempest-homekit-go --token "your-token" --alarms="@tempest-alarms.json"
+ ```
 
 2. **Open web console**:
-   ```
-   http://localhost:8080
-   ```
+ ```
+ http://localhost:8080
+ ```
 
 3. **Alarm Status Card**:
-   - Automatically displays at bottom of dashboard
-   - Refreshes every 10 seconds
-   - Shows current status and alarm details
+ - Automatically displays at bottom of dashboard
+ - Refreshes every 10 seconds
+ - Shows current status and alarm details
 
 ### Monitoring Alarms
 
-**Check Status**: Green ✅ = Active, Orange ⚠️ = Not Configured
+**Check Status**: Green = Active, Orange Warning: = Not Configured
 
 **View Last Triggered**:
 - See when each alarm last fired
@@ -246,23 +244,23 @@ Channels: console, syslog
 **Response** (200 OK):
 ```json
 {
-  "enabled": true,
-  "configPath": "Configured",
-  "lastReadTime": "2025-10-09 22:13:20",
-  "totalAlarms": 2,
-  "enabledAlarms": 2,
-  "alarms": [
-    {
-      "name": "string",
-      "description": "string",
-      "enabled": true,
-      "condition": "string",
-      "tags": ["string"],
-      "channels": ["string"],
-      "lastTriggered": "string",
-      "cooldown": 1800
-    }
-  ]
+ "enabled": true,
+ "configPath": "Configured",
+ "lastReadTime": "2025-10-09 22:13:20",
+ "totalAlarms": 2,
+ "enabledAlarms": 2,
+ "alarms": [
+ {
+ "name": "string",
+ "description": "string",
+ "enabled": true,
+ "condition": "string",
+ "tags": ["string"],
+ "channels": ["string"],
+ "lastTriggered": "string",
+ "cooldown": 1800
+ }
+ ]
 }
 ```
 
@@ -297,31 +295,31 @@ Channels: console, syslog
 ### Manual Testing
 
 1. **Start with alarms**:
-   ```bash
-   ./tempest-homekit-go --use-generated-weather --disable-homekit \
-     --alarms="@tempest-alarms.json"
-   ```
+ ```bash
+ ./tempest-homekit-go --use-generated-weather --disable-homekit \
+ --alarms="@tempest-alarms.json"
+ ```
 
 2. **Verify API**:
-   ```bash
-   curl http://localhost:8080/api/alarm-status | jq .
-   ```
+ ```bash
+ curl http://localhost:8080/api/alarm-status | jq .
+ ```
 
 3. **Check web console**:
-   - Open http://localhost:8080
-   - Scroll to bottom
-   - Verify alarm card displays
+ - Open http://localhost:8080
+ - Scroll to bottom
+ - Verify alarm card displays
 
 ### Expected Results
 
 **With Alarms**:
-- Status: ✅ Active
+- Status: Active
 - Alarm list populated
 - Counts accurate
 - Last triggered times shown
 
 **Without Alarms**:
-- Status: ⚠️ Not Configured
+- Status: Warning: Not Configured
 - Empty alarm list
 - Counts show 0
 - Message: "No active alarms configured"
@@ -329,15 +327,15 @@ Channels: console, syslog
 ### Trigger Testing
 
 1. **Create test alarm**:
-   ```json
-   {
-     "name": "Test",
-     "enabled": true,
-     "condition": "temperature > 0",
-     "cooldown": 60,
-     "channels": [{"type": "console", "template": "Test"}]
-   }
-   ```
+ ```json
+ {
+ "name": "Test",
+ "enabled": true,
+ "condition": "temperature > 0",
+ "cooldown": 60,
+ "channels": [{"type": "console", "template": "Test"}]
+ }
+ ```
 
 2. **Wait for observation cycle** (every 60 seconds with generated weather)
 
@@ -388,8 +386,7 @@ Potential improvements:
 - `pkg/alarm/manager.go` - Alarm management logic
 - `pkg/service/service.go` - Service integration
 
-### Frontend  
-- `pkg/web/static/script.js` - JavaScript fetch and display
+### Frontend - `pkg/web/static/script.js` - JavaScript fetch and display
 - `pkg/web/static/styles.css` - Card styling
 
 ### Documentation

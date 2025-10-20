@@ -16,28 +16,28 @@ The application has been refactored to use a **unified data source architecture*
 
 ```go
 type DataSource interface {
-    Start() (<-chan Observation, error)  // Start and get observation channel
-    Stop() error                          // Graceful shutdown
-    GetLatestObservation() *Observation   // Get most recent data
-    GetForecast() *ForecastResponse       // Get forecast (if available)
-    GetStatus() DataSourceStatus          // Get source status
-    GetType() DataSourceType              // Get source type (api/udp/generated)
+ Start() (<-chan Observation, error) // Start and get observation channel
+ Stop() error // Graceful shutdown
+ GetLatestObservation() *Observation // Get most recent data
+ GetForecast() *ForecastResponse // Get forecast (if available)
+ GetStatus() DataSourceStatus // Get source status
+ GetType() DataSourceType // Get source type (api/udp/generated)
 }
 ```
 
 ### Implementations
 
 1. **APIDataSource** (`pkg/weather/datasource_api.go`)
-   - Polls WeatherFlow API every 60 seconds
-   - Supports custom URLs (for generated weather, custom endpoints)
-   - Fetches forecast every 30 minutes
-   - Used for: Real API, Generated Weather, Custom URLs
+ - Polls WeatherFlow API every 60 seconds
+ - Supports custom URLs (for generated weather, custom endpoints)
+ - Fetches forecast every 30 minutes
+ - Used for: Real API, Generated Weather, Custom URLs
 
 2. **UDPDataSource** (`pkg/weather/datasource_udp.go`)
-   - Listens for UDP broadcasts on port 50222
-   - Forwards observations in real-time
-   - Optional forecast polling (when internet enabled)
-   - Used for: Offline mode, local monitoring
+ - Listens for UDP broadcasts on port 50222
+ - Forwards observations in real-time
+ - Optional forecast polling (when internet enabled)
+ - Used for: Offline mode, local monitoring
 
 ### Factory Pattern (`pkg/service/datasource_factory.go`)
 
@@ -62,17 +62,14 @@ dataSource, _ := CreateDataSource(cfg, station)
 obsChan, _ := dataSource.Start()
 
 for obs := range obsChan {
-    // Update HomeKit
-    ws.UpdateSensor(...)
-    
-    // Update web server
-    webServer.UpdateWeather(&obs)
-    
-    // Update forecast
-    webServer.UpdateForecast(dataSource.GetForecast())
-    
-    // Update status
-    webServer.UpdateDataSourceStatus(dataSource.GetStatus())
+ // Update HomeKit
+ ws.UpdateSensor(...)
+  // Update web server
+ webServer.UpdateWeather(&obs)
+  // Update forecast
+ webServer.UpdateForecast(dataSource.GetForecast())
+  // Update status
+ webServer.UpdateDataSourceStatus(dataSource.GetStatus())
 }
 ```
 
@@ -82,8 +79,8 @@ for obs := range obsChan {
 
 ```go
 type StatusResponse struct {
-    // ... existing fields
-    DataSource *weather.DataSourceStatus `json:"dataSource,omitempty"`
+ // ... existing fields
+ DataSource *weather.DataSourceStatus `json:"dataSource,omitempty"`
 }
 ```
 
@@ -136,26 +133,26 @@ The `DataSource` field contains:
 ```go
 // pkg/weather/datasource_mqtt.go
 type MQTTDataSource struct {
-    broker   string
-    topic    string
-    obsChan  chan Observation
-    // ...
+ broker string
+ topic string
+ obsChan chan Observation
+ // ...
 }
 
 func (m *MQTTDataSource) Start() (<-chan Observation, error) {
-    // Connect to MQTT broker
-    // Subscribe to topic
-    // Forward messages to obsChan
+ // Connect to MQTT broker
+ // Subscribe to topic
+ // Forward messages to obsChan
 }
 
 // Implement other interface methods...
 
 // pkg/service/datasource_factory.go
 func CreateDataSource(cfg *config.Config, station *weather.Station) (weather.DataSource, error) {
-    if cfg.MQTTBroker != "" {
-        return weather.NewMQTTDataSource(cfg.MQTTBroker, cfg.MQTTTopic), nil
-    }
-    // ... existing logic
+ if cfg.MQTTBroker != "" {
+ return weather.NewMQTTDataSource(cfg.MQTTBroker, cfg.MQTTTopic), nil
+ }
+ // ... existing logic
 }
 ```
 
@@ -179,8 +176,8 @@ func CreateDataSource(cfg *config.Config, station *weather.Station) (weather.Dat
 
 Build verification:
 ```bash
-go build  # Successful
-./tempest-homekit-go --version  # v1.5.0
+go build # Successful
+./tempest-homekit-go --version # v1.5.0
 ```
 
 All three data source types compile and work:

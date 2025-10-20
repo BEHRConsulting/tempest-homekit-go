@@ -1,8 +1,6 @@
 # Fix Summary: Alarm Console Output with Log Level Filtering
 
-**Date**: October 10, 2025  
-**Issue**: Alarms not displayed when using `--loglevel warning`  
-**Status**: ✅ **FIXED**
+**Date**: October 10, 2025 **Issue**: Alarms not displayed when using `--loglevel warning` **Status**: **FIXED**
 
 ---
 
@@ -27,17 +25,16 @@ The `ConsoleNotifier` in `pkg/alarm/notifiers.go` was using `logger.Info()` to o
 
 ```go
 func (n *ConsoleNotifier) Send(...) error {
-    message := expandTemplate(channel.Template, alarm, obs, stationName)
-    logger.Info("%s", message)  // ❌ Filtered by log level
-    return nil
+ message := expandTemplate(channel.Template, alarm, obs, stationName)
+ logger.Info("%s", message) // Filtered by log level
+ return nil
 }
 ```
 
 This treated alarms as regular informational logs, subject to the log level hierarchy:
 - `debug` - Shows DEBUG, INFO, WARN, ERROR
-- `info` - Shows INFO, WARN, ERROR  
-- `warn` - Shows WARN, ERROR (❌ alarms hidden)
-- `error` - Shows ERROR only (❌ alarms hidden)
+- `info` - Shows INFO, WARN, ERROR - `warn` - Shows WARN, ERROR (alarms hidden)
+- `error` - Shows ERROR only (alarms hidden)
 
 ---
 
@@ -51,18 +48,18 @@ Created a new `Alarm()` function in `pkg/logger/logger.go` that **always outputs
 // Alarm always prints alarm notifications, bypassing log level filtering
 // Alarms are critical events that should always be visible
 func Alarm(format string, v ...interface{}) {
-    message := fmt.Sprintf(format, v...)
-    if shouldLog(message) {
-        log.Printf("🚨 ALARM: %s", message)
-    }
+ message := fmt.Sprintf(format, v...)
+ if shouldLog(message) {
+ log.Printf("ALARM: %s", message)
+ }
 }
 ```
 
 **Key Features**:
-- ✅ Bypasses log level checks (similar to `Error()`)
-- ✅ Adds distinctive `🚨 ALARM:` prefix for visibility
-- ✅ Still respects log filter if configured
-- ✅ Outputs to stdout (not stderr)
+- Bypasses log level checks (similar to `Error()`)
+- Adds distinctive `ALARM:` prefix for visibility
+- Still respects log filter if configured
+- Outputs to stdout (not stderr)
 
 ### 2. Updated Console Notifier
 
@@ -70,9 +67,9 @@ Modified `ConsoleNotifier` to use the new `Alarm()` function:
 
 ```go
 func (n *ConsoleNotifier) Send(...) error {
-    message := expandTemplate(channel.Template, alarm, obs, stationName)
-    logger.Alarm("%s", message)  // ✅ Always visible
-    return nil
+ message := expandTemplate(channel.Template, alarm, obs, stationName)
+ logger.Alarm("%s", message) // Always visible
+ return nil
 }
 ```
 
@@ -85,8 +82,8 @@ func (n *ConsoleNotifier) Send(...) error {
 ```bash
 $ ./tempest-homekit-go --loglevel warning --alarms @tempest-alarms.json
 
-# ✅ Only ALARM and WARN/ERROR messages appear (INFO/DEBUG suppressed)
-2025/10/10 20:51:30 🚨 ALARM: 🚨 ALARM: Wind Change
+# Only ALARM and WARN/ERROR messages appear (INFO/DEBUG suppressed)
+2025/10/10 20:51:30 ALARM: ALARM: Wind Change
 Station: Chino Hills
 Time: 2025-10-10 20:50:51 PDT
 Description: Let me know when the wind changes
@@ -99,10 +96,10 @@ Last Wind Speed: 0.1
 ```bash
 $ ./tempest-homekit-go --loglevel debug --alarms @tempest-alarms.json
 
-# ✅ All messages appear including ALARM
+# All messages appear including ALARM
 2025/10/10 20:52:19 INFO: Starting service...
 2025/10/10 20:52:19 DEBUG: Fetching stations...
-2025/10/10 20:52:45 🚨 ALARM: 🚨 ALARM: Wind Change
+2025/10/10 20:52:45 ALARM: ALARM: Wind Change
 Station: Chino Hills
 ...
 ```
@@ -112,8 +109,8 @@ Station: Chino Hills
 ```bash
 $ ./tempest-homekit-go --loglevel error --alarms @tempest-alarms.json
 
-# ✅ ALARM messages still appear (only ERROR and ALARM output)
-2025/10/10 20:51:30 🚨 ALARM: 🚨 ALARM: Wind Change
+# ALARM messages still appear (only ERROR and ALARM output)
+2025/10/10 20:51:30 ALARM: ALARM: Wind Change
 Station: Chino Hills
 ...
 ```
@@ -145,10 +142,7 @@ Station: Chino Hills
 
 ### Alternative Approaches Considered
 
-❌ **Make alarms use `logger.Error()`** - Inappropriate severity level, would clutter error logs  
-❌ **Require users to set `--loglevel info`** - Breaks production best practices  
-❌ **Add `--alarm-output` flag** - Unnecessary complexity, alarms should "just work"  
-✅ **Create dedicated `logger.Alarm()` function** - Clean separation of concerns
+**Make alarms use `logger.Error()`** - Inappropriate severity level, would clutter error logs **Require users to set `--loglevel info`** - Breaks production best practices **Add `--alarm-output` flag** - Unnecessary complexity, alarms should "just work" **Create dedicated `logger.Alarm()` function** - Clean separation of concerns
 
 ---
 
@@ -179,27 +173,25 @@ chmod +x test-alarm-console.sh
 
 ## Related Documentation
 
-- **[ALARM_LOGGING.md](ALARM_LOGGING.md)** - Complete alarm logging behavior documentation
+- **[ALARM_LOGGING.md](../../pkg/alarm/docs/ALARM_LOGGING.md)** - Complete alarm logging behavior documentation
 - **[OSLOG_NOTIFIER.md](OSLOG_NOTIFIER.md)** - macOS unified logging for alarms
-- **[pkg/alarm/README.md](pkg/alarm/README.md)** - Alarm system overview
-- **[pkg/logger/README.md](pkg/logger/README.md)** - Logger package documentation
+- **[pkg/alarm/README.md](../../pkg/alarm/README.md)** - Alarm system overview
+- **[pkg/logger/README.md](../../pkg/logger/README.md)** - Logger package documentation
 
 ---
 
 ## Backward Compatibility
 
-✅ **Fully backward compatible** - No changes to alarm configuration format or API  
-✅ **No breaking changes** - Existing alarm configurations work without modification  
-✅ **Enhanced behavior** - Alarms now more reliable in production environments
+**Fully backward compatible** - No changes to alarm configuration format or API **No breaking changes** - Existing alarm configurations work without modification **Enhanced behavior** - Alarms now more reliable in production environments
 
 ---
 
 ## Additional Benefits
 
-1. **🚨 Visual distinction** - Alarm emoji prefix makes alarms instantly recognizable in logs
-2. **📊 Better monitoring** - Production systems can grep for "ALARM:" to extract critical events
-3. **🔍 Log analysis** - Alarm messages clearly separated from regular application logs
-4. **⚡ No performance impact** - Direct output, no additional processing
+1. ** Visual distinction** - Alarm emoji prefix makes alarms instantly recognizable in logs
+2. ** Better monitoring** - Production systems can grep for "ALARM:" to extract critical events
+3. ** Log analysis** - Alarm messages clearly separated from regular application logs
+4. ** No performance impact** - Direct output, no additional processing
 
 ---
 
@@ -208,10 +200,10 @@ chmod +x test-alarm-console.sh
 This fix ensures that critical weather alarm notifications are **always visible** to users, regardless of their log level configuration. This aligns with user expectations and production best practices while maintaining clean code architecture through a dedicated alarm logging function.
 
 **User Experience**:
-- ✅ Before: Alarms hidden with `--loglevel warning` (confusing, missed notifications)
-- ✅ After: Alarms always visible (reliable, predictable behavior)
+- Before: Alarms hidden with `--loglevel warning` (confusing, missed notifications)
+- After: Alarms always visible (reliable, predictable behavior)
 
 **Production Impact**:
-- ✅ Services can run with `--loglevel warning` or `--loglevel error` without missing alarms
-- ✅ Log volume reduced (no INFO/DEBUG noise) while maintaining alarm visibility
-- ✅ Cleaner logs with distinct alarm messages easy to filter and monitor
+- Services can run with `--loglevel warning` or `--loglevel error` without missing alarms
+- Log volume reduced (no INFO/DEBUG noise) while maintaining alarm visibility
+- Cleaner logs with distinct alarm messages easy to filter and monitor

@@ -33,8 +33,7 @@ generator.Regenerate()
 ## Locations
 
 1. Miami, FL (Tropical)
-2. Denver, CO (Continental) 
-3. Seattle, WA (Oceanic)
+2. Denver, CO (Continental) 3. Seattle, WA (Oceanic)
 4. Phoenix, AZ (Desert)
 5. Minneapolis, MN (Continental)
 6. San Diego, CA (Mediterranean)

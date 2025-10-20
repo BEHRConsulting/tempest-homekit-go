@@ -8,10 +8,10 @@ Alarm notifications in the Tempest HomeKit system are treated as **critical even
 
 Alarms are not regular log messages - they are important notifications about weather conditions that require user attention. Therefore:
 
-- ✅ **Alarms always display** regardless of log level (debug, info, warn, error)
-- ✅ **Alarms use a distinct prefix** (`🚨 ALARM:`) to make them easy to identify
-- ✅ **Alarms are not filtered** by the log filter setting
-- ✅ **Alarms appear in console output** even with `--loglevel error` or `--loglevel warning`
+- **Alarms always display** regardless of log level (debug, info, warn, error)
+- Alarms use a distinct prefix (`ALARM:`) to make them easy to identify
+- **Alarms are not filtered** by the log filter setting
+- **Alarms appear in console output** even with `--loglevel error` or `--loglevel warning`
 
 ## Implementation
 
@@ -23,10 +23,10 @@ A dedicated `Alarm()` function was added to the logger package that bypasses log
 // Alarm always prints alarm notifications, bypassing log level filtering
 // Alarms are critical events that should always be visible
 func Alarm(format string, v ...interface{}) {
-    message := fmt.Sprintf(format, v...)
-    if shouldLog(message) {
-        log.Printf("🚨 ALARM: %s", message)
-    }
+ message := fmt.Sprintf(format, v...)
+ if shouldLog(message) {
+ log.Printf("ALARM: %s", message)
+ }
 }
 ```
 
@@ -36,9 +36,9 @@ The console notifier uses `logger.Alarm()` instead of `logger.Info()`:
 
 ```go
 func (n *ConsoleNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observation, stationName string) error {
-    message := expandTemplate(channel.Template, alarm, obs, stationName)
-    logger.Alarm("%s", message)
-    return nil
+ message := expandTemplate(channel.Template, alarm, obs, stationName)
+ logger.Alarm("%s", message)
+ return nil
 }
 ```
 
@@ -50,7 +50,7 @@ func (n *ConsoleNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Obse
 $ ./tempest-homekit-go --loglevel warning --alarms @tempest-alarms.json
 
 # Only ALARM and ERROR messages appear (INFO/DEBUG suppressed)
-2025/10/10 20:51:30 🚨 ALARM: 🚨 ALARM: Wind Change
+2025/10/10 20:51:30 ALARM: ALARM: Wind Change
 Station: Chino Hills
 Time: 2025-10-10 20:50:51 PDT
 Description: Let me know when the wind changes
@@ -66,7 +66,7 @@ $ ./tempest-homekit-go --loglevel debug --alarms @tempest-alarms.json
 # All messages appear including ALARM
 2025/10/10 20:52:19 INFO: Starting service...
 2025/10/10 20:52:19 DEBUG: Fetching stations...
-2025/10/10 20:52:45 🚨 ALARM: 🚨 ALARM: Wind Change
+2025/10/10 20:52:45 ALARM: ALARM: Wind Change
 Station: Chino Hills
 Time: 2025-10-10 20:50:51 PDT
 ...
@@ -80,7 +80,7 @@ Even with the most restrictive log level, alarms still appear:
 $ ./tempest-homekit-go --loglevel error --alarms @tempest-alarms.json
 
 # Only ALARM and ERROR messages appear
-2025/10/10 20:51:30 🚨 ALARM: 🚨 ALARM: Wind Change
+2025/10/10 20:51:30 ALARM: ALARM: Wind Change
 Station: Chino Hills
 ...
 ```
@@ -122,13 +122,6 @@ curl http://localhost:8080/api/alarm-status
 
 ## Related Files
 
-- `pkg/logger/logger.go` - Defines the `Alarm()` function
-- `pkg/alarm/notifiers.go` - Console notifier implementation
-- `tempest-alarms.json` - Alarm configuration file
-- `test-alarm-console.sh` - Test script for alarm visibility
 
 ## See Also
-
-- [Alarm System Documentation](pkg/alarm/README.md)
-- [Logger Documentation](pkg/logger/README.md)
-- [OSLog Notifier Documentation](OSLOG_NOTIFIER.md)
+- [OSLog Notifier Documentation](../../../docs/development/OSLOG_NOTIFIER.md)

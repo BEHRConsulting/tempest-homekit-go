@@ -8,8 +8,7 @@ The alarm editor now includes comprehensive JSON viewing capabilities, allowing 
 
 ### 1. View Full Configuration JSON
 
-**Location:** Toolbar (top of page)  
-**Button:** 📄 View Full JSON
+**Location:** Toolbar (top of page) **Button:** View Full JSON
 
 Displays the complete alarm configuration in a modal window with:
 - Syntax-highlighted JSON (dark theme)
@@ -26,8 +25,7 @@ Displays the complete alarm configuration in a modal window with:
 
 ### 2. View Individual Alarm JSON
 
-**Location:** Each alarm card  
-**Button:** 📄 JSON (small button in alarm actions)
+**Location:** Each alarm card **Button:** JSON (small button in alarm actions)
 
 Displays the JSON for a single alarm including:
 - Alarm metadata (name, description, tags)
@@ -44,7 +42,7 @@ Displays the JSON for a single alarm including:
 
 ### 3. Copy to Clipboard
 
-Both JSON views include a "📋 Copy to Clipboard" button that:
+Both JSON views include a "Copy to Clipboard" button that:
 - Copies the formatted JSON to your clipboard
 - Shows success notification
 - Falls back to legacy copy method for older browsers
@@ -70,8 +68,8 @@ Both JSON views include a "📋 Copy to Clipboard" button that:
 
 ### Example 1: Export Full Configuration
 
-1. Click "📄 View Full JSON" in the toolbar
-2. Click "📋 Copy to Clipboard"
+1. Click "View Full JSON" in the toolbar
+2. Click "Copy to Clipboard"
 3. Paste into a text editor
 4. Save as `alarms-backup.json`
 
@@ -80,8 +78,8 @@ Result: Complete backup of all alarms.
 ### Example 2: Copy Alarm for Modification
 
 1. Find the alarm you want to duplicate
-2. Click "📄 JSON" on that alarm card
-3. Click "📋 Copy to Clipboard"
+2. Click "JSON" on that alarm card
+3. Click "Copy to Clipboard"
 4. Paste into text editor
 5. Modify the JSON (change name, adjust condition)
 6. Use the JSON to create a new alarm via file edit
@@ -91,7 +89,7 @@ Result: Quickly create similar alarms.
 ### Example 3: Inspect Email Configuration
 
 1. Find alarm with email delivery
-2. Click "📄 JSON" on the alarm card
+2. Click "JSON" on the alarm card
 3. Scroll to "channels" array
 4. Find the email channel object
 5. Verify `to`, `subject`, `body` settings
@@ -101,8 +99,8 @@ Result: Confirm email settings without editing.
 ### Example 4: Share Configuration with Team
 
 1. Configure alarms in the editor
-2. Click "📄 View Full JSON"
-3. Click "📋 Copy to Clipboard"
+2. Click "View Full JSON"
+3. Click "Copy to Clipboard"
 4. Paste into Slack/email/documentation
 5. Team members can review before deployment
 
@@ -113,66 +111,66 @@ Result: Collaborative alarm configuration.
 ### Full Configuration JSON
 ```json
 {
-  "alarms": [
-    {
-      "name": "high-temperature",
-      "description": "Alert when temperature exceeds 85°F",
-      "condition": "temperature > 29.4",
-      "tags": ["temperature", "heat"],
-      "enabled": true,
-      "cooldown": 1800,
-      "channels": [
-        {
-          "type": "console",
-          "template": "🌡️ HIGH TEMP: {{temperature}}°C at {{station}}"
-        }
-      ]
-    },
-    {
-      "name": "heavy-rain",
-      "condition": "rain_rate > 5",
-      "tags": ["rain"],
-      "enabled": true,
-      "cooldown": 600,
-      "channels": [
-        {
-          "type": "console",
-          "template": "🌧️ HEAVY RAIN: {{rain_rate}} mm/hr"
-        },
-        {
-          "type": "syslog",
-          "template": "Heavy rain detected: {{rain_rate}} mm/hr"
-        }
-      ]
-    }
-  ]
+ "alarms": [
+ {
+ "name": "high-temperature",
+ "description": "Alert when temperature exceeds 85°F",
+ "condition": "temperature > 29.4",
+ "tags": ["temperature", "heat"],
+ "enabled": true,
+ "cooldown": 1800,
+ "channels": [
+ {
+ "type": "console",
+ "template": "Temperature: HIGH TEMP: {{temperature}}°C at {{station}}"
+ }
+ ]
+ },
+ {
+ "name": "heavy-rain",
+ "condition": "rain_rate > 5",
+ "tags": ["rain"],
+ "enabled": true,
+ "cooldown": 600,
+ "channels": [
+ {
+ "type": "console",
+ "template": "️ HEAVY RAIN: {{rain_rate}} mm/hr"
+ },
+ {
+ "type": "syslog",
+ "template": "Heavy rain detected: {{rain_rate}} mm/hr"
+ }
+ ]
+ }
+ ]
 }
 ```
 
 ### Individual Alarm JSON
 ```json
 {
-  "name": "heat-and-humidity",
-  "description": "Combined heat and humidity warning",
-  "condition": "temperature > 30 && humidity > 70",
-  "tags": ["temperature", "humidity", "comfort"],
-  "enabled": true,
-  "cooldown": 3600,
-  "channels": [
-    {
-      "type": "console",
-      "template": "🥵 WARNING: {{temperature}}°C / {{humidity}}%"
-    },
-    {
-      "type": "email",
-      "template": "Heat and humidity alert",
-      "email": {
-        "to": ["admin@example.com"],
-        "subject": "Heat & Humidity Alert - {{station}}",
-        "body": "Current conditions:\nTemp: {{temperature}}°C\nHumidity: {{humidity}}%\nStation: {{station}}\nTime: {{timestamp}}"
-      }
-    }
-  ]
+ "name": "heat-and-humidity",
+ "description": "Combined heat and humidity warning",
+ "condition": "temperature > 30 && humidity > 70",
+ "tags": ["temperature", "humidity", "comfort"],
+ "enabled": true,
+ "cooldown": 3600,
+ "channels": [
+ {
+ "type": "console",
+ "template": " WARNING: {{temperature}}°C / {{humidity}}%"
+ },
+ {
+ "type": "email",
+ "template": "Heat and humidity alert",
+ "email": {
+ "to": ["admin@example.com"],
+ "subject": "Heat & Humidity Alert - {{station}}",
+ "body": "Current conditions:\nTemp: {{temperature}}°C\nHumidity: {{humidity}}%\nStation: {{station}}\nTime: {{timestamp}}"
+ }
+ }
+ ]
 }
 ```
 
@@ -183,34 +181,34 @@ Result: Collaborative alarm configuration.
 ```javascript
 // Show full configuration
 function showFullJSON() {
-  const config = { alarms: alarms };
-  displayJSON(config, 'Full Configuration JSON');
+ const config = { alarms: alarms };
+ displayJSON(config, 'Full Configuration JSON');
 }
 
 // Show single alarm
 function showAlarmJSON(name) {
-  const alarm = alarms.find(a => a.name === name);
-  displayJSON(alarm, 'Alarm: ' + name);
+ const alarm = alarms.find(a => a.name === name);
+ displayJSON(alarm, 'Alarm: ' + name);
 }
 
 // Generic JSON display
 function displayJSON(data, title) {
-  document.getElementById('jsonModalTitle').textContent = title;
-  const jsonString = JSON.stringify(data, null, 2);
-  document.getElementById('jsonContent').textContent = jsonString;
-  document.getElementById('jsonModal').classList.add('active');
+ document.getElementById('jsonModalTitle').textContent = title;
+ const jsonString = JSON.stringify(data, null, 2);
+ document.getElementById('jsonContent').textContent = jsonString;
+ document.getElementById('jsonModal').classList.add('active');
 }
 
 // Copy to clipboard with fallback
 async function copyJSON() {
-  const jsonText = document.getElementById('jsonContent').textContent;
-  try {
-    await navigator.clipboard.writeText(jsonText);
-    showNotification('JSON copied to clipboard!', 'success');
-  } catch (err) {
-    // Legacy fallback using execCommand
-    // ... fallback code ...
-  }
+ const jsonText = document.getElementById('jsonContent').textContent;
+ try {
+ await navigator.clipboard.writeText(jsonText);
+ showNotification('JSON copied to clipboard!', 'success');
+ } catch (err) {
+ // Legacy fallback using execCommand
+ // ... fallback code ...
+ }
 }
 ```
 
@@ -218,20 +216,20 @@ async function copyJSON() {
 
 ```css
 .json-viewer {
-  background: #282c34;
-  color: #abb2bf;
-  padding: 20px;
-  border-radius: 8px;
-  font-family: 'Courier New', Consolas, Monaco, monospace;
-  font-size: 13px;
-  overflow-x: auto;
-  max-height: 600px;
-  line-height: 1.6;
-  white-space: pre;
+ background: #282c34;
+ color: #abb2bf;
+ padding: 20px;
+ border-radius: 8px;
+ font-family: 'Courier New', Consolas, Monaco, monospace;
+ font-size: 13px;
+ overflow-x: auto;
+ max-height: 600px;
+ line-height: 1.6;
+ white-space: pre;
 }
 
 .modal-content.wide {
-  max-width: 900px;
+ max-width: 900px;
 }
 ```
 
@@ -252,7 +250,7 @@ async function copyJSON() {
 
 ### When to Use JSON View
 
-✅ **Good Use Cases:**
+**Good Use Cases:**
 - Backing up configurations before major changes
 - Documenting alarm setup in tickets/wikis
 - Debugging complex channel configurations
@@ -260,14 +258,14 @@ async function copyJSON() {
 - Learning the JSON structure
 - Migrating between environments
 
-❌ **Not Recommended:**
+**Not Recommended:**
 - Editing JSON directly in the viewer (read-only)
 - Replacing the visual editor for simple changes
 - Storing sensitive credentials (use environment variables)
 
 ### Security Considerations
 
-⚠️ **Important:** The JSON viewer displays all configuration including:
+Warning: **Important:** The JSON viewer displays all configuration including:
 - Email addresses in channel configurations
 - SMS phone numbers
 - Template strings
@@ -282,10 +280,10 @@ async function copyJSON() {
 ### Performance
 
 The JSON viewer is optimized for:
-- ✅ Configurations with up to 100 alarms
-- ✅ Individual alarms with multiple channels
-- ✅ Large template strings
-- ⚠️ Very large configurations (>500 alarms) may be slow to render
+- Configurations with up to 100 alarms
+- Individual alarms with multiple channels
+- Large template strings
+- Warning: Very large configurations (>500 alarms) may be slow to render
 
 For very large configurations, consider:
 - Viewing individual alarms instead of full config
@@ -296,24 +294,19 @@ For very large configurations, consider:
 
 ### JSON Not Displaying
 
-**Problem:** Modal shows but JSON content is empty  
-**Solution:** Refresh the page to reload alarm data
+**Problem:** Modal shows but JSON content is empty **Solution:** Refresh the page to reload alarm data
 
-**Problem:** "undefined" appears in JSON  
-**Solution:** Some alarms may have missing fields (normal), just means that field isn't set
+**Problem:** "undefined" appears in JSON **Solution:** Some alarms may have missing fields (normal), just means that field isn't set
 
 ### Copy to Clipboard Fails
 
-**Problem:** "Failed to copy JSON" notification  
-**Solution:** 
-1. Check browser permissions for clipboard access
+**Problem:** "Failed to copy JSON" notification **Solution:** 1. Check browser permissions for clipboard access
 2. Try manually selecting text and using Ctrl+C / Cmd+C
 3. Update your browser to latest version
 
 ### Modal Won't Close
 
-**Problem:** Can't dismiss the JSON viewer  
-**Solution:**
+**Problem:** Can't dismiss the JSON viewer **Solution:**
 1. Press ESC key
 2. Click the "Close" button
 3. Click outside the modal (on the dark overlay)
@@ -338,8 +331,7 @@ The JSON viewer uses existing API endpoints:
 GET /api/config
 Returns: Full alarm configuration with all alarms
 
-GET /api/alarms/list  
-Returns: Array of all alarms (same data, different format)
+GET /api/alarms/list Returns: Array of all alarms (same data, different format)
 ```
 
 No additional API endpoints are required for the JSON viewer.

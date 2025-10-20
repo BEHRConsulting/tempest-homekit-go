@@ -16,12 +16,12 @@ The `service` package provides the main service orchestration and lifecycle mana
 **Service Architecture:**
 ```go
 type ServiceManager struct {
-    Config      *config.Config
-    WeatherClient *weather.Client
-    HomeKitService *homekit.HomeKitService
-    WebServer   *web.WebServer
-    Context     context.Context
-    CancelFunc  context.CancelFunc
+ Config *config.Config
+ WeatherClient *weather.Client
+ HomeKitService *homekit.HomeKitService
+ WebServer *web.WebServer
+ Context context.Context
+ CancelFunc context.CancelFunc
 }
 ```
 
@@ -63,29 +63,26 @@ type ServiceManager struct {
 ### Main Service Loop
 ```go
 func StartService(cfg *config.Config) error {
-    // Initialize all components
-    weatherClient := weather.NewClient(cfg.Token)
-    hkService, err := homekit.SetupHomeKit(cfg)
-    webServer := web.NewWebServer(cfg.WebPort)
-    
-    // Start background services
-    go hkService.StartHomeKitServer(ctx)
-    go webServer.Start()
-    
-    // Main polling loop (60-second interval)
-    ticker := time.NewTicker(60 * time.Second)
-    for {
-        select {
-        case <-ticker.C:
-            // Fetch weather data
-            // Update HomeKit sensors
-            // Update web dashboard
-            
-        case <-ctx.Done():
-            // Graceful shutdown
-            return nil
-        }
-    }
+ // Initialize all components
+ weatherClient := weather.NewClient(cfg.Token)
+ hkService, err := homekit.SetupHomeKit(cfg)
+ webServer := web.NewWebServer(cfg.WebPort)
+  // Start background services
+ go hkService.StartHomeKitServer(ctx)
+ go webServer.Start()
+  // Main polling loop (60-second interval)
+ ticker := time.NewTicker(60 * time.Second)
+ for {
+ select {
+ case <-ticker.C:
+ // Fetch weather data
+ // Update HomeKit sensors
+ // Update web dashboard
+  case <-ctx.Done():
+ // Graceful shutdown
+ return nil
+ }
+ }
 }
 ```
 
@@ -111,18 +108,18 @@ The service is designed to continue operating despite temporary failures:
 // Example: Weather API error handling
 obs, err := weatherClient.GetObservation(stationID)
 if err != nil {
-    log.Printf("Weather API error: %v", err)
-    // Continue with last known data
-    // Don't crash the entire service
-    continue
+ log.Printf("Weather API error: %v", err)
+ // Continue with last known data
+ // Don't crash the entire service
+ continue
 }
 
 // Update components that are still operational
 if hkService != nil {
-    hkService.UpdateAllSensors(obs)
+ hkService.UpdateAllSensors(obs)
 }
 if webServer != nil {
-    webServer.UpdateWeather(obs)
+ webServer.UpdateWeather(obs)
 }
 ```
 
@@ -151,18 +148,18 @@ The service implements comprehensive logging with three levels:
 ### Logging Configuration
 ```go
 func setupLogging(level string) {
-    switch strings.ToLower(level) {
-    case "debug":
-        log.SetFlags(log.LstdFlags | log.Lshortfile)
-        // Enable detailed logging
-    case "info":
-        log.SetFlags(log.LstdFlags)
-        // Enable operational logging
-    case "error":
-    default:
-        log.SetOutput(io.Discard)
-        // Only critical errors
-    }
+ switch strings.ToLower(level) {
+ case "debug":
+ log.SetFlags(log.LstdFlags | log.Lshortfile)
+ // Enable detailed logging
+ case "info":
+ log.SetFlags(log.LstdFlags)
+ // Enable operational logging
+ case "error":
+ default:
+ log.SetOutput(io.Discard)
+ // Only critical errors
+ }
 }
 ```
 
@@ -177,12 +174,12 @@ The service includes smart logging that adapts to environmental conditions:
 ### Weather Data Flow
 ```
 WeatherFlow API → Weather Client → Service Orchestrator
-                                        ↓
-                               ┌─── HomeKit Service
-                               │    (Update all sensors)
-                               │
-                               └─── Web Server
-                                    (Update dashboard + API)
+ ↓
+ ┌─── HomeKit Service
+ │ (Update all sensors)
+ │
+ └─── Web Server
+ (Update dashboard + API)
 ```
 
 ### Concurrency Management
@@ -196,20 +193,20 @@ The service manages multiple concurrent operations:
 ```go
 // Thread-safe weather data sharing
 type SafeWeatherData struct {
-    mutex sync.RWMutex
-    data  *weather.Observation
+ mutex sync.RWMutex
+ data *weather.Observation
 }
 
 func (s *SafeWeatherData) Update(obs *weather.Observation) {
-    s.mutex.Lock()
-    defer s.mutex.Unlock()
-    s.data = obs
+ s.mutex.Lock()
+ defer s.mutex.Unlock()
+ s.data = obs
 }
 
 func (s *SafeWeatherData) Get() *weather.Observation {
-    s.mutex.RLock()
-    defer s.mutex.RUnlock()
-    return s.data
+ s.mutex.RLock()
+ defer s.mutex.RUnlock()
+ return s.data
 }
 ```
 
@@ -218,19 +215,18 @@ func (s *SafeWeatherData) Get() *weather.Observation {
 ### Basic Service Startup
 ```go
 import (
-    "tempest-homekit-go/pkg/config"
-    "tempest-homekit-go/pkg/service"
+ "tempest-homekit-go/pkg/config"
+ "tempest-homekit-go/pkg/service"
 )
 
 func main() {
-    // Load configuration
-    cfg := config.LoadConfig()
-    
-    // Start the service (blocks until shutdown)
-    err := service.StartService(cfg)
-    if err != nil {
-        log.Fatal("Service failed:", err)
-    }
+ // Load configuration
+ cfg := config.LoadConfig()
+  // Start the service (blocks until shutdown)
+ err := service.StartService(cfg)
+ if err != nil {
+ log.Fatal("Service failed:", err)
+ }
 }
 ```
 
@@ -238,11 +234,11 @@ func main() {
 ```go
 // Example: Service with custom settings
 cfg := &config.Config{
-    Token:       "your-api-token",
-    StationName: "Your Station",
-    WebPort:     "8080",
-    LogLevel:    "debug",
-    ReadHistory: true,
+ Token: "your-api-token",
+ StationName: "Your Station",
+ WebPort: "8080",
+ LogLevel: "debug",
+ ReadHistory: true,
 }
 
 err := service.StartService(cfg)
@@ -312,12 +308,11 @@ c := make(chan os.Signal, 1)
 signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 go func() {
-    <-c
-    log.Println("Shutting down gracefully...")
-    cancel() // Cancel context
-    
-    // Allow time for cleanup
-    time.Sleep(2 * time.Second)
-    os.Exit(0)
+ <-c
+ log.Println("Shutting down gracefully...")
+ cancel() // Cancel context
+  // Allow time for cleanup
+ time.Sleep(2 * time.Second)
+ os.Exit(0)
 }()
 ```

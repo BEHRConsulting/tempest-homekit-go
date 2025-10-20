@@ -12,16 +12,16 @@ Enhanced the alarm editor with comprehensive message configuration capabilities,
 - Default message section with checkbox toggle
 - Variable dropdown selector (17 available variables)
 - Custom message sections for each delivery method:
-  - Console message with variable dropdown
-  - Syslog message with variable dropdown
-  - Event Log message with variable dropdown
-  - Email configuration (To, Subject, Body) with variable dropdown
-  - SMS configuration (Phone numbers, Message) with variable dropdown
+ - Console message with variable dropdown
+ - Syslog message with variable dropdown
+ - Event Log message with variable dropdown
+ - Email configuration (To, Subject, Body) with variable dropdown
+ - SMS configuration (Phone numbers, Message) with variable dropdown
 - Dynamic show/hide based on selected delivery methods
 - `onchange` handlers for checkbox interactions
 
 **Key Features**:
-- Default message template: `🚨 ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}`
+- Default message template: `ALARM: {{alarm_name}}\nStation: {{station}}\nTime: {{timestamp}}`
 - All variable dropdowns include helpful descriptions (e.g., "{{temperature_f}} - Temperature °F")
 - Email section has separate fields for recipients, subject, and body
 - SMS section has separate fields for phone numbers and message
@@ -31,43 +31,43 @@ Enhanced the alarm editor with comprehensive message configuration capabilities,
 **New Functions**:
 
 1. `insertVariable(textareaId, alternateId)`
-   - Inserts selected variable at cursor position
-   - Handles email dual-target (subject or body based on focus)
-   - Resets dropdown after insertion
-   - Maintains cursor position
+ - Inserts selected variable at cursor position
+ - Handles email dual-target (subject or body based on focus)
+ - Resets dropdown after insertion
+ - Maintains cursor position
 
 2. `toggleMessageSections()`
-   - Shows/hides custom message sections based on delivery method checkboxes
-   - Called on delivery method change
-   - Dynamic UI responsiveness
+ - Shows/hides custom message sections based on delivery method checkboxes
+ - Called on delivery method change
+ - Dynamic UI responsiveness
 
 3. `toggleCustomMessages()`
-   - Toggles between default message and custom messages per channel
-   - Shows/hides appropriate sections
-   - Called on "Use Default Message" checkbox change
+ - Toggles between default message and custom messages per channel
+ - Shows/hides appropriate sections
+ - Called on "Use Default Message" checkbox change
 
 **Updated Functions**:
 
 1. `showCreateModal()`
-   - Resets all message fields to defaults
-   - Sets default message template
-   - Clears custom message fields
-   - Calls toggle functions to set initial UI state
+ - Resets all message fields to defaults
+ - Sets default message template
+ - Clears custom message fields
+ - Calls toggle functions to set initial UI state
 
 2. `editAlarm(name)`
-   - Loads messages from existing channel configurations
-   - Populates console, syslog, eventlog, email, SMS fields
-   - Detects if custom messages are used (different per channel)
-   - Auto-selects default vs custom message mode
-   - Preserves email recipients and SMS phone numbers
+ - Loads messages from existing channel configurations
+ - Populates console, syslog, eventlog, email, SMS fields
+ - Detects if custom messages are used (different per channel)
+ - Auto-selects default vs custom message mode
+ - Preserves email recipients and SMS phone numbers
 
 3. `handleSubmit(e)`
-   - Reads message configuration based on default/custom toggle
-   - Builds channels array with appropriate templates
-   - Uses default message for all channels when "Use Default" is checked
-   - Uses individual messages when custom mode is enabled
-   - Parses comma-separated email addresses and phone numbers
-   - Provides fallback values for email/SMS if not specified
+ - Reads message configuration based on default/custom toggle
+ - Builds channels array with appropriate templates
+ - Uses default message for all channels when "Use Default" is checked
+ - Uses individual messages when custom mode is enabled
+ - Parses comma-separated email addresses and phone numbers
+ - Provides fallback values for email/SMS if not specified
 
 ### 3. CSS Styling (pkg/alarm/editor/static/styles.css)
 
@@ -92,14 +92,14 @@ Enhanced the alarm editor with comprehensive message configuration capabilities,
 
 **Created**:
 - `ALARM_EDITOR_MESSAGES.md` - Comprehensive 500+ line documentation
-  - Feature overview
-  - All 17 available variables with descriptions
-  - User interface workflow
-  - 4 detailed examples with actual use cases
-  - Technical details on storage and expansion
-  - Best practices for message length, formatting, variable usage
-  - Troubleshooting guide
-  - Related documentation links
+ - Feature overview
+ - All 17 available variables with descriptions
+ - User interface workflow
+ - 4 detailed examples with actual use cases
+ - Technical details on storage and expansion
+ - Best practices for message length, formatting, variable usage
+ - Troubleshooting guide
+ - Related documentation links
 
 **Updated**:
 - `README.md` - Added reference to new documentation in "Additional Documentation" section
@@ -144,8 +144,8 @@ Enhanced the alarm editor with comprehensive message configuration capabilities,
 2. Enter alarm details (name, condition)
 3. Select delivery methods (console, syslog, email, SMS, etc.)
 4. Choose message strategy:
-   - **Option A**: Leave "Use Default Message" checked → Single message for all channels
-   - **Option B**: Uncheck "Use Default Message" → Customize each channel independently
+ - **Option A**: Leave "Use Default Message" checked → Single message for all channels
+ - **Option B**: Uncheck "Use Default Message" → Customize each channel independently
 5. Use variable dropdown to insert weather/alarm data
 6. For email: Enter recipients, subject, body
 7. For SMS: Enter phone numbers, keep message short
@@ -174,31 +174,31 @@ Enhanced the alarm editor with comprehensive message configuration capabilities,
 **Simple Channels (Console/Syslog/EventLog)**:
 ```json
 {
-  "type": "console",
-  "template": "🚨 ALARM: {{alarm_name}}\nTemp: {{temperature_f}}°F"
+ "type": "console",
+ "template": "ALARM: {{alarm_name}}\nTemp: {{temperature_f}}°F"
 }
 ```
 
 **Email Channel**:
 ```json
 {
-  "type": "email",
-  "email": {
-    "to": ["user@example.com", "admin@example.com"],
-    "subject": "⚠️ Weather Alert: {{alarm_name}}",
-    "body": "Alert at {{timestamp}}\nTemp: {{temperature_f}}°F\nHumidity: {{humidity}}%"
-  }
+ "type": "email",
+ "email": {
+ "to": ["user@example.com", "admin@example.com"],
+ "subject": "Warning: Weather Alert: {{alarm_name}}",
+ "body": "Alert at {{timestamp}}\nTemp: {{temperature_f}}°F\nHumidity: {{humidity}}%"
+ }
 }
 ```
 
 **SMS Channel**:
 ```json
 {
-  "type": "sms",
-  "sms": {
-    "to": ["+15551234567", "+15559876543"],
-    "message": "{{alarm_name}}: {{temperature_f}}°F @ {{timestamp}}"
-  }
+ "type": "sms",
+ "sms": {
+ "to": ["+15551234567", "+15559876543"],
+ "message": "{{alarm_name}}: {{temperature_f}}°F @ {{timestamp}}"
+ }
 }
 ```
 
@@ -219,11 +219,11 @@ Existing alarms without custom messages continue to work:
 
 ## Testing Checklist
 
-✅ Build successful (no compilation errors)
-✅ HTML structure valid
-✅ JavaScript functions defined
-✅ CSS styling applied
-✅ Documentation complete
+Build successful (no compilation errors)
+HTML structure valid
+JavaScript functions defined
+CSS styling applied
+Documentation complete
 
 ### Manual Testing Required
 - [ ] Create new alarm with default message

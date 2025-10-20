@@ -211,17 +211,17 @@ LOG_LEVEL=info
 ### Service Won't Start
 
 1. **Check configuration file permissions:**
-   ```bash
-   sudo chown tempest:tempest /etc/tempest-homekit-go/config.env
-   sudo chmod 600 /etc/tempest-homekit-go/config.env
-   ```
+ ```bash
+ sudo chown tempest:tempest /etc/tempest-homekit-go/config.env
+ sudo chmod 600 /etc/tempest-homekit-go/config.env
+ ```
 
 2. **Verify WeatherFlow token is correct**
 
 3. **Check service logs:**
-   - Linux: `sudo journalctl -u tempest-homekit-go -f`
-   - macOS: `tail -f /var/log/tempest-homekit-go/tempest-homekit-go.log`
-   - Windows: `type "C:\ProgramData\Tempest HomeKit Go\logs\tempest-homekit-go.log"`
+ - Linux: `sudo journalctl -u tempest-homekit-go -f`
+ - macOS: `tail -f /var/log/tempest-homekit-go/tempest-homekit-go.log`
+ - Windows: `type "C:\ProgramData\Tempest HomeKit Go\logs\tempest-homekit-go.log"`
 
 ### Permission Issues
 

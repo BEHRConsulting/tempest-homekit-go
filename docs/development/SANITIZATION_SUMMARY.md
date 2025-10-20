@@ -2,13 +2,12 @@
 
 ## Changes Made (October 3, 2025)
 
-### ✅ Sensitive Data Removed from Source Code
+### Sensitive Data Removed from Source Code
 
 #### 1. **pkg/config/config.go**
 - **Before**: `Token: getEnvOrDefault("TEMPEST_TOKEN", "b88edc78-6261-414e-8042-86a4d4f9ba15")`
 - **After**: `Token: getEnvOrDefault("TEMPEST_TOKEN", "")`
-- **Before**: `StationName: getEnvOrDefault("TEMPEST_STATION_NAME", "Chino Hills")`  
-- **After**: `StationName: getEnvOrDefault("TEMPEST_STATION_NAME", "")`
+- **Before**: `StationName: getEnvOrDefault("TEMPEST_STATION_NAME", "Chino Hills")` - **After**: `StationName: getEnvOrDefault("TEMPEST_STATION_NAME", "")`
 - **Help text**: Updated to show these are required fields
 
 #### 2. **pkg/config/config_edge_cases_test.go**
@@ -34,36 +33,35 @@
 - Credential rotation procedures
 - Best practices for future development
 
-### ✅ Files Protected by .gitignore
+### Files Protected by .gitignore
 
 The following files will NEVER be committed:
 ```
-.env                 # Your personal config with real credentials
-.env.local          # Local overrides
-.env.*.local        # Environment-specific configs  
-db/                 # HomeKit pairing database
+.env # Your personal config with real credentials
+.env.local # Local overrides
+.env.*.local # Environment-specific configs db/ # HomeKit pairing database
 ```
 
-### ✅ Build and Tests Verified
+### Build and Tests Verified
 
 ```bash
 $ go build
-✓ Build successful
+ Build successful
 
 $ go test ./pkg/config/...
-✓ All tests passing
+ All tests passing
 
 $ git grep "b88edc78" -- '*.go'
-✓ No hardcoded tokens in Go source files
+ No hardcoded tokens in Go source files
 ```
 
 ## Git History Status
 
 ### Current State
-- **Source code (.go files)**: ✅ Sanitized - no sensitive data
-- **.env.example**: ✅ Contains only placeholder values
-- **.env**: ⚠️ User's local file (gitignored, not committed)
-- **Git history**: ⚠️ Previous commits may contain old values
+- **Source code (.go files)**: Sanitized - no sensitive data
+- **.env.example**: Contains only placeholder values
+- **.env**: Warning: User's local file (gitignored, not committed)
+- **Git history**: Warning: Previous commits may contain old values
 
 ### Historical Commits
 Old commits in Git history may still contain:
@@ -86,7 +84,7 @@ Old commits in Git history may still contain:
 5. Once revoked, old token in history is harmless
 
 #### Option C: Rewrite History (Nuclear Option)
-**⚠️ WARNING**: Only do this if absolutely necessary! This requires all collaborators to re-clone.
+**Warning: WARNING**: Only do this if absolutely necessary! This requires all collaborators to re-clone.
 
 ```bash
 # Backup first!
@@ -94,8 +92,8 @@ cd /path/to/tempest-homekit-go
 git clone . ../tempest-homekit-go-backup
 
 # Install git-filter-repo
-brew install git-filter-repo  # macOS
-pip install git-filter-repo    # Linux
+brew install git-filter-repo # macOS
+pip install git-filter-repo # Linux
 
 # Rewrite history
 git filter-repo --replace-text <(cat <<EOF
@@ -119,8 +117,7 @@ git push --force --tags origin
 ## Verification Checklist
 
 - [x] No hardcoded tokens in .go source files
-- [x] No hardcoded station names in .go source files  
-- [x] .env.example contains only placeholders
+- [x] No hardcoded station names in .go source files - [x] .env.example contains only placeholders
 - [x] .env is in .gitignore
 - [x] README.md updated with security warnings
 - [x] SECURITY.md created with detailed guidance
@@ -157,26 +154,22 @@ git diff --cached | grep -i "token\|password\|secret\|key"
 
 1. **Clone the repository**
 2. **Copy .env.example to .env**:
-   ```bash
-   cp .env.example .env
-   ```
+ ```bash
+ cp .env.example .env
+ ```
 3. **Edit .env with your credentials**:
-   ```bash
-   # Get token from https://tempestwx.com/settings/tokens
-   nano .env
-   ```
+ ```bash
+ # Get token from https://tempestwx.com/settings/tokens
+ nano .env
+ ```
 4. **Never commit .env** (already in .gitignore)
 
 ## Summary
 
-✅ **Source code is now sanitized**  
-✅ **No sensitive data in current commits**  
-✅ **Protected by .gitignore**  
-✅ **Documentation updated**  
-⚠️ **Git history may contain old values** (see options above)
+**Source code is now sanitized** **No sensitive data in current commits** **Protected by .gitignore** **Documentation updated** Warning: **Git history may contain old values** (see options above)
 
 The codebase is now safe to share publicly, provided you either:
 - Keep the repository private, OR
 - Rotate/revoke the old credentials
 
-**All future commits will be clean!** 🎉
+**All future commits will be clean!**

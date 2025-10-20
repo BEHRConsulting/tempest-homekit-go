@@ -21,9 +21,9 @@ Added comprehensive CSS styles for all tag selector components:
 #### 1. Container Layout
 ```css
 .tag-selector-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+ display: flex;
+ flex-direction: column;
+ gap: 10px;
 }
 ```
 - Vertical layout (selected tags on top, input below)
@@ -32,21 +32,21 @@ Added comprehensive CSS styles for all tag selector components:
 #### 2. Selected Tags Display
 ```css
 .selected-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    min-height: 40px;
-    padding: 8px;
-    border: 1px solid #ced4da;
-    border-radius: 6px;
-    background: #f8f9fa;
-    align-items: center;
+ display: flex;
+ flex-wrap: wrap;
+ gap: 8px;
+ min-height: 40px;
+ padding: 8px;
+ border: 1px solid #ced4da;
+ border-radius: 6px;
+ background: #f8f9fa;
+ align-items: center;
 }
 
 .selected-tags:empty::before {
-    content: "No tags selected";
-    color: #6c757d;
-    font-size: 13px;
+ content: "No tags selected";
+ color: #6c757d;
+ font-size: 13px;
 }
 ```
 - Flex layout with wrapping for multiple tags
@@ -57,23 +57,23 @@ Added comprehensive CSS styles for all tag selector components:
 #### 3. Individual Tag Badges
 ```css
 .selected-tag {
-    background: #667eea;
-    color: white;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 13px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+ background: #667eea;
+ color: white;
+ padding: 6px 12px;
+ border-radius: 4px;
+ font-size: 13px;
+ display: inline-flex;
+ align-items: center;
+ gap: 6px;
 }
 
 .selected-tag .remove-tag {
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 16px;
-    line-height: 1;
-    opacity: 0.8;
-    transition: opacity 0.2s;
+ cursor: pointer;
+ font-weight: bold;
+ font-size: 16px;
+ line-height: 1;
+ opacity: 0.8;
+ transition: opacity 0.2s;
 }
 ```
 - Purple badges with white text
@@ -83,17 +83,17 @@ Added comprehensive CSS styles for all tag selector components:
 #### 4. Search Input
 ```css
 .tag-search-input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ced4da;
-    border-radius: 6px;
-    font-size: 14px;
+ width: 100%;
+ padding: 10px;
+ border: 1px solid #ced4da;
+ border-radius: 6px;
+ font-size: 14px;
 }
 
 .tag-search-input:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+ outline: none;
+ border-color: #667eea;
+ box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 ```
 - Full-width input field
@@ -103,24 +103,24 @@ Added comprehensive CSS styles for all tag selector components:
 #### 5. Dropdown Menu
 ```css
 .tag-dropdown {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    max-height: 200px;
-    overflow-y: auto;
-    background: white;
-    border: 1px solid #ced4da;
-    border-top: none;
-    border-radius: 0 0 6px 6px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    z-index: 100;
-    margin-top: -1px;
+ display: none;
+ position: absolute;
+ top: 100%;
+ left: 0;
+ right: 0;
+ max-height: 200px;
+ overflow-y: auto;
+ background: white;
+ border: 1px solid #ced4da;
+ border-top: none;
+ border-radius: 0 0 6px 6px;
+ box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+ z-index: 100;
+ margin-top: -1px;
 }
 
 .tag-dropdown.active {
-    display: block;
+ display: block;
 }
 ```
 - Absolutely positioned below input
@@ -131,21 +131,21 @@ Added comprehensive CSS styles for all tag selector components:
 #### 6. Dropdown Items
 ```css
 .tag-dropdown-item {
-    padding: 10px;
-    cursor: pointer;
-    transition: background 0.2s;
-    font-size: 14px;
+ padding: 10px;
+ cursor: pointer;
+ transition: background 0.2s;
+ font-size: 14px;
 }
 
 .tag-dropdown-item:hover {
-    background: #f8f9fa;
+ background: #f8f9fa;
 }
 
 .tag-dropdown-item.new-tag {
-    background: #d4edda;
-    color: #155724;
-    font-weight: 600;
-    border-top: 1px solid #c3e6cb;
+ background: #d4edda;
+ color: #155724;
+ font-weight: 600;
+ border-top: 1px solid #c3e6cb;
 }
 ```
 - Hover effect for interactivity
@@ -158,19 +158,16 @@ Updated `renderSelectedTags()` to work with CSS empty state:
 
 ```javascript
 function renderSelectedTags() {
-    const container = document.getElementById('selectedTags');
-    
-    if (selectedTags.length === 0) {
-        container.innerHTML = '';  // Let CSS ::before handle empty state
-        return;
-    }
-    
-    container.innerHTML = selectedTags.map(tag => 
-        '<div class="selected-tag">' +
-            '<span>' + tag + '</span>' +
-            '<span class="remove-tag" onclick="removeTag(\'' + tag.replace(/'/g, "\\'") + '\')">×</span>' +
-        '</div>'
-    ).join('');
+ const container = document.getElementById('selectedTags');
+  if (selectedTags.length === 0) {
+ container.innerHTML = ''; // Let CSS ::before handle empty state
+ return;
+ }
+  container.innerHTML = selectedTags.map(tag =>  '<div class="selected-tag">' +
+ '<span>' + tag + '</span>' +
+ '<span class="remove-tag" onclick="removeTag(\'' + tag.replace(/'/g, "\\'") + '\')">×</span>' +
+ '</div>'
+ ).join('');
 }
 ```
 
@@ -178,43 +175,39 @@ function renderSelectedTags() {
 
 ### Before Fix
 ```
-Tags: _______________  (input field)
-tag1 tag2 tag3         (tags listed as plain text below)
+Tags: _______________ (input field)
+tag1 tag2 tag3 (tags listed as plain text below)
 existing-tag-1
-existing-tag-2         (dropdown items mixed with tags)
+existing-tag-2 (dropdown items mixed with tags)
 ```
 
 ### After Fix
 ```
 ┌─────────────────────────────────────┐
-│ [tag1 ×] [tag2 ×] [tag3 ×]         │  ← Selected tags in styled box
+│ [tag1 ×] [tag2 ×] [tag3 ×] │ ← Selected tags in styled box
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
-│ Search or add new tag...            │  ← Search input
+│ Search or add new tag... │ ← Search input
 └─────────────────────────────────────┘
-  ⬇️ (when focused)
+ ⬇️ (when focused)
 ┌─────────────────────────────────────┐
-│ existing-tag-1                      │  ← Dropdown below input
-│ existing-tag-2                      │
-│ + Add new tag: "search-term"        │  ← Green create option
+│ existing-tag-1 │ ← Dropdown below input
+│ existing-tag-2 │
+│ + Add new tag: "search-term" │ ← Green create option
 └─────────────────────────────────────┘
 ```
 
 ## Files Modified
 
 - **pkg/alarm/editor/html.go**
-  - Added 120+ lines of CSS styling
-  - Fixed JavaScript `renderSelectedTags()` function
-  - Proper layout with flex-direction: column
+ - Added 120+ lines of CSS styling
+ - Fixed JavaScript `renderSelectedTags()` function
+ - Proper layout with flex-direction: column
 
 ## Testing
 
-✅ **Build:** Successful  
-✅ **Tests:** All 6 editor tests passing  
-✅ **Visual:** Proper layout and styling  
-✅ **Functionality:** Tags display correctly, dropdown positioned properly  
-
+**Build:** Successful **Tests:** All 6 editor tests passing **Visual:** Proper layout and styling **Functionality:** Tags display correctly, dropdown positioned properly
 ## Benefits
 
 1. **Proper Layout:** Selected tags appear above input field
@@ -246,10 +239,10 @@ existing-tag-2         (dropdown items mixed with tags)
 ## Summary
 
 The tag selector now has complete CSS styling that matches the design intent:
-- ✅ Selected tags display in styled box above input
-- ✅ Dropdown appears below input when focused
-- ✅ Professional appearance with proper colors and spacing
-- ✅ Responsive layout that wraps multiple tags
-- ✅ Clear visual hierarchy and interaction patterns
+- Selected tags display in styled box above input
+- Dropdown appears below input when focused
+- Professional appearance with proper colors and spacing
+- Responsive layout that wraps multiple tags
+- Clear visual hierarchy and interaction patterns
 
 The fix ensures the tag selector works as designed with proper layout, styling, and user experience.

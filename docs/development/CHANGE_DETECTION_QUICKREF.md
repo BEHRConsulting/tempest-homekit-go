@@ -12,50 +12,50 @@
 
 ### Lightning Monitoring
 ```
-*lightning_count              → Any strike
-<lightning_distance          → Getting closer
-*lightning_count && lightning_distance < 10  → Strike within 10km
+*lightning_count → Any strike
+<lightning_distance → Getting closer
+*lightning_count && lightning_distance < 10 → Strike within 10km
 ```
 
 ### Rain Detection
 ```
->rain_rate                   → Rain starting or increasing
->rain_rate && rain_rate > 5  → Heavy rain onset
+>rain_rate → Rain starting or increasing
+>rain_rate && rain_rate > 5 → Heavy rain onset
 ```
 
 ### Storm Approach
 ```
-<pressure                    → Pressure dropping
+<pressure → Pressure dropping
 <pressure && pressure < 1000 → Rapid pressure drop
-<pressure && >wind_speed     → Storm approaching (falling pressure + rising wind)
+<pressure && >wind_speed → Storm approaching (falling pressure + rising wind)
 ```
 
 ### Wind Monitoring
 ```
->wind_gust                   → Wind strengthening
->wind_speed || >wind_gust    → Any wind increase
+>wind_gust → Wind strengthening
+>wind_speed || >wind_gust → Any wind increase
 >wind_gust && wind_gust > 15 → Strong wind strengthening
 ```
 
 ### Temperature Changes
 ```
->temperature                 → Warming
-<temperature                 → Cooling
->temperature && temperature > 35  → Heat wave
-<temperature && temperature < 0   → Freeze approaching
+>temperature → Warming
+<temperature → Cooling
+>temperature && temperature > 35 → Heat wave
+<temperature && temperature < 0 → Freeze approaching
 ```
 
 ### Humidity Changes
 ```
->humidity                    → Humidity rising
->humidity && temperature > 30     → Muggy conditions
-<humidity && humidity < 30        → Drying out
+>humidity → Humidity rising
+>humidity && temperature > 30 → Muggy conditions
+<humidity && humidity < 30 → Drying out
 ```
 
 ### UV Index
 ```
->uv                         → UV increasing
->uv && uv > 8              → Dangerous UV levels
+>uv → UV increasing
+>uv && uv > 8 → Dangerous UV levels
 ```
 
 ## All Supported Fields
@@ -138,16 +138,16 @@ Change detection works with unit suffixes:
 ### First Observation
 The first observation establishes a baseline and will NOT trigger:
 ```
-Obs 1: lightning_count=0  → No trigger (baseline)
-Obs 2: lightning_count=1  → TRIGGER (changed!)
+Obs 1: lightning_count=0 → No trigger (baseline)
+Obs 2: lightning_count=1 → TRIGGER (changed!)
 ```
 
 ### Cooldown
 Use cooldown to prevent spam on rapidly changing values:
 ```json
 {
-  "condition": "*lightning_count",
-  "cooldown": 60
+ "condition": "*lightning_count",
+ "cooldown": 60
 }
 ```
 Will only notify once per minute, even if multiple strikes occur.
@@ -161,11 +161,11 @@ Will only notify once per minute, even if multiple strikes occur.
 
 ### Simple Examples
 ```json
-{"condition": "*lightning_count"}         // Any lightning
-{"condition": ">rain_rate"}              // Rain increasing
-{"condition": "<lightning_distance"}     // Lightning closer
-{"condition": "<pressure"}               // Pressure falling
-{"condition": ">wind_gust"}              // Wind strengthening
+{"condition": "*lightning_count"} // Any lightning
+{"condition": ">rain_rate"} // Rain increasing
+{"condition": "<lightning_distance"} // Lightning closer
+{"condition": "<pressure"} // Pressure falling
+{"condition": ">wind_gust"} // Wind strengthening
 ```
 
 ### Compound Examples
@@ -179,11 +179,11 @@ Will only notify once per minute, even if multiple strikes occur.
 ### Complex Examples
 ```json
 {
-  "condition": "(*lightning_count && lightning_distance < 15) || (>wind_gust && wind_gust > 15)"
+ "condition": "(*lightning_count && lightning_distance < 15) || (>wind_gust && wind_gust > 15)"
 }
 
 {
-  "condition": "<pressure && pressure < 1000 && (>wind_speed || >rain_rate)"
+ "condition": "<pressure && pressure < 1000 && (>wind_speed || >rain_rate)"
 }
 ```
 
@@ -192,9 +192,9 @@ Will only notify once per minute, even if multiple strikes occur.
 1. Open alarm editor: `./tempest-homekit-go --alarm-editor @alarms.json --port 8081`
 2. Create new alarm
 3. In condition field, use change operators:
-   - `*lightning_count`
-   - `>rain_rate`
-   - `<lightning_distance`
+ - `*lightning_count`
+ - `>rain_rate`
+ - `<lightning_distance`
 4. Click sensor names to insert them
 5. Add operators before field name
 6. Combine with thresholds and logical operators
@@ -218,5 +218,5 @@ Will only notify once per minute, even if multiple strikes occur.
 ## See Also
 
 - [Full Documentation](CHANGE_DETECTION_OPERATORS.md) - Detailed explanation
-- [Example Config](examples/alarms-with-change-detection.json) - Ready-to-use examples
+- [Example Config](../../examples/alarms-with-change-detection.json) - Ready-to-use examples
 - [Unit Conversion](UNIT_CONVERSION_SUPPORT.md) - Temperature and wind units

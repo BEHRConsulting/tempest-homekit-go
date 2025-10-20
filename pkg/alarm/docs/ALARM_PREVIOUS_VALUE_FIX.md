@@ -10,7 +10,7 @@ When alarms with change detection operators (`*field`, `>field`, `<field`) trigg
 **Example:**
 ```
 Debug log: Change detected in wind_speed: 0.30 -> 0.20
-Notification: Last Wind Speed: 0.2  ❌ WRONG (should be 0.3)
+Notification: Last Wind Speed: 0.2 WRONG (should be 0.3)
 ```
 
 **Root Cause:**
@@ -20,42 +20,42 @@ The `SetPreviousValue()` method was called immediately after comparison but befo
 Added a `triggerContext` map to the `Alarm` struct that captures the comparison values at trigger time:
 
 1. **New field added to Alarm:**
-   ```go
-   triggerContext map[string]float64 // Values at time of trigger
-   ```
+ ```go
+ triggerContext map[string]float64 // Values at time of trigger
+ ```
 
 2. **New methods:**
-   ```go
-   GetTriggerValue(field) (float64, bool)  // Retrieve trigger context value
-   SetTriggerContext(values)                // Store trigger context
-   ```
+ ```go
+ GetTriggerValue(field) (float64, bool) // Retrieve trigger context value
+ SetTriggerContext(values) // Store trigger context
+ ```
 
 3. **Updated evaluation flow:**
-   ```go
-   // In evaluateChangeDetection():
-   if triggered {
-       // Store the PREVIOUS value before updating
-       alarm.SetTriggerContext(map[string]float64{fieldName: previousValue})
-   }
-   alarm.SetPreviousValue(fieldName, currentValue)  // Update for next time
-   ```
+ ```go
+ // In evaluateChangeDetection():
+ if triggered {
+ // Store the PREVIOUS value before updating
+ alarm.SetTriggerContext(map[string]float64{fieldName: previousValue})
+ }
+ alarm.SetPreviousValue(fieldName, currentValue) // Update for next time
+ ```
 
 4. **Updated template expansion:**
-   ```go
-   // Try trigger context first (most accurate), fall back to previousValue
-   if lastWindSpeed, ok := alarm.GetTriggerValue("wind_speed"); ok {
-       replacements["{{last_wind_speed}}"] = fmt.Sprintf("%.1f", lastWindSpeed)
-   } else if lastWindSpeed, ok := alarm.GetPreviousValue("wind_speed"); ok {
-       replacements["{{last_wind_speed}}"] = fmt.Sprintf("%.1f", lastWindSpeed)
-   } else {
-       replacements["{{last_wind_speed}}"] = "N/A"
-   }
-   ```
+ ```go
+ // Try trigger context first (most accurate), fall back to previousValue
+ if lastWindSpeed, ok := alarm.GetTriggerValue("wind_speed"); ok {
+ replacements["{{last_wind_speed}}"] = fmt.Sprintf("%.1f", lastWindSpeed)
+ } else if lastWindSpeed, ok := alarm.GetPreviousValue("wind_speed"); ok {
+ replacements["{{last_wind_speed}}"] = fmt.Sprintf("%.1f", lastWindSpeed)
+ } else {
+ replacements["{{last_wind_speed}}"] = "N/A"
+ }
+ ```
 
 **Result:**
 ```
 Debug log: Change detected in wind_speed: 0.10 -> 0.20
-Notification: Last Wind Speed: 0.1  ✅ CORRECT
+Notification: Last Wind Speed: 0.1 CORRECT
 ```
 
 ### Issue 2: Unsorted Sensor Buttons in Alarm Editor
@@ -65,14 +65,12 @@ The sensor field buttons in the alarm editor condition section were not in alpha
 
 **Before:**
 ```
-temperature humidity pressure wind_speed wind_gust wind_direction 
-lux uv rain_rate rain_daily lightning_count lightning_distance
+temperature humidity pressure wind_speed wind_gust wind_direction lux uv rain_rate rain_daily lightning_count lightning_distance
 ```
 
 **After (Alphabetized):**
 ```
-humidity lightning_count lightning_distance lux pressure rain_daily 
-rain_rate temperature uv wind_direction wind_gust wind_speed
+humidity lightning_count lightning_distance lux pressure rain_daily rain_rate temperature uv wind_direction wind_gust wind_speed
 ```
 
 **Solution:**
@@ -111,33 +109,33 @@ Tests the fix by:
 **Test Results:**
 ```
 Debug log shows:
-  Change detected in wind_speed: 0.10 -> 0.20
+ Change detected in wind_speed: 0.10 -> 0.20
 
 Notification shows:
-  Wind speed: 0.2
-  Last Wind Speed: 0.1
+ Wind speed: 0.2
+ Last Wind Speed: 0.1
 
-✅ Previous value correct! (0.1 matches 0.10)
+Previous value correct! (0.1 matches 0.10)
 ```
 
 ### Manual Testing
 
 1. Create an alarm with change detection:
-   ```json
-   {
-     "condition": "*wind_speed",
-     "channels": [{
-       "type": "console",
-       "template": "Wind: {{wind_speed}} (was {{last_wind_speed}})"
-     }]
-   }
-   ```
+ ```json
+ {
+ "condition": "*wind_speed",
+ "channels": [{
+ "type": "console",
+ "template": "Wind: {{wind_speed}} (was {{last_wind_speed}})"
+ }]
+ }
+ ```
 
 2. Run application and wait for wind to change
 
 3. Check notification shows:
-   - Current value in `{{wind_speed}}`
-   - Previous value in `{{last_wind_speed}}` (should match debug log)
+ - Current value in `{{wind_speed}}`
+ - Previous value in `{{last_wind_speed}}` (should match debug log)
 
 ## Impact
 
@@ -165,7 +163,7 @@ Works correctly for all 12 previous value variables:
 
 ### Temperature Increase Alert
 ```
-🚨 ALARM: Temperature Rising
+ALARM: Temperature Rising
 Temp increased from {{last_temperature}}°C to {{temperature}}°C
 Increase: [calculate manually] °C
 ```
@@ -174,7 +172,7 @@ Now correctly shows the previous temperature, not the current one.
 
 ### Wind Speed Monitoring
 ```
-🚨 ALARM: Wind Change
+ALARM: Wind Change
 Current: {{wind_speed}} m/s
 Previous: {{last_wind_speed}} m/s
 ```
@@ -183,7 +181,7 @@ Both values are now accurate.
 
 ### Lux Change Detection
 ```
-🚨 ALARM: Light Changed
+ALARM: Light Changed
 From {{last_lux}} lux → {{lux}} lux
 ```
 
@@ -194,31 +192,30 @@ Shows actual before/after values.
 ### Trigger Context Lifecycle
 
 1. **Baseline Establishment** (First observation)
-   ```
-   previousValue: {} (empty)
-   triggerContext: {} (empty)
-   Result: No trigger, establish baseline
-   ```
+ ```
+ previousValue: {} (empty)
+ triggerContext: {} (empty)
+ Result: No trigger, establish baseline
+ ```
 
 2. **Change Detection** (Second observation)
-   ```
-   previousValue: {wind_speed: 0.3}
-   Compare: 0.2 != 0.3 → Trigger!
-   triggerContext: {wind_speed: 0.3}  ← Store for notification
-   previousValue: {wind_speed: 0.2}   ← Update for next time
-   ```
+ ```
+ previousValue: {wind_speed: 0.3}
+ Compare: 0.2 != 0.3 → Trigger!
+ triggerContext: {wind_speed: 0.3} ← Store for notification
+ previousValue: {wind_speed: 0.2} ← Update for next time
+ ```
 
 3. **Notification Expansion**
-   ```
-   {{wind_speed}} → 0.2 (from observation)
-   {{last_wind_speed}} → 0.3 (from triggerContext) ✅
-   ```
+ ```
+ {{wind_speed}} → 0.2 (from observation)
+ {{last_wind_speed}} → 0.3 (from triggerContext)  ```
 
 4. **Next Evaluation**
-   ```
-   previousValue: {wind_speed: 0.2}  ← Ready for next comparison
-   triggerContext: {wind_speed: 0.3} ← Stale, but irrelevant
-   ```
+ ```
+ previousValue: {wind_speed: 0.2} ← Ready for next comparison
+ triggerContext: {wind_speed: 0.3} ← Stale, but irrelevant
+ ```
 
 ### Why This Works
 
@@ -229,7 +226,7 @@ Shows actual before/after values.
 
 ## Backwards Compatibility
 
-✅ **Fully compatible:**
+**Fully compatible:**
 - Existing alarm configs work unchanged
 - Non-change-detection alarms unaffected
 - `{{last_*}}` variables work for all alarm types

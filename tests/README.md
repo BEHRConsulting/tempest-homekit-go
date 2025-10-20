@@ -24,10 +24,10 @@ go build
 Notes
 -----
 - Many scripts are time-based (long sleeps) because they simulate real polling intervals. Expect
-  some scripts to run several minutes.
+ some scripts to run several minutes.
 - Scripts write logs to `/tmp/*.log` (see the script headers). Adjust paths as needed.
 - These scripts are intended for local/manual testing only. For CI use, convert them into
-  deterministic Go tests or shorten polling intervals to avoid long-running jobs.
+ deterministic Go tests or shorten polling intervals to avoid long-running jobs.
 
 Scripts
 -------

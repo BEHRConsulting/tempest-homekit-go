@@ -14,15 +14,15 @@ This document describes the new validation and paraphrase functionality added to
 - `pkg/alarm/editor/html.go` - Changed Save button type from button to submit
 
 ### 2. Added Condition Validation Button
-**Feature:** Added a "✓ Validate Condition" button next to the condition textarea.
+**Feature:** Added a " Validate Condition" button next to the condition textarea.
 
 **Behavior:**
-- Validates the condition syntax against the evaluator
+- Validates the condition syntax against the evaluator.
 - Shows a color-coded result message:
-  - ✓ Green background for valid conditions
-  - ✗ Red background for invalid conditions
-  - ⚠ Yellow background for warnings
-- Displays a human-readable paraphrase of valid conditions
+ - Green background for valid conditions
+ - Red background for invalid conditions
+ - Yellow background for warnings
+- Displays a human-readable paraphrase of valid conditions.
 
 **Files Changed:**
 - `pkg/alarm/editor/html.go` - Added validate button and result div
@@ -69,16 +69,16 @@ This document describes the new validation and paraphrase functionality added to
 **API Response:**
 ```json
 {
-  "valid": true,
-  "paraphrase": "When temperature exceeds 85°F"
+ "valid": true,
+ "paraphrase": "When temperature exceeds 85°F"
 }
 ```
 
 Or for invalid conditions:
 ```json
 {
-  "valid": false,
-  "error": "unknown field: fake_field"
+ "valid": false,
+ "error": "unknown field: fake_field"
 }
 ```
 
@@ -109,7 +109,7 @@ Or for invalid conditions:
 All tests pass successfully:
 ```
 go test -cover ./pkg/alarm/
-ok      tempest-homekit-go/pkg/alarm    5.291s  coverage: 68.4% of statements
+ok tempest-homekit-go/pkg/alarm 5.291s coverage: 68.4% of statements
 ```
 
 Coverage increased from 66.5% to 68.4% (+1.9%).
@@ -125,14 +125,14 @@ Coverage increased from 66.5% to 68.4% (+1.9%).
 
 ### After:
 1. User enters condition
-2. User clicks "✓ Validate Condition" button (optional)
-   - Sees immediate validation result
-   - Sees human-readable explanation of what the condition means
+2. User clicks " Validate Condition" button (optional)
+ - Sees immediate validation result
+ - Sees human-readable explanation of what the condition means
 3. User clicks Save
-   - **Save button now works properly** (fixed)
-   - Condition is automatically validated
-   - Clear error message if condition is invalid
-   - Only saves if condition is valid
+ - **Save button now works properly** (fixed)
+ - Condition is automatically validated
+ - Clear error message if condition is invalid
+ - Only saves if condition is valid
 
 ## Examples
 
@@ -161,12 +161,12 @@ Coverage increased from 66.5% to 68.4% (+1.9%).
 ### Paraphrase Algorithm
 1. Parse condition into parts (splitting on && or ||)
 2. For each part:
-   - Detect unary operators (*, >, <) for change detection
-   - Detect binary operators (>=, <=, !=, ==, >, <) for comparisons
-   - Extract field name and value
-   - Format field name (e.g., "wind_speed" → "wind speed")
-   - Format value with units (e.g., "85F" → "85°F")
-   - Convert operator to human text (e.g., ">" → "exceeds")
+ - Detect unary operators (*, >, <) for change detection
+ - Detect binary operators (>=, <=, !=, ==, >, <) for comparisons
+ - Extract field name and value
+ - Format field name (e.g., "wind_speed" → "wind speed")
+ - Format value with units (e.g., "85F" → "85°F")
+ - Convert operator to human text (e.g., ">" → "exceeds")
 3. Combine parts with AND/OR connectors
 
 ### Supported Fields

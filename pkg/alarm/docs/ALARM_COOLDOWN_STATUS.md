@@ -1,8 +1,6 @@
 # Alarm Cooldown Status Display
 
-**Date**: October 10, 2025  
-**Feature**: Web console alarm cooldown status  
-**Status**: ✅ **IMPLEMENTED**
+**Date**: October 10, 2025 **Feature**: Web console alarm cooldown status **Status**: **IMPLEMENTED**
 
 ---
 
@@ -32,23 +30,23 @@ The `/api/alarm-status` endpoint now includes cooldown information for each alar
 
 ```json
 {
-  "enabled": true,
-  "configPath": "tempest-alarms.json",
-  "totalAlarms": 4,
-  "enabledAlarms": 4,
-  "alarms": [
-    {
-      "name": "Test Cooldown",
-      "description": "Test alarm with 120 second cooldown",
-      "enabled": true,
-      "condition": "*wind_speed",
-      "cooldown": 120,
-      "cooldownRemaining": 104,
-      "inCooldown": true,
-      "lastTriggered": "2025-10-10 21:03:19",
-      "channels": ["console"]
-    }
-  ]
+ "enabled": true,
+ "configPath": "tempest-alarms.json",
+ "totalAlarms": 4,
+ "enabledAlarms": 4,
+ "alarms": [
+ {
+ "name": "Test Cooldown",
+ "description": "Test alarm with 120 second cooldown",
+ "enabled": true,
+ "condition": "*wind_speed",
+ "cooldown": 120,
+ "cooldownRemaining": 104,
+ "inCooldown": true,
+ "lastTriggered": "2025-10-10 21:03:19",
+ "channels": ["console"]
+ }
+ ]
 }
 ```
 
@@ -62,7 +60,7 @@ The alarm status card in the web dashboard now shows:
 
 #### When Alarm is Ready (Not in Cooldown)
 ```
-✓ Ready (cooldown: 120s)
+ Ready (cooldown: 120s)
 ```
 - Green text color
 - Shows configured cooldown duration
@@ -70,7 +68,7 @@ The alarm status card in the web dashboard now shows:
 
 #### When Alarm is in Cooldown
 ```
-⏳ Cooldown: 1m 44s remaining
+Cooldown: 1m 44s remaining
 ```
 - Orange/warning text color
 - Shows time remaining in human-readable format (minutes and seconds)
@@ -88,20 +86,20 @@ Added methods to calculate and check cooldown status:
 
 ```go
 func (a *Alarm) GetCooldownRemaining() int {
-    if !a.Enabled || a.Cooldown == 0 {
-        return 0
-    }
-    elapsed := time.Since(a.lastFired)
-    cooldownDuration := time.Duration(a.Cooldown) * time.Second
-    if elapsed >= cooldownDuration {
-        return 0
-    }
-    remaining := cooldownDuration - elapsed
-    return int(remaining.Seconds())
+ if !a.Enabled || a.Cooldown == 0 {
+ return 0
+ }
+ elapsed := time.Since(a.lastFired)
+ cooldownDuration := time.Duration(a.Cooldown) * time.Second
+ if elapsed >= cooldownDuration {
+ return 0
+ }
+ remaining := cooldownDuration - elapsed
+ return int(remaining.Seconds())
 }
 
 func (a *Alarm) IsInCooldown() bool {
-    return a.GetCooldownRemaining() > 0
+ return a.GetCooldownRemaining() > 0
 }
 ```
 
@@ -110,16 +108,16 @@ func (a *Alarm) IsInCooldown() bool {
 Updated `AlarmStatus` struct:
 ```go
 type AlarmStatus struct {
-    Name              string   `json:"name"`
-    Description       string   `json:"description"`
-    Enabled           bool     `json:"enabled"`
-    Condition         string   `json:"condition"`
-    Tags              []string `json:"tags"`
-    Channels          []string `json:"channels"`
-    LastTriggered     string   `json:"lastTriggered"`
-    Cooldown          int      `json:"cooldown"`
-    CooldownRemaining int      `json:"cooldownRemaining"` // NEW
-    InCooldown        bool     `json:"inCooldown"`        // NEW
+ Name string `json:"name"`
+ Description string `json:"description"`
+ Enabled bool `json:"enabled"`
+ Condition string `json:"condition"`
+ Tags []string `json:"tags"`
+ Channels []string `json:"channels"`
+ LastTriggered string `json:"lastTriggered"`
+ Cooldown int `json:"cooldown"`
+ CooldownRemaining int `json:"cooldownRemaining"` // NEW
+ InCooldown bool `json:"inCooldown"` // NEW
 }
 ```
 
@@ -129,9 +127,9 @@ cooldownRemaining := alm.GetCooldownRemaining()
 inCooldown := alm.IsInCooldown()
 
 alarmStatuses = append(alarmStatuses, AlarmStatus{
-    // ... other fields ...
-    CooldownRemaining: cooldownRemaining,
-    InCooldown:        inCooldown,
+ // ... other fields ...
+ CooldownRemaining: cooldownRemaining,
+ InCooldown: inCooldown,
 })
 ```
 
@@ -146,14 +144,14 @@ Enhanced `updateAlarmStatus()` function to display cooldown information:
 const cooldown = document.createElement('div');
 cooldown.className = 'alarm-item-cooldown';
 if (alarm.inCooldown) {
-    const minutes = Math.floor(alarm.cooldownRemaining / 60);
-    const seconds = alarm.cooldownRemaining % 60;
-    const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-    cooldown.textContent = `⏳ Cooldown: ${timeStr} remaining`;
-    cooldown.style.color = 'var(--warning-color, #ff9800)';
+ const minutes = Math.floor(alarm.cooldownRemaining / 60);
+ const seconds = alarm.cooldownRemaining % 60;
+ const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+ cooldown.textContent = `Cooldown: ${timeStr} remaining`;
+ cooldown.style.color = 'var(--warning-color, #ff9800)';
 } else {
-    cooldown.textContent = `✓ Ready (cooldown: ${alarm.cooldown}s)`;
-    cooldown.style.color = 'var(--success-color, #4caf50)';
+ cooldown.textContent = ` Ready (cooldown: ${alarm.cooldown}s)`;
+ cooldown.style.color = 'var(--success-color, #4caf50)';
 }
 ```
 
@@ -177,21 +175,21 @@ An alarm with a 30-minute (1800s) cooldown just fired:
 **API Response:**
 ```json
 {
-  "name": "Hot outside",
-  "cooldown": 1800,
-  "cooldownRemaining": 1795,
-  "inCooldown": true,
-  "lastTriggered": "2025-10-10 21:00:00"
+ "name": "Hot outside",
+ "cooldown": 1800,
+ "cooldownRemaining": 1795,
+ "inCooldown": true,
+ "lastTriggered": "2025-10-10 21:00:00"
 }
 ```
 
 **Web Display:**
 ```
-🔔 Hot outside
+Alert: Hot outside
 Condition: temp > 85
 Last: 2025-10-10 21:00:00
 Channels: console, syslog
-⏳ Cooldown: 29m 55s remaining
+Cooldown: 29m 55s remaining
 ```
 
 ### Scenario 2: Alarm Ready to Fire
@@ -201,21 +199,21 @@ An alarm that hasn't fired recently or has completed its cooldown:
 **API Response:**
 ```json
 {
-  "name": "Wind Change",
-  "cooldown": 10,
-  "cooldownRemaining": 0,
-  "inCooldown": false,
-  "lastTriggered": "2025-10-10 20:55:00"
+ "name": "Wind Change",
+ "cooldown": 10,
+ "cooldownRemaining": 0,
+ "inCooldown": false,
+ "lastTriggered": "2025-10-10 20:55:00"
 }
 ```
 
 **Web Display:**
 ```
-🔔 Wind Change
+Alert: Wind Change
 Condition: *wind_speed
 Last: 2025-10-10 20:55:00
 Channels: console, oslog
-✓ Ready (cooldown: 10s)
+ Ready (cooldown: 10s)
 ```
 
 ### Scenario 3: Alarm Never Triggered
@@ -225,21 +223,21 @@ A newly configured alarm that hasn't fired yet:
 **API Response:**
 ```json
 {
-  "name": "Lightning Nearby",
-  "cooldown": 1800,
-  "cooldownRemaining": 0,
-  "inCooldown": false,
-  "lastTriggered": "Never"
+ "name": "Lightning Nearby",
+ "cooldown": 1800,
+ "cooldownRemaining": 0,
+ "inCooldown": false,
+ "lastTriggered": "Never"
 }
 ```
 
 **Web Display:**
 ```
-🔔 Lightning Nearby
+Alert: Lightning Nearby
 Condition: *lightning_count
 Last: Never
 Channels: console, syslog
-✓ Ready (cooldown: 1800s)
+ Ready (cooldown: 1800s)
 ```
 
 ---
@@ -266,10 +264,10 @@ curl -s http://localhost:8080/api/alarm-status | python3 -m json.tool
 
 # Monitor specific alarm cooldown
 curl -s http://localhost:8080/api/alarm-status | \
-  python3 -c "import sys, json; \
-  data=json.load(sys.stdin); \
-  alarm=[a for a in data['alarms'] if a['name']=='Wind Change'][0]; \
-  print(f\"Cooldown: {alarm['cooldownRemaining']}s remaining, In cooldown: {alarm['inCooldown']}\")"
+ python3 -c "import sys, json; \
+ data=json.load(sys.stdin); \
+ alarm=[a for a in data['alarms'] if a['name']=='Wind Change'][0]; \
+ print(f\"Cooldown: {alarm['cooldownRemaining']}s remaining, In cooldown: {alarm['inCooldown']}\")"
 ```
 
 ### Test with Long Cooldown
@@ -278,21 +276,21 @@ Create a test alarm with a long cooldown to observe the countdown:
 
 ```json
 {
-  "alarms": [
-    {
-      "name": "Test Cooldown",
-      "description": "Test alarm with 2 minute cooldown",
-      "enabled": true,
-      "condition": "*wind_speed",
-      "cooldown": 120,
-      "channels": [
-        {
-          "type": "console",
-          "template": "Test alarm triggered"
-        }
-      ]
-    }
-  ]
+ "alarms": [
+ {
+ "name": "Test Cooldown",
+ "description": "Test alarm with 2 minute cooldown",
+ "enabled": true,
+ "condition": "*wind_speed",
+ "cooldown": 120,
+ "channels": [
+ {
+ "type": "console",
+ "template": "Test alarm triggered"
+ }
+ ]
+ }
+ ]
 }
 ```
 
@@ -300,12 +298,12 @@ Monitor the cooldown countdown:
 ```bash
 # After alarm triggers
 while true; do
-  curl -s http://localhost:8080/api/alarm-status | \
-    python3 -c "import sys, json; \
-    data=json.load(sys.stdin); \
-    alarm=[a for a in data['alarms'] if a['name']=='Test Cooldown'][0]; \
-    print(f\"Remaining: {alarm['cooldownRemaining']}s\")"
-  sleep 5
+ curl -s http://localhost:8080/api/alarm-status | \
+ python3 -c "import sys, json; \
+ data=json.load(sys.stdin); \
+ alarm=[a for a in data['alarms'] if a['name']=='Test Cooldown'][0]; \
+ print(f\"Remaining: {alarm['cooldownRemaining']}s\")"
+ sleep 5
 done
 ```
 
@@ -315,18 +313,18 @@ done
 
 ### Ready State (Green)
 ```
-✓ Ready (cooldown: 10s)
+ Ready (cooldown: 10s)
 ```
 - Color: `var(--success-color, #4caf50)` (green)
-- Icon: ✓ (checkmark)
+- Icon:  (checkmark)
 - Message: Shows configured cooldown duration
 
 ### Cooldown State (Orange)
 ```
-⏳ Cooldown: 1m 44s remaining
+Cooldown: 1m 44s remaining
 ```
 - Color: `var(--warning-color, #ff9800)` (orange)
-- Icon: ⏳ (hourglass)
+- Icon: (hourglass)
 - Message: Shows time remaining with automatic formatting
 
 ### Time Formatting
@@ -338,10 +336,10 @@ done
 
 ## Related Documentation
 
-- [Alarm System Overview](pkg/alarm/README.md)
-- [Web Console Alarm Status Card](WEB_ALARM_STATUS_CARD.md)
+- [Alarm System Overview](../README.md)
+- [Web Console Alarm Status Card](../../../docs/development/WEB_ALARM_STATUS_CARD.md)
 - [Alarm Configuration Guide](ALARM_EDITOR_MESSAGES.md)
-- [Change Detection Operators](CHANGE_DETECTION_OPERATORS.md)
+- [Change Detection Operators](../../../docs/development/CHANGE_DETECTION_OPERATORS.md)
 
 ---
 
@@ -360,9 +358,9 @@ Potential future improvements:
 ## Conclusion
 
 The cooldown status display provides critical visibility into alarm availability, helping users:
-- ✅ Understand why alarms may not be triggering
-- ✅ Monitor alarm readiness in real-time
-- ✅ Troubleshoot alarm configuration issues
-- ✅ Plan around cooldown periods
+- Understand why alarms may not be triggering
+- Monitor alarm readiness in real-time
+- Troubleshoot alarm configuration issues
+- Plan around cooldown periods
 
 The feature integrates seamlessly with the existing alarm system and requires no configuration changes to existing alarm definitions.

@@ -16,19 +16,19 @@ The `homekit` package handles Apple HomeKit integration for the Tempest HomeKit 
 **HomeKit Architecture:**
 ```go
 type HomeKitService struct {
-    Bridge      *accessory.Bridge
-    Server      *hap.Server
-    Accessories []hap.Accessory
-    // Individual sensor accessories
-    Temperature  *accessory.TemperatureSensor
-    WindSpeed    *WeatherAccessory
-    WindGust     *WeatherAccessory
-    WindDirection *WeatherAccessory
-    Humidity     *WeatherAccessory
-    Rain         *WeatherAccessory
-    UV           *WeatherAccessory
-    Lightning    *WeatherAccessory
-    Light        *WeatherAccessory
+ Bridge *accessory.Bridge
+ Server *hap.Server
+ Accessories []hap.Accessory
+ // Individual sensor accessories
+ Temperature *accessory.TemperatureSensor
+ WindSpeed *WeatherAccessory
+ WindGust *WeatherAccessory
+ WindDirection *WeatherAccessory
+ Humidity *WeatherAccessory
+ Rain *WeatherAccessory
+ UV *WeatherAccessory
+ Lightning *WeatherAccessory
+ Light *WeatherAccessory
 }
 ```
 
@@ -64,9 +64,9 @@ type HomeKitService struct {
 
 ### Standard HomeKit Sensor
 1. **Temperature Sensor** - Uses native HomeKit temperature characteristic
-   - Displays in Celsius (HomeKit standard)
-   - Compatible with all HomeKit apps
-   - Automatic temperature conversion by iOS
+ - Displays in Celsius (HomeKit standard)
+ - Compatible with all HomeKit apps
+ - Automatic temperature conversion by iOS
 
 ### Custom Weather Sensors (10 Accessories)
 1. **Wind Speed** - Average wind speed (mph/kph)
@@ -90,7 +90,7 @@ import "tempest-homekit-go/pkg/config"
 cfg := config.LoadConfig()
 hkService, err := homekit.SetupHomeKit(cfg)
 if err != nil {
-    log.Fatal("Failed to setup HomeKit:", err)
+ log.Fatal("Failed to setup HomeKit:", err)
 }
 
 // Start the HomeKit server
@@ -103,7 +103,7 @@ go hkService.StartHomeKitServer(ctx)
 // Update all sensors with new weather data
 err := hkService.UpdateAllSensors(weatherData)
 if err != nil {
-    log.Printf("Failed to update sensors: %v", err)
+ log.Printf("Failed to update sensors: %v", err)
 }
 ```
 

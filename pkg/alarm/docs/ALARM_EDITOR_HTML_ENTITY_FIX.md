@@ -77,10 +77,10 @@ Content-Type: application/javascript
 Content-Length: 14424
 ```
 
-✅ Page loads correctly
-✅ CSS loads correctly (9.5 KB)
-✅ JavaScript loads correctly (14.4 KB)
-✅ All static assets accessible
+Page loads correctly
+CSS loads correctly (9.5 KB)
+JavaScript loads correctly (14.4 KB)
+All static assets accessible
 
 ## Browser Display
 The help text now correctly displays as:
@@ -95,8 +95,8 @@ Also added error handling to the `handleIndex` function to log template executio
 
 ```go
 if err := tmpl.Execute(w, data); err != nil {
-    logger.Error("Failed to execute template: %v", err)
-    http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+ logger.Error("Failed to execute template: %v", err)
+ http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 }
 ```
 
@@ -115,31 +115,30 @@ go build
 open http://localhost:8081
 ```
 
-Expected result: 
-- Page loads with full UI
+Expected result: - Page loads with full UI
 - Help text displays correctly: `>field (increase), <field (decrease)`
 - All styling and JavaScript functionality works
 
 ## Lessons Learned
 
 1. **HTML Entity Escaping Required**
-   - Always escape `<`, `>`, `&`, `"`, and `'` in HTML content
-   - Use `&lt;`, `&gt;`, `&amp;`, `&quot;`, `&apos;` respectively
+ - Always escape `<`, `>`, `&`, `"`, and `'` in HTML content
+ - Use `&lt;`, `&gt;`, `&amp;`, `&quot;`, `&apos;` respectively
 
 2. **Template Error Handling**
-   - Always check template execution errors
-   - Log errors to help with debugging
-   - Return proper HTTP error codes
+ - Always check template execution errors
+ - Log errors to help with debugging
+ - Return proper HTTP error codes
 
 3. **Test After Documentation Changes**
-   - Documentation changes can introduce syntax errors
-   - Test the actual rendered page, not just the build
-   - Use curl to verify HTTP responses
+ - Documentation changes can introduce syntax errors
+ - Test the actual rendered page, not just the build
+ - Use curl to verify HTTP responses
 
 4. **Go Template Strictness**
-   - `html/template` is strict about HTML syntax
-   - Provides security against XSS attacks
-   - Prevents accidental HTML injection
+ - `html/template` is strict about HTML syntax
+ - Provides security against XSS attacks
+ - Prevents accidental HTML injection
 
 ## Related Files
 - `pkg/alarm/editor/html.go` - Fixed HTML template with entity escaping
@@ -147,4 +146,4 @@ Expected result:
 - `CHANGE_DETECTION_OPERATORS.md` - Documentation for the operators
 
 ## Status
-✅ **FIXED** - Alarm editor now loads correctly with properly escaped HTML entities in the help text.
+**FIXED** - Alarm editor now loads correctly with properly escaped HTML entities in the help text.

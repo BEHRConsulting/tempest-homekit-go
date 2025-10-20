@@ -52,8 +52,7 @@ Implements notification channels with template expansion.
 - **Syslog**: Local or remote syslog
 - **OSLog**: macOS unified logging system (os_log API via CGO, macOS only)
 - **EventLog**: System event log (Windows) or syslog (Unix)
-- **Email**: SMTP (with TLS support) or **Microsoft 365 OAuth2** ✅
-- **SMS**: Twilio or AWS SNS (placeholder implementation)
+- **Email**: SMTP (with TLS support) or **Microsoft 365 OAuth2** - **SMS**: Twilio or AWS SNS (placeholder implementation)
 
 **Template variables:**
 - `{{temperature}}`, `{{temperature_f}}`, `{{temperature_c}}`
@@ -79,39 +78,39 @@ Orchestrates alarm evaluation and notification delivery.
 #### SMTP Email
 ```json
 {
-  "email": {
-    "provider": "smtp",
-    "smtp_host": "smtp.example.com",
-    "smtp_port": 587,
-    "username": "alerts@example.com",
-    "password": "${SMTP_PASSWORD}",
-    "from_address": "alerts@example.com",
-    "use_tls": true
-  },
-  "alarms": [
-    {
-      "name": "high-temperature",
-      "description": "Alert when temperature exceeds 85°F",
-      "tags": ["temperature", "heat"],
-      "enabled": true,
-      "condition": "temperature > 85",
-      "cooldown": 1800,
-      "channels": [
-        {
-          "type": "console",
-          "template": "Tempest-Alarm [high-temperature]: Temperature is {{temperature}}°F at {{timestamp}}"
-        },
-        {
-          "type": "email",
-          "email": {
-            "to": ["admin@example.com"],
-            "subject": "High Temperature Alert: {{temperature}}°F",
-            "body": "Temperature: {{temperature}}°F\\nTime: {{timestamp}}"
-          }
-        }
-      ]
-    }
-  ]
+ "email": {
+ "provider": "smtp",
+ "smtp_host": "smtp.example.com",
+ "smtp_port": 587,
+ "username": "alerts@example.com",
+ "password": "${SMTP_PASSWORD}",
+ "from_address": "alerts@example.com",
+ "use_tls": true
+ },
+ "alarms": [
+ {
+ "name": "high-temperature",
+ "description": "Alert when temperature exceeds 85°F",
+ "tags": ["temperature", "heat"],
+ "enabled": true,
+ "condition": "temperature > 85",
+ "cooldown": 1800,
+ "channels": [
+ {
+ "type": "console",
+ "template": "Tempest-Alarm [high-temperature]: Temperature is {{temperature}}°F at {{timestamp}}"
+ },
+ {
+ "type": "email",
+ "email": {
+ "to": ["admin@example.com"],
+ "subject": "High Temperature Alert: {{temperature}}°F",
+ "body": "Temperature: {{temperature}}°F\\nTime: {{timestamp}}"
+ }
+ }
+ ]
+ }
+ ]
 }
 ```
 
@@ -123,29 +122,29 @@ import "tempest-homekit-go/pkg/alarm"
 // Initialize manager
 manager, err := alarm.NewManager("@alarms.json", "Station Name")
 if err != nil {
-    log.Fatal(err)
+ log.Fatal(err)
 }
 defer manager.Stop()
 
 // Process observations
 for obs := range observationChannel {
-    manager.ProcessObservation(&obs)
+ manager.ProcessObservation(&obs)
 }
 ```
 
 #### Microsoft 365 Email (OAuth2)
 ```json
 {
-  "email": {
-    "provider": "microsoft365",
-    "use_oauth2": true,
-    "client_id": "${MS365_CLIENT_ID}",
-    "client_secret": "${MS365_CLIENT_SECRET}",
-    "tenant_id": "${MS365_TENANT_ID}",
-    "from_address": "alerts@yourdomain.com",
-    "from_name": "Weather Alerts"
-  },
-  "alarms": [...]
+ "email": {
+ "provider": "microsoft365",
+ "use_oauth2": true,
+ "client_id": "${MS365_CLIENT_ID}",
+ "client_secret": "${MS365_CLIENT_SECRET}",
+ "tenant_id": "${MS365_TENANT_ID}",
+ "from_address": "alerts@yourdomain.com",
+ "from_name": "Weather Alerts"
+ },
+ "alarms": [...]
 }
 ```
 

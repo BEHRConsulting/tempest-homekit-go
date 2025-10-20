@@ -17,27 +17,27 @@ The `weather` package provides a comprehensive client for the WeatherFlow Tempes
 **Data Structures:**
 ```go
 type Station struct {
-    StationID   int     `json:"station_id"`
-    Name        string  `json:"name"`
-    StationName string  `json:"station_name"`
-    Latitude    float64 `json:"latitude"`
-    Longitude   float64 `json:"longitude"`
+ StationID int `json:"station_id"`
+ Name string `json:"name"`
+ StationName string `json:"station_name"`
+ Latitude float64 `json:"latitude"`
+ Longitude float64 `json:"longitude"`
 }
 
 type Observation struct {
-    Timestamp            int64   `json:"timestamp"`
-    AirTemperature       float64 `json:"air_temperature"`
-    RelativeHumidity     float64 `json:"relative_humidity"`
-    WindAvg              float64 `json:"wind_avg"`
-    WindGust             float64 `json:"wind_gust"`
-    WindDirection        float64 `json:"wind_direction"`
-    RainAccumulated      float64 `json:"precip"`
-    StationPressure      float64 `json:"station_pressure"`
-    UV                   int     `json:"uv"`
-    Illuminance          float64 `json:"illuminance"`
-    LightningCount       int     `json:"lightning_strike_count"`
-    LightningDistance    float64 `json:"lightning_strike_avg_distance"`
-    PrecipitationType    int     `json:"precip_type"`
+ Timestamp int64 `json:"timestamp"`
+ AirTemperature float64 `json:"air_temperature"`
+ RelativeHumidity float64 `json:"relative_humidity"`
+ WindAvg float64 `json:"wind_avg"`
+ WindGust float64 `json:"wind_gust"`
+ WindDirection float64 `json:"wind_direction"`
+ RainAccumulated float64 `json:"precip"`
+ StationPressure float64 `json:"station_pressure"`
+ UV int `json:"uv"`
+ Illuminance float64 `json:"illuminance"`
+ LightningCount int `json:"lightning_strike_count"`
+ LightningDistance float64 `json:"lightning_strike_avg_distance"`
+ PrecipitationType int `json:"precip_type"`
 }
 ```
 
@@ -77,14 +77,14 @@ GET https://swd.weatherflow.com/swd/rest/stations?token={token}
 **Response Structure:**
 ```json
 {
-  "stations": [
-    {
-      "station_id": 178915,
-      "name": "Chino Hills",
-      "latitude": 33.98632,
-      "longitude": -117.74695
-    }
-  ]
+ "stations": [
+ {
+ "station_id": 178915,
+ "name": "Chino Hills",
+ "latitude": 33.98632,
+ "longitude": -117.74695
+ }
+ ]
 }
 ```
 
@@ -95,20 +95,20 @@ GET https://swd.weatherflow.com/swd/rest/observations/station/{station_id}?token
 **Response Structure:**
 ```json
 {
-  "status": {"status_code": 0, "status_message": "SUCCESS"},
-  "obs": [
-    {
-      "timestamp": 1757045053,
-      "air_temperature": 24.4,
-      "relative_humidity": 66,
-      "wind_avg": 0.3,
-      "wind_direction": 241,
-      "precip": 0.0,
-      "station_pressure": 979.7,
-      "uv": 2,
-      "illuminance": 15000.0
-    }
-  ]
+ "status": {"status_code": 0, "status_message": "SUCCESS"},
+ "obs": [
+ {
+ "timestamp": 1757045053,
+ "air_temperature": 24.4,
+ "relative_humidity": 66,
+ "wind_avg": 0.3,
+ "wind_direction": 241,
+ "precip": 0.0,
+ "station_pressure": 979.7,
+ "uv": 2,
+ "illuminance": 15000.0
+ }
+ ]
 }
 ```
 
@@ -129,13 +129,13 @@ client := weather.NewClient("your-api-token")
 // Discover stations
 stations, err := client.GetStations()
 if err != nil {
-    log.Fatal("Failed to get stations:", err)
+ log.Fatal("Failed to get stations:", err)
 }
 
 // Find specific station
 station := weather.FindStationByName(stations, "Chino Hills")
 if station == nil {
-    log.Fatal("Station not found")
+ log.Fatal("Station not found")
 }
 ```
 
@@ -144,7 +144,7 @@ if station == nil {
 // Get latest observation
 obs, err := client.GetObservation(station.StationID)
 if err != nil {
-    log.Fatal("Failed to get observation:", err)
+ log.Fatal("Failed to get observation:", err)
 }
 
 fmt.Printf("Temperature: %.1f°C\n", obs.AirTemperature)
@@ -157,7 +157,7 @@ fmt.Printf("Wind: %.1f mph from %d°\n", obs.WindAvg, int(obs.WindDirection))
 // Load 200 historical observations (for --read-history flag). The number of points loaded is controlled by HISTORY_POINTS.
 historical, err := client.GetHistoricalObservations(station.StationID, 200)
 if err != nil {
-    log.Fatal("Failed to load historical data:", err)
+ log.Fatal("Failed to load historical data:", err)
 }
 
 fmt.Printf("Loaded %d historical observations\n", len(historical))
@@ -198,16 +198,16 @@ The client receives data in metric units from the WeatherFlow API:
 ```go
 obs, err := client.GetObservation(stationID)
 if err != nil {
-    switch {
-    case strings.Contains(err.Error(), "timeout"):
-        // Handle timeout - retry with exponential backoff
-    case strings.Contains(err.Error(), "404"):
-        // Station not found - check station ID
-    case strings.Contains(err.Error(), "401"):
-        // Invalid API token - check credentials
-    default:
-        // Other errors - log and continue
-    }
+ switch {
+ case strings.Contains(err.Error(), "timeout"):
+ // Handle timeout - retry with exponential backoff
+ case strings.Contains(err.Error(), "404"):
+ // Station not found - check station ID
+ case strings.Contains(err.Error(), "401"):
+ // Invalid API token - check credentials
+ default:
+ // Other errors - log and continue
+ }
 }
 ```
 

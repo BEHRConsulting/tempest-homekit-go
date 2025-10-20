@@ -17,26 +17,26 @@ The alarm system now supports sending email notifications through Microsoft 365 
 ### Azure AD App Registration
 
 1. **Register an Application in Azure Portal**:
-   - Navigate to Azure Active Directory → App registrations → New registration
-   - Name: "Tempest Weather Alerts" (or your preference)
-   - Supported account types: Accounts in this organizational directory only
-   - Redirect URI: Not required for this use case
+ - Navigate to Azure Active Directory → App registrations → New registration
+ - Name: "Tempest Weather Alerts" (or your preference)
+ - Supported account types: Accounts in this organizational directory only
+ - Redirect URI: Not required for this use case
 
 2. **Configure API Permissions**:
-   - Go to API permissions → Add a permission → Microsoft Graph → Application permissions
-   - Add: `Mail.Send` permission
-   - Click "Grant admin consent" for your organization
+ - Go to API permissions → Add a permission → Microsoft Graph → Application permissions
+ - Add: `Mail.Send` permission
+ - Click "Grant admin consent" for your organization
 
 3. **Create Client Secret**:
-   - Go to Certificates & secrets → New client secret
-   - Description: "Tempest Email Notifier"
-   - Expiration: Choose appropriate duration
-   - **Save the secret value** - you won't be able to see it again!
+ - Go to Certificates & secrets → New client secret
+ - Description: "Tempest Email Notifier"
+ - Expiration: Choose appropriate duration
+ - **Save the secret value** - you won't be able to see it again!
 
 4. **Get Required IDs**:
-   - **Client ID**: Found on the app's Overview page
-   - **Tenant ID**: Found on the app's Overview page
-   - **Client Secret**: The value you saved in step 3
+ - **Client ID**: Found on the app's Overview page
+ - **Tenant ID**: Found on the app's Overview page
+ - **Client Secret**: The value you saved in step 3
 
 ### Environment Variables
 
@@ -57,33 +57,33 @@ In your alarm JSON configuration file, set up the global email configuration:
 
 ```json
 {
-  "email": {
-    "provider": "microsoft365",
-    "use_oauth2": true,
-    "client_id": "${MS365_CLIENT_ID}",
-    "client_secret": "${MS365_CLIENT_SECRET}",
-    "tenant_id": "${MS365_TENANT_ID}",
-    "from_address": "alerts@yourdomain.com",
-    "from_name": "Tempest Weather Alerts"
-  },
-  "alarms": [
-    {
-      "name": "High Temperature Alert",
-      "enabled": true,
-      "condition": "temperature > 85",
-      "channels": [
-        {
-          "type": "email",
-          "email": {
-            "to": ["admin@yourdomain.com"],
-            "cc": ["team@yourdomain.com"],
-            "subject": "⚠️ High Temperature: {{temperature_f}}°F",
-            "body": "Temperature has exceeded threshold.\n\nCurrent: {{temperature_f}}°F\nStation: {{station}}\nTime: {{timestamp}}"
-          }
-        }
-      ]
-    }
-  ]
+ "email": {
+ "provider": "microsoft365",
+ "use_oauth2": true,
+ "client_id": "${MS365_CLIENT_ID}",
+ "client_secret": "${MS365_CLIENT_SECRET}",
+ "tenant_id": "${MS365_TENANT_ID}",
+ "from_address": "alerts@yourdomain.com",
+ "from_name": "Tempest Weather Alerts"
+ },
+ "alarms": [
+ {
+ "name": "High Temperature Alert",
+ "enabled": true,
+ "condition": "temperature > 85",
+ "channels": [
+ {
+ "type": "email",
+ "email": {
+ "to": ["admin@yourdomain.com"],
+ "cc": ["team@yourdomain.com"],
+ "subject": "Warning: High Temperature: {{temperature_f}}°F",
+ "body": "Temperature has exceeded threshold.\n\nCurrent: {{temperature_f}}°F\nStation: {{station}}\nTime: {{timestamp}}"
+ }
+ }
+ ]
+ }
+ ]
 }
 ```
 
@@ -100,16 +100,16 @@ If `use_oauth2` is set to `false` or OAuth2 credentials are missing, the system 
 
 ```json
 {
-  "email": {
-    "provider": "microsoft365",
-    "use_oauth2": false,
-    "smtp_host": "smtp.office365.com",
-    "smtp_port": 587,
-    "username": "${SMTP_USERNAME}",
-    "password": "${SMTP_PASSWORD}",
-    "from_address": "alerts@yourdomain.com",
-    "use_tls": true
-  }
+ "email": {
+ "provider": "microsoft365",
+ "use_oauth2": false,
+ "smtp_host": "smtp.office365.com",
+ "smtp_port": 587,
+ "username": "${SMTP_USERNAME}",
+ "password": "${SMTP_PASSWORD}",
+ "from_address": "alerts@yourdomain.com",
+ "use_tls": true
+ }
 }
 ```
 
@@ -154,43 +154,43 @@ Email subjects and bodies support template variables:
 ## Testing
 
 1. **Test Configuration**:
-   ```bash
-   ./tempest-homekit-go --alarms @alarms.json --loglevel debug
-   ```
+ ```bash
+ ./tempest-homekit-go --alarms @alarms.json --loglevel debug
+ ```
 
 2. **Check Logs**: Look for these messages:
-   ```
-   DEBUG: Sending email via Microsoft 365 Graph API
-   DEBUG:   Tenant ID: your-tenant-id
-   DEBUG:   Client ID: your-client-id
-   DEBUG:   From: alerts@yourdomain.com
-   DEBUG:   To: [admin@yourdomain.com]
-   INFO: Email sent successfully via Microsoft 365 to [admin@yourdomain.com]
-   ```
+ ```
+ DEBUG: Sending email via Microsoft 365 Graph API
+ DEBUG: Tenant ID: your-tenant-id
+ DEBUG: Client ID: your-client-id
+ DEBUG: From: alerts@yourdomain.com
+ DEBUG: To: [admin@yourdomain.com]
+ INFO: Email sent successfully via Microsoft 365 to [admin@yourdomain.com]
+ ```
 
 3. **Common Issues**:
-   - **Missing Permissions**: Ensure `Mail.Send` application permission is granted
-   - **Wrong Tenant**: Verify the tenant ID matches your organization
-   - **Expired Secret**: Client secrets have expiration dates
-   - **Invalid From Address**: The from address must be a valid mailbox in your organization
+ - **Missing Permissions**: Ensure `Mail.Send` application permission is granted
+ - **Wrong Tenant**: Verify the tenant ID matches your organization
+ - **Expired Secret**: Client secrets have expiration dates
+ - **Invalid From Address**: The from address must be a valid mailbox in your organization
 
 ## Security Considerations
 
 1. **Client Secret Protection**:
-   - Store client secrets in `.env` file
-   - Add `.env` to `.gitignore`
-   - Never commit secrets to version control
-   - Rotate secrets periodically
+ - Store client secrets in `.env` file
+ - Add `.env` to `.gitignore`
+ - Never commit secrets to version control
+ - Rotate secrets periodically
 
 2. **Least Privilege**:
-   - Only grant `Mail.Send` permission
-   - Use application-specific credentials, not user accounts
-   - Monitor app usage in Azure AD logs
+ - Only grant `Mail.Send` permission
+ - Use application-specific credentials, not user accounts
+ - Monitor app usage in Azure AD logs
 
 3. **Audit Trail**:
-   - All emails are logged with INFO level
-   - Failed sends are logged with ERROR level
-   - Azure AD tracks all Graph API calls
+ - All emails are logged with INFO level
+ - Failed sends are logged with ERROR level
+ - Azure AD tracks all Graph API calls
 
 ## Troubleshooting
 
@@ -203,10 +203,10 @@ Email subjects and bodies support template variables:
 
 ### Error: "failed to send email via Microsoft Graph API"
 - Common causes:
-  - Missing or insufficient API permissions
-  - Admin consent not granted
-  - Invalid from address (not a valid mailbox)
-  - Client secret expired
+ - Missing or insufficient API permissions
+ - Admin consent not granted
+ - Invalid from address (not a valid mailbox)
+ - Client secret expired
 
 ### Email Not Received
 - Check spam/junk folders
@@ -237,19 +237,19 @@ To migrate from SMTP to OAuth2:
 Example migration config:
 ```json
 {
-  "email": {
-    "provider": "microsoft365",
-    "use_oauth2": true,
-    "client_id": "${MS365_CLIENT_ID}",
-    "client_secret": "${MS365_CLIENT_SECRET}",
-    "tenant_id": "${MS365_TENANT_ID}",
-    "smtp_host": "smtp.office365.com",
-    "smtp_port": 587,
-    "username": "${SMTP_USERNAME}",
-    "password": "${SMTP_PASSWORD}",
-    "from_address": "alerts@yourdomain.com",
-    "use_tls": true
-  }
+ "email": {
+ "provider": "microsoft365",
+ "use_oauth2": true,
+ "client_id": "${MS365_CLIENT_ID}",
+ "client_secret": "${MS365_CLIENT_SECRET}",
+ "tenant_id": "${MS365_TENANT_ID}",
+ "smtp_host": "smtp.office365.com",
+ "smtp_port": 587,
+ "username": "${SMTP_USERNAME}",
+ "password": "${SMTP_PASSWORD}",
+ "from_address": "alerts@yourdomain.com",
+ "use_tls": true
+ }
 }
 ```
 

@@ -19,13 +19,13 @@ The `--alarms` flag requires the `@` prefix when specifying a file path. Without
 
 ## Solution
 
-### ✅ Correct Usage (with @ prefix)
+### Correct Usage (with @ prefix)
 
 ```bash
 ./tempest-homekit-go --loglevel info --alarms @tempest-alarms.json
 ```
 
-### ❌ Incorrect Usage (missing @)
+### Incorrect Usage (missing @)
 
 ```bash
 ./tempest-homekit-go --loglevel info --alarms tempest-alarms.json
@@ -36,15 +36,15 @@ The `--alarms` flag requires the `@` prefix when specifying a file path. Without
 The `--alarms` flag supports two modes:
 
 1. **File Mode** (`@filename`): Reads alarm configuration from a file
-   ```bash
-   --alarms @tempest-alarms.json
-   --alarms @/path/to/alarms.json
-   ```
+ ```bash
+ --alarms @tempest-alarms.json
+ --alarms @/path/to/alarms.json
+ ```
 
 2. **Inline Mode** (JSON string): Accepts JSON directly as a string
-   ```bash
-   --alarms '{"alarms":[{"name":"test","enabled":true,"condition":"temp>85","channels":[{"type":"console"}]}]}'
-   ```
+ ```bash
+ --alarms '{"alarms":[{"name":"test","enabled":true,"condition":"temp>85","channels":[{"type":"console"}]}]}'
+ ```
 
 The `@` prefix tells the system to read the file rather than treating it as inline JSON.
 
@@ -63,20 +63,20 @@ Hint: Did you mean to use '@tempest-alarms.json'? File paths must be prefixed wi
 
 ```bash
 ./tempest-homekit-go \
-  --token <your-token> \
-  --station <your-station> \
-  --alarms @tempest-alarms.json \
-  --loglevel info
+ --token <your-token> \
+ --station <your-station> \
+ --alarms @tempest-alarms.json \
+ --loglevel info
 ```
 
 ### Start with debug logging
 
 ```bash
 ./tempest-homekit-go \
-  --token <your-token> \
-  --station <your-station> \
-  --alarms @tempest-alarms.json \
-  --loglevel debug
+ --token <your-token> \
+ --station <your-station> \
+ --alarms @tempest-alarms.json \
+ --loglevel debug
 ```
 
 ### Use environment variable
@@ -102,15 +102,15 @@ The help text shows the correct format:
 
 ```
 ALARM OPTIONS:
-  --alarms <config>             Enable alarm system with configuration
-                                Format: @filename.json or inline JSON string
-                                Env: ALARMS
+ --alarms <config> Enable alarm system with configuration
+ Format: @filename.json or inline JSON string
+ Env: ALARMS
 ```
 
 ## Summary
 
-- ✅ Always use `@` prefix for file paths: `--alarms @tempest-alarms.json`
-- ✅ File paths can be relative or absolute: `--alarms @/full/path/alarms.json`
-- ✅ Environment variable also needs `@`: `ALARMS=@tempest-alarms.json`
-- ✅ Inline JSON does NOT use `@`: `--alarms '{"alarms":[...]}'`
-- ✅ Error message now provides helpful hint when `@` is missing
+- Always use `@` prefix for file paths: `--alarms @tempest-alarms.json`
+- File paths can be relative or absolute: `--alarms @/full/path/alarms.json`
+- Environment variable also needs `@`: `ALARMS=@tempest-alarms.json`
+- Inline JSON does NOT use `@`: `--alarms '{"alarms":[...]}'`
+- Error message now provides helpful hint when `@` is missing

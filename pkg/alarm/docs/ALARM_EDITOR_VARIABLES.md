@@ -10,7 +10,7 @@ Enhanced the alarm editor and template system to provide better alarm messages w
 
 **Old Format:**
 ```
-🚨 ALARM: {{alarm_name}}
+ALARM: {{alarm_name}}
 Station: {{station}}
 Time: {{timestamp}}
 Description: {{alarm_description}}
@@ -18,7 +18,7 @@ Description: {{alarm_description}}
 
 **New Format (Description Prominent):**
 ```
-🚨 ALARM: {{alarm_name}}
+ALARM: {{alarm_name}}
 {{alarm_description}}
 
 Station: {{station}}
@@ -76,7 +76,7 @@ Perfect for alarms using `*field`, `>field`, or `<field` operators:
 
 **Example - Lux Change:**
 ```
-🚨 ALARM: {{alarm_name}}
+ALARM: {{alarm_name}}
 {{alarm_description}}
 
 Current LUX: {{lux}}
@@ -89,7 +89,7 @@ Time: {{timestamp}}
 
 **Output:**
 ```
-🚨 ALARM: Lux Change
+ALARM: Lux Change
 This alarm should alert on LUX change
 
 Current LUX: 5950
@@ -103,7 +103,7 @@ Time: 2025-10-10 17:15:54 PDT
 ### Temperature Increase Detection
 
 ```
-🚨 ALARM: {{alarm_name}}
+ALARM: {{alarm_name}}
 {{alarm_description}}
 
 Temperature increased from {{last_temperature}}°C to {{temperature}}°C
@@ -115,7 +115,7 @@ Time: {{timestamp}}
 ### Rain Detection
 
 ```
-🚨 ALARM: Rain Started
+ALARM: Rain Started
 It's raining! Bring in your laundry.
 
 Current rain rate: {{rain_rate}} mm/hr
@@ -131,12 +131,12 @@ Station: {{station}}
 **1. pkg/alarm/editor/html.go**
 - Updated default message template (5 lines, description on line 2)
 - Added `last_*` variables to all 6 dropdown menus:
-  - Default message dropdown
-  - Console message dropdown
-  - Syslog message dropdown
-  - Event log message dropdown
-  - Email message dropdown
-  - SMS message dropdown
+ - Default message dropdown
+ - Console message dropdown
+ - Syslog message dropdown
+ - Event log message dropdown
+ - Email message dropdown
+ - SMS message dropdown
 - Added "(current)" and "(previous)" labels to clarify variable purpose
 
 **2. pkg/alarm/notifiers.go** - `expandTemplate()` function
@@ -191,16 +191,16 @@ The alarm template system now supports **30 variables**:
 ```
 
 Verifies:
-- ✅ Description appears on line 2
-- ✅ `last_lux` variable is present
-- ✅ Previous value shows correctly
+- Description appears on line 2
+- `last_lux` variable is present
+- Previous value shows correctly
 
 ### Manual Testing with Alarm Editor
 
 1. Start alarm editor:
-   ```bash
-   ./tempest-homekit-go --alarms-edit @tempest-alarms.json --alarms-edit-port 8081
-   ```
+ ```bash
+ ./tempest-homekit-go --alarms-edit @tempest-alarms.json --alarms-edit-port 8081
+ ```
 
 2. Open browser to http://localhost:8081
 
@@ -223,7 +223,7 @@ Verifies:
 
 ## Backwards Compatibility
 
-✅ **Fully compatible** - Existing alarm configurations continue to work:
+**Fully compatible** - Existing alarm configurations continue to work:
 - Old variables still work
 - Old message templates unchanged
 - New variables are optional
@@ -234,32 +234,32 @@ Verifies:
 ### Minimal (Quick Setup)
 ```json
 {
-  "type": "console",
-  "template": "🚨 {{alarm_name}}: {{alarm_description}}"
+ "type": "console",
+ "template": " {{alarm_name}}: {{alarm_description}}"
 }
 ```
 
 ### Standard (Recommended)
 ```json
 {
-  "type": "console",
-  "template": "🚨 ALARM: {{alarm_name}}\n{{alarm_description}}\n\nStation: {{station}}\nTime: {{timestamp}}"
+ "type": "console",
+ "template": "ALARM: {{alarm_name}}\n{{alarm_description}}\n\nStation: {{station}}\nTime: {{timestamp}}"
 }
 ```
 
 ### Detailed (Change Detection)
 ```json
 {
-  "type": "console",
-  "template": "🚨 ALARM: {{alarm_name}}\n{{alarm_description}}\n\nCurrent: {{lux}} lux\nPrevious: {{last_lux}} lux\n\nStation: {{station}}\nTime: {{timestamp}}"
+ "type": "console",
+ "template": "ALARM: {{alarm_name}}\n{{alarm_description}}\n\nCurrent: {{lux}} lux\nPrevious: {{last_lux}} lux\n\nStation: {{station}}\nTime: {{timestamp}}"
 }
 ```
 
 ### Comprehensive (All Data)
 ```json
 {
-  "type": "console",
-  "template": "🚨 ALARM: {{alarm_name}}\n{{alarm_description}}\n\nCurrent Conditions:\n  Temp: {{temperature}}°C ({{temperature_f}}°F)\n  Humidity: {{humidity}}%\n  Light: {{lux}} lux\n\nPrevious Conditions:\n  Temp: {{last_temperature}}°C\n  Humidity: {{last_humidity}}%\n  Light: {{last_lux}} lux\n\nStation: {{station}}\nTime: {{timestamp}}"
+ "type": "console",
+ "template": "ALARM: {{alarm_name}}\n{{alarm_description}}\n\nCurrent Conditions:\n Temp: {{temperature}}°C ({{temperature_f}}°F)\n Humidity: {{humidity}}%\n Light: {{lux}} lux\n\nPrevious Conditions:\n Temp: {{last_temperature}}°C\n Humidity: {{last_humidity}}%\n Light: {{last_lux}} lux\n\nStation: {{station}}\nTime: {{timestamp}}"
 }
 ```
 

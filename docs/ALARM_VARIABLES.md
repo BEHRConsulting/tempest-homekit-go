@@ -15,7 +15,7 @@ Uptime: 2 days, 3 hours, 45 minutes
 Go version: 1.24.2
 ```
 
-**Implementation Required:**
+**Implementation notes:**
 - Version string from `main.go` (currently hardcoded as "v1.7.0")
 - Application start time to calculate uptime
 - Build timestamp
@@ -34,7 +34,7 @@ Cooldown: 30 minutes
 Tags: critical, temperature, safety
 ```
 
-**Implementation Required:**
+**Implementation notes:**
 - Alarm name
 - Alarm description
 - Alarm condition (the expression that triggered)
@@ -70,7 +70,7 @@ Lightning: 0 strikes
 </table>
 ```
 
-**Implementation Required:**
+**Implementation notes:**
 - Current sensor readings from weather data
 - Unit conversions (C/F for temp, mph/m/s for wind)
 - Formatted output based on context (HTML vs plain text)
@@ -116,13 +116,13 @@ The email delivery method now supports an `html` flag in its configuration:
 
 ```json
 {
-  "type": "email",
-  "email": {
-    "to": ["recipient@example.com"],
-    "subject": "Weather Alert",
-    "body": "<h1>Alert!</h1><p>{{alarm_info}}</p>",
-    "html": true
-  }
+ "type": "email",
+ "email": {
+ "to": ["recipient@example.com"],
+ "subject": "Weather Alert",
+ "body": "<h1>Alert!</h1><p>{{alarm_info}}</p>",
+ "html": true
+ }
 }
 ```
 
@@ -148,27 +148,27 @@ When `html: false` or omitted, plain text is used.
 1. Add application info tracking:
 ```go
 var (
-    appVersion   = "v1.7.0"
-    appStartTime = time.Now()
-    buildTime    string // Set via ldflags during build
+ appVersion = "v1.7.0"
+ appStartTime = time.Now()
+ buildTime string // Set via ldflags during build
 )
 ```
 
 2. Implement variable resolver:
 ```go
 func (m *Manager) resolveVariables(template string, alarm *Alarm, data *weather.Observation) string {
-    // Implement substitution for all variables
-    // Handle special cases for {{app_info}}, {{alarm_info}}, {{sensor_info}}
+ // Implement substitution for all variables
+ // Handle special cases for {{app_info}}, {{alarm_info}}, {{sensor_info}}
 }
 ```
 
 3. Add HTML detection for `{{sensor_info}}`:
 ```go
 func formatSensorInfo(data *weather.Observation, isHTML bool) string {
-    if isHTML {
-        return formatSensorInfoHTML(data)
-    }
-    return formatSensorInfoText(data)
+ if isHTML {
+ return formatSensorInfoHTML(data)
+ }
+ return formatSensorInfoText(data)
 }
 ```
 

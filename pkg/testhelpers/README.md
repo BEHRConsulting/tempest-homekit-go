@@ -13,13 +13,13 @@ base := time.Now().Truncate(time.Second)
 chartTypes := []string{"temperature", "humidity", "uv"}
 
 opts := testhelpers.SeedOptions{
-    Points:      5,
-    Season:      "summer",      // "summer", "winter", or "neutral"
-    Location:    "coastal",     // "coastal", "desert", "mountain", or "default"
-    TimeSpacing: 5 * time.Minute, // spacing between generated points
-    TempNoise:   0.5,             // small gaussian noise magnitude for temperature
-    UVNoise:     2,               // small integer noise applied to UV values
-    RandSeed:    base.Unix(),     // deterministic seed for reproducible tests
+ Points: 5,
+ Season: "summer", // "summer", "winter", or "neutral"
+ Location: "coastal", // "coastal", "desert", "mountain", or "default"
+ TimeSpacing: 5 * time.Minute, // spacing between generated points
+ TempNoise: 0.5, // small gaussian noise magnitude for temperature
+ UVNoise: 2, // small integer noise applied to UV values
+ RandSeed: base.Unix(), // deterministic seed for reproducible tests
 }
 
 var got []weather.Observation
@@ -47,25 +47,25 @@ updater := func(o *weather.Observation) { got = append(got, *o) }
 
 // coastal, winter
 coastalOpts := testhelpers.SeedOptions{
-    Points:      4,
-    Season:      "winter",
-    Location:    "coastal",
-    TimeSpacing: 5 * time.Minute,
-    TempNoise:   0.2,
-    UVNoise:     1,
-    RandSeed:    base.Unix(),
+ Points: 4,
+ Season: "winter",
+ Location: "coastal",
+ TimeSpacing: 5 * time.Minute,
+ TempNoise: 0.2,
+ UVNoise: 1,
+ RandSeed: base.Unix(),
 }
 testhelpers.SeedObservationsWithOptions(t, updater, chartTypes, base, coastalOpts)
 
 // desert, summer (a separate batch of observations for the same charts)
 desertOpts := testhelpers.SeedOptions{
-    Points:      4,
-    Season:      "summer",
-    Location:    "desert",
-    TimeSpacing: 5 * time.Minute,
-    TempNoise:   0.5,
-    UVNoise:     2,
-    RandSeed:    base.Add(1 * time.Hour).Unix(),
+ Points: 4,
+ Season: "summer",
+ Location: "desert",
+ TimeSpacing: 5 * time.Minute,
+ TempNoise: 0.5,
+ UVNoise: 2,
+ RandSeed: base.Add(1 * time.Hour).Unix(),
 }
 testhelpers.SeedObservationsWithOptions(t, updater, chartTypes, base.Add(-6*time.Hour), desertOpts)
 ```
@@ -79,18 +79,18 @@ Available locations and seasons
 
 The seeder provides a few small built-in location profiles and seasonal biases. These are intentionally conservative; treat them as starting points you can extend.
 
-| Location  | Temperature bias (°C) | UV bias (integer) | Notes |
+| Location | Temperature bias (°C) | UV bias (integer) | Notes |
 |-----------|------------------------:|------------------:|-------|
-| default   | 0.0                    | 0                 | No special bias |
-| coastal   | -1.5                   | -1                | Mildly cooler, slightly lower UV due to marine influence |
-| desert    | 3.0                    | 2                 | Warmer and higher UV |
-| mountain  | -3.0                   | -2                | Cooler and lower UV |
+| default | 0.0 | 0 | No special bias |
+| coastal | -1.5 | -1 | Mildly cooler, slightly lower UV due to marine influence |
+| desert | 3.0 | 2 | Warmer and higher UV |
+| mountain | -3.0 | -2 | Cooler and lower UV |
 
-| Season    | Temperature bias (°C) | UV bias (integer) | Notes |
+| Season | Temperature bias (°C) | UV bias (integer) | Notes |
 |-----------|------------------------:|------------------:|-------|
-| summer    | +5.0                   | +2                | Warmer temps and higher UV |
-| winter    | -5.0                   | 0                 | Colder temps, low UV |
-| neutral   | 0.0                    | 0                 | No seasonal bias |
+| summer | +5.0 | +2 | Warmer temps and higher UV |
+| winter | -5.0 | 0 | Colder temps, low UV |
+| neutral | 0.0 | 0 | No seasonal bias |
 
 Extending profiles
 -------------------

@@ -34,10 +34,10 @@ INFO: Alarm config reloaded successfully
 When running with `--loglevel debug`, additional details are shown for each alarm:
 
 ```
-DEBUG:   Condition: temp > 85
-DEBUG:   Description: Set when temp is > 85F
-DEBUG:   Cooldown: 1800s
-DEBUG:   Channels: 2
+DEBUG: Condition: temp > 85
+DEBUG: Description: Set when temp is > 85F
+DEBUG: Cooldown: 1800s
+DEBUG: Channels: 2
 ```
 
 Plus the full JSON configuration of all alarms.
@@ -156,7 +156,7 @@ This test:
 ./tempest-homekit-go --alarms @tempest-alarms.json --loglevel info
 
 # Terminal 2: Modify alarm config
-vim tempest-alarms.json  # Make a change and save
+vim tempest-alarms.json # Make a change and save
 
 # Terminal 1: Watch for automatic reload with detailed output
 ```
@@ -196,8 +196,8 @@ vim tempest-alarms.json  # Make a change and save
 ## Cross-Platform Support
 
 File watching works on:
-- ✅ macOS (FSEvents via fsnotify)
-- ✅ Linux (inotify via fsnotify)
-- ✅ Windows (ReadDirectoryChangesW via fsnotify)
+- macOS (FSEvents via fsnotify)
+- Linux (inotify via fsnotify)
+- Windows (ReadDirectoryChangesW via fsnotify)
 
 The logging enhancement works identically on all platforms.

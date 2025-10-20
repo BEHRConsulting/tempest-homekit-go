@@ -1,8 +1,6 @@
 # AWS SNS SMS Notification Implementation
 
-**Version**: 1.8.0  
-**Status**: ✅ **COMPLETE** - Production ready  
-**Date**: October 15, 2025
+**Version**: 1.8.0 **Status**: **COMPLETE** - Production ready **Date**: October 15, 2025
 
 ## Overview
 
@@ -13,50 +11,50 @@ Complete implementation of AWS SNS SMS notification delivery for the alarm syste
 ### What Was Implemented
 
 1. **AWS SDK v2 Integration**
-   - Installed `github.com/aws/aws-sdk-go-v2` v1.39.2
-   - Installed `github.com/aws/aws-sdk-go-v2/config` v1.31.12
-   - Installed `github.com/aws/aws-sdk-go-v2/service/sns` v1.38.5
-   - Installed `github.com/aws/aws-sdk-go-v2/credentials` v1.18.16
+ - Installed `github.com/aws/aws-sdk-go-v2` v1.39.2
+ - Installed `github.com/aws/aws-sdk-go-v2/config` v1.31.12
+ - Installed `github.com/aws/aws-sdk-go-v2/service/sns` v1.38.5
+ - Installed `github.com/aws/aws-sdk-go-v2/credentials` v1.18.16
 
 2. **SMS Notifier Implementation** (`pkg/alarm/notifiers.go`)
-   - `sendAWSSNS()` method for AWS SNS integration
-   - Support for direct SMS to phone numbers
-   - Support for SNS topic publishing (broadcast to subscribers)
-   - Environment variable expansion for credentials
-   - Comprehensive error handling and logging
-   - Multi-recipient support with success tracking
+ - `sendAWSSNS()` method for AWS SNS integration
+ - Support for direct SMS to phone numbers
+ - Support for SNS topic publishing (broadcast to subscribers)
+ - Environment variable expansion for credentials
+ - Comprehensive error handling and logging
+ - Multi-recipient support with success tracking
 
 3. **Configuration Architecture**
-   - Credentials stored in `.env` file only (not in alarm JSON)
-   - Environment-first design with precedence over JSON configs
-   - Separate IAM user for application runtime (least privilege)
-   - Clean separation: alarm rules in JSON, credentials in `.env`
+ - Credentials stored in `.env` file only (not in alarm JSON)
+ - Environment-first design with precedence over JSON configs
+ - Separate IAM user for application runtime (least privilege)
+ - Clean separation: alarm rules in JSON, credentials in `.env`
 
 4. **Setup Automation** (`scripts/setup-aws-sns.sh`)
-   - Interactive bash script for production configuration
-   - Uses admin AWS CLI credentials from `~/.aws/credentials`
-   - Configures SMS type (Transactional/Promotional)
-   - Sets spending limits
-   - Creates SNS topics with subscriptions
-   - Sends test SMS
-   - Updates `.env` automatically with Topic ARN
-   - Color-coded output for UX
-   - Comprehensive error handling
+ - Interactive bash script for production configuration
+ - Uses admin AWS CLI credentials from `~/.aws/credentials`
+ - Configures SMS type (Transactional/Promotional)
+ - Sets spending limits
+ - Creates SNS topics with subscriptions
+ - Sends test SMS
+ - Updates `.env` automatically with Topic ARN
+ - Color-coded output for UX
+ - Comprehensive error handling
 
 5. **Documentation**
-   - Detailed setup instructions in `.env` and `.env.example`
-   - Clarified difference between admin and runtime credentials
-   - Step-by-step IAM user creation guide
-   - Production considerations (sandbox, spending limits, regional capabilities)
-   - README.md updated with AWS SNS features
+ - Detailed setup instructions in `.env` and `.env.example`
+ - Clarified difference between admin and runtime credentials
+ - Step-by-step IAM user creation guide
+ - Production considerations (sandbox, spending limits, regional capabilities)
+ - README.md updated with AWS SNS features
 
 6. **Unit Tests** (`pkg/alarm/notifiers_sms_test.go`)
-   - AWS SNS configuration validation tests
-   - Template expansion verification
-   - Topic ARN configuration tests
-   - Multiple recipient handling tests
-   - Factory creation tests
-   - Missing credentials error handling tests
+ - AWS SNS configuration validation tests
+ - Template expansion verification
+ - Topic ARN configuration tests
+ - Multiple recipient handling tests
+ - Factory creation tests
+ - Missing credentials error handling tests
 
 ## Architecture
 
@@ -78,27 +76,27 @@ Complete implementation of AWS SNS SMS notification delivery for the alarm syste
 
 ```
 Alarm Trigger → SMSNotifier.Send()
-              → sendAWSSNS()
-              → Load credentials from .env (environment vars)
-              → Create AWS config with static credentials
-              → Create SNS client
-              → For each recipient:
-                  If Topic ARN present:
-                    → Publish to SNS topic
-                  Else:
-                    → Send direct SMS to phone number
-              → Track success/failure
-              → Return error if all sends failed
+ → sendAWSSNS()
+ → Load credentials from .env (environment vars)
+ → Create AWS config with static credentials
+ → Create SNS client
+ → For each recipient:
+ If Topic ARN present:
+ → Publish to SNS topic
+ Else:
+ → Send direct SMS to phone number
+ → Track success/failure
+ → Return error if all sends failed
 ```
 
 ### Configuration Flow
 
 ```
 .env file → Environment variables → types.go LoadConfigFromEnv()
-                                  → SMSGlobalConfig struct
-                                  → SMSNotifier
-                                  → sendAWSSNS() method
-                                  → AWS SDK credentials provider
+ → SMSGlobalConfig struct
+ → SMSNotifier
+ → sendAWSSNS() method
+ → AWS SDK credentials provider
 ```
 
 ## Usage
@@ -111,12 +109,12 @@ Alarm Trigger → SMSNotifier.Send()
 # 2. User name: tempest-homekit-sns-sender
 # 3. Attach custom policy with ONLY sns:Publish:
 {
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Action": ["sns:Publish"],
-    "Resource": "*"
-  }]
+ "Version": "2012-10-17",
+ "Statement": [{
+ "Effect": "Allow",
+ "Action": ["sns:Publish"],
+ "Resource": "*"
+ }]
 }
 # 4. Create access key > Application running outside AWS
 # 5. Save credentials to .env file
@@ -152,21 +150,21 @@ AWS_SNS_TOPIC_ARN=arn:aws:sns:us-west-2:123456789012:WeatherAlert
 
 ```json
 {
-  "alarms": [
-    {
-      "name": "high-temperature",
-      "condition": "temperature > 95",
-      "channels": [
-        {
-          "type": "sms",
-          "sms": {
-            "to": ["+15555551234", "+15555555678"],
-            "message": "⚠️ {{alarm_name}}: {{temperature}}°F at {{station}}"
-          }
-        }
-      ]
-    }
-  ]
+ "alarms": [
+ {
+ "name": "high-temperature",
+ "condition": "temperature > 95",
+ "channels": [
+ {
+ "type": "sms",
+ "sms": {
+ "to": ["+15555551234", "+15555555678"],
+ "message": "Warning: {{alarm_name}}: {{temperature}}°F at {{station}}"
+ }
+ }
+ ]
+ }
+ ]
 }
 ```
 
@@ -184,8 +182,7 @@ AWS_SNS_TOPIC_ARN=arn:aws:sns:us-west-2:123456789012:WeatherAlert
 - Simple configuration
 - Good for single recipient
 
-### Topic Broadcasting Mode  
-- Create SNS topic with multiple subscribers
+### Topic Broadcasting Mode - Create SNS topic with multiple subscribers
 - Publish once, deliver to all subscribers
 - Easier subscriber management
 - Support for SMS, Email, HTTP, etc. subscribers
@@ -238,11 +235,11 @@ go test -cover ./pkg/alarm/...
 ## Security Considerations
 
 ### Credential Management
-- ✅ Never commit `.env` file to git (added to `.gitignore`)
-- ✅ Use separate IAM user for application (not personal account)
-- ✅ Minimal permissions: `sns:Publish` only
-- ✅ Rotate access keys regularly
-- ✅ Monitor CloudTrail logs for API usage
+- Never commit `.env` file to git (added to `.gitignore`)
+- Use separate IAM user for application (not personal account)
+- Minimal permissions: `sns:Publish` only
+- Rotate access keys regularly
+- Monitor CloudTrail logs for API usage
 
 ### .gitignore Protection
 ```
@@ -254,7 +251,7 @@ go test -cover ./pkg/alarm/...
 *.env.bak
 *.env.backup
 *.env.old
-!.env.example  # Allow template file
+!.env.example # Allow template file
 ```
 
 ### AWS IAM Best Practices
@@ -318,30 +315,30 @@ go test -cover ./pkg/alarm/...
 ```bash
 # View SNS publish logs
 aws logs filter-log-events \
-  --log-group-name /aws/sns/us-west-2/123456789012/WeatherAlert \
-  --start-time $(date -u -d '1 hour ago' +%s)000
+ --log-group-name /aws/sns/us-west-2/123456789012/WeatherAlert \
+ --start-time $(date -u -d '1 hour ago' +%s)000
 ```
 
 ## Files Modified
 
 ### Core Implementation
 - `pkg/alarm/notifiers.go` (~910 lines)
-  - Added `sendAWSSNS()` method
-  - Added AWS SDK imports
-  - Updated `SMSNotifier.Send()` routing
+ - Added `sendAWSSNS()` method
+ - Added AWS SDK imports
+ - Updated `SMSNotifier.Send()` routing
 
 - `pkg/alarm/types.go` (~416 lines)
-  - `SMSGlobalConfig` already had AWS fields
-  - `LoadConfigFromEnv()` loads AWS config
-  - `LoadAlarmConfig()` merges environment config
+ - `SMSGlobalConfig` already had AWS fields
+ - `LoadConfigFromEnv()` loads AWS config
+ - `LoadAlarmConfig()` merges environment config
 
 ### Testing
 - `pkg/alarm/notifiers_sms_test.go` (NEW, ~250 lines)
-  - AWS SNS configuration validation
-  - Template expansion tests
-  - Topic ARN tests
-  - Multiple recipient tests
-  - Factory creation tests
+ - AWS SNS configuration validation
+ - Template expansion tests
+ - Topic ARN tests
+ - Multiple recipient tests
+ - Factory creation tests
 
 ### Configuration
 - `.env` - Updated with comprehensive AWS SNS docs
@@ -351,11 +348,11 @@ aws logs filter-log-events \
 
 ### Scripts
 - `scripts/setup-aws-sns.sh` (NEW, ~450 lines)
-  - Interactive production setup
-  - AWS CLI integration
-  - Topic creation
-  - Test SMS sending
-  - Automatic .env updates
+ - Interactive production setup
+ - AWS CLI integration
+ - Topic creation
+ - Test SMS sending
+ - Automatic .env updates
 
 ### Documentation
 - `README.md` - Added AWS SNS section with quick start
@@ -391,21 +388,19 @@ aws logs filter-log-events \
 
 ## Completion Checklist
 
-- ✅ AWS SDK v2 packages installed
-- ✅ `sendAWSSNS()` method implemented
-- ✅ Direct SMS support working
-- ✅ Topic publishing support working
-- ✅ Configuration architecture clean (.env only)
-- ✅ Setup script created and tested
-- ✅ Unit tests written and passing
-- ✅ Documentation complete (.env, README.md, REQUIREMENTS.md)
-- ✅ .gitignore updated for .env protection
-- ✅ Version bumped to 1.8.0
-- ⏳ Twilio implementation (next)
-- ⏳ Documentation audit (after 3-4 major changes)
+- AWS SDK v2 packages installed
+- `sendAWSSNS()` method implemented
+- Direct SMS support working
+- Topic publishing support working
+- Configuration architecture clean (.env only)
+- Setup script created and tested
+- Unit tests written and passing
+- Documentation complete (.env, README.md, REQUIREMENTS.md)
+- .gitignore updated for .env protection
+- Version bumped to 1.8.0
+- Twilio implementation (next)
+- Documentation audit (after 3-4 major changes)
 
 ---
 
-**Status**: Production Ready  
-**Version**: 1.8.0  
-**Date**: October 15, 2025
+**Status**: Production Ready **Version**: 1.8.0 **Date**: October 15, 2025

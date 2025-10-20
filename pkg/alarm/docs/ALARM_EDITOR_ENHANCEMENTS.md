@@ -38,11 +38,11 @@ The alarm editor now includes clickable sensor field buttons that make writing c
 Select multiple notification channels with intuitive checkboxes. No more manual JSON editing!
 
 **Available Delivery Methods:**
-- 📟 **Console** - Log to console (default, always recommended)
-- 📋 **Syslog** - System log integration (Unix/Linux)
-- 📊 **Event Log** - Windows Event Log integration
-- ✉️ **Email** - Email notifications (requires SMTP configuration)
-- 📱 **SMS** - SMS notifications (requires Twilio configuration)
+-  **Console** - Log to console (default, always recommended)
+- **Syslog** - System log integration (Unix/Linux)
+-  **Event Log** - Windows Event Log integration
+- ️ **Email** - Email notifications (requires SMTP configuration)
+-  **SMS** - SMS notifications (requires Twilio configuration)
 
 **Default Behavior:**
 - New alarms default to Console delivery only
@@ -80,9 +80,9 @@ INFO: Sent console notification for alarm high-temperature
 **Info Level Logs (default):**
 - Alarm manager initialization with total alarm count
 - Active alarm summary at startup with details:
-  - Alarm name and condition
-  - Cooldown period
-  - Number of delivery channels
+ - Alarm name and condition
+ - Cooldown period
+ - Number of delivery channels
 - Count of enabled vs total alarms
 - Alarm trigger events with condition
 - Notification delivery confirmations per channel
@@ -127,7 +127,7 @@ INFO: 5 of 5 alarms are enabled
 2. Enter name: `hot-weather`
 3. Click the `temperature` button
 4. Type: ` > 35`
-5. Select delivery: ✓ Console, ✓ Syslog
+5. Select delivery:  Console,  Syslog
 6. Click "Save Alarm"
 
 Result: Alarm triggers when temperature exceeds 35°C, logs to both console and syslog.
@@ -138,7 +138,7 @@ Result: Alarm triggers when temperature exceeds 35°C, logs to both console and 
 2. Enter name: `dangerous-conditions`
 3. Click `temperature` → type ` > 38 && `
 4. Click `humidity` → type ` < 20`
-5. Select delivery: ✓ Console, ✓ Email
+5. Select delivery:  Console,  Email
 6. Click "Save Alarm"
 
 Result: Alarm triggers when it's both very hot AND very dry (fire weather conditions).
@@ -163,38 +163,37 @@ Watch for:
 
 ```json
 {
-  "name": "severe-weather",
-  "description": "Critical weather conditions",
-  "condition": "wind_gust > 30 || rain_rate > 20",
-  "tags": ["severe", "emergency"],
-  "enabled": true,
-  "cooldown": 300,
-  "channels": [
-    {
-      "type": "console",
-      "template": "⚠️ SEVERE WEATHER: {{condition}}"
-    },
-    {
-      "type": "syslog",
-      "template": "SEVERE WEATHER ALERT: {{condition}} at {{station}}"
-    },
-    {
-      "type": "email",
-      "template": "Severe weather detected at {{station}}: {{condition}}",
-      "email": {
-        "to": ["admin@example.com"],
-        "subject": "URGENT: Severe Weather Alert",
-        "body": "Severe weather conditions detected.\n\nStation: {{station}}\nCondition: {{condition}}\nWind Gust: {{wind_gust}} m/s\nRain Rate: {{rain_rate}} mm/hr\nTime: {{timestamp}}"
-      }
-    }
-  ]
+ "name": "severe-weather",
+ "description": "Critical weather conditions",
+ "condition": "wind_gust > 30 || rain_rate > 20",
+ "tags": ["severe", "emergency"],
+ "enabled": true,
+ "cooldown": 300,
+ "channels": [
+ {
+ "type": "console",
+ "template": "Warning: SEVERE WEATHER: {{condition}}"
+ },
+ {
+ "type": "syslog",
+ "template": "SEVERE WEATHER ALERT: {{condition}} at {{station}}"
+ },
+ {
+ "type": "email",
+ "template": "Severe weather detected at {{station}}: {{condition}}",
+ "email": {
+ "to": ["admin@example.com"],
+ "subject": "URGENT: Severe Weather Alert",
+ "body": "Severe weather conditions detected.\n\nStation: {{station}}\nCondition: {{condition}}\nWind Gust: {{wind_gust}} m/s\nRain Rate: {{rain_rate}} mm/hr\nTime: {{timestamp}}"
+ }
+ }
+ ]
 }
 ```
 
 When you edit this alarm in the UI:
-- ✓ Console checkbox will be checked
-- ✓ Syslog checkbox will be checked  
-- ✓ Email checkbox will be checked
+-  Console checkbox will be checked
+-  Syslog checkbox will be checked -  Email checkbox will be checked
 - The existing email configuration is preserved
 
 ## Best Practices

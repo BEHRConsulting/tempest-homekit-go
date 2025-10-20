@@ -1,155 +1,144 @@
 # Tag Selector Quick Start Guide
 
-## 🎯 What's New?
+##  What's New?
 
 The alarm editor now has a **searchable dropdown tag selector** that makes adding and managing tags much easier!
 
-## 🖼️ Visual Guide
+## ️ Visual Guide
 
 ### Before (Old Interface)
 ```
 ┌─────────────────────────────────────────┐
-│ Tags (comma-separated)                   │
+│ Tags (comma-separated) │
 │ ┌─────────────────────────────────────┐ │
-│ │ outdoor, temperature, critical      │ │  ← Plain text input
+│ │ outdoor, temperature, critical │ │ ← Plain text input
 │ └─────────────────────────────────────┘ │
 └─────────────────────────────────────────┘
 ```
-❌ Hard to see what tags you have  
-❌ Easy to make typos  
-❌ Can't see available tags  
-❌ Need to remember exact tag names  
-
+Hard to see what tags you have Easy to make typos Can't see available tags Need to remember exact tag names
 ### After (New Interface)
 ```
 ┌─────────────────────────────────────────┐
-│ Tags                                     │
+│ Tags │
 │ ┌─────────────────────────────────────┐ │
-│ │ [outdoor] [temperature] [critical]  │ │  ← Visual tag badges
-│ │       ×          ×            ×     │ │     with remove buttons
+│ │ [outdoor] [temperature] [critical] │ │ ← Visual tag badges
+│ │ × × × │ │ with remove buttons
 │ └─────────────────────────────────────┘ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 🔍 Search or add new tag...         │ │  ← Search/add input
+│ │  Search or add new tag... │ │ ← Search/add input
 │ └─────────────────────────────────────┘ │
-│   ⬇️ Click to show dropdown              │
+│ ⬇️ Click to show dropdown │
 │ ┌─────────────────────────────────────┐ │
-│ │ humidity                             │ │  ← Available tags
-│ │ indoor                               │ │
-│ │ lightning                            │ │
-│ │ wind                                 │ │
+│ │ humidity │ │ ← Available tags
+│ │ indoor │ │
+│ │ lightning │ │
+│ │ wind │ │
 │ └─────────────────────────────────────┘ │
 └─────────────────────────────────────────┘
 ```
-✅ See all tags at a glance  
-✅ Click to add existing tags  
-✅ Search as you type  
-✅ Create new tags easily  
-✅ Remove tags with one click  
-
-## 🚀 How to Use
+See all tags at a glance Click to add existing tags Search as you type Create new tags easily Remove tags with one click
+## How to Use
 
 ### Adding Existing Tags
 
 1. **Click** in the search box
-   ```
-   Search or add new tag...  ← Click here
-   ```
+ ```
+ Search or add new tag... ← Click here
+ ```
 
 2. **Dropdown appears** with all available tags
-   ```
-   ┌─────────────────┐
-   │ humidity        │
-   │ indoor          │
-   │ lightning       │
-   │ outdoor         │
-   │ temperature     │
-   │ wind            │
-   └─────────────────┘
-   ```
+ ```
+ ┌─────────────────┐
+ │ humidity │
+ │ indoor │
+ │ lightning │
+ │ outdoor │
+ │ temperature │
+ │ wind │
+ └─────────────────┘
+ ```
 
 3. **Click** the tag you want
-   ```
-   │ temperature     │  ← Click this
-   ```
+ ```
+ │ temperature │ ← Click this
+ ```
 
 4. **Tag is added** to your alarm
-   ```
-   [temperature] ✅
-   ```
+ ```
+ [temperature]  ```
 
 ### Creating New Tags
 
 1. **Type** a new tag name
-   ```
-   Search: critical  ← Type new tag
-   ```
+ ```
+ Search: critical ← Type new tag
+ ```
 
 2. **See "Add new tag" option** (green)
-   ```
-   ┌──────────────────────────────┐
-   │ + Add new tag: "critical"    │  ← Green option appears
-   └──────────────────────────────┘
-   ```
+ ```
+ ┌──────────────────────────────┐
+ │ + Add new tag: "critical" │ ← Green option appears
+ └──────────────────────────────┘
+ ```
 
 3. **Press Enter** or **click the option**
-   ```
-   Press ⏎ Enter
-   ```
+ ```
+ Press ⏎ Enter
+ ```
 
 4. **New tag added!**
-   ```
-   [critical] ✅
-   ```
+ ```
+ [critical]  ```
 
 ### Removing Tags
 
 1. **See your selected tags**
-   ```
-   [outdoor ×] [temperature ×] [critical ×]
-   ```
+ ```
+ [outdoor ×] [temperature ×] [critical ×]
+ ```
 
 2. **Click the ×** on any tag
-   ```
-   [outdoor ×]  ← Click the ×
-   ```
+ ```
+ [outdoor ×] ← Click the ×
+ ```
 
 3. **Tag removed!**
-   ```
-   [temperature ×] [critical ×]
-   ```
+ ```
+ [temperature ×] [critical ×]
+ ```
 
 ### Searching for Tags
 
 1. **Type** to filter tags
-   ```
-   Search: temp
-   ```
+ ```
+ Search: temp
+ ```
 
 2. **See matching results**
-   ```
-   ┌──────────────────────────────┐
-   │ temperature                   │  ← Matches "temp"
-   │ + Add new tag: "temp"         │  ← Option to create
-   └──────────────────────────────┘
-   ```
+ ```
+ ┌──────────────────────────────┐
+ │ temperature │ ← Matches "temp"
+ │ + Add new tag: "temp" │ ← Option to create
+ └──────────────────────────────┘
+ ```
 
 3. **Click** to add the one you want
 
-## 🎨 Visual Reference
+##  Visual Reference
 
 ### Tag States
 
 **Selected Tags (Purple Badges):**
 ```
 ┌──────────────────────────────────┐
-│ [outdoor] [temperature] [wind]   │  ← Your tags
+│ [outdoor] [temperature] [wind] │ ← Your tags
 └──────────────────────────────────┘
 ```
 
 **Empty State:**
 ```
 ┌──────────────────────────────────┐
-│ No tags selected                  │  ← Placeholder
+│ No tags selected │ ← Placeholder
 └──────────────────────────────────┘
 ```
 
@@ -157,11 +146,11 @@ The alarm editor now has a **searchable dropdown tag selector** that makes addin
 ```
 Search or add new tag...
 ┌──────────────────────────────────┐
-│ humidity                          │  ← Existing tags
-│ indoor                            │     (white background)
-│ lightning                         │
-│ + Add new tag: "my-tag"           │  ← New tag option
-└──────────────────────────────────┘     (green background)
+│ humidity │ ← Existing tags
+│ indoor │ (white background)
+│ lightning │
+│ + Add new tag: "my-tag" │ ← New tag option
+└──────────────────────────────────┘ (green background)
 ```
 
 ### Interaction Examples
@@ -169,59 +158,57 @@ Search or add new tag...
 #### Example 1: Quick Tag Addition
 ```
 Step 1: Click search box
-   [Search or add new tag...]
-           ⬇️
+ [Search or add new tag...]
+ ⬇️
 Step 2: Click tag from list
-   ┌─────────────┐
-   │ outdoor     │ ← Click
-   └─────────────┘
-           ⬇️
+ ┌─────────────┐
+ │ outdoor │ ← Click
+ └─────────────┘
+ ⬇️
 Step 3: Tag appears
-   [outdoor ×]
+ [outdoor ×]
 ```
 
 #### Example 2: Search and Add
 ```
 Step 1: Type to search
-   [Search: temp_______]
-           ⬇️
+ [Search: temp_______]
+ ⬇️
 Step 2: See filtered results
-   ┌────────────────┐
-   │ temperature    │
-   └────────────────┘
-           ⬇️
+ ┌────────────────┐
+ │ temperature │
+ └────────────────┘
+ ⬇️
 Step 3: Click to add
-   [temperature ×]
+ [temperature ×]
 ```
 
 #### Example 3: Create New Tag
 ```
 Step 1: Type new tag
-   [Search: station-01___]
-           ⬇️
+ [Search: station-01___]
+ ⬇️
 Step 2: See create option
-   ┌─────────────────────────────┐
-   │ + Add new tag: "station-01" │ ← Green
-   └─────────────────────────────┘
-           ⬇️
+ ┌─────────────────────────────┐
+ │ + Add new tag: "station-01" │ ← Green
+ └─────────────────────────────┘
+ ⬇️
 Step 3: Click or press Enter
-   [station-01 ×]
+ [station-01 ×]
 ```
 
 #### Example 4: Remove Multiple Tags
 ```
 Before:
-   [outdoor ×] [indoor ×] [temp ×]
-           
-Click ×:
-   [outdoor ×] [indoor  ] [temp ×]
-                  ⬆️ Removed
-           
-After:
-   [outdoor ×] [temp ×]
+ [outdoor ×] [indoor ×] [temp ×]
+ Click ×:
+ [outdoor ×] [indoor ] [temp ×]
+ ⬆️ Removed
+ After:
+ [outdoor ×] [temp ×]
 ```
 
-## 💡 Tips & Tricks
+## Tips & Tricks
 
 ### Keyboard Shortcuts
 
@@ -233,41 +220,41 @@ After:
 
 ### Quick Workflows
 
-**🚀 Speed Tagging:**
+**Speed Tagging:**
 1. Click search box
 2. Click tag → Click tag → Click tag
 3. Done! Three tags in seconds
 
-**🔍 Find Similar Tags:**
+** Find Similar Tags:**
 1. Type partial name (e.g., "temp")
 2. See all matching tags
 3. Pick the right one
 
-**✏️ Custom Tags:**
+**️ Custom Tags:**
 1. Type unique name
 2. Press Enter
 3. Tag created and selected
 
-**🗑️ Clean Up Tags:**
+**️ Clean Up Tags:**
 1. Click × on unwanted tags
 2. Add better tags
 3. Save alarm
 
 ### Best Practices
 
-✅ **DO:**
+**DO:**
 - Use the search to find existing tags
 - Create descriptive tag names
 - Remove unused tags
 - Use consistent naming (e.g., all lowercase)
 
-❌ **DON'T:**
+**DON'T:**
 - Create duplicate tags with different cases
 - Make tags too long
 - Use special characters unnecessarily
 - Add too many tags per alarm (keep it to 3-5)
 
-## 🎓 Common Scenarios
+##  Common Scenarios
 
 ### Scenario 1: New Alarm with Standard Tags
 ```
@@ -311,27 +298,27 @@ Task: Mark critical alarms
 Result: Priority and notification tags set
 ```
 
-## 🔄 Migration from Old System
+##  Migration from Old System
 
 If you have existing alarms with comma-separated tags:
 
 **Before:**
 ```json
 {
-  "tags": ["outdoor, temperature, critical"]  ← Wrong format
+ "tags": ["outdoor, temperature, critical"] ← Wrong format
 }
 ```
 
 **After (Auto-converted):**
 ```json
 {
-  "tags": ["outdoor", "temperature", "critical"]  ← Correct format
+ "tags": ["outdoor", "temperature", "critical"] ← Correct format
 }
 ```
 
 The system automatically handles this! Just edit and save the alarm.
 
-## 📱 Mobile-Friendly
+##  Mobile-Friendly
 
 The tag selector works great on touch devices:
 
@@ -341,23 +328,17 @@ The tag selector works great on touch devices:
 - Dropdown scrolls if many tags
 - No need to type on small screens
 
-## 🎉 Summary
+##  Summary
 
 ### What You Can Do Now
 
-✅ **See** all your tags visually  
-✅ **Search** through available tags  
-✅ **Click** to add tags instantly  
-✅ **Create** new tags on the fly  
-✅ **Remove** tags with one click  
-✅ **Organize** alarms better  
-
+**See** all your tags visually **Search** through available tags **Click** to add tags instantly **Create** new tags on the fly **Remove** tags with one click **Organize** alarms better
 ### Time Saved
 
 - **Old way:** Type tags manually, fix typos, remember names → 30 seconds
 - **New way:** Click search, click tags → 5 seconds
 
-**That's 6x faster!** ⚡
+**That's 6x faster!**
 
 ---
 

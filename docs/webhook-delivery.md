@@ -8,24 +8,24 @@ Webhooks are configured in the alarm JSON file as a channel with type `"webhook"
 
 ```json
 {
-  "name": "High Temperature Alert",
-  "condition": "temperature > 85F",
-  "channels": [
-    {
-      "type": "webhook",
-      "webhook": {
-        "url": "https://api.example.com/alerts",
-        "method": "POST",
-        "headers": {
-          "Authorization": "Bearer your-token",
-          "Content-Type": "application/json",
-          "X-Source": "tempest-weather"
-        },
-        "body": "{\"alarm\":\"{{alarm_name}}\", \"condition\":\"{{alarm_condition}}\", \"temperature\":{{temperature}}, \"station\":\"{{station}}\", \"timestamp\":\"{{timestamp}}\"}",
-        "content_type": "application/json"
-      }
-    }
-  ]
+ "name": "High Temperature Alert",
+ "condition": "temperature > 85F",
+ "channels": [
+ {
+ "type": "webhook",
+ "webhook": {
+ "url": "https://api.example.com/alerts",
+ "method": "POST",
+ "headers": {
+ "Authorization": "Bearer your-token",
+ "Content-Type": "application/json",
+ "X-Source": "tempest-weather"
+ },
+ "body": "{\"alarm\":\"{{alarm_name}}\", \"condition\":\"{{alarm_condition}}\", \"temperature\":{{temperature}}, \"station\":\"{{station}}\", \"timestamp\":\"{{timestamp}}\"}",
+ "content_type": "application/json"
+ }
+ }
+ ]
 }
 ```
 
@@ -98,52 +98,52 @@ import (
 
 type WebhookPayload struct {
 	Alarm struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Condition   string `json:"condition"`
+ Name string `json:"name"`
+ Description string `json:"description"`
+ Condition string `json:"condition"`
 	} `json:"alarm"`
-	Station   string                 `json:"station"`
-	Timestamp string                 `json:"timestamp"`
-	Sensors   map[string]interface{} `json:"sensors"`
+	Station string `json:"station"`
+	Timestamp string `json:"timestamp"`
+	Sensors map[string]interface{} `json:"sensors"`
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+ http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+ return
 	}
 
 	var payload WebhookPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		log.Printf("Error decoding webhook payload: %v", err)
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+ log.Printf("Error decoding webhook payload: %v", err)
+ http.Error(w, "Bad request", http.StatusBadRequest)
+ return
 	}
 
 	// Log the webhook
 	fmt.Printf("[%s] Webhook received from station: %s\n",
-		time.Now().Format("2006-01-02 15:04:05"), payload.Station)
-	fmt.Printf("  Alarm: %s - %s\n", payload.Alarm.Name, payload.Alarm.Description)
-	fmt.Printf("  Condition: %s\n", payload.Alarm.Condition)
-	fmt.Printf("  Temperature: %.1f°C\n", payload.Sensors["temperature_c"])
-	fmt.Printf("  Humidity: %.0f%%\n", payload.Sensors["humidity"])
+ time.Now().Format("2006-01-02 15:04:05"), payload.Station)
+	fmt.Printf(" Alarm: %s - %s\n", payload.Alarm.Name, payload.Alarm.Description)
+	fmt.Printf(" Condition: %s\n", payload.Alarm.Condition)
+	fmt.Printf(" Temperature: %.1f°C\n", payload.Sensors["temperature_c"])
+	fmt.Printf(" Humidity: %.0f%%\n", payload.Sensors["humidity"])
 	fmt.Println()
 
 	// Send success response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "received",
-		"alarm":   payload.Alarm.Name,
-		"station": payload.Station,
+ "status": "received",
+ "alarm": payload.Alarm.Name,
+ "station": payload.Station,
 	})
 }
 
 func main() {
 	http.HandleFunc("/webhook", webhookHandler)
 
-	fmt.Println("🌐 Webhook test server listening on :8080")
-	fmt.Println("Send test webhooks to: http://localhost:8080/webhook")
+ fmt.Println("Webhook test server listening on :8080")
+ fmt.Println("Send test webhooks to: http://localhost:8080/webhook")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 ```
@@ -160,15 +160,15 @@ func main() {
 
 ```json
 {
-  "type": "webhook",
-  "webhook": {
-    "url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
-    "method": "POST",
-    "headers": {
-      "Content-Type": "application/json"
-    },
-    "body": "{\"text\":\"🚨 Weather Alert: {{alarm_name}}\\nStation: {{station}}\\nTemperature: {{temperature_f}}°F\\nCondition: {{alarm_condition}}\\nTime: {{timestamp}}\"}"
-  }
+ "type": "webhook",
+ "webhook": {
+ "url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+ "method": "POST",
+ "headers": {
+ "Content-Type": "application/json"
+ },
+ "body": "{\"text\":\" Weather Alert: {{alarm_name}}\\nStation: {{station}}\\nTemperature: {{temperature_f}}°F\\nCondition: {{alarm_condition}}\\nTime: {{timestamp}}\"}"
+ }
 }
 ```
 
@@ -176,15 +176,15 @@ func main() {
 
 ```json
 {
-  "type": "webhook",
-  "webhook": {
-    "url": "https://discord.com/api/webhooks/YOUR/DISCORD/WEBHOOK",
-    "method": "POST",
-    "headers": {
-      "Content-Type": "application/json"
-    },
-    "body": "{\"content\":\"🚨 **Weather Alert**\\n**Alarm:** {{alarm_name}}\\n**Station:** {{station}}\\n**Temperature:** {{temperature_f}}°F\\n**Condition:** {{alarm_condition}}\\n**Time:** {{timestamp}}\"}"
-  }
+ "type": "webhook",
+ "webhook": {
+ "url": "https://discord.com/api/webhooks/YOUR/DISCORD/WEBHOOK",
+ "method": "POST",
+ "headers": {
+ "Content-Type": "application/json"
+ },
+ "body": "{\"content\":\" **Weather Alert**\\n**Alarm:** {{alarm_name}}\\n**Station:** {{station}}\\n**Temperature:** {{temperature_f}}°F\\n**Condition:** {{alarm_condition}}\\n**Time:** {{timestamp}}\"}"
+ }
 }
 ```
 
@@ -192,16 +192,16 @@ func main() {
 
 ```json
 {
-  "type": "webhook",
-  "webhook": {
-    "url": "https://api.monitoring-service.com/alerts",
-    "method": "POST",
-    "headers": {
-      "Authorization": "Bearer your-api-token",
-      "Content-Type": "application/json"
-    },
-    "body": "{{sensor_info}}"
-  }
+ "type": "webhook",
+ "webhook": {
+ "url": "https://api.monitoring-service.com/alerts",
+ "method": "POST",
+ "headers": {
+ "Authorization": "Bearer your-api-token",
+ "Content-Type": "application/json"
+ },
+ "body": "{{sensor_info}}"
+ }
 }
 ```
 

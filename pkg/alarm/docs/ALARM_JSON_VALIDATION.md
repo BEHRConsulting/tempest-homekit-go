@@ -125,27 +125,27 @@ Created `test-alarm-validation.sh` to test all error scenarios with automatic ti
 
 ```
 Input String
-    ↓
+ ↓
 [Starts with @?]
-    ↓                           ↓
-   YES                         NO
-    ↓                           ↓
-Read File                  Test JSON Syntax
-    ↓                           ↓
-    ├→ File Error          [Valid JSON?]
-    ↓                           ↓
-Parse JSON              YES         NO
-    ↓                    ↓           ↓
-    ├→ Parse Error    Parse      Syntax Error
-    ↓                  JSON       with line/col
-Validate Config           ↓           ↓
-    ↓                     ↓       [Looks like
-    ├→ Validation      Validate   filename?]
-    ↓    Error         Config        ↓
-Success                   ↓        YES  NO
-                          ↓         ↓    ↓
-                      Success   Hint  Generic
-                                @file  error
+ ↓ ↓
+ YES NO
+ ↓ ↓
+Read File Test JSON Syntax
+ ↓ ↓
+ ├→ File Error [Valid JSON?]
+ ↓ ↓
+Parse JSON YES NO
+ ↓ ↓ ↓
+ ├→ Parse Error Parse Syntax Error
+ ↓ JSON with line/col
+Validate Config ↓ ↓
+ ↓ ↓ [Looks like
+ ├→ Validation Validate filename?]
+ ↓ Error Config ↓
+Success ↓ YES NO
+ ↓ ↓ ↓
+ Success Hint Generic
+ @file error
 ```
 
 ## Error Message Categories
@@ -168,30 +168,30 @@ Success                   ↓        YES  NO
 
 ## Usage Examples
 
-### ✅ Correct - File Reference
+### Correct - File Reference
 ```bash
 ./tempest-homekit-go --alarms @tempest-alarms.json
 ./tempest-homekit-go --alarms @/full/path/alarms.json
 ```
 
-### ✅ Correct - Inline JSON
+### Correct - Inline JSON
 ```bash
 ./tempest-homekit-go --alarms '{"alarms":[{"name":"test","enabled":true,"condition":"temp>85","channels":[{"type":"console","template":"Alert!"}]}]}'
 ```
 
-### ❌ Incorrect - Missing @
+### Incorrect - Missing @
 ```bash
 ./tempest-homekit-go --alarms tempest-alarms.json
 # Error: Hint: Did you mean to use '@tempest-alarms.json'?
 ```
 
-### ❌ Incorrect - Invalid JSON
+### Incorrect - Invalid JSON
 ```bash
 ./tempest-homekit-go --alarms '{"alarms":['
 # Error: invalid JSON syntax at line 1, column 12: unexpected end of JSON input
 ```
 
-### ❌ Incorrect - Wrong Structure
+### Incorrect - Wrong Structure
 ```bash
 ./tempest-homekit-go --alarms '{}'
 # Error: invalid alarm config: at least one alarm must be defined

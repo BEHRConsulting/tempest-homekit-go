@@ -34,19 +34,19 @@ All validation messages are logged at **INFO** level. This means:
 If an alarm uses email but no email provider is set up:
 
 ```
-⚠️  Email delivery is configured in alarms, but no email provider is configured.
-    Set either SMTP_* or MS365_* environment variables in .env file.
-    For SMTP: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_ADDRESS
-    For MS365: MS365_CLIENT_ID, MS365_CLIENT_SECRET, MS365_TENANT_ID, MS365_FROM_ADDRESS
+Warning: Email delivery is configured in alarms, but no email provider is configured.
+ Set either SMTP_* or MS365_* environment variables in .env file.
+ For SMTP: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_ADDRESS
+ For MS365: MS365_CLIENT_ID, MS365_CLIENT_SECRET, MS365_TENANT_ID, MS365_FROM_ADDRESS
 ```
 
 If an alarm uses SMS but no SMS provider is set up:
 
 ```
-⚠️  SMS delivery is configured in alarms, but no SMS provider is configured.
-    Set either Twilio or AWS SNS environment variables in .env file.
-    For Twilio: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
-    For AWS SNS: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+Warning: SMS delivery is configured in alarms, but no SMS provider is configured.
+ Set either Twilio or AWS SNS environment variables in .env file.
+ For Twilio: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
+ For AWS SNS: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
 ```
 
 ### Missing Required Variables
@@ -54,11 +54,11 @@ If an alarm uses SMS but no SMS provider is set up:
 If a provider is partially configured (e.g., only `SMTP_HOST` is set):
 
 ```
-⚠️  SMTP email is configured but missing required environment variables: SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_ADDRESS
+Warning: SMTP email is configured but missing required environment variables: SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_ADDRESS
 ```
 
 ```
-⚠️  Twilio SMS is configured but missing required environment variables: TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
+Warning: Twilio SMS is configured but missing required environment variables: TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
 ```
 
 ## Examples
@@ -68,19 +68,19 @@ If a provider is partially configured (e.g., only `SMTP_HOST` is set):
 **Alarm configuration:**
 ```json
 {
-  "alarms": [{
-    "name": "High Temperature Alert",
-    "enabled": true,
-    "condition": "temperature > 35C",
-    "channels": [{
-      "type": "email",
-      "email": {
-        "to": ["alerts@example.com"],
-        "subject": "Temperature Alert",
-        "body": "Temperature exceeded threshold"
-      }
-    }]
-  }]
+ "alarms": [{
+ "name": "High Temperature Alert",
+ "enabled": true,
+ "condition": "temperature > 35C",
+ "channels": [{
+ "type": "email",
+ "email": {
+ "to": ["alerts@example.com"],
+ "subject": "Temperature Alert",
+ "body": "Temperature exceeded threshold"
+ }
+ }]
+ }]
 }
 ```
 
@@ -89,10 +89,10 @@ If a provider is partially configured (e.g., only `SMTP_HOST` is set):
 
 **Validation output (INFO level):**
 ```
-INFO: ⚠️  Email delivery is configured in alarms, but no email provider is configured.
-INFO:     Set either SMTP_* or MS365_* environment variables in .env file.
-INFO:     For SMTP: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_ADDRESS
-INFO:     For MS365: MS365_CLIENT_ID, MS365_CLIENT_SECRET, MS365_TENANT_ID, MS365_FROM_ADDRESS
+INFO: Warning: Email delivery is configured in alarms, but no email provider is configured.
+INFO: Set either SMTP_* or MS365_* environment variables in .env file.
+INFO: For SMTP: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_ADDRESS
+INFO: For MS365: MS365_CLIENT_ID, MS365_CLIENT_SECRET, MS365_TENANT_ID, MS365_FROM_ADDRESS
 ```
 
 **Fix:** Add to .env:
@@ -110,18 +110,18 @@ SMTP_USE_TLS=true
 **Alarm configuration:**
 ```json
 {
-  "alarms": [{
-    "name": "Storm Warning",
-    "enabled": true,
-    "condition": "*lightning_count && lightning_distance < 5",
-    "channels": [{
-      "type": "sms",
-      "sms": {
-        "to": ["+15555551234"],
-        "message": "Lightning detected nearby!"
-      }
-    }]
-  }]
+ "alarms": [{
+ "name": "Storm Warning",
+ "enabled": true,
+ "condition": "*lightning_count && lightning_distance < 5",
+ "channels": [{
+ "type": "sms",
+ "sms": {
+ "to": ["+15555551234"],
+ "message": "Lightning detected nearby!"
+ }
+ }]
+ }]
 }
 ```
 
@@ -133,7 +133,7 @@ TWILIO_ACCOUNT_SID=AC1234567890abcdef
 
 **Validation output (INFO level):**
 ```
-INFO: ⚠️  Twilio SMS is configured but missing required environment variables: TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
+INFO: Warning: Twilio SMS is configured but missing required environment variables: TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
 ```
 
 **Fix:** Add to .env:
@@ -147,13 +147,13 @@ TWILIO_FROM_NUMBER=+15555550000
 
 Validation logic is tested in `pkg/alarm/manager_validation_test.go` with comprehensive test cases:
 
-1. ✅ No delivery methods used (console only) - no warnings
-2. ✅ Email used but no provider configured - warning shown
-3. ✅ SMTP partially configured - lists missing variables
-4. ✅ SMS used but no provider configured - warning shown
-5. ✅ Twilio partially configured - lists missing variables
-6. ✅ Disabled alarms are ignored - no validation
-7. ✅ Fully configured providers - no warnings
+1. No delivery methods used (console only) - no warnings
+2. Email used but no provider configured - warning shown
+3. SMTP partially configured - lists missing variables
+4. SMS used but no provider configured - warning shown
+5. Twilio partially configured - lists missing variables
+6. Disabled alarms are ignored - no validation
+7. Fully configured providers - no warnings
 
 Run tests:
 ```bash
@@ -192,7 +192,7 @@ This ensures validation runs:
 
 All validation uses the custom logger package (`pkg/logger`):
 ```go
-logger.Info("⚠️  Email delivery is configured...")
+logger.Info("Warning: Email delivery is configured...")
 ```
 
 The logger respects the global log level setting. To see validation warnings:
@@ -210,7 +210,7 @@ Or via command line:
 
 - [Alarm Configuration Guide](ALARM_CONFIGURATION.md) - Complete environment variable setup
 - [Alarm Validation](ALARM_VALIDATION.md) - Condition validation and paraphrase features
-- [Architecture: Data Sources](../ARCHITECTURE_DATA_SOURCES.md) - Overall system architecture
+- [Architecture: Data Sources](development/ARCHITECTURE_DATA_SOURCES.md) - Overall system architecture
 
 ## Best Practices
 
@@ -227,7 +227,7 @@ Or via command line:
 Check your log level:
 ```bash
 # .env file
-LOG_LEVEL=info  # Must be 'info' or 'debug'
+LOG_LEVEL=info # Must be 'info' or 'debug'
 ```
 
 ### Validation passes but delivery fails?
@@ -248,8 +248,8 @@ LOG_LEVEL=warn
 Or disable the alarm temporarily while testing:
 ```json
 {
-  "name": "Test Alarm",
-  "enabled": false,  // Won't be validated
-  ...
+ "name": "Test Alarm",
+ "enabled": false, // Won't be validated
+ ...
 }
 ```
