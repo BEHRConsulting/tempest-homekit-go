@@ -5100,9 +5100,24 @@ function updateAlarmStatus(data) {
             alarmListEl.innerHTML = '<div class="alarm-list-header">Active Alarms:</div>';
         }
         
+        // Check for tag filter in URL (e.g. ?tag=outdoor)
+        const urlParamsLocal = new URLSearchParams(window.location.search);
+        const filterTag = urlParamsLocal.get('tag');
+
+        // Update header to indicate if filtered by tag
+        const headerEl = alarmListEl.querySelector('.alarm-list-header');
+        if (headerEl) {
+            if (filterTag) {
+                headerEl.textContent = `Active Alarms (filtered by tag: ${filterTag}):`;
+            } else {
+                headerEl.textContent = 'Active Alarms:';
+            }
+        }
+
         // Add alarm items
         data.alarms.forEach(alarm => {
             if (!alarm.enabled) return; // Only show enabled alarms
+            if (filterTag && Array.isArray(alarm.tags) && alarm.tags.indexOf(filterTag) === -1) return; // Apply tag filter
             
             const alarmItem = document.createElement('div');
             alarmItem.className = 'alarm-item';
@@ -5125,6 +5140,15 @@ function updateAlarmStatus(data) {
             const channels = document.createElement('div');
             channels.className = 'alarm-item-channels';
             channels.textContent = `Channels: ${alarm.channels.join(', ')}`;
+
+            // Tags display
+            const tagsEl = document.createElement('div');
+            tagsEl.className = 'alarm-item-tags';
+            if (Array.isArray(alarm.tags) && alarm.tags.length > 0) {
+                tagsEl.textContent = `Tags: ${alarm.tags.join(', ')}`;
+            } else {
+                tagsEl.textContent = 'Tags: -';
+            }
             
             // Add cooldown status if applicable
             const cooldown = document.createElement('div');
@@ -5151,6 +5175,7 @@ function updateAlarmStatus(data) {
 
             alarmDetails.appendChild(triggeredCountEl);
             alarmDetails.appendChild(channels);
+            alarmDetails.appendChild(tagsEl);
             alarmDetails.appendChild(cooldown);
             
             alarmItem.appendChild(alarmName);
