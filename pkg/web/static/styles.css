@@ -216,6 +216,19 @@ body {
     font-size: 0.85rem;
 }
 
+/* Triggered badge states */
+.alarm-item-triggered-count.alarm-triggered-warn {
+    background: rgba(255, 193, 7, 0.15); /* light amber */
+    color: #b35b00;
+    border: 1px solid rgba(255, 193, 7, 0.25);
+}
+
+.alarm-item-triggered-count.alarm-triggered-ok {
+    background: rgba(0, 0, 0, 0.03);
+    color: var(--card-text-light);
+    border: 1px solid rgba(0,0,0,0.03);
+}
+
 .card-icon {
     font-size: 2rem;
     margin-right: 10px;

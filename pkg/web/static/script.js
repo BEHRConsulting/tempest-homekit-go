@@ -5247,7 +5247,14 @@ function updateAlarmStatus(data) {
             const triggeredCountEl = document.createElement('div');
             triggeredCountEl.className = 'alarm-item-triggered-count';
             // API provides triggeredCount (number of times alarm fired during process lifetime)
-            triggeredCountEl.textContent = `Triggered: ${alarm.triggeredCount || 0}`;
+            const triggeredCount = Number(alarm.triggeredCount || 0);
+            triggeredCountEl.textContent = `Triggered: ${triggeredCount}`;
+            // Add a visual warning class when the count is > 0
+            if (triggeredCount > 0) {
+                triggeredCountEl.classList.add('alarm-triggered-warn');
+            } else {
+                triggeredCountEl.classList.add('alarm-triggered-ok');
+            }
 
             alarmDetails.appendChild(triggeredCountEl);
             alarmDetails.appendChild(channels);
