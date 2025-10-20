@@ -5104,14 +5104,86 @@ function updateAlarmStatus(data) {
         const urlParamsLocal = new URLSearchParams(window.location.search);
         const filterTag = urlParamsLocal.get('tag');
 
-        // Update header to indicate if filtered by tag
+        // Update header to indicate if filtered by tag and add tag selector
         const headerEl = alarmListEl.querySelector('.alarm-list-header');
         if (headerEl) {
-            if (filterTag) {
-                headerEl.textContent = `Active Alarms (filtered by tag: ${filterTag}):`;
-            } else {
-                headerEl.textContent = 'Active Alarms:';
+            // Create or reuse a container for header controls
+            let headerControls = headerEl.querySelector('.alarm-header-controls');
+            if (!headerControls) {
+                headerControls = document.createElement('div');
+                headerControls.className = 'alarm-header-controls';
+                headerControls.style.display = 'inline-block';
+                headerControls.style.marginLeft = '12px';
+                headerEl.appendChild(headerControls);
             }
+
+            // Update main header text
+            if (filterTag) {
+                headerEl.firstChild && (headerEl.firstChild.textContent = `Active Alarms (filtered by tag: ${filterTag}):`);
+            } else {
+                headerEl.firstChild && (headerEl.firstChild.textContent = 'Active Alarms:');
+            }
+
+            // Build unique tag list from data.alarms
+            const tagSet = new Set();
+            data.alarms.forEach(a => {
+                if (Array.isArray(a.tags)) {
+                    a.tags.forEach(t => tagSet.add(t));
+                }
+            });
+
+            // Create dropdown if not present
+            let tagSelect = headerControls.querySelector('select.alarm-tag-select');
+            if (!tagSelect) {
+                const label = document.createElement('label');
+                label.textContent = ' Tag: ';
+                label.htmlFor = 'alarm-tag-select';
+                label.style.fontSize = '0.9em';
+                label.style.marginRight = '6px';
+
+                tagSelect = document.createElement('select');
+                tagSelect.id = 'alarm-tag-select';
+                tagSelect.className = 'alarm-tag-select';
+                tagSelect.setAttribute('aria-label', 'Filter alarms by tag');
+                tagSelect.style.fontSize = '0.9em';
+                tagSelect.style.padding = '2px 6px';
+
+                headerControls.appendChild(label);
+                headerControls.appendChild(tagSelect);
+
+                // Attach change handler to update URL and refresh
+                tagSelect.addEventListener('change', function() {
+                    const val = this.value;
+                    const params = new URLSearchParams(window.location.search);
+                    if (val === '') {
+                        params.delete('tag');
+                    } else {
+                        params.set('tag', val);
+                    }
+                    const newUrl = window.location.pathname + '?' + params.toString();
+                    window.history.replaceState({}, '', newUrl);
+                    // Re-render using current data (no need to fetch again)
+                    updateAlarmStatus(data);
+                });
+            }
+
+            // Populate the select with options
+            // Preserve current selection if still valid
+            const currentValue = filterTag || '';
+            tagSelect.innerHTML = '';
+            const emptyOpt = document.createElement('option');
+            emptyOpt.value = '';
+            emptyOpt.textContent = '-- all tags --';
+            tagSelect.appendChild(emptyOpt);
+            Array.from(tagSet).sort().forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                if (t === currentValue) opt.selected = true;
+                tagSelect.appendChild(opt);
+            });
+            // Ensure selection reflects filterTag
+            if (filterTag) tagSelect.value = filterTag;
         }
 
         // Add alarm items
