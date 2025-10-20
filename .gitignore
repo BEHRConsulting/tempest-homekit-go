@@ -89,3 +89,6 @@ node_modules/
 # pkg/web/static/ - Commented out to track manual changes
 /db
 more-promptstxt.txt
+
+# Ignore editor/backup files
+*.bak
