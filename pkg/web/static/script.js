@@ -5117,13 +5117,8 @@ function updateAlarmStatus(data) {
                 headerEl.appendChild(headerControls);
             }
 
-            // Update main header text
-            if (filterTag) {
-                // Short, non-redundant label when filtered
-                headerEl.firstChild && (headerEl.firstChild.textContent = `Active Alarms (tag: ${filterTag})`);
-            } else {
-                headerEl.firstChild && (headerEl.firstChild.textContent = 'Active Alarms');
-            }
+            // Always show the main header text; tag is shown as a control in parentheses
+            headerEl.firstChild && (headerEl.firstChild.textContent = 'Active Alarms');
 
             // Build unique tag list from data.alarms
             const tagSet = new Set();
@@ -5137,10 +5132,10 @@ function updateAlarmStatus(data) {
             let tagSelect = headerControls.querySelector('select.alarm-tag-select');
             if (!tagSelect) {
                 const label = document.createElement('label');
-                label.textContent = ' Tag: ';
+                label.textContent = ' (tag: ';
                 label.htmlFor = 'alarm-tag-select';
                 label.style.fontSize = '0.9em';
-                label.style.marginRight = '6px';
+                label.style.marginRight = '4px';
 
                 tagSelect = document.createElement('select');
                 tagSelect.id = 'alarm-tag-select';
@@ -5149,8 +5144,13 @@ function updateAlarmStatus(data) {
                 tagSelect.style.fontSize = '0.9em';
                 tagSelect.style.padding = '2px 6px';
 
+                const closing = document.createElement('span');
+                closing.textContent = ')';
+                closing.style.marginLeft = '4px';
+
                 headerControls.appendChild(label);
                 headerControls.appendChild(tagSelect);
+                headerControls.appendChild(closing);
 
                 // Attach change handler to update URL and refresh
                 tagSelect.addEventListener('change', function() {
@@ -5161,7 +5161,7 @@ function updateAlarmStatus(data) {
                     } else {
                         params.set('tag', val);
                     }
-                    const newUrl = window.location.pathname + '?' + params.toString();
+                    const newUrl = window.location.pathname + (params.toString() ? ('?' + params.toString()) : '');
                     window.history.replaceState({}, '', newUrl);
                     // Re-render using current data (no need to fetch again)
                     updateAlarmStatus(data);
