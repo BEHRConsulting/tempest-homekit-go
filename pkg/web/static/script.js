@@ -5119,9 +5119,10 @@ function updateAlarmStatus(data) {
 
             // Update main header text
             if (filterTag) {
-                headerEl.firstChild && (headerEl.firstChild.textContent = `Active Alarms (filtered by tag: ${filterTag}):`);
+                // Short, non-redundant label when filtered
+                headerEl.firstChild && (headerEl.firstChild.textContent = `Active Alarms (tag: ${filterTag})`);
             } else {
-                headerEl.firstChild && (headerEl.firstChild.textContent = 'Active Alarms:');
+                headerEl.firstChild && (headerEl.firstChild.textContent = 'Active Alarms');
             }
 
             // Build unique tag list from data.alarms
