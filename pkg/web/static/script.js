@@ -5142,6 +5142,14 @@ function updateAlarmStatus(data) {
             
             alarmDetails.appendChild(condition);
             alarmDetails.appendChild(lastTriggered);
+
+            // Triggered count badge
+            const triggeredCountEl = document.createElement('div');
+            triggeredCountEl.className = 'alarm-item-triggered-count';
+            // API provides triggeredCount (number of times alarm fired during process lifetime)
+            triggeredCountEl.textContent = `Triggered: ${alarm.triggeredCount || 0}`;
+
+            alarmDetails.appendChild(triggeredCountEl);
             alarmDetails.appendChild(channels);
             alarmDetails.appendChild(cooldown);
             

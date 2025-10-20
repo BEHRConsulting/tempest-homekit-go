@@ -63,13 +63,13 @@ type SyslogConfig struct {
 
 // Alarm represents a single alarm rule
 type Alarm struct {
-	Name           string             `json:"name"`
-	Description    string             `json:"description,omitempty"`
-	Tags           []string           `json:"tags,omitempty"`
-	Enabled        bool               `json:"enabled"`
-	Condition      string             `json:"condition"`          // e.g., "temperature > 85", "humidity > 80 && temperature > 35", "*lightning_count"
-	Cooldown       int                `json:"cooldown,omitempty"` // Seconds between repeated notifications
-	Channels       []Channel          `json:"channels"`
+	Name        string    `json:"name"`
+	Description string    `json:"description,omitempty"`
+	Tags        []string  `json:"tags,omitempty"`
+	Enabled     bool      `json:"enabled"`
+	Condition   string    `json:"condition"`          // e.g., "temperature > 85", "humidity > 80 && temperature > 35", "*lightning_count"
+	Cooldown    int       `json:"cooldown,omitempty"` // Seconds between repeated notifications
+	Channels    []Channel `json:"channels"`
 	// TriggeredCount tracks how many times this alarm has been triggered since process start
 	TriggeredCount int                `json:"triggered_count,omitempty"`
 	lastFired      time.Time          // Internal: last trigger time
