@@ -4,7 +4,8 @@
 # 1. tempest-homekit-go: console with [additional flags...]
 # 2. tempest-homekit-go: editor
 # Usage: ./scripts/myrun.sh [additional flags...]
-# Example: ./scripts/myrun.sh --disable-homekit --web-port 8086
+# Examples: ./scripts/myrun.sh --disable-homekit --web-port 8086
+# 
 set -e
 
 ./scripts/kill-all.sh # Ensure no other instances are running

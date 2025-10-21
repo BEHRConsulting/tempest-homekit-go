@@ -1158,6 +1158,18 @@ func (ws *WebServer) getDashboardHTML() string {
                 </div>
             </div>
 
+			<!-- Tempest Station Tooltip (hidden, toggled by JS) -->
+			<div class="tempest-tooltip hidden" id="station-tooltip" role="dialog" aria-hidden="true">
+				<div class="tempest-tooltip-header">
+					<div>Tempest Station Details</div>
+					<div class="tempest-tooltip-close" id="station-tooltip-close" title="Close">✕</div>
+				</div>
+				<div class="tempest-tooltip-body" style="padding:12px; font-size:0.9rem;">
+					<p style="margin:0 0 8px 0;">Detailed device and hub status (battery, uptime, signal strength, firmware, serial numbers) are only available when the service is receiving UDP broadcasts from the Tempest station (<code>--udp-stream</code>) or when headless web-status scraping is enabled (<code>--use-web-status</code>).</p>
+					<p style="margin:0;">If neither is enabled the API does not provide these details and the dashboard will show summary status only.</p>
+				</div>
+			</div>
+
             <div class="card" id="humidity-card">
                 <div class="card-header">
                     <span class="card-icon">💧</span>
@@ -1517,10 +1529,11 @@ func (ws *WebServer) getDashboardHTML() string {
                         <span class="info-label">Status:</span>
                         <span class="info-value" id="tempest-status">Disconnected</span>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Data Source:</span>
-                        <span class="info-value" id="tempest-data-source">--</span>
-                    </div>
+					<div class="info-row">
+						<span class="info-label">Data Source:</span>
+						<span class="info-value" id="tempest-data-source">--</span>
+						<span class="info-icon" id="station-info-icon" role="button" aria-label="More info about Tempest Station status" title="More info about Tempest Station status">ℹ️</span>
+					</div>
                     <div class="info-row">
                         <span class="info-label">Station:</span>
                         <span class="info-value" id="tempest-station">--</span>
@@ -1806,8 +1819,9 @@ func (ws *WebServer) getDashboardHTML() string {
     `
 	}() + `
     
-    <!-- Main Application Script -->
-    <script src="pkg/web/static/script.js?v=` + fmt.Sprintf("%d", time.Now().UnixNano()) + `"></script>
+	<!-- Main Application Script -->
+	<script src="/pkg/web/static/alarm-utils.js"></script>
+	<script src="pkg/web/static/script.js?v=` + fmt.Sprintf("%d", time.Now().UnixNano()) + `"></script>
 </body>
 </html>`
 }

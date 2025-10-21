@@ -1,0 +1,9 @@
+{
+  "testEnvironment": "jsdom",
+  "setupFiles": ["<rootDir>/jest.setup.js"],
+  "testMatch": [
+    "**/pkg/web/static/**/__tests__/**/*.test.js"
+  ],
+  "testPathIgnorePatterns": ["/node_modules/"],
+  "transform": {}
+}

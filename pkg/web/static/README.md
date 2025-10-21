@@ -235,6 +235,36 @@ To add new static assets:
 - **CSS**: Flexbox and Grid layout, CSS custom properties
 
 ### No Build Process
+---
+
+## Run JS tests & manual tooltip check
+
+To run the frontend unit tests (jsdom + Jest) locally from the project root:
+
+```bash
+# Install dev dependencies (only needed once)
+npm install
+
+# Run the jsdom Jest tests (focused on pkg/web/static)
+npm test
+```
+
+To manually verify the Tempest Station tooltip in a browser:
+
+1. Start the Go server (from the project root):
+
+```bash
+# builds the binary
+go build -o tempest-homekit-go .
+
+# run the server (adjust flags as needed)
+./tempest-homekit-go --port 8086
+```
+
+2. Open the web dashboard in your browser at http://localhost:8086/
+3. In the Tempest Station card, click the ⓘ info icon next to the Station URL / UDP row. The tooltip explains that device/hub details are available only when running with --udp-stream or --use-web-status.
+4. Click the close icon on the tooltip or click outside the tooltip to dismiss it.
+
 The frontend uses vanilla technologies without a build process:
 - No npm/webpack/babel required
 - Direct browser execution

@@ -15,18 +15,7 @@ if (urlParams.get('loglevel') === 'debug' || localStorage.getItem('loglevel') ==
 }
 
 // Enhanced debug logger
-function debugLog(level, message, data = null) {
-    if (!DEBUG_MODE && level < logLevels.INFO) return;
-    
-    const levelNames = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
-    const emoji = ['🐛', 'ℹ️', '⚠️', '❌'];
-    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
-    
-    console.log(`${emoji[level]} [${timestamp}] ${levelNames[level]}: ${message}`);
-    if (data !== null) {
-        console.log('   Data:', data);
-    }
-}
+const debugLog = (typeof global !== 'undefined' && global.__JEST__) ? (() => {}) : console.log;
 
 // Global variable to track data source type for better error messaging
 let currentDataSourceType = null;
@@ -5055,9 +5044,18 @@ async function fetchAlarmStatus() {
 }
 
 // Update alarm status display
-function updateAlarmStatus(data) {
+function updateAlarmStatus(data, opts) {
+    // Allow callers (tests) to provide explicit window/document via opts
+    const optWin = opts && opts.window ? opts.window : null;
+    const optDoc = opts && opts.document ? opts.document : null;
+
+    // Prefer explicit opts, then JSDOM-provided globals, then real browser globals
+    const win = optWin || ((typeof global !== 'undefined' && global.window) ? global.window : (typeof window !== 'undefined' ? window : null));
+    const doc = optDoc || ((win && win.document) ? win.document : ((typeof global !== 'undefined' && global.document) ? global.document : (typeof document !== 'undefined' ? document : null)));
+    if (!doc) return; // cannot operate without a document
+
     // Update status indicator
-    const statusEl = document.getElementById('alarm-status');
+    const statusEl = doc.getElementById('alarm-status');
     if (statusEl) {
         if (data.enabled) {
             statusEl.textContent = '✅ Active';
@@ -5069,30 +5067,30 @@ function updateAlarmStatus(data) {
     }
     
     // Update config path
-    const configPathEl = document.getElementById('alarm-config-path');
+    const configPathEl = doc.getElementById('alarm-config-path');
     if (configPathEl) {
         configPathEl.textContent = data.configPath || 'N/A';
     }
     
     // Update last read time
-    const lastReadEl = document.getElementById('alarm-last-read');
+    const lastReadEl = doc.getElementById('alarm-last-read');
     if (lastReadEl) {
         lastReadEl.textContent = data.lastReadTime || 'N/A';
     }
     
     // Update counts
-    const totalCountEl = document.getElementById('alarm-total-count');
+    const totalCountEl = doc.getElementById('alarm-total-count');
     if (totalCountEl) {
         totalCountEl.textContent = data.totalAlarms || 0;
     }
     
-    const enabledCountEl = document.getElementById('alarm-enabled-count');
+    const enabledCountEl = doc.getElementById('alarm-enabled-count');
     if (enabledCountEl) {
         enabledCountEl.textContent = data.enabledAlarms || 0;
     }
     
     // Update alarm list
-    const alarmListEl = document.getElementById('alarm-list');
+    const alarmListEl = doc.getElementById('alarm-list');
     if (alarmListEl && data.alarms && data.alarms.length > 0) {
         // Clear existing items except header
         const header = alarmListEl.querySelector('.alarm-list-header');
@@ -5104,7 +5102,7 @@ function updateAlarmStatus(data) {
         }
         
         // Check for tag filter in URL (e.g. ?tag=outdoor)
-        const urlParamsLocal = new URLSearchParams(window.location.search);
+        const urlParamsLocal = new URLSearchParams((win && win.location) ? win.location.search : '');
         const filterTag = urlParamsLocal.get('tag');
 
         // Update header to indicate if filtered by tag and add tag selector
@@ -5113,7 +5111,7 @@ function updateAlarmStatus(data) {
             // Create or reuse a container for header controls
             let headerControls = headerEl.querySelector('.alarm-header-controls');
             if (!headerControls) {
-                headerControls = document.createElement('div');
+                headerControls = doc.createElement('div');
                 headerControls.className = 'alarm-header-controls';
                 headerControls.style.display = 'inline-block';
                 headerControls.style.marginLeft = '12px';
@@ -5131,23 +5129,35 @@ function updateAlarmStatus(data) {
                 }
             });
 
+            // Determine selected tag (URL param takes precedence)
+            const persistedTag = (() => { try { return (win && win.localStorage) ? win.localStorage.getItem('alarm-selected-tag') : (typeof localStorage !== 'undefined' ? localStorage.getItem('alarm-selected-tag') : null); } catch(e) { return null; } })();
+            let selectedTag = filterTag || '';
+            if (!selectedTag && persistedTag && tagSet.has(persistedTag)) {
+                selectedTag = persistedTag;
+                // Update URL to reflect persisted selection
+                const params = new URLSearchParams((win && win.location) ? win.location.search : '');
+                params.set('tag', selectedTag);
+                const newUrl = ((win && win.location) ? win.location.pathname : '/') + (params.toString() ? ('?' + params.toString()) : '');
+                if (win && win.history && typeof win.history.replaceState === 'function') win.history.replaceState({}, '', newUrl);
+            }
+
             // Create dropdown if not present
             let tagSelect = headerControls.querySelector('select.alarm-tag-select');
             if (!tagSelect) {
-                const label = document.createElement('label');
+                const label = doc.createElement('label');
                 label.textContent = ' (tag: ';
                 label.htmlFor = 'alarm-tag-select';
                 label.style.fontSize = '0.9em';
                 label.style.marginRight = '4px';
 
-                tagSelect = document.createElement('select');
+                tagSelect = doc.createElement('select');
                 tagSelect.id = 'alarm-tag-select';
                 tagSelect.className = 'alarm-tag-select';
                 tagSelect.setAttribute('aria-label', 'Filter alarms by tag');
                 tagSelect.style.fontSize = '0.9em';
                 tagSelect.style.padding = '2px 6px';
 
-                const closing = document.createElement('span');
+                const closing = doc.createElement('span');
                 closing.textContent = ')';
                 closing.style.marginLeft = '4px';
 
@@ -5158,36 +5168,37 @@ function updateAlarmStatus(data) {
                 // Attach change handler to update URL and refresh
                 tagSelect.addEventListener('change', function() {
                     const val = this.value;
-                    const params = new URLSearchParams(window.location.search);
+                    const params = new URLSearchParams((win && win.location) ? win.location.search : '');
                     if (val === '') {
                         params.delete('tag');
+                        try { if (win && win.localStorage) win.localStorage.removeItem('alarm-selected-tag'); else localStorage.removeItem('alarm-selected-tag'); } catch(e){}
                     } else {
                         params.set('tag', val);
+                        try { if (win && win.localStorage) win.localStorage.setItem('alarm-selected-tag', val); else localStorage.setItem('alarm-selected-tag', val); } catch(e){}
                     }
-                    const newUrl = window.location.pathname + (params.toString() ? ('?' + params.toString()) : '');
-                    window.history.replaceState({}, '', newUrl);
+                    const newUrl = ((win && win.location) ? win.location.pathname : '/') + (params.toString() ? ('?' + params.toString()) : '');
+                    if (win && win.history && typeof win.history.replaceState === 'function') win.history.replaceState({}, '', newUrl);
                     // Re-render using current data (no need to fetch again)
-                    updateAlarmStatus(data);
+                    updateAlarmStatus(data, { window: win, document: doc });
                 });
             }
 
             // Populate the select with options
             // Preserve current selection if still valid
-            const currentValue = filterTag || '';
             tagSelect.innerHTML = '';
-            const emptyOpt = document.createElement('option');
+            const emptyOpt = doc.createElement('option');
             emptyOpt.value = '';
             emptyOpt.textContent = '-- all tags --';
             tagSelect.appendChild(emptyOpt);
             Array.from(tagSet).sort().forEach(t => {
-                const opt = document.createElement('option');
+                const opt = doc.createElement('option');
                 opt.value = t;
                 opt.textContent = t;
-                if (t === currentValue) opt.selected = true;
+                if (t === selectedTag) opt.selected = true;
                 tagSelect.appendChild(opt);
             });
-            // Ensure selection reflects filterTag
-            if (filterTag) tagSelect.value = filterTag;
+            // Ensure selection reflects selectedTag
+            tagSelect.value = selectedTag;
         }
 
         // Add alarm items
@@ -5195,30 +5206,81 @@ function updateAlarmStatus(data) {
             if (!alarm.enabled) return; // Only show enabled alarms
             if (filterTag && Array.isArray(alarm.tags) && alarm.tags.indexOf(filterTag) === -1) return; // Apply tag filter
             
-            const alarmItem = document.createElement('div');
+            const alarmItem = doc.createElement('div');
             alarmItem.className = 'alarm-item';
             
-            const alarmName = document.createElement('div');
-            alarmName.className = 'alarm-item-name';
-            alarmName.textContent = `🔔 ${alarm.name}`;
+            // Check for compact mode
+            const storage = (win && win.localStorage) || (typeof localStorage !== 'undefined' ? localStorage : null);
+            const isCompact = storage ? storage.getItem('alarm-compact-mode') === 'true' : false;
+            if (isCompact) {
+                alarmItem.classList.add('compact');
+            }
             
-            const alarmDetails = document.createElement('div');
+            // Check for expanded state
+            const expandedSet = storage ? storage.getItem('alarm-expanded-set') : null;
+            let expandedKeys = [];
+            if (expandedSet) {
+                try {
+                    expandedKeys = JSON.parse(expandedSet);
+                } catch(e) {}
+            }
+            if (expandedKeys.includes(alarm.name)) {
+                alarmItem.classList.add('expanded');
+            }
+            
+            const alarmName = doc.createElement('div');
+            alarmName.className = 'alarm-item-name';
+            
+            // Add expand/collapse button
+            const expandButton = doc.createElement('button');
+            expandButton.className = 'alarm-expand-button';
+            expandButton.textContent = alarmItem.classList.contains('expanded') ? '▼' : '▶';
+            expandButton.setAttribute('aria-label', 'Toggle alarm details');
+            expandButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                alarmItem.classList.toggle('expanded');
+                this.textContent = alarmItem.classList.contains('expanded') ? '▼' : '▶';
+                // Update localStorage
+                const expandedSet = storage ? storage.getItem('alarm-expanded-set') : null;
+                let expandedKeys = [];
+                if (expandedSet) {
+                    try {
+                        expandedKeys = JSON.parse(expandedSet);
+                    } catch(e) {}
+                }
+                const name = alarm.name;
+                if (alarmItem.classList.contains('expanded')) {
+                    if (!expandedKeys.includes(name)) {
+                        expandedKeys.push(name);
+                    }
+                } else {
+                    expandedKeys = expandedKeys.filter(k => k !== name);
+                }
+                try {
+                    if (storage) storage.setItem('alarm-expanded-set', JSON.stringify(expandedKeys));
+                } catch(e) {}
+            });
+            
+            alarmName.appendChild(expandButton);
+            alarmName.appendChild(doc.createTextNode(` 🔔 ${alarm.name}`));
+            
+            const alarmDetails = doc.createElement('div');
             alarmDetails.className = 'alarm-item-details';
             
-            const condition = document.createElement('div');
+            const condition = doc.createElement('div');
             condition.className = 'alarm-item-condition';
             condition.textContent = `Condition: ${alarm.condition}`;
             
-            const lastTriggered = document.createElement('div');
+            const lastTriggered = doc.createElement('div');
             lastTriggered.className = 'alarm-item-triggered';
             lastTriggered.textContent = `Last: ${alarm.lastTriggered}`;
             
-            const channels = document.createElement('div');
+            const channels = doc.createElement('div');
             channels.className = 'alarm-item-channels';
-            channels.textContent = `Channels: ${alarm.channels.join(', ')}`;
+            channels.textContent = `Channels: ${Array.isArray(alarm.channels) ? alarm.channels.join(', ') : '-'}`;
 
             // Tags display
-            const tagsEl = document.createElement('div');
+            const tagsEl = doc.createElement('div');
             tagsEl.className = 'alarm-item-tags';
             if (Array.isArray(alarm.tags) && alarm.tags.length > 0) {
                 tagsEl.textContent = `Tags: ${alarm.tags.join(', ')}`;
@@ -5227,7 +5289,7 @@ function updateAlarmStatus(data) {
             }
             
             // Add cooldown status if applicable
-            const cooldown = document.createElement('div');
+            const cooldown = doc.createElement('div');
             cooldown.className = 'alarm-item-cooldown';
             if (alarm.inCooldown) {
                 const minutes = Math.floor(alarm.cooldownRemaining / 60);
@@ -5244,13 +5306,15 @@ function updateAlarmStatus(data) {
             alarmDetails.appendChild(lastTriggered);
 
             // Triggered count badge
-            const triggeredCountEl = document.createElement('div');
+            const triggeredCountEl = doc.createElement('div');
             triggeredCountEl.className = 'alarm-item-triggered-count';
             // API provides triggeredCount (number of times alarm fired during process lifetime)
             const triggeredCount = Number(alarm.triggeredCount || 0);
             triggeredCountEl.textContent = `Triggered: ${triggeredCount}`;
             // Add a visual warning class when the count is > 0
-            if (triggeredCount > 0) {
+            if (triggeredCount > 5) {
+                triggeredCountEl.classList.add('alarm-triggered-critical');
+            } else if (triggeredCount > 0) {
                 triggeredCountEl.classList.add('alarm-triggered-warn');
             } else {
                 triggeredCountEl.classList.add('alarm-triggered-ok');
@@ -5269,4 +5333,20 @@ function updateAlarmStatus(data) {
     } else if (alarmListEl) {
         alarmListEl.innerHTML = '<div class="alarm-list-header">Active Alarms:</div><div class="alarm-list-empty">No active alarms configured</div>';
     }
+}
+
+// Ensure updateAlarmStatus is available on window (browser) and exportable for tests
+try {
+    if (typeof window !== 'undefined' && window) {
+        // Attach only if not already present
+        window.updateAlarmStatus = window.updateAlarmStatus || updateAlarmStatus;
+    }
+} catch (e) {
+    // ignore
+}
+
+// CommonJS export for Node/Jest tests
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = module.exports || {};
+    module.exports.updateAlarmStatus = updateAlarmStatus;
 }

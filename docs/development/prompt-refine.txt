@@ -117,13 +117,21 @@
 
 [x] Add a command line parameter --env <filename> that overrides .env. 
 
-[-] Bring test coverage back yo >70%
+[-] Bring test coverage back to >70%
 
 [x] In all the popout charts, the data line should be solid and behind the average dashed line.
 
 [-] Lets implement the alarms sms (Twilio) notifications
 
 [x] Lets implment the alarms email (smtp) notifications
+
+[x] for all alarms, lets keep a triggered count and display in the alarm status card on the console
+
+[x] for all alarms, add a tags: display and add "filtered by tag" and tag selected dropdown to the active alarm header.
+
+[x] add tooltip to tempest station card, devcie and hub status only available with --udp-stream or --web-status options, the API does not relay this informaiton. match the tool tips in the other cards. See Humidity card as an example.
+
+[] remove all emoji characters from log messages. They do not map will on some systems.
 
 [] for popout graphs, the data line should be solid, no data point indicator, with all the points, it looks like a dotted line confusing it with the avg line.
 

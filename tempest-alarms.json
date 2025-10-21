@@ -8,8 +8,8 @@
         "rapid-change",
         "console"
       ],
-      "enabled": false,
-      "condition": "* wind_speed",
+      "enabled": true,
+      "condition": "* wind_direction",
       "cooldown": 300,
       "channels": [
         {

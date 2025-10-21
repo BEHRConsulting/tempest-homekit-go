@@ -1,6 +1,6 @@
 # Tempest HomeKit Go
 
-[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://golang.org) [![Test Coverage](https://img.shields.io/badge/coverage-59.1%25-yellow?style=flat)](./coverage.out) [![Build](https://github.com/BEHRConsulting/tempest-homekit-go/actions/workflows/ci.yml/badge.svg)](https://github.com/BEHRConsulting/tempest-homekit-go/actions) [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
+[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://golang.org) [![Test Coverage](https://img.shields.io/badge/coverage-60.3%25-yellow?style=flat)](./coverage.out) [![Build](https://github.com/BEHRConsulting/tempest-homekit-go/actions/workflows/ci.yml/badge.svg)](https://github.com/BEHRConsulting/tempest-homekit-go/actions) [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
 Tempest HomeKit Go is a Go service that reads WeatherFlow Tempest station data and exposes sensors to Apple HomeKit while providing a modern web dashboard. It supports UDP stream mode, historical preloading, alarm notifications, and optional device status scraping.
 
@@ -991,6 +991,8 @@ Access the modern web dashboard at `http://localhost:8080` (or your configured p
 - **Accessories Status**: Real-time HomeKit sensor status showing enabled/disabled state with priority sorting
 - **Wind Direction Display**: Shows cardinal direction + degrees (e.g., "WSW (241°)")
 - **Unit Persistence**: Preferences saved in browser localStorage
+ - **Alarm Tag Persistence**: The web dashboard persistently stores the selected alarm tag in browser localStorage under the key `alarm-selected-tag`. If a `?tag=` URL parameter is present it takes precedence over the saved value; clearing the selection removes the stored key. This is a client-side preference only and is not persisted server-side.
+ - **Tempest Station Tooltip**: The Tempest Station card shows an informational tooltip about device and hub details only when those details are available. Detailed device/hub info is populated either from the local UDP stream (`--udp-stream`) or from the optional headless web scraping mode (`--use-web-status`). Without one of those enabled the dashboard will show a brief tooltip indicating the data source limitation.
 - **Modern Design**: Responsive interface with weather-themed styling and cache-busting script loading
 - **All Sensors**: Complete weather data display with comprehensive DOM debugging
 - **HomeKit Status**: Bridge status, accessory count, and pairing PIN
