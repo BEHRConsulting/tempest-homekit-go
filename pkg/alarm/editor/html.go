@@ -7,6 +7,7 @@ const indexHTML = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alarm Configuration Editor</title>
     <link rel="stylesheet" href="/alarm-editor/static/styles.css">
+    <link rel="stylesheet" href="/alarm-editor/static/themes.css">
 </head>
 <body>
     <div class="container">
@@ -339,6 +340,23 @@ const indexHTML = `<!DOCTYPE html>
     <div id="notification" class="notification"></div>
     
     <script src="/alarm-editor/static/script.js"></script>
+    
+    <div class="footer">
+        <p>Last updated: <span id="last-update">--</span></p>
+        <p>Tempest HomeKit Service v{{.Version}}</p>
+        <div class="theme-selector">
+            <label for="theme-select">🎨 Theme:</label>
+            <select id="theme-select">
+                <option value="default">Default (Purple)</option>
+                <option value="ocean">Ocean Blue</option>
+                <option value="sunset">Sunset Orange</option>
+                <option value="forest">Forest Green</option>
+                <option value="midnight">Midnight Dark</option>
+                <option value="arctic">Arctic Light</option>
+                <option value="autumn">Autumn Earth</option>
+            </select>
+        </div>
+    </div>
 </body>
 </html>
 `

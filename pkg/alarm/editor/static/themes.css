@@ -1,0 +1,175 @@
+/* Theme System for Tempest HomeKit Web Console */
+/* Each theme defines CSS variables that override the default values */
+
+/* Default Theme (Purple Gradient) - Already in styles.css */
+:root {
+    --bg-gradient-start: #667eea;
+    --bg-gradient-end: #764ba2;
+    --card-bg: white;
+    --card-text: #333;
+    --card-text-light: #666;
+    --card-title: #555;
+    --header-text: white;
+    --footer-text: white;
+    --status-bg: rgba(255,255,255,0.1);
+    --status-text: white;
+    --shadow-color: rgba(0,0,0,0.1);
+    --shadow-hover: rgba(0,0,0,0.2);
+    --link-color: #007bff;
+    --chart-grid: rgba(0, 0, 0, 0.1);
+}
+
+/* Ocean Blue Theme */
+[data-theme="ocean"] {
+    --bg-gradient-start: #2E3192;
+    --bg-gradient-end: #1BFFFF;
+    --card-bg: white;
+    --card-text: #1a4d6d;
+    --card-text-light: #4a7a93;
+    --card-title: #2a5a7a;
+    --header-text: white;
+    --footer-text: white;
+    --status-bg: rgba(255,255,255,0.15);
+    --status-text: white;
+    --shadow-color: rgba(0,0,0,0.1);
+    --shadow-hover: rgba(0,0,0,0.2);
+    --link-color: #0096c7;
+    --chart-grid: rgba(0, 0, 0, 0.1);
+}
+
+/* Sunset Orange Theme */
+[data-theme="sunset"] {
+    --bg-gradient-start: #FA8BFF;
+    --bg-gradient-end: #FD1D1D;
+    --card-bg: white;
+    --card-text: #7d2d00;
+    --card-text-light: #b8641b;
+    --card-title: #a84300;
+    --header-text: white;
+    --footer-text: white;
+    --status-bg: rgba(255,255,255,0.15);
+    --status-text: white;
+    --shadow-color: rgba(0,0,0,0.1);
+    --shadow-hover: rgba(0,0,0,0.2);
+    --link-color: #ff6b35;
+    --chart-grid: rgba(0, 0, 0, 0.1);
+}
+
+/* Forest Green Theme */
+[data-theme="forest"] {
+    --bg-gradient-start: #134E5E;
+    --bg-gradient-end: #71B280;
+    --card-bg: white;
+    --card-text: #1e4d2b;
+    --card-text-light: #4a7856;
+    --card-title: #2d6a3e;
+    --header-text: white;
+    --footer-text: white;
+    --status-bg: rgba(255,255,255,0.15);
+    --status-text: white;
+    --shadow-color: rgba(0,0,0,0.1);
+    --shadow-hover: rgba(0,0,0,0.2);
+    --link-color: #52b788;
+    --chart-grid: rgba(0, 0, 0, 0.1);
+}
+
+/* Midnight Dark Theme */
+[data-theme="midnight"] {
+    --bg-gradient-start: #0f2027;
+    --bg-gradient-end: #203a43;
+    --card-bg: #1a2a3a;
+    --card-text: #e0e0e0;
+    --card-text-light: #b0b0b0;
+    --card-title: #d0d0d0;
+    --header-text: #e0e0e0;
+    --footer-text: #b0b0b0;
+    --status-bg: rgba(255,255,255,0.05);
+    --status-text: #d0d0d0;
+    --shadow-color: rgba(0,0,0,0.3);
+    --shadow-hover: rgba(0,0,0,0.5);
+    --link-color: #5dade2;
+    --chart-grid: rgba(255, 255, 255, 0.1);
+}
+
+/* Arctic Theme */
+[data-theme="arctic"] {
+    --bg-gradient-start: #E0EAFC;
+    --bg-gradient-end: #CFDEF3;
+    --card-bg: white;
+    --card-text: #2c3e50;
+    --card-text-light: #5d6d7e;
+    --card-title: #34495e;
+    --header-text: #2c3e50;
+    --footer-text: #34495e;
+    --status-bg: rgba(255,255,255,0.7);
+    --status-text: #2c3e50;
+    --shadow-color: rgba(0,0,0,0.08);
+    --shadow-hover: rgba(0,0,0,0.15);
+    --link-color: #3498db;
+    --chart-grid: rgba(0, 0, 0, 0.1);
+}
+
+/* Autumn Theme */
+[data-theme="autumn"] {
+    --bg-gradient-start: #DAD299;
+    --bg-gradient-end: #B0DAB9;
+    --card-bg: white;
+    --card-text: #5d4037;
+    --card-text-light: #8d6e63;
+    --card-title: #6d4c41;
+    --header-text: #5d4037;
+    --footer-text: #6d4c41;
+    --status-bg: rgba(255,255,255,0.6);
+    --status-text: #5d4037;
+    --shadow-color: rgba(0,0,0,0.1);
+    --shadow-hover: rgba(0,0,0,0.2);
+    --link-color: #d2691e;
+    --chart-grid: rgba(0, 0, 0, 0.1);
+}
+
+/* Theme Selector Styles */
+.theme-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+    padding: 10px;
+    background: var(--status-bg);
+    border-radius: 8px;
+}
+
+.theme-selector label {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.theme-selector select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+[data-theme="midnight"] .theme-selector select,
+[data-theme="arctic"] .theme-selector select,
+[data-theme="autumn"] .theme-selector select {
+    background: var(--card-bg);
+    color: var(--card-text);
+    border-color: var(--card-text-light);
+}
+
+.theme-selector select:hover {
+    transform: scale(1.05);
+    border-color: var(--link-color);
+}
+
+.theme-selector select:focus {
+    outline: none;
+    border-color: var(--link-color);
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}

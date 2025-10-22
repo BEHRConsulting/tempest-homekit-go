@@ -3,6 +3,41 @@ let currentAlarm = null;
 let allTags = [];
 let selectedTags = [];
 
+// ============================================
+// Theme Switching System
+// ============================================
+
+// Load saved theme on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const savedTheme = localStorage.getItem('selected-theme') || 'default';
+    applyTheme(savedTheme);
+    
+    const themeSelect = document.getElementById('theme-select');
+    if (themeSelect) {
+        themeSelect.value = savedTheme;
+        
+        // Listen for theme changes
+        themeSelect.addEventListener('change', function() {
+            const newTheme = this.value;
+            applyTheme(newTheme);
+            localStorage.setItem('selected-theme', newTheme);
+        });
+    }
+});
+
+// Apply theme to document
+function applyTheme(themeName) {
+    const body = document.body;
+    
+    // Remove existing theme
+    body.removeAttribute('data-theme');
+    
+    // Apply new theme (except for default)
+    if (themeName !== 'default') {
+        body.setAttribute('data-theme', themeName);
+    }
+}
+
 async function init() {
     await loadAlarms();
     await loadTags();
@@ -10,6 +45,9 @@ async function init() {
     document.getElementById('filterTag').addEventListener('change', filterAlarms);
     document.getElementById('alarmForm').addEventListener('submit', handleSubmit);
     initTagSelector();
+    
+    // Update last update timestamp
+    updateLastUpdateTimestamp();
 }
 
 async function loadAlarms() {
@@ -770,6 +808,22 @@ function showNotification(message, type) {
     setTimeout(() => {
         notification.classList.remove('show');
     }, 3000);
+}
+
+function updateLastUpdateTimestamp() {
+    const lastUpdateElement = document.getElementById('last-update');
+    if (lastUpdateElement) {
+        const now = new Date();
+        const lastUpdateText = now.toLocaleString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+        lastUpdateElement.textContent = lastUpdateText;
+    }
 }
 
 init();

@@ -668,3 +668,38 @@ body {
 #customMessageSections .message-input-section:last-child {
     margin-bottom: 0;
 }
+
+.footer {
+    text-align: center;
+    color: var(--footer-text);
+    margin-top: 30px;
+    font-size: 0.9rem;
+}
+
+.footer p {
+    margin: 5px 0;
+}
+
+.theme-selector {
+    margin-top: 15px;
+    display: inline-block;
+}
+
+.theme-selector label {
+    margin-right: 10px;
+    font-weight: 600;
+    color: var(--footer-text);
+}
+
+.theme-selector select {
+    padding: 6px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+}
+
+.theme-selector select:hover {
+    border-color: #667eea;
+}

@@ -137,6 +137,8 @@
 
 [x] if the command line parameter --webhook-listener <port to listen to> is speicfied, start a standalone http server on <port to listen to, default 8082> that will listen for the webhook. the feature is to help test webhooks and should not run any other part of the application. Report nicely to the console as it receives them, pretty printing the json body. update usage and readme.md with --webhook-listener and --test-webhook. 
 
+[] All the popout graphs should use the same style selection as the web-console. UX consistantcy.
+
 [] remove all emoji characters from log messages. They do not map well on some systems.
 
 [] Lets add delivery methods csv and json files. The config section for these should include at least path and max number of days in the file. maintain the file as a FIFO queue. if the file can not me opened, generate a warning log and create a temp file (also shown in the warning log) to hold the alarms until the file can be opened. This is to catch files already opened or permission issues. create nice default messages when selected.

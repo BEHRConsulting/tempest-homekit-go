@@ -48,7 +48,7 @@
         "rapid-change",
         "webhook"
       ],
-      "enabled": true,
+      "enabled": false,
       "condition": "* wind_direction",
       "cooldown": 30,
       "channels": [

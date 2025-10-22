@@ -278,6 +278,32 @@ function initCharts() {
         try {
             debugLog(logLevels.INFO, 'Detected chart popout canvas - creating minimal popout chart');
             
+            // Read configuration from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const configParam = urlParams.get('config');
+            let popoutConfig = {};
+            if (configParam) {
+                try {
+                    popoutConfig = JSON.parse(decodeURIComponent(configParam));
+                    debugLog(logLevels.DEBUG, 'Popout config loaded from URL', popoutConfig);
+                } catch (e) {
+                    debugLog(logLevels.WARN, 'Failed to parse popout config from URL', e);
+                }
+            }
+            
+            // Apply theme from config if available
+            if (popoutConfig.theme) {
+                document.body.setAttribute('data-theme', popoutConfig.theme);
+                debugLog(logLevels.INFO, 'Applied theme from popout config', { theme: popoutConfig.theme });
+                
+                // Update chart colors for dark themes
+                if (popoutConfig.theme === 'midnight') {
+                    updateChartsForDarkMode(true);
+                } else {
+                    updateChartsForDarkMode(false);
+                }
+            }
+            
             // Detect chart type from URL path (/chart/temperature, /chart/humidity, etc.)
             const urlPath = window.location.pathname;
             const chartType = urlPath.split('/').pop(); // Gets 'temperature', 'humidity', etc.
@@ -1128,7 +1154,7 @@ function forceChartColors() {
                 incomingUnits = Object.assign({}, units);
             }
 
-            const cfg = { type: type, field: field, title: title, color: color, units: units, incomingUnits: incomingUnits, datasets: datasetsMeta };
+            const cfg = { type: type, field: field, title: title, color: color, units: units, incomingUnits: incomingUnits, datasets: datasetsMeta, theme: localStorage.getItem('theme') || 'default' };
             const encoded = encodeURIComponent(JSON.stringify(cfg));
             const url = '/chart/' + type + '?config=' + encoded;
             window.open(url, '_blank');

@@ -18,18 +18,20 @@ import (
 type Server struct {
 	configPath   string
 	port         string
+	version      string
 	config       *alarm.AlarmConfig
 	lastLoadTime time.Time
 }
 
 // NewServer creates a new alarm editor server
-func NewServer(configPath, port string) (*Server, error) {
+func NewServer(configPath, port, version string) (*Server, error) {
 	// Remove @ prefix if present
 	path := strings.TrimPrefix(configPath, "@")
 
 	s := &Server{
 		configPath: path,
 		port:       port,
+		version:    version,
 	}
 
 	// Load existing config or create new one
@@ -149,6 +151,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
 		"ConfigPath": s.configPath,
 		"Port":       s.port,
+		"Version":    s.version,
 		"LastLoad":   lastLoad,
 	}
 	if err := tmpl.Execute(w, data); err != nil {
