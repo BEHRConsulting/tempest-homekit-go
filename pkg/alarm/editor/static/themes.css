@@ -17,6 +17,18 @@
     --shadow-hover: rgba(0,0,0,0.2);
     --link-color: #007bff;
     --chart-grid: rgba(0, 0, 0, 0.1);
+    --success-color: #28a745;
+    --success-hover: #218838;
+    --danger-color: #dc3545;
+    --danger-hover: #c82333;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5a6268;
+    --info-color: #17a2b8;
+    --info-hover: #138496;
+    --border-color: #ced4da;
+    --light-bg: #f8f9fa;
+    --tag-bg: #e7f3ff;
+    --tag-color: #0066cc;
 }
 
 /* Ocean Blue Theme */
@@ -35,6 +47,18 @@
     --shadow-hover: rgba(0,0,0,0.2);
     --link-color: #0096c7;
     --chart-grid: rgba(0, 0, 0, 0.1);
+    --success-color: #28a745;
+    --success-hover: #218838;
+    --danger-color: #dc3545;
+    --danger-hover: #c82333;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5a6268;
+    --info-color: #17a2b8;
+    --info-hover: #138496;
+    --border-color: #ced4da;
+    --light-bg: #f8f9fa;
+    --tag-bg: #e7f3ff;
+    --tag-color: #0066cc;
 }
 
 /* Sunset Orange Theme */
@@ -53,6 +77,18 @@
     --shadow-hover: rgba(0,0,0,0.2);
     --link-color: #ff6b35;
     --chart-grid: rgba(0, 0, 0, 0.1);
+    --success-color: #28a745;
+    --success-hover: #218838;
+    --danger-color: #dc3545;
+    --danger-hover: #c82333;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5a6268;
+    --info-color: #17a2b8;
+    --info-hover: #138496;
+    --border-color: #ced4da;
+    --light-bg: #f8f9fa;
+    --tag-bg: #e7f3ff;
+    --tag-color: #0066cc;
 }
 
 /* Forest Green Theme */
@@ -71,6 +107,18 @@
     --shadow-hover: rgba(0,0,0,0.2);
     --link-color: #52b788;
     --chart-grid: rgba(0, 0, 0, 0.1);
+    --success-color: #28a745;
+    --success-hover: #218838;
+    --danger-color: #dc3545;
+    --danger-hover: #c82333;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5a6268;
+    --info-color: #17a2b8;
+    --info-hover: #138496;
+    --border-color: #ced4da;
+    --light-bg: #f8f9fa;
+    --tag-bg: #e7f3ff;
+    --tag-color: #0066cc;
 }
 
 /* Midnight Dark Theme */
@@ -89,6 +137,18 @@
     --shadow-hover: rgba(0,0,0,0.5);
     --link-color: #5dade2;
     --chart-grid: rgba(255, 255, 255, 0.1);
+    --success-color: #28a745;
+    --success-hover: #218838;
+    --danger-color: #dc3545;
+    --danger-hover: #c82333;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5a6268;
+    --info-color: #17a2b8;
+    --info-hover: #138496;
+    --border-color: #4a5a6a;
+    --light-bg: #2a3a4a;
+    --tag-bg: #1a4a6a;
+    --tag-color: #5dade2;
 }
 
 /* Arctic Theme */
@@ -107,6 +167,18 @@
     --shadow-hover: rgba(0,0,0,0.15);
     --link-color: #3498db;
     --chart-grid: rgba(0, 0, 0, 0.1);
+    --success-color: #28a745;
+    --success-hover: #218838;
+    --danger-color: #dc3545;
+    --danger-hover: #c82333;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5a6268;
+    --info-color: #17a2b8;
+    --info-hover: #138496;
+    --border-color: #bdc3c7;
+    --light-bg: #ecf0f1;
+    --tag-bg: #e7f3ff;
+    --tag-color: #0066cc;
 }
 
 /* Autumn Theme */
@@ -125,6 +197,18 @@
     --shadow-hover: rgba(0,0,0,0.2);
     --link-color: #d2691e;
     --chart-grid: rgba(0, 0, 0, 0.1);
+    --success-color: #28a745;
+    --success-hover: #218838;
+    --danger-color: #dc3545;
+    --danger-hover: #c82333;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5a6268;
+    --info-color: #17a2b8;
+    --info-hover: #138496;
+    --border-color: #d7ccc8;
+    --light-bg: #efebe9;
+    --tag-bg: #e7f3ff;
+    --tag-color: #0066cc;
 }
 
 /* Theme Selector Styles */
