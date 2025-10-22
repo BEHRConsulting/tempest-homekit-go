@@ -131,15 +131,15 @@
 
 [x] add tooltip to tempest station card, devcie and hub status only available with --udp-stream or --web-status options, the API does not relay this informaiton. match the tool tips in the other cards. See Humidity card as an example.
 
-[] remove all emoji characters from log messages. They do not map will on some systems.
+[x] for popout graphs, the data line should be solid, no data point indicator, with all the points, it looks like a dotted line confusing it with the avg line.
 
-[] for popout graphs, the data line should be solid, no data point indicator, with all the points, it looks like a dotted line confusing it with the avg line.
+[x] Lets add deleivery method web hook. add to alarm editor. add --test-webhook. document usage showing a golang server and example in a documentation file. add to readme.md and other .md files as needed.
+
+[x] if the command line parameter --webhook-listener <port to listen to> is speicfied, start a standalone http server on <port to listen to, default 8082> that will listen for the webhook. the feature is to help test webhooks and should not run any other part of the application. Report nicely to the console as it receives them, pretty printing the json body. update usage and readme.md with --webhook-listener and --test-webhook. 
+
+[] remove all emoji characters from log messages. They do not map well on some systems.
 
 [] Lets add delivery methods csv and json files. The config section for these should include at least path and max number of days in the file. maintain the file as a FIFO queue. if the file can not me opened, generate a warning log and create a temp file (also shown in the warning log) to hold the alarms until the file can be opened. This is to catch files already opened or permission issues. create nice default messages when selected.
-
-[] Lets add deleivery method web hook. add to alarm editor. add --test-webhook. document usage showing a golang server and example in a documentation file. add to readme.md and other .md files as needed.
-
-[] if the command line parameter --webhook-listener <port to listen to> is speicfied, start a standalone http server on <port to listen to, default 8082> that will listen for the webhook. the feature is to help test webhooks and should not run any other part of the application. Report nicely to the console as it receives them, pretty printing the json body. update usage and readme.md with --webhook-listener and --test-webhook. 
 
 [] Lets add a per-alarm scheduling system. daily by hour, sunrise, sunset, days per week, start time, end time. Any other standard scheduled options? I.e.: (1) Every date from sunrise to sunset. (2) Monday through Friday from 10:00-20:00. (3) No schedule defaults to Everyday, all day.
 

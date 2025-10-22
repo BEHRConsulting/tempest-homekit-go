@@ -117,38 +117,69 @@ For a concise history of versions and notable changes, see `VERSIONS.md`.
 
 Planned enhancements and strategic priorities for upcoming releases. Items are grouped by priority and include brief implementation notes and suggested CLI/environment configuration where relevant.
 
-High priority
-- Alarms and Notifications
- - Description: Rule-based alerting system that triggers notifications when weather conditions meet configured criteria (thresholds, combinations, or event patterns).
- - Channels: Console logging, Syslog, OSLog (macOS unified logging), Email, SMS, and an internal EventManager (webhook/HTTP). Support templated messages with runtime value interpolation.
- - CLI/Env: `--alarms @alarms.json` or `--alarms '{...json...}'`. File-watcher to auto-reload alarm configuration.
- - Notes: Provide a secure secrets mechanism for SMTP/SMS credentials (use `.env` or platform secrets). Include an interactive web-based alarm editor behind `--alarms-edit` for ease of configuration.
+### ✅ Completed Features
 
-- Multi-station Monitoring
- - Description: Allow monitoring of multiple Tempest stations from a single instance. Each station has its own data source, history buffer, and HomeKit grouping.
- - CLI/Env: `--stations config.json` or multiple `--station-url` entries. Provide station tagging and per-station sensor enable/disable.
- - Notes: Architect with per-station goroutines, scoped caches, and aggregated UI views.
+**High Priority - Completed:**
+- **Alarms and Notifications** ✓ - Fully implemented rule-based alerting system with multiple channels (Email, SMS, Webhook, Console, Syslog, OSLog, EventLog). Supports templated messages, cooldown periods, and interactive web-based alarm editor.
+  - CLI/Env: `--alarms @alarms.json` or `--alarms '{...json...}'`. File-watcher for auto-reload.
+  - Channels: SMTP/Microsoft 365 OAuth2 email, Twilio/AWS SNS SMS, HTTP webhooks, console logging, syslog, macOS OSLog, Windows EventLog
+  - Features: Change detection operators (`*field`, `>field`, `<field>`), template expansion, cooldown management, web console status card
 
-Medium priority
-- Container & Serverless Deployment
- - Docker: Provide a lightweight Docker image with recommended environment variables and a `Dockerfile` producing a small, reproducible artifact.
- - AWS Lambda (Serverless): Provide a design for a Lambda-friendly mode (stateless handler + external storage for history); `--lambda-mode` for event-driven execution. Note: HomeKit functionality is not supported in serverless mode — this mode targets data ingestion, web dashboard, and notifications.
- - Notes: Include example `docker-compose.yml` for local multi-container setups (web + optional SMTP/SMS mock) and CI build steps for publishing images.
+- **Notification Integrations** ✓ - Complete multi-provider support with secure credential management
+  - Email: SMTP with TLS + Microsoft 365 OAuth2 (Mail.Send permission)
+  - SMS: Twilio (trial/production) + AWS SNS (production-grade)
+  - Webhook: HTTP POST with JSON payloads and template expansion
+  - Testing: `--test-email`, `--test-sms`, `--test-webhook` flags for validation
 
-- Notification Integrations
- - Email: SMTP with optional OAUTH2 support for providers like Microsoft 365 / Google Workspace.
- - SMS: Pluggable providers (Twilio, Amazon SNS); supply a provider interface and sample provider configs in `.env.example`.
- - Syslog & EventManager: Local syslog emission and webhook-based event forwarding for enterprise integrations.
+- **Alarm Editor** ✓ - Modern web-based alarm configuration interface
+  - Features: Search/filter, create/edit/delete alarms, visual status, live validation, auto-save
+  - Access: `--alarms-edit @alarms.json` starts editor at http://localhost:8081
+  - Independent operation with file watching for live reload
 
-Longer-term / stretch goals
-- Alarm editor: Interactive web UI to author and validate alarms with templates and live preview.
-- Advanced rules engine: Support for boolean logic, time windows, and rate-limiting to prevent notification storms.
-- Multi-tenant UI: Role-based access controls and per-tenant station configuration for managed deployments.
+### 🔄 In Progress / Medium Priority
 
-Contributing / Implementation notes
-- Priorities: Focus test coverage and robust unit tests for `pkg/service` (multi-station orchestration) and `pkg/weather` (data parsing & UDP ingestion) before adding large integration features.
-- CLI flags and env variables should be documented in `REQUIREMENTS.md` and `README.md` as features are implemented. Use `.env.example` for credential scaffolding.
-- Backward compatibility: Add feature flags (`--enable-alarms`, `--multi-station`) to avoid surprising default behavior.
+**Multi-station Monitoring** - Allow monitoring multiple Tempest stations from single instance
+- Description: Each station gets own data source, history buffer, and HomeKit grouping
+- CLI/Env: `--stations config.json` or multiple `--station-url` entries with station tagging
+- Notes: Requires per-station goroutines, scoped caches, and aggregated UI views
+
+**Container & Serverless Deployment** - Production deployment options
+- Docker: Lightweight image with environment variables and docker-compose examples
+- AWS Lambda: Serverless handler for data ingestion (HomeKit not supported in serverless)
+- Notes: Include example configurations and CI build steps for image publishing
+
+### 🔮 Future / Long-term Goals
+
+**Advanced Rules Engine** - Enhanced alarm capabilities
+- Description: Boolean logic, time windows, rate limiting, complex condition combinations
+- Features: `AND`/`OR` operators, time-based triggers, notification throttling
+- Notes: Extends current condition syntax beyond simple threshold comparisons
+
+**Multi-tenant UI** - Role-based access controls for managed deployments
+- Description: User isolation, per-tenant station configuration, access controls
+- Features: Authentication, tenant-specific dashboards, admin controls
+- Notes: Requires database layer for user management and session handling
+
+**Additional Alarm Delivery Methods** - CSV and JSON file logging
+- Description: Log alarm events to local CSV or JSON files with configurable retention policies
+- Features: FIFO queue management, configurable file paths and max days retention, fallback to temp files on write failures
+- Notes: Extends notification channels for audit trails and data export
+
+**Per-Alarm Scheduling System** - Time-based alarm activation
+- Description: Schedule alarms to be active only during specific time windows
+- Features: Daily/hourly scheduling, sunrise/sunset triggers, days-of-week restrictions, start/end time ranges
+- Notes: Reduces false positives during maintenance windows or off-hours
+
+**Database Alarm Delivery** - MariaDB/MySQL integration
+- Description: Store alarm events as JSON records in local or remote MariaDB/MySQL databases
+- Features: Secure protocol support with fallback to plain text, UUID primary keys, timestamp indexing, configurable connection parameters
+- Notes: Requires database credentials in .env file, supports both local and remote database servers
+
+**Contributing / Implementation Notes:**
+- **Current Focus**: Multi-station monitoring and container deployment
+- **Test Coverage**: Maintain 60%+ coverage with new features
+- **Backward Compatibility**: Use feature flags for major changes
+- **Documentation**: Update CLI flags and env vars in REQUIREMENTS.md as features are implemented
 
 ## Alarms and Notifications
 
