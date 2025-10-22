@@ -32,9 +32,23 @@
       </div>
     </div>
 
-    <!-- Load charting libraries from local static files when possible -->
+    <div class="footer">
+      <div class="theme-selector">
+        <label for="theme-select">🎨 Theme:</label>
+        <select id="theme-select">
+          <option value="default">Default (Purple)</option>
+          <option value="ocean">Ocean Blue</option>
+          <option value="sunset">Sunset Orange</option>
+          <option value="forest">Forest Green</option>
+          <option value="midnight">Midnight Dark</option>
+          <option value="arctic">Arctic Light</option>
+          <option value="autumn">Autumn Earth</option>
+        </select>
+      </div>
+    </div>
     <script src="/pkg/web/static/chart.umd.js"></script>
     <script src="/pkg/web/static/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="/pkg/web/static/alarm-utils.js"></script>
     <script src="/pkg/web/static/script.js"></script>
   </body>
 </html>
