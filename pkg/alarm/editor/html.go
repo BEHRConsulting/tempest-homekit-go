@@ -127,30 +127,33 @@ const indexHTML = `<!DOCTYPE html>
                     <div id="consoleMessageSection" class="form-group message-input-section" style="display:block;">
                         <div class="message-header">
                             <label>📟 Console Message</label>
-                            <select onchange="insertVariable('consoleMessage')" class="variable-dropdown">
-                                <option value="">📋 Insert Variable...</option>
-                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
-                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
-                                <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
-                                <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
-                                <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
-                                <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
-                                <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
-                                <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
-                                <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
-                                <option value="{{ "{{" }}wind_gust}}">{{ "{{" }}wind_gust}} - Wind Gust m/s (current)</option>
-                                <option value="{{ "{{" }}wind_direction}}">{{ "{{" }}wind_direction}} - Wind Direction° (current)</option>
-                                <option value="{{ "{{" }}lux}}">{{ "{{" }}lux}} - Light Lux (current)</option>
-                                <option value="{{ "{{" }}uv}}">{{ "{{" }}uv}} - UV Index (current)</option>
-                                <option value="{{ "{{" }}rain_rate}}">{{ "{{" }}rain_rate}} - Rain Rate mm (current)</option>
-                                <option value="{{ "{{" }}rain_daily}}">{{ "{{" }}rain_daily}} - Daily Rain mm (current)</option>
-                                <option value="{{ "{{" }}lightning_count}}">{{ "{{" }}lightning_count}} - Lightning Strikes (current)</option>
-                                <option value="{{ "{{" }}lightning_distance}}">{{ "{{" }}lightning_distance}} - Lightning Distance km (current)</option>
-                            </select>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select onchange="insertVariable('consoleMessage')" class="variable-dropdown">
+                                    <option value="">📋 Insert Variable...</option>
+                                    <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                    <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                    <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                    <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                    <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                    <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
+                                    <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                    <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
+                                    <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
+                                    <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
+                                    <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
+                                    <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
+                                    <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
+                                    <option value="{{ "{{" }}wind_gust}}">{{ "{{" }}wind_gust}} - Wind Gust m/s (current)</option>
+                                    <option value="{{ "{{" }}wind_direction}}">{{ "{{" }}wind_direction}} - Wind Direction° (current)</option>
+                                    <option value="{{ "{{" }}lux}}">{{ "{{" }}lux}} - Light Lux (current)</option>
+                                    <option value="{{ "{{" }}uv}}">{{ "{{" }}uv}} - UV Index (current)</option>
+                                    <option value="{{ "{{" }}rain_rate}}">{{ "{{" }}rain_rate}} - Rain Rate mm (current)</option>
+                                    <option value="{{ "{{" }}rain_daily}}">{{ "{{" }}rain_daily}} - Daily Rain mm (current)</option>
+                                    <option value="{{ "{{" }}lightning_count}}">{{ "{{" }}lightning_count}} - Lightning Strikes (current)</option>
+                                    <option value="{{ "{{" }}lightning_distance}}">{{ "{{" }}lightning_distance}} - Lightning Distance km (current)</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="showEmojiPicker('consoleMessage')" title="Insert Emoji">😀</button>
+                            </div>
                         </div>
                         <textarea id="consoleMessage" rows="5" placeholder="Console-specific message..."></textarea>
                     </div>
@@ -158,22 +161,25 @@ const indexHTML = `<!DOCTYPE html>
                     <div id="syslogMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>📋 Syslog Message</label>
-                            <select onchange="insertVariable('syslogMessage')" class="variable-dropdown">
-                                <option value="">📋 Insert Variable...</option>
-                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
-                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
-                                <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
-                                <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
-                                <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
-                                <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
-                                <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
-                                <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
-                                <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
-                            </select>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select onchange="insertVariable('syslogMessage')" class="variable-dropdown">
+                                    <option value="">📋 Insert Variable...</option>
+                                    <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                    <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                    <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                    <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                    <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                    <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
+                                    <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                    <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
+                                    <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
+                                    <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
+                                    <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
+                                    <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
+                                    <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="showEmojiPicker('syslogMessage')" title="Insert Emoji">😀</button>
+                            </div>
                         </div>
                         <textarea id="syslogMessage" rows="5" placeholder="Syslog-specific message..."></textarea>
                     </div>
@@ -181,14 +187,17 @@ const indexHTML = `<!DOCTYPE html>
                     <div id="oslogMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>🍎 OSLog Message (macOS Unified Logging)</label>
-                            <select onchange="insertVariable('oslogMessage')" class="variable-dropdown">
-                                <option value="">📋 Insert Variable...</option>
-                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
-                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
-                            </select>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select onchange="insertVariable('oslogMessage')" class="variable-dropdown">
+                                    <option value="">📋 Insert Variable...</option>
+                                    <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                    <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                    <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                    <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                    <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="showEmojiPicker('oslogMessage')" title="Insert Emoji">😀</button>
+                            </div>
                         </div>
                         <textarea id="oslogMessage" rows="5" placeholder="OSLog-specific message (visible in Console.app and log command)..."></textarea>
                     </div>
@@ -196,14 +205,17 @@ const indexHTML = `<!DOCTYPE html>
                     <div id="eventlogMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>📊 Event Log Message</label>
-                            <select onchange="insertVariable('eventlogMessage')" class="variable-dropdown">
-                                <option value="">📋 Insert Variable...</option>
-                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
-                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
-                            </select>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select onchange="insertVariable('eventlogMessage')" class="variable-dropdown">
+                                    <option value="">📋 Insert Variable...</option>
+                                    <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                    <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                    <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                    <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                    <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="showEmojiPicker('eventlogMessage')" title="Insert Emoji">😀</button>
+                            </div>
                         </div>
                         <textarea id="eventlogMessage" rows="5" placeholder="Event log-specific message..."></textarea>
                     </div>
@@ -211,16 +223,19 @@ const indexHTML = `<!DOCTYPE html>
                     <div id="emailMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>✉️ Email Configuration</label>
-                            <select onchange="insertVariable('emailBody')" class="variable-dropdown">
-                                <option value="">📋 Insert Variable...</option>
-                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
-                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
-                                <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
-                                <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
-                            </select>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select onchange="insertVariable('emailBody')" class="variable-dropdown">
+                                    <option value="">📋 Insert Variable...</option>
+                                    <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                    <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                    <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                    <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                    <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                    <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                    <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="showEmojiPicker('emailBody')" title="Insert Emoji">😀</button>
+                            </div>
                         </div>
                         <label for="emailTo" style="font-weight: 600;">To: <span style="color: red;">*</span></label>
                         <input type="text" id="emailTo" placeholder="recipient@example.com (comma-separated for multiple)" />
@@ -238,15 +253,18 @@ const indexHTML = `<!DOCTYPE html>
                     <div id="smsMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>📱 SMS Configuration</label>
-                            <select onchange="insertVariable('smsMessage')" class="variable-dropdown">
-                                <option value="">📋 Insert Variable...</option>
-                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
-                                <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
-                                <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
-                            </select>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select onchange="insertVariable('smsMessage')" class="variable-dropdown">
+                                    <option value="">📋 Insert Variable...</option>
+                                    <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                    <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                    <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                    <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                    <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                    <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="showEmojiPicker('smsMessage')" title="Insert Emoji">😀</button>
+                            </div>
                         </div>
                         <label for="smsTo" style="font-weight: 600;">To: <span style="color: red;">*</span></label>
                         <input type="text" id="smsTo" placeholder="Phone number(s) (comma-separated)" />
@@ -257,30 +275,33 @@ const indexHTML = `<!DOCTYPE html>
                     <div id="webhookMessageSection" class="form-group message-input-section" style="display:none;">
                         <div class="message-header">
                             <label>🌐 Webhook Configuration</label>
-                            <select onchange="insertVariable('webhookBody')" class="variable-dropdown">
-                                <option value="">📋 Insert Variable...</option>
-                                <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
-                                <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
-                                <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
-                                <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
-                                <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
-                                <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
-                                <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
-                                <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
-                                <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
-                                <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
-                                <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
-                                <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
-                                <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
-                                <option value="{{ "{{" }}wind_gust}}">{{ "{{" }}wind_gust}} - Wind Gust m/s (current)</option>
-                                <option value="{{ "{{" }}wind_direction}}">{{ "{{" }}wind_direction}} - Wind Direction° (current)</option>
-                                <option value="{{ "{{" }}lux}}">{{ "{{" }}lux}} - Light Lux (current)</option>
-                                <option value="{{ "{{" }}uv}}">{{ "{{" }}uv}} - UV Index (current)</option>
-                                <option value="{{ "{{" }}rain_rate}}">{{ "{{" }}rain_rate}} - Rain Rate mm (current)</option>
-                                <option value="{{ "{{" }}rain_daily}}">{{ "{{" }}rain_daily}} - Daily Rain mm (current)</option>
-                                <option value="{{ "{{" }}lightning_count}}">{{ "{{" }}lightning_count}} - Lightning Strikes (current)</option>
-                                <option value="{{ "{{" }}lightning_distance}}">{{ "{{" }}lightning_distance}} - Lightning Distance km (current)</option>
-                            </select>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select onchange="insertVariable('webhookBody')" class="variable-dropdown">
+                                    <option value="">📋 Insert Variable...</option>
+                                    <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                    <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                    <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                    <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                    <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                    <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
+                                    <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                    <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
+                                    <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
+                                    <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
+                                    <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
+                                    <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
+                                    <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
+                                    <option value="{{ "{{" }}wind_gust}}">{{ "{{" }}wind_gust}} - Wind Gust m/s (current)</option>
+                                    <option value="{{ "{{" }}wind_direction}}">{{ "{{" }}wind_direction}} - Wind Direction° (current)</option>
+                                    <option value="{{ "{{" }}lux}}">{{ "{{" }}lux}} - Light Lux (current)</option>
+                                    <option value="{{ "{{" }}uv}}">{{ "{{" }}uv}} - UV Index (current)</option>
+                                    <option value="{{ "{{" }}rain_rate}}">{{ "{{" }}rain_rate}} - Rain Rate mm (current)</option>
+                                    <option value="{{ "{{" }}rain_daily}}">{{ "{{" }}rain_daily}} - Daily Rain mm (current)</option>
+                                    <option value="{{ "{{" }}lightning_count}}">{{ "{{" }}lightning_count}} - Lightning Strikes (current)</option>
+                                    <option value="{{ "{{" }}lightning_distance}}">{{ "{{" }}lightning_distance}} - Lightning Distance km (current)</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="showEmojiPicker('webhookBody')" title="Insert Emoji">😀</button>
+                            </div>
                         </div>
                         <label for="webhookUrl" style="font-weight: 600;">URL: <span style="color: red;">*</span></label>
                         <input type="url" id="webhookUrl" placeholder="https://api.example.com/webhooks/alert" />
@@ -338,6 +359,46 @@ const indexHTML = `<!DOCTYPE html>
     </div>
     
     <div id="notification" class="notification"></div>
+    
+    <div id="emojiModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">😀 Choose Emoji</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 8px; max-height: 300px; overflow-y: auto; padding: 20px;">
+                <button onclick="insertEmoji('consoleMessage', '⚡')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">⚡</button>
+                <button onclick="insertEmoji('consoleMessage', '🌡️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🌡️</button>
+                <button onclick="insertEmoji('consoleMessage', '💧')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">💧</button>
+                <button onclick="insertEmoji('consoleMessage', '🌬️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🌬️</button>
+                <button onclick="insertEmoji('consoleMessage', '🌪️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🌪️</button>
+                <button onclick="insertEmoji('consoleMessage', '🌧️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🌧️</button>
+                <button onclick="insertEmoji('consoleMessage', '⛈️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">⛈️</button>
+                <button onclick="insertEmoji('consoleMessage', '🌩️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🌩️</button>
+                <button onclick="insertEmoji('consoleMessage', '☀️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">☀️</button>
+                <button onclick="insertEmoji('consoleMessage', '🌤️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🌤️</button>
+                <button onclick="insertEmoji('consoleMessage', '⛅')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">⛅</button>
+                <button onclick="insertEmoji('consoleMessage', '☁️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">☁️</button>
+                <button onclick="insertEmoji('consoleMessage', '🌫️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🌫️</button>
+                <button onclick="insertEmoji('consoleMessage', '🌈')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🌈</button>
+                <button onclick="insertEmoji('consoleMessage', '❄️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">❄️</button>
+                <button onclick="insertEmoji('consoleMessage', '🌊')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🌊</button>
+                <button onclick="insertEmoji('consoleMessage', '🌍')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🌍</button>
+                <button onclick="insertEmoji('consoleMessage', '📊')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">📊</button>
+                <button onclick="insertEmoji('consoleMessage', '📈')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">📈</button>
+                <button onclick="insertEmoji('consoleMessage', '📉')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">📉</button>
+                <button onclick="insertEmoji('consoleMessage', '🔥')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🔥</button>
+                <button onclick="insertEmoji('consoleMessage', '🔔')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🔔</button>
+                <button onclick="insertEmoji('consoleMessage', '⚠️')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">⚠️</button>
+                <button onclick="insertEmoji('consoleMessage', '🚨')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🚨</button>
+                <button onclick="insertEmoji('consoleMessage', '✅')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">✅</button>
+                <button onclick="insertEmoji('consoleMessage', '❌')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">❌</button>
+                <button onclick="insertEmoji('consoleMessage', '⏰')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">⏰</button>
+                <button onclick="insertEmoji('consoleMessage', '📅')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">📅</button>
+                <button onclick="insertEmoji('consoleMessage', '🏠')" style="font-size: 24px; border: none; background: none; cursor: pointer; padding: 8px;">🏠</button>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeEmojiModal()">Close</button>
+            </div>
+        </div>
+    </div>
     
     <script src="/alarm-editor/static/script.js"></script>
     

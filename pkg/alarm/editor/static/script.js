@@ -826,4 +826,48 @@ function updateLastUpdateTimestamp() {
     }
 }
 
+// ============================================
+// Emoji Picker Functions
+// ============================================
+
+let currentEmojiTarget = null;
+
+function showEmojiPicker(targetId) {
+    currentEmojiTarget = targetId;
+    document.getElementById('emojiModal').classList.add('active');
+}
+
+function closeEmojiModal() {
+    document.getElementById('emojiModal').classList.remove('active');
+    currentEmojiTarget = null;
+}
+
+function insertEmoji(targetId, emoji) {
+    const textarea = document.getElementById(targetId);
+    if (textarea) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        const before = text.substring(0, start);
+        const after = text.substring(end, text.length);
+        textarea.value = before + emoji + after;
+        textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+        textarea.focus();
+    }
+    closeEmojiModal();
+}
+
+// Update emoji buttons to use the current target
+document.addEventListener('DOMContentLoaded', function() {
+    // Update emoji modal buttons to use current target
+    const emojiModal = document.getElementById('emojiModal');
+    if (emojiModal) {
+        const emojiButtons = emojiModal.querySelectorAll('button[onclick*="insertEmoji"]');
+        emojiButtons.forEach(button => {
+            const onclick = button.getAttribute('onclick');
+            button.setAttribute('onclick', onclick.replace('consoleMessage', currentEmojiTarget || 'consoleMessage'));
+        });
+    }
+});
+
 init();
