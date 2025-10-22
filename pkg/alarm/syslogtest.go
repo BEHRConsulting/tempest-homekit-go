@@ -35,7 +35,7 @@ func TestSyslogConfiguration(alarmsJSON, stationName string) error {
 		}
 		fmt.Println()
 	} else {
-		fmt.Println("ℹ️  No syslog configuration found in .env")
+		fmt.Println("No syslog configuration found in .env")
 		fmt.Println("   Optional environment variables:")
 		fmt.Println("   - SYSLOG_NETWORK (tcp/udp, empty for local)")
 		fmt.Println("   - SYSLOG_ADDRESS (e.g., localhost:514)")
@@ -82,7 +82,7 @@ func TestSyslogConfiguration(alarmsJSON, stationName string) error {
 	}
 
 	fmt.Println()
-	fmt.Println("✅ Syslog notification sent successfully!")
+	fmt.Println("Syslog notification sent successfully!")
 	fmt.Println()
 	fmt.Println("To verify delivery:")
 	if config.Syslog != nil && config.Syslog.Network != "" {
@@ -99,7 +99,7 @@ func TestSyslogConfiguration(alarmsJSON, stationName string) error {
 // RunSyslogTest is a convenience function that wraps TestSyslogConfiguration and exits
 func RunSyslogTest(alarmsJSON, stationName string) {
 	if err := TestSyslogConfiguration(alarmsJSON, stationName); err != nil {
-		log.Fatalf("❌ Syslog test failed: %v", err)
+		log.Fatalf("Syslog test failed: %v", err)
 	}
 	os.Exit(0)
 }

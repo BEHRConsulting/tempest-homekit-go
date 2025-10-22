@@ -53,7 +53,7 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 		}
 
 		dataSource := weather.NewUDPDataSource(listener, cfg.DisableInternet, stationID, token)
-		logger.Info("✓ UDP data source created (port 50222)")
+		logger.Info("UDP data source created (port 50222)")
 		return dataSource, nil
 	}
 
@@ -69,7 +69,7 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 		}
 
 		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, weather.APIDataSourceOptions{CustomURL: cfg.StationURL, GeneratedPath: cfg.GeneratedWeatherPath})
-		logger.Info("✓ API data source created with custom URL")
+		logger.Info("API data source created with custom URL")
 		return dataSource, nil
 	}
 
@@ -98,7 +98,7 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 		}
 		generatedURL := fmt.Sprintf("http://localhost:%s%s", port, path)
 		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, weather.APIDataSourceOptions{CustomURL: generatedURL, GeneratedPath: cfg.GeneratedWeatherPath})
-		logger.Info("✓ Generated weather data source created")
+		logger.Info("Generated weather data source created")
 		return dataSource, nil
 	}
 
@@ -109,6 +109,6 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 
 	logger.Info("Creating API data source for station: %s (ID: %d)", station.StationName, station.StationID)
 	dataSource := weather.NewAPIDataSource(station.StationID, cfg.Token, station.StationName, weather.APIDataSourceOptions{CustomURL: "", GeneratedPath: cfg.GeneratedWeatherPath})
-	logger.Info("✓ WeatherFlow API data source created")
+	logger.Info("WeatherFlow API data source created")
 	return dataSource, nil
 }

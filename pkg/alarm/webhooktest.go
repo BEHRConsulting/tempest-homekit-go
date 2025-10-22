@@ -95,7 +95,7 @@ func TestWebhookConfiguration(alarmsJSON, stationName string) error {
 // RunWebhookTest is a convenience function that wraps TestWebhookConfiguration and exits
 func RunWebhookTest(alarmsJSON, stationName string) {
 	if err := TestWebhookConfiguration(alarmsJSON, stationName); err != nil {
-		log.Fatalf("❌ Webhook test failed: %v", err)
+		log.Fatalf("Webhook test failed: %v", err)
 	}
 	os.Exit(0)
 }

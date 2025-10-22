@@ -76,7 +76,7 @@ func TestEventLogConfiguration(alarmsJSON, stationName string) error {
 // RunEventLogTest is a convenience function that wraps TestEventLogConfiguration and exits
 func RunEventLogTest(alarmsJSON, stationName string) {
 	if err := TestEventLogConfiguration(alarmsJSON, stationName); err != nil {
-		log.Fatalf("❌ EventLog test failed: %v", err)
+		log.Fatalf("EventLog test failed: %v", err)
 	}
 	os.Exit(0)
 }

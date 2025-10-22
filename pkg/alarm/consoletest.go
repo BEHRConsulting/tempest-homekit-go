@@ -68,7 +68,7 @@ func TestConsoleConfiguration(alarmsJSON, stationName string) error {
 // RunConsoleTest is a convenience function that wraps TestConsoleConfiguration and exits
 func RunConsoleTest(alarmsJSON, stationName string) {
 	if err := TestConsoleConfiguration(alarmsJSON, stationName); err != nil {
-		log.Fatalf("❌ Console test failed: %v", err)
+		log.Fatalf("Console test failed: %v", err)
 	}
 	os.Exit(0)
 }

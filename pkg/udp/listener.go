@@ -249,7 +249,7 @@ func (l *UDPListener) listen() {
 func PrettyPrintMessage(data []byte) string {
 	var msg UDPMessage
 	if err := json.Unmarshal(data, &msg); err != nil {
-		return fmt.Sprintf("❌ Failed to parse: %v", err)
+		return fmt.Sprintf("Failed to parse: %v", err)
 	}
 
 	ts := time.Now().Format("15:04:05")
@@ -295,20 +295,20 @@ func PrettyPrintMessage(data []byte) string {
 			lux := obs[1].(float64)
 			solar := obs[10].(float64)
 			battery := obs[8].(float64)
-			return fmt.Sprintf("[%s] ☀️  obs_sky | Wind: %.1f/%.1fm/s@%.0f° | UV: %d | Lux: %.0f | Solar: %.0fW/m² | Rain: %.2fmm | Battery: %.2fV | Serial: %s",
+			return fmt.Sprintf("[%s] obs_sky | Wind: %.1f/%.1fm/s@%.0f° | UV: %d | Lux: %.0f | Solar: %.0fW/m² | Rain: %.2fmm | Battery: %.2fV | Serial: %s",
 				ts, windAvg, windGust, windDir, uv, lux, solar, rain, battery, msg.SerialNumber)
 		}
 	case TypeRapidWind:
 		if len(msg.Ob) >= 3 {
 			windSpeed := msg.Ob[1].(float64)
 			windDir := int(msg.Ob[2].(float64))
-			return fmt.Sprintf("[%s] 💨 rapid_wind | Speed: %.1fm/s | Direction: %d° | Serial: %s",
+			return fmt.Sprintf("[%s] rapid_wind | Speed: %.1fm/s | Direction: %d° | Serial: %s",
 				ts, windSpeed, windDir, msg.SerialNumber)
 		}
 	case TypeRainStart:
 		if len(msg.Evt) > 0 {
 			timestamp := int64(msg.Evt[0].(float64))
-			return fmt.Sprintf("[%s] 🌧️  evt_precip | Rain started at %s | Serial: %s",
+			return fmt.Sprintf("[%s] evt_precip | Rain started at %s | Serial: %s",
 				ts, time.Unix(timestamp, 0).Format("15:04:05"), msg.SerialNumber)
 		}
 	case TypeLightning:
@@ -316,19 +316,19 @@ func PrettyPrintMessage(data []byte) string {
 			timestamp := int64(msg.Evt[0].(float64))
 			distance := msg.Evt[1].(float64)
 			energy := msg.Evt[2].(float64)
-			return fmt.Sprintf("[%s] ⚡ evt_strike | Distance: %.1fkm | Energy: %.0f | Time: %s | Serial: %s",
+			return fmt.Sprintf("[%s] evt_strike | Distance: %.1fkm | Energy: %.0f | Time: %s | Serial: %s",
 				ts, distance, energy, time.Unix(timestamp, 0).Format("15:04:05"), msg.SerialNumber)
 		}
 	case TypeDeviceStatus:
-		return fmt.Sprintf("[%s] 📊 device_status | Uptime: %ds | Battery: %.2fV | RSSI: %ddBm | Hub RSSI: %ddBm | Sensor Status: 0x%X | Serial: %s",
+		return fmt.Sprintf("[%s] device_status | Uptime: %ds | Battery: %.2fV | RSSI: %ddBm | Hub RSSI: %ddBm | Sensor Status: 0x%X | Serial: %s",
 			ts, msg.Uptime, msg.Voltage, msg.RSSI, msg.HubRSSI, msg.SensorStatus, msg.SerialNumber)
 	case TypeHubStatus:
-		return fmt.Sprintf("[%s] 🔌 hub_status | Uptime: %ds | RSSI: %ddBm | Firmware: %d | Reset Flags: %s | Seq: %d | Serial: %s",
+		return fmt.Sprintf("[%s] hub_status | Uptime: %ds | RSSI: %ddBm | Firmware: %d | Reset Flags: %s | Seq: %d | Serial: %s",
 			ts, msg.Uptime, msg.RSSI, msg.FirmwareRevision, msg.ResetFlags, msg.Seq, msg.SerialNumber)
 	default:
-		return fmt.Sprintf("[%s] ❓ %s | Serial: %s", ts, msg.Type, msg.SerialNumber)
+		return fmt.Sprintf("[%s] %s | Serial: %s", ts, msg.Type, msg.SerialNumber)
 	}
-	return fmt.Sprintf("[%s] ⚠️  %s (incomplete data) | Serial: %s", ts, msg.Type, msg.SerialNumber)
+	return fmt.Sprintf("[%s] %s (incomplete data) | Serial: %s", ts, msg.Type, msg.SerialNumber)
 }
 
 // processMessage parses and processes a UDP message

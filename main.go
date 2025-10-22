@@ -215,7 +215,7 @@ func runEmailTest(cfg *config.Config) {
 	fmt.Println()
 
 	if cfg.Alarms == "" {
-		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+		log.Fatal("No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
 	}
 
 	// Set recipient via environment variable for test function
@@ -231,7 +231,7 @@ func runSMSTest(cfg *config.Config) {
 	fmt.Println()
 
 	if cfg.Alarms == "" {
-		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+		log.Fatal("No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
 	}
 
 	// Set recipient via environment variable for test function
@@ -247,7 +247,7 @@ func runWebhookTest(cfg *config.Config) {
 	fmt.Println()
 
 	if cfg.Alarms == "" {
-		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+		log.Fatal("No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
 	}
 
 	// Set recipient via environment variable for test function
@@ -263,7 +263,7 @@ func runConsoleTest(cfg *config.Config) {
 	fmt.Println()
 
 	if cfg.Alarms == "" {
-		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+		log.Fatal("No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
 	}
 
 	// Use alarm package's console test function
@@ -276,7 +276,7 @@ func runSyslogTest(cfg *config.Config) {
 	fmt.Println()
 
 	if cfg.Alarms == "" {
-		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+		log.Fatal("No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
 	}
 
 	// Use alarm package's syslog test function
@@ -289,7 +289,7 @@ func runOSLogTest(cfg *config.Config) {
 	fmt.Println()
 
 	if cfg.Alarms == "" {
-		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+		log.Fatal("No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
 	}
 
 	// Use alarm package's oslog test function
@@ -302,7 +302,7 @@ func runEventLogTest(cfg *config.Config) {
 	fmt.Println()
 
 	if cfg.Alarms == "" {
-		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+		log.Fatal("No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
 	}
 
 	// Use alarm package's eventlog test function
@@ -320,13 +320,13 @@ func runUDPTest(_ *config.Config, seconds int) {
 		fmt.Println(udp.PrettyPrintMessage(data))
 	})
 
-	fmt.Println("📡 Starting UDP listener on port 50222...")
+	fmt.Println("Starting UDP listener on port 50222...")
 	if err := udpListener.Start(); err != nil {
-		log.Fatalf("❌ Failed to start UDP listener: %v", err)
+		log.Fatalf("Failed to start UDP listener: %v", err)
 	}
 	defer udpListener.Stop()
 
-	fmt.Println("✅ UDP listener started successfully")
+	fmt.Println("UDP listener started successfully")
 	fmt.Printf("⏱️  Listening for %d seconds...\n\n", seconds)
 	fmt.Println("Waiting for UDP broadcasts from Tempest station...")
 	fmt.Println("(Make sure your station is on the same network and broadcasting)")
@@ -375,9 +375,9 @@ func runUDPTest(_ *config.Config, seconds int) {
 					}
 				}
 
-				fmt.Println("\n✅ UDP broadcast test completed successfully!")
+				fmt.Println("\nUDP broadcast test completed successfully!")
 			} else {
-				fmt.Println("\n⚠️  No packets received. Possible issues:")
+				fmt.Println("\nNo packets received. Possible issues:")
 				fmt.Println("  - Tempest station not on same network")
 				fmt.Println("  - Firewall blocking UDP port 50222")
 				fmt.Println("  - Station not broadcasting (check station settings)")
@@ -391,7 +391,7 @@ func runUDPTest(_ *config.Config, seconds int) {
 			if packetCount > lastPacketCount {
 				newPackets := packetCount - lastPacketCount
 				elapsed := time.Since(startTime).Truncate(time.Second)
-				fmt.Printf("\n📊 [%v elapsed] Total: %d packets | New: %d | Station: %s | Serial: %s\n\n", elapsed, packetCount, newPackets, stationIP, serialNumber)
+				fmt.Printf("\n[%v elapsed] Total: %d packets | New: %d | Station: %s | Serial: %s\n\n", elapsed, packetCount, newPackets, stationIP, serialNumber)
 				lastPacketCount = packetCount
 			} else if packetCount == 0 {
 				elapsed := time.Since(startTime).Truncate(time.Second)
@@ -406,7 +406,7 @@ func runHomeKitTest(cfg *config.Config) {
 	fmt.Println("=== HomeKit Bridge Test ===")
 	fmt.Println()
 
-	fmt.Println("📋 HomeKit Configuration:")
+	fmt.Println("HomeKit Configuration:")
 	fmt.Printf("  PIN: %s\n", cfg.Pin)
 	fmt.Printf("  Station: %s\n", cfg.StationName)
 	fmt.Printf("  Sensors: %s\n", cfg.Sensors)
@@ -414,7 +414,7 @@ func runHomeKitTest(cfg *config.Config) {
 
 	// Parse sensor config
 	sensorConfig := config.ParseSensorConfig(cfg.Sensors)
-	fmt.Println("✅ Sensor Configuration:")
+	fmt.Println("Sensor Configuration:")
 	fmt.Printf("  Temperature: %v\n", sensorConfig.Temperature)
 	fmt.Printf("  Humidity: %v\n", sensorConfig.Humidity)
 	fmt.Printf("  Light: %v\n", sensorConfig.Light)
@@ -425,14 +425,14 @@ func runHomeKitTest(cfg *config.Config) {
 	fmt.Printf("  Lightning: %v\n", sensorConfig.Lightning)
 	fmt.Println()
 
-	fmt.Println("🏠 HomeKit Bridge would be created with:")
+	fmt.Println("HomeKit Bridge would be created with:")
 	fmt.Printf("  Name: Tempest - %s\n", cfg.StationName)
 	fmt.Printf("  Manufacturer: WeatherFlow\n")
 	fmt.Printf("  Model: Tempest Weather System\n")
 	fmt.Printf("  Serial: Tempest-%s\n", cfg.StationName)
 	fmt.Println()
 
-	fmt.Println("📱 To pair with HomeKit:")
+	fmt.Println("To pair with HomeKit:")
 	fmt.Println("  1. Open Home app on iOS/macOS")
 	fmt.Println("  2. Tap '+' to add accessory")
 	fmt.Println("  3. Select 'More Options'")
@@ -440,7 +440,7 @@ func runHomeKitTest(cfg *config.Config) {
 	fmt.Printf("  5. Enter PIN: %s\n", cfg.Pin)
 	fmt.Println()
 
-	fmt.Println("✅ HomeKit configuration test completed successfully!")
+	fmt.Println("HomeKit configuration test completed successfully!")
 	fmt.Println("   (Bridge was not actually started - this is a dry run)")
 	os.Exit(0)
 }
@@ -451,14 +451,14 @@ func runWebStatusTest(cfg *config.Config) {
 	fmt.Println()
 
 	if cfg.Token == "" || cfg.StationName == "" {
-		log.Fatal("❌ Token and station name are required for web status testing")
+		log.Fatal("Token and station name are required for web status testing")
 	}
 
 	fmt.Printf("Testing status scraping for station: %s\n\n", cfg.StationName)
 
 	// Note: This would require implementing a scraper test function
 	// For now, provide guidance
-	fmt.Println("⚠️  Web status scraping test not yet implemented")
+	fmt.Println("Web status scraping test not yet implemented")
 	fmt.Println()
 	fmt.Println("To test web status scraping:")
 	fmt.Println("  1. Ensure Chrome/Chromium is installed")
@@ -476,13 +476,13 @@ func runAlarmTest(cfg *config.Config) {
 	fmt.Printf("=== Alarm Trigger Test: %s ===\n\n", cfg.TestAlarm)
 
 	if cfg.Alarms == "" {
-		log.Fatal("❌ No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
+		log.Fatal("No alarm configuration specified. Use --alarms flag or ALARMS environment variable.")
 	}
 
 	// Load alarm configuration
 	alarmConfig, err := alarm.LoadAlarmConfig(cfg.Alarms)
 	if err != nil {
-		log.Fatalf("❌ Failed to load alarm config: %v", err)
+		log.Fatalf("Failed to load alarm config: %v", err)
 	}
 
 	// Find the alarm by name
@@ -495,7 +495,7 @@ func runAlarmTest(cfg *config.Config) {
 	}
 
 	if targetAlarm == nil {
-		log.Fatalf("❌ Alarm '%s' not found in configuration", cfg.TestAlarm)
+		log.Fatalf("Alarm '%s' not found in configuration", cfg.TestAlarm)
 	}
 
 	fmt.Printf("Found alarm: %s\n", targetAlarm.Name)
@@ -506,7 +506,7 @@ func runAlarmTest(cfg *config.Config) {
 	fmt.Println()
 
 	if !targetAlarm.Enabled {
-		log.Fatalf("❌ Alarm '%s' is disabled in configuration", cfg.TestAlarm)
+		log.Fatalf("Alarm '%s' is disabled in configuration", cfg.TestAlarm)
 	}
 
 	// Create a test observation that will trigger the alarm
@@ -530,7 +530,7 @@ func runAlarmTest(cfg *config.Config) {
 	// Create alarm manager
 	manager, err := alarm.NewManager(cfg.Alarms, cfg.StationName)
 	if err != nil {
-		log.Fatalf("❌ Failed to create alarm manager: %v", err)
+		log.Fatalf("Failed to create alarm manager: %v", err)
 	}
 
 	fmt.Println("Triggering alarm by sending test observation...")
@@ -548,7 +548,7 @@ func runAlarmTest(cfg *config.Config) {
 	targetAlarm.Condition = originalCondition
 
 	fmt.Println()
-	fmt.Println("✅ Alarm test completed!")
+	fmt.Println("Alarm test completed!")
 	fmt.Println("   Check above output for notification delivery results")
 	os.Exit(0)
 }
@@ -795,7 +795,7 @@ func formatWebhookAlarmMessage(body []byte) string {
 	alarmInfo := formatAlarmInfo(alarm, false)
 	sensorInfo := formatSensorInfoWithAlarm(obs, alarm, false)
 
-	message := fmt.Sprintf("🔔 WEBHOOK ALARM: %s\n%s\n\n📊 Current Conditions:\n%s",
+	message := fmt.Sprintf("WEBHOOK ALARM: %s\n%s\n\nCurrent Conditions:\n%s",
 		payload.Alarm.Name, alarmInfo, sensorInfo)
 
 	return message
@@ -971,9 +971,9 @@ func runAPITests(cfg *config.Config) {
 	fmt.Println("\n1. Testing Stations API...")
 	stations, err := weather.GetStations(cfg.Token)
 	if err != nil {
-		log.Fatalf("❌ Failed to get stations: %v", err)
+		log.Fatalf("Failed to get stations: %v", err)
 	}
-	fmt.Printf("✅ Found %d stations\n", len(stations))
+	fmt.Printf("Found %d stations\n", len(stations))
 	for _, station := range stations {
 		fmt.Printf("   - ID: %d, Name: '%s', StationName: '%s'\n",
 			station.StationID, station.Name, station.StationName)
@@ -983,15 +983,15 @@ func runAPITests(cfg *config.Config) {
 	fmt.Printf("\n2. Testing Station Details API for '%s'...\n", cfg.StationName)
 	station := weather.FindStationByName(stations, cfg.StationName)
 	if station == nil {
-		log.Fatalf("❌ Station '%s' not found", cfg.StationName)
+		log.Fatalf("Station '%s' not found", cfg.StationName)
 	}
-	fmt.Printf("✅ Found station: %s (ID: %d)\n", station.Name, station.StationID)
+	fmt.Printf("Found station: %s (ID: %d)\n", station.Name, station.StationID)
 
 	stationDetails, err := weather.GetStationDetails(station.StationID, cfg.Token)
 	if err != nil {
-		log.Fatalf("❌ Failed to get station details: %v", err)
+		log.Fatalf("Failed to get station details: %v", err)
 	}
-	fmt.Printf("✅ Station has %d devices\n", len(stationDetails.Devices))
+	fmt.Printf("Station has %d devices\n", len(stationDetails.Devices))
 	for i, device := range stationDetails.Devices {
 		fmt.Printf("   Device %d: ID=%d, Type=%s, Serial=%s\n",
 			i+1, device.DeviceID, device.DeviceType, device.SerialNumber)
@@ -1001,18 +1001,18 @@ func runAPITests(cfg *config.Config) {
 	fmt.Println("\n3. Testing Tempest Device Discovery...")
 	deviceID, err := weather.GetTempestDeviceID(stationDetails)
 	if err != nil {
-		log.Fatalf("❌ Failed to find Tempest device: %v", err)
+		log.Fatalf("Failed to find Tempest device: %v", err)
 	}
-	fmt.Printf("✅ Tempest Device ID: %d\n", deviceID)
+	fmt.Printf("Tempest Device ID: %d\n", deviceID)
 
 	// Test 4: Get current observation
 	fmt.Println("\n4. Testing Current Observation API...")
 	obs, err := weather.GetObservation(station.StationID, cfg.Token)
 	if err != nil {
-		log.Fatalf("❌ Failed to get current observation: %v", err)
+		log.Fatalf("Failed to get current observation: %v", err)
 	}
 	obsTime := time.Unix(obs.Timestamp, 0)
-	fmt.Printf("✅ Current observation retrieved\n")
+	fmt.Printf("Current observation retrieved\n")
 	fmt.Printf("   - Time: %s\n", obsTime.Format("2006-01-02 15:04:05"))
 	fmt.Printf("   - Temperature: %.1f°C\n", obs.AirTemperature)
 	fmt.Printf("   - Humidity: %.1f%%\n", obs.RelativeHumidity)
@@ -1023,11 +1023,11 @@ func runAPITests(cfg *config.Config) {
 	startTime := time.Now()
 	observations, err := weather.GetHistoricalObservations(station.StationID, cfg.Token, cfg.LogLevel)
 	if err != nil {
-		log.Fatalf("❌ Failed to get historical observations: %v", err)
+		log.Fatalf("Failed to get historical observations: %v", err)
 	}
 	elapsed := time.Since(startTime)
 
-	fmt.Printf("✅ Historical data retrieved in %.2f seconds\n", elapsed.Seconds())
+	fmt.Printf("Historical data retrieved in %.2f seconds\n", elapsed.Seconds())
 	fmt.Printf("   - Total observations: %d\n", len(observations))
 
 	if len(observations) > 0 {
@@ -1075,13 +1075,13 @@ func runAPITests(cfg *config.Config) {
 		}
 	}
 
-	fmt.Println("\n🎉 All API endpoint tests completed successfully!")
+	fmt.Println("\nAll API endpoint tests completed successfully!")
 	fmt.Println("\n=== Summary ===")
-	fmt.Printf("- Stations API: ✅ Working\n")
-	fmt.Printf("- Station Details API: ✅ Working\n")
-	fmt.Printf("- Device Discovery: ✅ Working\n")
-	fmt.Printf("- Current Observations: ✅ Working\n")
-	fmt.Printf("- Historical Observations (day_offset): ✅ Working\n")
+	fmt.Printf("- Stations API: Working\n")
+	fmt.Printf("- Station Details API: Working\n")
+	fmt.Printf("- Device Discovery: Working\n")
+	fmt.Printf("- Current Observations: Working\n")
+	fmt.Printf("- Historical Observations (day_offset): Working\n")
 	fmt.Printf("- Data Points Retrieved: %d observations\n", len(observations))
 	fmt.Printf("- API Performance: %.2f seconds for historical data\n", elapsed.Seconds())
 }

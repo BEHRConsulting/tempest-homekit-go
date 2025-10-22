@@ -55,9 +55,9 @@ func TestEmailConfiguration(alarmsJSON, stationName string) error {
 		fromName = "Tempest Weather Alerts"
 	}
 
-	fmt.Printf("✓ Email provider: %s\n", provider)
-	fmt.Printf("✓ From address: %s\n", fromAddress)
-	fmt.Printf("✓ From name: %s\n", fromName)
+	fmt.Printf("Email provider: %s\n", provider)
+	fmt.Printf("From address: %s\n", fromAddress)
+	fmt.Printf("From name: %s\n", fromName)
 	fmt.Println()
 
 	// Validate provider-specific configuration
@@ -69,20 +69,20 @@ func TestEmailConfiguration(alarmsJSON, stationName string) error {
 			return fmt.Errorf("MS365_CLIENT_ID is not set (required for Microsoft 365)")
 		}
 		if len(clientID) >= 12 {
-			fmt.Printf("✓ Client ID: %s...%s\n", clientID[:8], clientID[len(clientID)-4:])
+			fmt.Printf("Client ID: %s...%s\n", clientID[:8], clientID[len(clientID)-4:])
 		} else {
-			fmt.Printf("✓ Client ID: %s\n", clientID)
+			fmt.Printf("Client ID: %s\n", clientID)
 		}
 
 		if clientSecret == "" {
 			return fmt.Errorf("MS365_CLIENT_SECRET is not set (required for Microsoft 365)")
 		}
-		fmt.Printf("✓ Client Secret: [configured, %d characters]\n", len(clientSecret))
+		fmt.Printf("Client Secret: [configured, %d characters]\n", len(clientSecret))
 
 		if tenantID == "" {
 			return fmt.Errorf("MS365_TENANT_ID is not set (required for Microsoft 365)")
 		}
-		fmt.Printf("✓ Tenant ID: %s\n", tenantID)
+		fmt.Printf("Tenant ID: %s\n", tenantID)
 		fmt.Println()
 	case "smtp":
 		fmt.Println("Validating SMTP configuration...")
@@ -95,22 +95,22 @@ func TestEmailConfiguration(alarmsJSON, stationName string) error {
 		if smtpHost == "" {
 			return fmt.Errorf("SMTP_HOST is not set")
 		}
-		fmt.Printf("✓ SMTP Host: %s\n", smtpHost)
+		fmt.Printf("SMTP Host: %s\n", smtpHost)
 
 		if smtpPort == "" {
 			smtpPort = "587"
 		}
-		fmt.Printf("✓ SMTP Port: %s\n", smtpPort)
+		fmt.Printf("SMTP Port: %s\n", smtpPort)
 
 		if smtpUser == "" {
 			return fmt.Errorf("SMTP_USERNAME is not set")
 		}
-		fmt.Printf("✓ SMTP Username: %s\n", smtpUser)
+		fmt.Printf("SMTP Username: %s\n", smtpUser)
 
 		if smtpPass == "" {
 			return fmt.Errorf("SMTP_PASSWORD is not set")
 		}
-		fmt.Printf("✓ SMTP Password: [configured, %d characters]\n", len(smtpPass))
+		fmt.Printf("SMTP Password: [configured, %d characters]\n", len(smtpPass))
 		fmt.Println()
 	}
 
@@ -227,7 +227,7 @@ Current Weather Data:
 // RunEmailTest is a convenience function that wraps TestEmailConfiguration and exits
 func RunEmailTest(alarmsJSON, stationName string) {
 	if err := TestEmailConfiguration(alarmsJSON, stationName); err != nil {
-		log.Fatalf("❌ Email test failed: %v", err)
+		log.Fatalf("Email test failed: %v", err)
 	}
 	os.Exit(0)
 }

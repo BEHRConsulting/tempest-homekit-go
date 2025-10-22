@@ -75,7 +75,7 @@ func TestOSLogConfiguration(alarmsJSON, stationName string) error {
 // RunOSLogTest is a convenience function that wraps TestOSLogConfiguration and exits
 func RunOSLogTest(alarmsJSON, stationName string) {
 	if err := TestOSLogConfiguration(alarmsJSON, stationName); err != nil {
-		log.Fatalf("❌ OSLog test failed: %v", err)
+		log.Fatalf("OSLog test failed: %v", err)
 	}
 	os.Exit(0)
 }
