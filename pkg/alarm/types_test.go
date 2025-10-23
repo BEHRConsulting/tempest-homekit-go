@@ -210,8 +210,51 @@ func TestChannelValidate(t *testing.T) {
 			wantError: false,
 		},
 		{
-			name:      "valid eventlog channel",
-			channel:   Channel{Type: "eventlog", Template: "Tempest-Alarm: {{condition}}"},
+			name: "valid csv channel",
+			channel: Channel{
+				Type: "csv",
+				CSV: &CSVConfig{
+					Path:    "/tmp/test.csv",
+					MaxDays: 30,
+					Message: "{{timestamp}},{{alarm_name}},{{temperature}}",
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "valid json channel",
+			channel: Channel{
+				Type: "json",
+				JSON: &JSONConfig{
+					Path:    "/tmp/test.json",
+					MaxDays: 30,
+					Message: `{"timestamp": "{{timestamp}}", "alarm": "{{alarm_name}}"}`,
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "csv channel with empty message gets default",
+			channel: Channel{
+				Type: "csv",
+				CSV: &CSVConfig{
+					Path:    "/tmp/test.csv",
+					MaxDays: 30,
+					Message: "",
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "json channel with empty message gets default",
+			channel: Channel{
+				Type: "json",
+				JSON: &JSONConfig{
+					Path:    "/tmp/test.json",
+					MaxDays: 30,
+					Message: "",
+				},
+			},
 			wantError: false,
 		},
 		{
@@ -230,8 +273,35 @@ func TestChannelValidate(t *testing.T) {
 			wantError: true,
 		},
 		{
-			name:      "webhook without config",
-			channel:   Channel{Type: "webhook"},
+			name:      "csv without config",
+			channel:   Channel{Type: "csv"},
+			wantError: true,
+		},
+		{
+			name:      "json without config",
+			channel:   Channel{Type: "json"},
+			wantError: true,
+		},
+		{
+			name: "csv without path",
+			channel: Channel{
+				Type: "csv",
+				CSV: &CSVConfig{
+					MaxDays: 30,
+					Message: "test",
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "json without path",
+			channel: Channel{
+				Type: "json",
+				JSON: &JSONConfig{
+					MaxDays: 30,
+					Message: "test",
+				},
+			},
 			wantError: true,
 		},
 		{

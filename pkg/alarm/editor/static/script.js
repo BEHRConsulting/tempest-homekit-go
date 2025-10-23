@@ -302,6 +302,8 @@ function toggleMessageSections() {
     const emailChecked = document.getElementById('deliveryEmail').checked;
     const smsChecked = document.getElementById('deliverySMS').checked;
     const webhookChecked = document.getElementById('deliveryWebhook').checked;
+    const csvChecked = document.getElementById('deliveryCSV').checked;
+    const jsonChecked = document.getElementById('deliveryJSON').checked;
     
     // Message sections for each delivery method
     document.getElementById('consoleMessageSection').style.display = consoleChecked ? 'block' : 'none';
@@ -311,6 +313,8 @@ function toggleMessageSections() {
     document.getElementById('emailMessageSection').style.display = emailChecked ? 'block' : 'none';
     document.getElementById('smsMessageSection').style.display = smsChecked ? 'block' : 'none';
     document.getElementById('webhookMessageSection').style.display = webhookChecked ? 'block' : 'none';
+    document.getElementById('csvMessageSection').style.display = csvChecked ? 'block' : 'none';
+    document.getElementById('jsonMessageSection').style.display = jsonChecked ? 'block' : 'none';
 }
 
 function showCreateModal() {
@@ -330,6 +334,8 @@ function showCreateModal() {
     document.getElementById('deliveryEmail').checked = false;
     document.getElementById('deliverySMS').checked = false;
     document.getElementById('deliveryWebhook').checked = false;
+    document.getElementById('deliveryCSV').checked = false;
+    document.getElementById('deliveryJSON').checked = false;
     
     // Set default messages with nice formatting
     // Console: Simple, clean terminal output
@@ -439,6 +445,16 @@ Sensor Data:
 }`;
     document.getElementById('webhookContentType').value = 'application/json';
     
+    // CSV: Default path and message with timestamp, alarm info, and sensor data
+    document.getElementById('csvPath').value = '/tmp/tempest-alarms.csv';
+    document.getElementById('csvMaxDays').value = 30;
+    document.getElementById('csvMessage').value = '{{alarm_name}},{{alarm_description}},{{temperature}},{{humidity}},{{pressure}},{{wind_speed}},{{lux}},{{uv}},{{rain_daily}},{{message}}';
+    
+    // JSON: Default path and message with timestamp, message, alarm info, and sensor info
+    document.getElementById('jsonPath').value = '/tmp/tempest-alarms.json';
+    document.getElementById('jsonMaxDays').value = 30;
+    document.getElementById('jsonMessage').value = '{"timestamp": "{{timestamp}}", "message": "ALARM: {{alarm_name}} triggered", "alarm": {{alarm_info}}, "sensors": {{sensor_info}}}';
+    
     selectedTags = [];
     renderSelectedTags();
     document.getElementById('tagSearchInput').value = '';
@@ -495,6 +511,8 @@ function editAlarm(name) {
     document.getElementById('deliveryEmail').checked = channelTypes.includes('email');
     document.getElementById('deliverySMS').checked = channelTypes.includes('sms');
     document.getElementById('deliveryWebhook').checked = channelTypes.includes('webhook');
+    document.getElementById('deliveryCSV').checked = channelTypes.includes('csv');
+    document.getElementById('deliveryJSON').checked = channelTypes.includes('json');
     
     // Load messages from channels
     channels.forEach(channel => {
@@ -520,6 +538,14 @@ function editAlarm(name) {
             document.getElementById('webhookHeaders').value = channel.webhook.headers ? JSON.stringify(channel.webhook.headers, null, 2) : '';
             document.getElementById('webhookBody').value = channel.webhook.body || '';
             document.getElementById('webhookContentType').value = channel.webhook.content_type || 'application/json';
+        } else if (channel.type === 'csv' && channel.csv) {
+            document.getElementById('csvPath').value = channel.csv.path || '';
+            document.getElementById('csvMaxDays').value = channel.csv.max_days || 30;
+            document.getElementById('csvMessage').value = channel.csv.message || '';
+        } else if (channel.type === 'json' && channel.json) {
+            document.getElementById('jsonPath').value = channel.json.path || '';
+            document.getElementById('jsonMaxDays').value = channel.json.max_days || 30;
+            document.getElementById('jsonMessage').value = channel.json.message || '';
         }
     });
     
@@ -578,6 +604,97 @@ async function validateCondition() {
     }
 }
 
+async function validateJSONMessage() {
+    const template = document.getElementById('jsonMessage').value;
+    const resultDiv = document.getElementById('jsonValidationResult');
+    
+    if (!template || template.trim() === '') {
+        resultDiv.style.display = 'block';
+        resultDiv.style.backgroundColor = '#fff3cd';
+        resultDiv.style.color = '#856404';
+        resultDiv.innerHTML = '⚠️ Please enter a JSON template to validate';
+        return false;
+    }
+    
+    try {
+        const response = await fetch('/api/validate-json', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ template: template })
+        });
+        
+        const result = await response.json();
+        resultDiv.style.display = 'block';
+        
+        if (result.valid) {
+            resultDiv.style.backgroundColor = '#d4edda';
+            resultDiv.style.color = '#155724';
+            resultDiv.innerHTML = `✓ Valid JSON template!<br><strong>Sample output:</strong><br><pre style="font-size: 11px; margin-top: 4px; word-wrap: break-word; white-space: pre-wrap;">${JSON.stringify(JSON.parse(result.expanded), null, 2)}</pre>`;
+            return true;
+        } else {
+            resultDiv.style.backgroundColor = '#f8d7da';
+            resultDiv.style.color = '#721c24';
+            
+            // Try to pretty-print even invalid JSON for better readability
+            let formattedExpanded;
+            try {
+                formattedExpanded = JSON.stringify(JSON.parse(result.expanded), null, 2);
+            } catch (parseError) {
+                // If we can't parse it as JSON, show the raw text with some formatting
+                formattedExpanded = result.expanded.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+            }
+            
+            resultDiv.innerHTML = `✗ Invalid JSON template: ${result.error}<br><strong>Expanded result:</strong><br><pre style="font-size: 11px; margin-top: 4px; word-wrap: break-word; white-space: pre-wrap;">${formattedExpanded}</pre>`;
+            return false;
+        }
+    } catch (error) {
+        resultDiv.style.display = 'block';
+        resultDiv.style.backgroundColor = '#f8d7da';
+        resultDiv.style.color = '#721c24';
+        resultDiv.innerHTML = `✗ Validation error: ${error.message}`;
+        return false;
+    }
+}
+
+async function showSampleJSON() {
+    const template = document.getElementById('jsonMessage').value;
+    
+    if (!template || template.trim() === '') {
+        showNotification('Please enter a JSON template first', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/validate-json', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ template: template })
+        });
+        
+        const result = await response.json();
+        
+        // Format the expanded result for display
+        let formattedExpanded;
+        let title;
+        
+        if (result.valid) {
+            formattedExpanded = JSON.stringify(JSON.parse(result.expanded), null, 2);
+            title = 'Sample JSON Output (Valid)';
+        } else {
+            title = 'Sample JSON Output (Invalid)';
+            try {
+                formattedExpanded = JSON.stringify(JSON.parse(result.expanded), null, 2);
+            } catch (parseError) {
+                formattedExpanded = result.expanded.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+            }
+        }
+        
+        displayJSON(formattedExpanded, title);
+    } catch (error) {
+        showNotification('Error generating sample JSON: ' + error.message, 'error');
+    }
+}
+
 function showFullJSON() {
     const config = { alarms: alarms };
     displayJSON(config, 'Full Configuration JSON');
@@ -591,7 +708,16 @@ function showAlarmJSON(name) {
 
 function displayJSON(data, title) {
     document.getElementById('jsonModalTitle').textContent = title;
-    const jsonString = JSON.stringify(data, null, 2);
+    
+    let jsonString;
+    if (typeof data === 'string') {
+        // If data is already a formatted JSON string, use it directly
+        jsonString = data;
+    } else {
+        // If data is an object, stringify it
+        jsonString = JSON.stringify(data, null, 2);
+    }
+    
     document.getElementById('jsonContent').textContent = jsonString;
     document.getElementById('jsonModal').classList.add('active');
 }
@@ -627,6 +753,15 @@ async function handleSubmit(e) {
     if (!isValid) {
         showNotification('Please fix the condition before saving', 'error');
         return;
+    }
+    
+    // Validate JSON template if JSON delivery is selected
+    if (document.getElementById('deliveryJSON').checked) {
+        const jsonValid = await validateJSONMessage();
+        if (!jsonValid) {
+            showNotification('Please fix the JSON template before saving', 'error');
+            return;
+        }
     }
     
     // Build channels array from selected delivery methods
@@ -713,6 +848,36 @@ async function handleSubmit(e) {
                 headers: webhookHeaders,
                 body: webhookBody,
                 content_type: webhookContentType
+            }
+        });
+    }
+    
+    if (document.getElementById('deliveryCSV').checked) {
+        const csvPath = document.getElementById('csvPath').value;
+        const csvMaxDays = parseInt(document.getElementById('csvMaxDays').value) || 30;
+        const csvMessage = document.getElementById('csvMessage').value || '{{alarm_name}},{{alarm_description}},{{temperature}},{{humidity}},{{pressure}},{{wind_speed}},{{lux}},{{uv}},{{rain_daily}}';
+        
+        channels.push({ 
+            type: 'csv',
+            csv: {
+                path: csvPath,
+                max_days: csvMaxDays,
+                message: csvMessage
+            }
+        });
+    }
+    
+    if (document.getElementById('deliveryJSON').checked) {
+        const jsonPath = document.getElementById('jsonPath').value;
+        const jsonMaxDays = parseInt(document.getElementById('jsonMaxDays').value) || 30;
+        const jsonMessage = document.getElementById('jsonMessage').value || '{"timestamp": "{{timestamp}}", "message": "ALARM: {{alarm_name}} triggered", "alarm": {{alarm_info}}, "sensors": {{sensor_info}}}';
+        
+        channels.push({ 
+            type: 'json',
+            json: {
+                path: jsonPath,
+                max_days: jsonMaxDays,
+                message: jsonMessage
             }
         });
     }

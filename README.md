@@ -192,6 +192,8 @@ The alarm system enables rule-based weather alerting with multiple notification 
 - **Email**: SMTP or Microsoft 365 OAuth2
 - **SMS**: **AWS SNS** (fully implemented) | Twilio (coming soon)
 - **Webhook**: HTTP POST with JSON payload and template expansion
+- **CSV File**: Log events to CSV files with configurable retention
+- **JSON File**: Log events to JSON files with validation and configurable retention
 - **EventLog**: System event log (Windows) or syslog (Unix)
 
 **Features:**
@@ -337,6 +339,59 @@ The webhook test will:
  "lightning_distance": 25,
  "rain_rate": 0.0
  }
+}
+```
+
+### File-Based Delivery Methods (CSV and JSON)
+
+The alarm system supports logging alarm events to local CSV and JSON files with configurable retention policies. This is useful for audit trails, data export, and integration with other monitoring systems.
+
+**CSV File Delivery:**
+- Logs alarm events as CSV records with timestamp, alarm information, and sensor data
+- Configurable file path and maximum retention days (0 = unlimited)
+- Default path: `/tmp/tempest-alarms.csv` (macOS/Linux) or `%TEMP%\tempest-alarms.csv` (Windows)
+- FIFO queue management - automatically rotates files when max days is reached
+- Fallback to temporary files if the configured path cannot be opened (handles permission issues or locked files)
+
+**JSON File Delivery:**
+- Logs alarm events as structured JSON objects with timestamp, message, alarm info, and sensor data
+- Configurable file path and maximum retention days (0 = unlimited)
+- Default path: `/tmp/tempest-alarms.json` (macOS/Linux) or `%TEMP%\tempest-alarms.json` (Windows)
+- Built-in JSON validation in the alarm editor before saving
+- Fallback to temporary files if the configured path cannot be opened
+
+**Important Notes for Temporary Directories:**
+- **macOS**: Files in `/tmp` are automatically deleted at system boot and may be cleaned up by the system when needed
+- **Windows**: Files in `%TEMP%` are periodically cleaned up by the system and disk cleanup utilities
+- **Production Use**: For persistent logging, configure custom file paths outside of temporary directories
+- **Fallback Behavior**: If the configured file cannot be opened (permissions, locked by another process), the system will log a warning and create a temporary file to ensure alarm delivery continues
+
+**Example CSV Output:**
+```
+2025-01-20 15:30:45,High Temperature,High temperature detected: 85F,Temperature exceeds threshold,temperature,85.0,humidity,65.0,pressure,1013.25,wind_speed,5.2,lux,50000,uv,6,rain_daily,2.5
+```
+
+**Example JSON Output:**
+```json
+{
+  "timestamp": "2025-01-20T15:30:45Z",
+  "message": "ALARM: High Temperature triggered",
+  "alarm": {
+    "name": "High Temperature",
+    "description": "High temperature detected: 85F",
+    "condition": "temperature > 85",
+    "enabled": true,
+    "triggered_count": 1
+  },
+  "sensors": {
+    "temperature": 85.0,
+    "humidity": 65.0,
+    "pressure": 1013.25,
+    "wind_speed": 5.2,
+    "lux": 50000,
+    "uv": 6,
+    "rain_daily": 2.5
+  }
 }
 ```
 

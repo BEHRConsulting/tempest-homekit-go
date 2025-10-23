@@ -101,6 +101,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/alarms/delete", s.handleDeleteAlarm)
 	mux.HandleFunc("/api/tags", s.handleGetTags)
 	mux.HandleFunc("/api/validate", s.handleValidate)
+	mux.HandleFunc("/api/validate-json", s.handleValidateJSON)
 	mux.HandleFunc("/api/fields", s.handleGetFields)
 	mux.HandleFunc("/api/env-defaults", s.handleGetEnvDefaults)
 
@@ -462,6 +463,91 @@ func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
 			// Add paraphrase for valid conditions
 			response["paraphrase"] = evaluator.Paraphrase(condition)
 		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// handleValidateJSON validates a JSON message template
+func (s *Server) handleValidateJSON(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Template string `json:"template"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Create test data for template expansion
+	testObs := &weather.Observation{
+		Timestamp:            time.Now().Unix(),
+		AirTemperature:       25.5,
+		RelativeHumidity:     65.0,
+		StationPressure:      1013.25,
+		WindAvg:              8.5,
+		WindGust:             12.3,
+		WindDirection:        180.0,
+		Illuminance:          50000,
+		UV:                   6,
+		RainAccumulated:      2.5,
+		RainDailyTotal:       15.2,
+		LightningStrikeCount: 3,
+		LightningStrikeAvg:   2.1,
+	}
+
+	testAlarm := &alarm.Alarm{
+		Name:           "test-alarm",
+		Description:    "Test alarm for validation",
+		Condition:      "temperature > 20",
+		Enabled:        true,
+		TriggeredCount: 5,
+	}
+
+	// Simple template expansion for validation
+	expanded := strings.ReplaceAll(req.Template, "{{timestamp}}", time.Unix(testObs.Timestamp, 0).Format("2006-01-02 15:04:05"))
+	expanded = strings.ReplaceAll(expanded, "{{alarm_name}}", testAlarm.Name)
+	expanded = strings.ReplaceAll(expanded, "{{alarm_description}}", testAlarm.Description)
+	expanded = strings.ReplaceAll(expanded, "{{alarm_condition}}", testAlarm.Condition)
+	expanded = strings.ReplaceAll(expanded, "{{station}}", "Test Station")
+	expanded = strings.ReplaceAll(expanded, "{{temperature}}", fmt.Sprintf("%.1f", testObs.AirTemperature))
+	expanded = strings.ReplaceAll(expanded, "{{humidity}}", fmt.Sprintf("%.0f", testObs.RelativeHumidity))
+	expanded = strings.ReplaceAll(expanded, "{{pressure}}", fmt.Sprintf("%.2f", testObs.StationPressure))
+	expanded = strings.ReplaceAll(expanded, "{{wind_speed}}", fmt.Sprintf("%.1f", testObs.WindAvg))
+	expanded = strings.ReplaceAll(expanded, "{{wind_gust}}", fmt.Sprintf("%.1f", testObs.WindGust))
+	expanded = strings.ReplaceAll(expanded, "{{wind_direction}}", fmt.Sprintf("%.0f", testObs.WindDirection))
+	expanded = strings.ReplaceAll(expanded, "{{lux}}", fmt.Sprintf("%.0f", testObs.Illuminance))
+	expanded = strings.ReplaceAll(expanded, "{{uv}}", fmt.Sprintf("%d", testObs.UV))
+	expanded = strings.ReplaceAll(expanded, "{{rain_rate}}", fmt.Sprintf("%.2f", testObs.RainAccumulated))
+	expanded = strings.ReplaceAll(expanded, "{{rain_daily}}", fmt.Sprintf("%.2f", testObs.RainDailyTotal))
+	expanded = strings.ReplaceAll(expanded, "{{lightning_count}}", fmt.Sprintf("%d", testObs.LightningStrikeCount))
+
+	// Handle complex templates that need JSON formatting
+	expanded = strings.ReplaceAll(expanded, "{{alarm_info}}", fmt.Sprintf(`{"name":"%s","description":"%s","condition":"%s","enabled":%t,"triggered_count":%d}`,
+		testAlarm.Name, testAlarm.Description, testAlarm.Condition, testAlarm.Enabled, testAlarm.TriggeredCount))
+	expanded = strings.ReplaceAll(expanded, "{{sensor_info}}", fmt.Sprintf(`{"temperature":%.1f,"humidity":%.0f,"pressure":%.2f,"wind_speed":%.1f,"wind_gust":%.1f,"wind_direction":%.0f,"lux":%.0f,"uv":%d,"rain_rate":%.2f,"rain_daily":%.2f,"lightning_count":%d}`,
+		testObs.AirTemperature, testObs.RelativeHumidity, testObs.StationPressure, testObs.WindAvg, testObs.WindGust, testObs.WindDirection, testObs.Illuminance, testObs.UV, testObs.RainAccumulated, testObs.RainDailyTotal, testObs.LightningStrikeCount))
+
+	// Try to parse the expanded result as JSON
+	var jsonTest interface{}
+	err := json.Unmarshal([]byte(expanded), &jsonTest)
+
+	response := map[string]interface{}{}
+
+	if err != nil {
+		response["valid"] = false
+		response["error"] = fmt.Sprintf("Template expansion produces invalid JSON: %v", err)
+		response["expanded"] = expanded
+	} else {
+		response["valid"] = true
+		response["message"] = "Template produces valid JSON"
+		response["expanded"] = expanded
 	}
 
 	w.Header().Set("Content-Type", "application/json")

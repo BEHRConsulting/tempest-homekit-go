@@ -33,7 +33,7 @@ func TestNewServer(t *testing.T) {
 	tmpfile.Close()
 
 	// Create server
-	server, err := NewServer("@"+tmpfile.Name(), "8081")
+	server, err := NewServer("@"+tmpfile.Name(), "8081", "test")
 	if err != nil {
 		t.Fatalf("Failed to create server: %v", err)
 	}

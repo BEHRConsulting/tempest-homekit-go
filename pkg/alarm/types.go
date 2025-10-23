@@ -84,6 +84,8 @@ type Channel struct {
 	Email    *EmailConfig   `json:"email,omitempty"`
 	SMS      *SMSConfig     `json:"sms,omitempty"`
 	Webhook  *WebhookConfig `json:"webhook,omitempty"`
+	CSV      *CSVConfig     `json:"csv,omitempty"`
+	JSON     *JSONConfig    `json:"json,omitempty"`
 }
 
 // EmailConfig holds email-specific configuration for a channel
@@ -109,6 +111,20 @@ type WebhookConfig struct {
 	Headers     map[string]string `json:"headers,omitempty"`
 	Body        string            `json:"body,omitempty"`
 	ContentType string            `json:"content_type,omitempty"`
+}
+
+// CSVConfig holds CSV file-specific configuration for a channel
+type CSVConfig struct {
+	Path    string `json:"path,omitempty"`
+	MaxDays int    `json:"max_days,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+// JSONConfig holds JSON file-specific configuration for a channel
+type JSONConfig struct {
+	Path    string `json:"path,omitempty"`
+	MaxDays int    `json:"max_days,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 // LoadConfigFromEnv loads email/SMS configuration from environment variables.
@@ -317,6 +333,8 @@ func (c *Channel) Validate() error {
 		"oslog":    true,
 		"eventlog": true,
 		"webhook":  true,
+		"csv":      true,
+		"json":     true,
 	}
 
 	if !validTypes[c.Type] {
@@ -366,6 +384,32 @@ func (c *Channel) Validate() error {
 		}
 		if c.Webhook.ContentType == "" {
 			c.Webhook.ContentType = "application/json" // Default content type
+		}
+	case "csv":
+		if c.CSV == nil {
+			return fmt.Errorf("csv configuration is required for csv channel")
+		}
+		if c.CSV.Path == "" {
+			return fmt.Errorf("path is required for csv channel")
+		}
+		if c.CSV.MaxDays < 0 {
+			return fmt.Errorf("max_days must be 0 (unlimited) or positive for csv channel")
+		}
+		if c.CSV.Message == "" {
+			c.CSV.Message = `{{timestamp}},{{alarm_name}},{{alarm_description}},{{temperature}},{{humidity}},{{pressure}},{{wind_speed}},{{lux}},{{uv}},{{rain_daily}}`
+		}
+	case "json":
+		if c.JSON == nil {
+			return fmt.Errorf("json configuration is required for json channel")
+		}
+		if c.JSON.Path == "" {
+			return fmt.Errorf("path is required for json channel")
+		}
+		if c.JSON.MaxDays < 0 {
+			return fmt.Errorf("max_days must be 0 (unlimited) or positive for json channel")
+		}
+		if c.JSON.Message == "" {
+			c.JSON.Message = `{"timestamp": "{{timestamp}}", "message": "ALARM: {{alarm_name}} triggered", "alarm": {{alarm_info}}, "sensors": {{sensor_info}}}`
 		}
 	}
 

@@ -3,6 +3,8 @@ package alarm
 import (
 	"context"
 	"crypto/tls"
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/syslog"
@@ -64,6 +66,10 @@ func (f *NotifierFactory) GetNotifier(channelType string) (Notifier, error) {
 		return &SMSNotifier{config: f.config.SMS}, nil
 	case "webhook":
 		return &WebhookNotifier{}, nil
+	case "csv":
+		return &CSVNotifier{}, nil
+	case "json":
+		return &JSONNotifier{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported notifier type: %s", channelType)
 	}
@@ -662,6 +668,232 @@ func (n *WebhookNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Obse
 	return nil
 }
 
+// CSVNotifier writes alarm notifications to CSV files
+type CSVNotifier struct{}
+
+func (n *CSVNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observation, stationName string) error {
+	if channel.CSV == nil {
+		return fmt.Errorf("CSV configuration missing for channel")
+	}
+
+	// Expand the message template
+	message := expandTemplate(channel.CSV.Message, alarm, obs, stationName)
+
+	return n.appendToCSVFile(channel.CSV.Path, message, channel.CSV.MaxDays)
+}
+
+// JSONNotifier writes alarm notifications to JSON files
+type JSONNotifier struct{}
+
+func (n *JSONNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Observation, stationName string) error {
+	if channel.JSON == nil {
+		return fmt.Errorf("JSON configuration missing for channel")
+	}
+
+	// Expand the message template
+	message := expandTemplate(channel.JSON.Message, alarm, obs, stationName)
+
+	return n.appendToJSONFile(channel.JSON.Path, message, channel.JSON.MaxDays)
+}
+
+// appendToCSVFile appends a message to a CSV file with rotation
+func (n *CSVNotifier) appendToCSVFile(filePath string, message string, maxDays int) error {
+	// Check if file needs rotation
+	if maxDays > 0 {
+		if err := rotateFileIfNeeded(filePath, maxDays); err != nil {
+			logger.Warn("Failed to rotate CSV file %s: %v", filePath, err)
+		}
+	}
+
+	// Open file for appending (create if doesn't exist)
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		// Try to create temp file as fallback
+		tempPath := filePath + ".tmp"
+		logger.Warn("Failed to open CSV file %s: %v, using temp file %s", filePath, err, tempPath)
+		file, err = os.OpenFile(tempPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to open temp CSV file %s: %w", tempPath, err)
+		}
+		filePath = tempPath
+	}
+	defer file.Close()
+
+	// Check if file is empty to write headers
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat file: %w", err)
+	}
+
+	isEmpty := fileInfo.Size() == 0
+
+	// Prepare CSV writer
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Write headers if file is empty
+	if isEmpty {
+		// Check if message contains commas (multi-column format)
+		if strings.Contains(message, ",") {
+			headers := []string{"timestamp", "alarm_name", "alarm_description", "temperature", "humidity", "pressure", "wind_speed", "lux", "uv", "rain_daily", "message"}
+			if err := writer.Write(headers); err != nil {
+				return fmt.Errorf("failed to write CSV headers: %w", err)
+			}
+		} else {
+			headers := []string{"timestamp", "message"}
+			if err := writer.Write(headers); err != nil {
+				return fmt.Errorf("failed to write CSV headers: %w", err)
+			}
+		}
+	}
+
+	// Write record with current timestamp
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+
+	// Check if message contains commas (multi-column format)
+	if strings.Contains(message, ",") {
+		// Parse the message as CSV to handle quoted fields properly
+		reader := csv.NewReader(strings.NewReader(message))
+		fields, err := reader.Read()
+		if err != nil {
+			// If parsing fails, treat as single field
+			row := []string{timestamp, message}
+			if err := writer.Write(row); err != nil {
+				return fmt.Errorf("failed to write CSV record: %w", err)
+			}
+		} else {
+			// Prepend timestamp to the fields
+			row := append([]string{timestamp}, fields...)
+			if err := writer.Write(row); err != nil {
+				return fmt.Errorf("failed to write CSV record: %w", err)
+			}
+		}
+	} else {
+		row := []string{timestamp, message}
+		if err := writer.Write(row); err != nil {
+			return fmt.Errorf("failed to write CSV record: %w", err)
+		}
+	}
+
+	logger.Info("Alarm message written to CSV file %s", filePath)
+	return nil
+}
+
+// appendToJSONFile appends a message to a JSON file with rotation
+func (n *JSONNotifier) appendToJSONFile(filePath string, message string, maxDays int) error {
+	// Check if file needs rotation
+	if maxDays > 0 {
+		if err := rotateFileIfNeeded(filePath, maxDays); err != nil {
+			logger.Warn("Failed to rotate JSON file %s: %v", filePath, err)
+		}
+	}
+
+	// Read existing content
+	var existingContent []byte
+	file, err := os.Open(filePath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("failed to open JSON file for reading: %w", err)
+		}
+		// File doesn't exist, existingContent remains empty
+	} else {
+		defer file.Close()
+		existingContent, err = io.ReadAll(file)
+		if err != nil {
+			return fmt.Errorf("failed to read JSON file: %w", err)
+		}
+	}
+
+	// Create JSON record with timestamp and message
+	record := map[string]interface{}{
+		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
+		"message":   message,
+	}
+
+	// Marshal record to JSON
+	jsonData, err := json.MarshalIndent(record, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON record: %w", err)
+	}
+
+	// Prepare new content
+	var newContent []byte
+	if len(existingContent) == 0 {
+		// Empty file, start new array
+		newContent = append([]byte("[\n"), jsonData...)
+		newContent = append(newContent, []byte("\n]")...)
+	} else {
+		// File exists, check if it ends with \n]
+		contentStr := string(existingContent)
+		if !strings.HasSuffix(contentStr, "\n]") {
+			return fmt.Errorf("JSON file %s does not end with expected array closure", filePath)
+		}
+		// Remove the closing \n]
+		contentStr = contentStr[:len(contentStr)-2]
+		// Add comma, newline, record, and closing bracket
+		newContent = []byte(contentStr + ",\n" + string(jsonData) + "\n]")
+	}
+
+	// Write the new content back to file
+	err = os.WriteFile(filePath, newContent, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write JSON file: %w", err)
+	}
+
+	logger.Info("Alarm message written to JSON file %s", filePath)
+	return nil
+}
+
+// rotateFileIfNeeded rotates a file if it's older than maxDays
+func rotateFileIfNeeded(filePath string, maxDays int) error {
+	if maxDays <= 0 {
+		return nil // No rotation needed
+	}
+
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // File doesn't exist, no rotation needed
+		}
+		return err
+	}
+
+	// Check if file is older than maxDays
+	fileAge := time.Since(fileInfo.ModTime())
+	maxAge := time.Duration(maxDays) * 24 * time.Hour
+
+	if fileAge > maxAge {
+		// Create backup with timestamp
+		timestamp := time.Now().Format("2006-01-02_15-04-05")
+		backupPath := filePath + "." + timestamp + ".bak"
+
+		if err := os.Rename(filePath, backupPath); err != nil {
+			return fmt.Errorf("failed to rotate file: %w", err)
+		}
+
+		logger.Info("Rotated file %s to %s (age: %v)", filePath, backupPath, fileAge)
+	}
+
+	return nil
+}
+
+// formatNumber formats a number with thousands separator
+func formatNumber(n float64) string {
+	s := fmt.Sprintf("%.0f", n)
+	if len(s) <= 3 {
+		return s
+	}
+
+	var result strings.Builder
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			result.WriteString(",")
+		}
+		result.WriteRune(c)
+	}
+	return result.String()
+}
+
 // formatAppInfo returns formatted application information
 func formatAppInfo(isHTML bool) string {
 	uptime := time.Since(appStartTime)
@@ -757,26 +989,6 @@ func formatSensorInfoWithAlarm(obs *weather.Observation, alarm *Alarm, isHTML bo
 		cardinal = "NW"
 	}
 
-	// Helper to check if value changed
-	hasChanged := func(key string, current float64, threshold float64) bool {
-		if alarm == nil {
-			return false
-		}
-		var prev float64
-		var ok bool
-		if prev, ok = alarm.GetTriggerValue(key); !ok {
-			if prev, ok = alarm.GetPreviousValue(key); !ok {
-				return false
-			}
-		}
-		// Check if difference exceeds threshold
-		diff := current - prev
-		if diff < 0 {
-			diff = -diff
-		}
-		return diff > threshold
-	}
-
 	// Helper to get previous value with proper formatting
 	getPrevValue := func(key string, _ /* current */ float64, format string) string {
 		if alarm == nil {
@@ -805,16 +1017,36 @@ func formatSensorInfoWithAlarm(obs *weather.Observation, alarm *Alarm, isHTML bo
 		return "N/A"
 	}
 
-	// Helper to get row style based on whether value changed
-	getRowStyle := func(changed bool) string {
-		if changed {
-			return ` style="background: #fff3cd;"`
-		}
-		return ""
-	}
-
 	if isHTML {
-		return fmt.Sprintf(`<table style="border-collapse: collapse; width: 100%%;">
+		// Helper to check if value changed
+		hasChanged := func(key string, current float64, threshold float64) bool {
+			if alarm == nil {
+				return false
+			}
+			var prev float64
+			var ok bool
+			if prev, ok = alarm.GetTriggerValue(key); !ok {
+				if prev, ok = alarm.GetPreviousValue(key); !ok {
+					return false
+				}
+			}
+			// Check if difference exceeds threshold
+			diff := current - prev
+			if diff < 0 {
+				diff = -diff
+			}
+			return diff > threshold
+		}
+
+		// Helper to get row style based on whether value changed
+		getRowStyle := func(changed bool) string {
+			if changed {
+				return ` style="background: #fff3cd;"`
+			}
+			return ""
+		}
+
+		htmlTemplate := `<table style="border-collapse: collapse; width: 100%%;">
 			<tr style="background: #f0f0f0;"><th style="padding: 5px; border: 1px solid #ddd;">Sensor</th><th style="padding: 5px; border: 1px solid #ddd;">Current</th><th style="padding: 5px; border: 1px solid #ddd;">Last</th></tr>
 			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Temperature:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.1f°F (%.1f°C)</td><td style="padding: 5px; border: 1px solid #ddd;">%s°C</td></tr>
 			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Humidity:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.0f%%</td><td style="padding: 5px; border: 1px solid #ddd;">%s%%</td></tr>
@@ -827,7 +1059,8 @@ func formatSensorInfoWithAlarm(obs *weather.Observation, alarm *Alarm, isHTML bo
 			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Rain Rate:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f mm/hr</td><td style="padding: 5px; border: 1px solid #ddd;">%s mm/hr</td></tr>
 			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Daily Rain:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%.2f in (%.1f mm)</td><td style="padding: 5px; border: 1px solid #ddd;">%s mm</td></tr>
 			<tr%s><td style="padding: 5px; border: 1px solid #ddd;"><strong>Lightning:</strong></td><td style="padding: 5px; border: 1px solid #ddd;">%d strikes</td><td style="padding: 5px; border: 1px solid #ddd;">%s strikes</td></tr>
-		</table>`,
+		</table>`
+		return fmt.Sprintf(htmlTemplate,
 			getRowStyle(hasChanged("temperature", obs.AirTemperature, 0.1)),
 			tempF, obs.AirTemperature, getPrevValue("temperature", obs.AirTemperature, "%.1f"),
 			getRowStyle(hasChanged("humidity", obs.RelativeHumidity, 1.0)),
@@ -876,23 +1109,6 @@ Lightning: %d strikes [Last: %s strikes]`,
 		obs.LightningStrikeCount, getPrevValue("lightning_count", float64(obs.LightningStrikeCount), "%.0f"))
 }
 
-// formatNumber formats a number with thousands separator
-func formatNumber(n float64) string {
-	s := fmt.Sprintf("%.0f", n)
-	if len(s) <= 3 {
-		return s
-	}
-
-	var result strings.Builder
-	for i, c := range s {
-		if i > 0 && (len(s)-i)%3 == 0 {
-			result.WriteString(",")
-		}
-		result.WriteRune(c)
-	}
-	return result.String()
-}
-
 // expandTemplate replaces template variables with actual values
 func expandTemplate(template string, alarm *Alarm, obs *weather.Observation, stationName string) string {
 	result := template
@@ -923,6 +1139,7 @@ func expandTemplate(template string, alarm *Alarm, obs *weather.Observation, sta
 		"{{alarm_name}}":         alarm.Name,
 		"{{alarm_description}}":  alarm.Description,
 		"{{alarm_condition}}":    alarm.Condition,
+		"{{message}}":            fmt.Sprintf("ALARM: %s triggered", alarm.Name),
 		// New composite variables
 		"{{app_info}}":    formatAppInfo(isHTML),
 		"{{alarm_info}}":  formatAlarmInfo(alarm, isHTML),

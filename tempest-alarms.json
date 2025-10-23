@@ -66,6 +66,59 @@
           }
         }
       ]
+    },
+    {
+      "name": "Emoji test",
+      "description": "Testing the emoji editor",
+      "enabled": false,
+      "condition": "*wind_direction",
+      "cooldown": 30,
+      "channels": [
+        {
+          "type": "console",
+          "template": "🚨 WEATHER ALARM TRIGGERED\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nAlarm:       {{alarm_name}}\nDescription: {{alarm_description}}\nStation:     {{station}}\nTime:        {{timestamp}}\n\n✅\n\n{{sensor_info}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        }
+      ]
+    },
+    {
+      "name": "Rapid Change JSON",
+      "description": "Trigger the JSON delivery on almost any change",
+      "tags": [
+        "rapid-change"
+      ],
+      "enabled": true,
+      "condition": "* humidity || * lux || * pressure || * temperature || * wind_direction || * wind_speed",
+      "cooldown": 30,
+      "channels": [
+        {
+          "type": "json",
+          "json": {
+            "path": "/tmp/tempest-alarms.json",
+            "max_days": 30,
+            "message": "{\"timestamp\": \"{{timestamp}}\", \"message\": \"ALARM: {{alarm_name}} triggered\", \"alarm\": {{alarm_info}}, \"sensors\": {{sensor_info}}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rapid Change csv",
+      "description": "Trigger for csv",
+      "tags": [
+        "rapid-change"
+      ],
+      "enabled": true,
+      "condition": "* humidity || * lux || * pressure || * temperature || * uv || * wind_direction || * wind_speed",
+      "cooldown": 30,
+      "channels": [
+        {
+          "type": "csv",
+          "csv": {
+            "path": "/tmp/tempest-alarms.csv",
+            "max_days": 30,
+            "message": "{{alarm_name}},{{alarm_description}},{{temperature}},{{humidity}},{{pressure}},{{wind_speed}},{{lux}},{{uv}},{{rain_daily}},{{message}}"
+          }
+        }
+      ]
     }
   ]
 }

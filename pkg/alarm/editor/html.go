@@ -119,6 +119,14 @@ const indexHTML = `<!DOCTYPE html>
                             <input type="checkbox" id="deliveryWebhook" onchange="toggleMessageSections()" />
                             <span>🌐 Webhook</span>
                         </label>
+                        <label class="delivery-method">
+                            <input type="checkbox" id="deliveryCSV" onchange="toggleMessageSections()" />
+                            <span>📊 CSV File</span>
+                        </label>
+                        <label class="delivery-method">
+                            <input type="checkbox" id="deliveryJSON" onchange="toggleMessageSections()" />
+                            <span>📄 JSON File</span>
+                        </label>
                     </div>
                     <small>Select at least one delivery method. Each method will show its configuration below with defaults pre-populated.</small>
                 </div>
@@ -318,6 +326,91 @@ const indexHTML = `<!DOCTYPE html>
                         <label for="webhookContentType" style="margin-top: 10px; font-weight: 600;">Content Type:</label>
                         <input type="text" id="webhookContentType" value="application/json" placeholder="application/json" />
                         <small>Headers should be valid JSON. Body supports template variables like &#123;&#123;alarm_name&#125;&#125;. Content type defaults to application/json.</small>
+                    </div>
+                    
+                    <div id="csvMessageSection" class="form-group message-input-section" style="display:none;">
+                        <div class="message-header">
+                            <label>📊 CSV File Configuration</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select onchange="insertVariable('csvMessage')" class="variable-dropdown">
+                                    <option value="">📋 Insert Variable...</option>
+                                    <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                    <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                    <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                    <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                    <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                    <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
+                                    <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                    <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
+                                    <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
+                                    <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
+                                    <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
+                                    <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
+                                    <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
+                                    <option value="{{ "{{" }}wind_gust}}">{{ "{{" }}wind_gust}} - Wind Gust m/s (current)</option>
+                                    <option value="{{ "{{" }}wind_direction}}">{{ "{{" }}wind_direction}} - Wind Direction° (current)</option>
+                                    <option value="{{ "{{" }}lux}}">{{ "{{" }}lux}} - Light Lux (current)</option>
+                                    <option value="{{ "{{" }}uv}}">{{ "{{" }}uv}} - UV Index (current)</option>
+                                    <option value="{{ "{{" }}rain_rate}}">{{ "{{" }}rain_rate}} - Rain Rate mm (current)</option>
+                                    <option value="{{ "{{" }}rain_daily}}">{{ "{{" }}rain_daily}} - Daily Rain mm (current)</option>
+                                    <option value="{{ "{{" }}lightning_count}}">{{ "{{" }}lightning_count}} - Lightning Strikes (current)</option>
+                                    <option value="{{ "{{" }}lightning_distance}}">{{ "{{" }}lightning_distance}} - Lightning Distance km (current)</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="showEmojiPicker('csvMessage')" title="Insert Emoji">😀</button>
+                            </div>
+                        </div>
+                        <label for="csvPath" style="font-weight: 600;">File Path: <span style="color: red;">*</span></label>
+                        <input type="text" id="csvPath" placeholder="/tmp/tempest-alarms.csv" />
+                        <label for="csvMaxDays" style="margin-top: 10px; font-weight: 600;">Max Days (0 = unlimited):</label>
+                        <input type="number" id="csvMaxDays" value="30" min="0" placeholder="30" />
+                        <label for="csvMessage" style="margin-top: 10px; font-weight: 600;">Message Template: <span style="color: red;">*</span></label>
+                        <textarea id="csvMessage" rows="3" placeholder="CSV message template..."></textarea>
+                        <small>CSV files will be rotated when max days is reached. Set to 0 for unlimited retention. Message supports template variables like &#123;&#123;alarm_name&#125;&#125;.</small>
+                    </div>
+                    
+                    <div id="jsonMessageSection" class="form-group message-input-section" style="display:none;">
+                        <div class="message-header">
+                            <label>📄 JSON File Configuration</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select onchange="insertVariable('jsonMessage')" class="variable-dropdown">
+                                    <option value="">📋 Insert Variable...</option>
+                                    <option value="{{ "{{" }}app_info}}">{{ "{{" }}app_info}} - Application info (version, uptime)</option>
+                                    <option value="{{ "{{" }}alarm_info}}">{{ "{{" }}alarm_info}} - Alarm info (name, desc, condition)</option>
+                                    <option value="{{ "{{" }}sensor_info}}">{{ "{{" }}sensor_info}} - Sensor values that triggered alarm</option>
+                                    <option value="{{ "{{" }}alarm_name}}">{{ "{{" }}alarm_name}} - Alarm name</option>
+                                    <option value="{{ "{{" }}alarm_description}}">{{ "{{" }}alarm_description}} - Alarm description</option>
+                                    <option value="{{ "{{" }}alarm_condition}}">{{ "{{" }}alarm_condition}} - Alarm condition</option>
+                                    <option value="{{ "{{" }}station}}">{{ "{{" }}station}} - Station name</option>
+                                    <option value="{{ "{{" }}timestamp}}">{{ "{{" }}timestamp}} - Current time</option>
+                                    <option value="{{ "{{" }}temperature}}">{{ "{{" }}temperature}} - Temperature °C (current)</option>
+                                    <option value="{{ "{{" }}temperature_f}}">{{ "{{" }}temperature_f}} - Temperature °F (current)</option>
+                                    <option value="{{ "{{" }}humidity}}">{{ "{{" }}humidity}} - Humidity % (current)</option>
+                                    <option value="{{ "{{" }}pressure}}">{{ "{{" }}pressure}} - Pressure mb (current)</option>
+                                    <option value="{{ "{{" }}wind_speed}}">{{ "{{" }}wind_speed}} - Wind Speed m/s (current)</option>
+                                    <option value="{{ "{{" }}wind_gust}}">{{ "{{" }}wind_gust}} - Wind Gust m/s (current)</option>
+                                    <option value="{{ "{{" }}wind_direction}}">{{ "{{" }}wind_direction}} - Wind Direction° (current)</option>
+                                    <option value="{{ "{{" }}lux}}">{{ "{{" }}lux}} - Light Lux (current)</option>
+                                    <option value="{{ "{{" }}uv}}">{{ "{{" }}uv}} - UV Index (current)</option>
+                                    <option value="{{ "{{" }}rain_rate}}">{{ "{{" }}rain_rate}} - Rain Rate mm (current)</option>
+                                    <option value="{{ "{{" }}rain_daily}}">{{ "{{" }}rain_daily}} - Daily Rain mm (current)</option>
+                                    <option value="{{ "{{" }}lightning_count}}">{{ "{{" }}lightning_count}} - Lightning Strikes (current)</option>
+                                    <option value="{{ "{{" }}lightning_distance}}">{{ "{{" }}lightning_distance}} - Lightning Distance km (current)</option>
+                                </select>
+                                <button type="button" class="btn btn-secondary" onclick="showEmojiPicker('jsonMessage')" title="Insert Emoji">😀</button>
+                            </div>
+                        </div>
+                        <label for="jsonPath" style="font-weight: 600;">File Path: <span style="color: red;">*</span></label>
+                        <input type="text" id="jsonPath" placeholder="/tmp/tempest-alarms.json" />
+                        <label for="jsonMaxDays" style="margin-top: 10px; font-weight: 600;">Max Days (0 = unlimited):</label>
+                        <input type="number" id="jsonMaxDays" value="30" min="0" placeholder="30" />
+                        <label for="jsonMessage" style="margin-top: 10px; font-weight: 600;">Message Template: <span style="color: red;">*</span></label>
+                        <textarea id="jsonMessage" rows="3" placeholder="JSON message template..."></textarea>
+                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                            <button type="button" class="btn btn-info" onclick="validateJSONMessage()">✓ Validate JSON</button>
+                            <button type="button" class="btn btn-secondary" onclick="showSampleJSON()">📄 Show Sample JSON</button>
+                        </div>
+                        <div id="jsonValidationResult" style="margin-top: 8px; padding: 8px; border-radius: 4px; display: none;"></div>
+                        <small>JSON files will be rotated when max days is reached. Set to 0 for unlimited retention. Message supports template variables like &#123;&#123;alarm_name&#125;&#125;.</small>
                     </div>
                 </div>
                 

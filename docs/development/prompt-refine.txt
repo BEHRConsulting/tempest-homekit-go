@@ -139,11 +139,17 @@
 
 [x] All the popout graphs should use the same style selection as the web-console. UX consistantcy. Add the webconsole footer to the editor
 
-[] remove all emoji characters from log messages. They do not map well on some systems.
+[x] remove all emoji characters from log messages. They do not map well on some systems.
 
-[] add an emoji insert picker for the alarm message editor.
+[x] add an emoji insert picker for the alarm message editor.
 
-[] Lets add delivery methods csv and json files. The config section for these should include at least path and max number of days in the file. maintain the file as a FIFO queue. if the file can not me opened, generate a warning log and create a temp file (also shown in the warning log) to hold the alarms until the file can be opened. This is to catch files already opened or permission issues. create nice default messages when selected.
+[] alarm editor search alarms by tag is no longer working
+
+[-] Lets add delivery methods csv and json files. The config section for these should include at least path and max number of days in the file or unlimited. maintain the file as a FIFO queue. if the file can not me opened, generate a warning log and create a temp file (also shown in the warning log) to hold the alarms until the file can be opened. This is to catch files already opened or permission issues. create nice default messages when selected.
+
+[x] in alarm editor add a default template for json and csv that has timespamp, a message string,  alarm information. and sensor information for the json message and a json validation button. validate json before saving alarm.
+
+[x] alarm editor for json and csv running on macos, default to /tmp/tempest-alarms. for windows, the default is %TEMP%\tempest-alarms. Add a note in readme.md that on macOS, all files in /tmp removed at system boot, and as needed by the system. And Windows periodically cleans up this directory.
 
 [] Lets add a per-alarm scheduling system. daily by hour, sunrise, sunset, days per week, start time, end time. Any other standard scheduled options? I.e.: (1) Every date from sunrise to sunset. (2) Monday through Friday from 10:00-20:00. (3) No schedule defaults to Everyday, all day.
 
