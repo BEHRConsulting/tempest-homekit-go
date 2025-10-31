@@ -3264,7 +3264,7 @@ function updateStatusDisplay(status) {
         debugLog(logLevels.DEBUG, '🔋 No battery data available');
     }
     
-    if (tempestDataCount) tempestDataCount.textContent = status.observationCount || '0';
+    if (tempestDataCount) tempestDataCount.textContent = status.observationCount > 0 ? `${status.observationCount}/${status.maxHistorySize}` : '0';
     
     // Handle historical data loading progress
     if (status.historyLoadingProgress && status.historyLoadingProgress.isLoading) {
@@ -3277,9 +3277,9 @@ function updateStatusDisplay(status) {
     } else {
         // Show/hide historical data row and update count (normal state)
         if (tempestHistoricalRow && tempestHistoricalCount) {
-            if (status.historicalDataLoaded && status.observationCount > 0) {
+            if (status.observationCount > 0) {
                 tempestHistoricalRow.style.display = '';
-                tempestHistoricalCount.textContent = `${status.observationCount} data points`;
+                tempestHistoricalCount.textContent = `${status.observationCount}/${status.maxHistorySize} data points`;
             } else {
                 tempestHistoricalRow.style.display = 'none';
             }
@@ -3493,22 +3493,33 @@ function updateDetailedStationStatus(status) {
 
 function updateForecastDisplay(status) {
     debugLog(logLevels.DEBUG, 'Updating forecast display', status.forecast);
-    
+
     if (!status.forecast) {
         debugLog(logLevels.DEBUG, 'No forecast data available');
         return;
     }
 
     const forecast = status.forecast;
-    
+    debugLog(logLevels.DEBUG, 'Forecast data structure:', forecast);
+
     // Store forecast data globally for unit conversions
     forecastData = forecast;
-    
+
     // Update current conditions
-    updateCurrentConditions(forecast.current_conditions);
-    
+    if (forecast.current_conditions) {
+        debugLog(logLevels.DEBUG, 'Updating current conditions');
+        updateCurrentConditions(forecast.current_conditions);
+    } else {
+        debugLog(logLevels.DEBUG, 'No current conditions data');
+    }
+
     // Update daily forecast
-    updateDailyForecast(forecast.forecast.daily);
+    if (forecast.forecast && forecast.forecast.daily) {
+        debugLog(logLevels.DEBUG, 'Updating daily forecast');
+        updateDailyForecast(forecast.forecast.daily);
+    } else {
+        debugLog(logLevels.DEBUG, 'No daily forecast data');
+    }
 }
 
 function refreshForecastDisplay() {
@@ -3928,8 +3939,8 @@ function updateHomekitStatus(status) {
     if (pairedDevices) pairedDevices.textContent = hk.bridge ? (hk.pairedDevices || 'Unknown') : 'N/A';
     
     // Generate QR code for HomeKit pairing
-    if (hk.bridge && hk.setupCode) {
-        generateHomekitQRCode(hk.setupCode);
+    if (hk.bridge && hk.pin) {
+        generateHomekitQRCode(hk.pin);
     }
     if (reachability) {
         if (hk.bridge) {
@@ -3978,76 +3989,130 @@ function updateHomekitStatus(status) {
 function generateHomekitQRCode(setupCode) {
     const canvas = document.getElementById('homekit-qr-code');
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     const size = 200; // QR code size in pixels
     canvas.width = size;
     canvas.height = size;
-    
+
     // Clear canvas
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, size, size);
-    
-    // Simple QR code generation using a basic pattern
-    // For HomeKit setup code format: X-HH-HHH-HHH where H is PIN digit
-    const cellSize = size / 21; // 21x21 grid for simplicity
-    
-    // Create a simple data matrix based on setup code
-    const data = encodeHomekitSetupCode(setupCode);
-    
-    // Draw QR-like pattern
-    ctx.fillStyle = 'black';
-    for (let y = 0; y < 21; y++) {
-        for (let x = 0; x < 21; x++) {
-            const index = y * 21 + x;
-            if (data[index]) {
-                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+
+    try {
+        // Calculate HomeKit setup payload
+        const payload = calculateHomekitPayload(setupCode);
+        const qrContent = `X-HM://${payload}`;
+
+        debugLog(logLevels.DEBUG, 'Generating QR code for:', qrContent);
+
+        // Use qrcode library if available, otherwise fallback
+        if (typeof qrcode !== 'undefined') {
+            // Create QR code object
+            const qr = qrcode(0, 'M'); // Error correction level M
+            qr.addData(qrContent);
+            qr.make();
+
+            // Calculate module size to fit in canvas
+            const moduleCount = qr.getModuleCount();
+            const moduleSize = size / moduleCount;
+
+            // Clear canvas with white background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, size, size);
+
+            // Draw QR code modules
+            ctx.fillStyle = 'black';
+            for (let row = 0; row < moduleCount; row++) {
+                for (let col = 0; col < moduleCount; col++) {
+                    if (qr.isDark(row, col)) {
+                        ctx.fillRect(
+                            col * moduleSize,
+                            row * moduleSize,
+                            moduleSize,
+                            moduleSize
+                        );
+                    }
+                }
             }
+
+            debugLog(logLevels.DEBUG, 'HomeKit QR code generated successfully');
+        } else {
+            // Fallback to manual generation
+            debugLog(logLevels.WARN, 'QRCode library not available, using fallback');
+            generateFallbackQRCode(canvas, setupCode);
         }
+    } catch (error) {
+        debugLog(logLevels.ERROR, 'Failed to generate HomeKit QR code:', error);
+        // Fallback to a simple pattern
+        generateFallbackQRCode(canvas, setupCode);
     }
 }
 
-// Encode HomeKit setup code into a simple pattern
-function encodeHomekitSetupCode(setupCode) {
-    const size = 21 * 21;
-    const data = new Array(size).fill(false);
-    
-    // Add finder patterns (corners)
-    const addFinderPattern = (startX, startY) => {
-        for (let y = 0; y < 7; y++) {
-            for (let x = 0; x < 7; x++) {
-                const shouldFill = (x === 0 || x === 6 || y === 0 || y === 6 || (x >= 2 && x <= 4 && y >= 2 && y <= 4));
-                if (shouldFill) {
-                    const index = (startY + y) * 21 + (startX + x);
-                    if (index < size) data[index] = true;
-                }
-            }
-        }
-    };
-    
-    addFinderPattern(0, 0);   // Top-left
-    addFinderPattern(14, 0);  // Top-right
-    addFinderPattern(0, 14);  // Bottom-left
-    
-    // Encode the setup code into the center area
-    const codeStr = setupCode.replace(/[^0-9]/g, ''); // Extract digits only
-    for (let i = 0; i < codeStr.length && i < 8; i++) {
-        const digit = parseInt(codeStr[i]);
-        const startX = 8 + (i % 4);
-        const startY = 8 + Math.floor(i / 4) * 2;
-        
-        // Encode each digit as a 2x2 pattern
-        for (let bit = 0; bit < 4; bit++) {
-            if (digit & (1 << bit)) {
-                const x = startX + (bit % 2);
-                const y = startY + Math.floor(bit / 2);
-                const index = y * 21 + x;
-                if (index < size) data[index] = true;
-            }
+// Calculate HomeKit setup payload according to specification
+function calculateHomekitPayload(setupCode) {
+    // Extract digits from setup code (remove dashes and non-digits)
+    const digits = setupCode.replace(/[^0-9]/g, '');
+    if (digits.length !== 8) {
+        throw new Error('Invalid setup code: must be 8 digits');
+    }
+
+    const setupValue = parseInt(digits, 10);
+    if (setupValue < 0 || setupValue > 99999999) {
+        throw new Error('Invalid setup code range');
+    }
+
+    // HomeKit setup payload format (64-bit):
+    // Version (3 bits): 0
+    // Reserved (4 bits): 0
+    // Category (8 bits): 2 (bridge)
+    // Flags (8 bits): 0
+    // Setup code (27 bits): encoded from 8 digits
+    // Reserved (4 bits): 0
+    // Reserved (10 bits): 0
+
+    let payload = 0n;
+
+    // Build from LSB to MSB (correct bit positioning)
+    payload |= 0n;  // Version (3 bits): 0
+    payload <<= 4n; // Reserved (4 bits): 0
+    payload |= 2n;  // Category (8 bits): 2 (bridge)
+    payload <<= 8n; // Flags (8 bits): 0
+    payload |= 0n;  // Flags
+    payload <<= 27n; // Setup code (27 bits) - FIXED: was <<= 8n
+    payload |= BigInt(setupValue);
+    payload <<= 4n; // Reserved (4 bits): 0
+    // Final 10 bits remain 0 (reserved)
+
+    return payload.toString(10);
+}
+
+
+
+// Fallback QR code generation for errors
+function generateFallbackQRCode(canvas, setupCode) {
+    const ctx = canvas.getContext('2d');
+    const size = canvas.width;
+    const cellSize = size / 21;
+
+    // Clear canvas
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, size, size);
+
+    // Simple pattern based on setup code
+    const codeStr = setupCode.replace(/[^0-9]/g, '');
+    ctx.fillStyle = 'black';
+
+    for (let i = 0; i < Math.min(codeStr.length, 21 * 21); i++) {
+        const digit = parseInt(codeStr[i % codeStr.length]);
+        if (digit > 5) { // Arbitrary threshold
+            const x = i % 21;
+            const y = Math.floor(i / 21);
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
         }
     }
-    
-    return data;
+
+    debugLog(logLevels.WARN, 'Using fallback QR code generation');
 }
 
 function updateAccessoriesList(accessoryNames, allSensors) {
@@ -4235,6 +4300,27 @@ function toggleCompactMode() {
         const isCompact = tempestCard.classList.contains('compact');
         localStorage.setItem('tempest-compact-mode', isCompact ? 'true' : 'false');
         debugLog(logLevels.DEBUG, 'Compact mode toggled', { compact: isCompact });
+    }
+}
+
+function toggleAlarmCompactMode() {
+    const alarmCard = document.getElementById('alarm-card');
+    if (alarmCard) {
+        alarmCard.classList.toggle('compact');
+        const isCompact = alarmCard.classList.contains('compact');
+        localStorage.setItem('alarm-compact-mode', isCompact ? 'true' : 'false');
+        
+        // Update toggle button appearance
+        const toggleButton = document.getElementById('alarm-compact-toggle');
+        if (toggleButton) {
+            if (isCompact) {
+                toggleButton.classList.add('active');
+            } else {
+                toggleButton.classList.remove('active');
+            }
+        }
+        
+        debugLog(logLevels.DEBUG, 'Alarm compact mode toggled', { compact: isCompact });
     }
 }
 
@@ -4589,6 +4675,7 @@ document.addEventListener('DOMContentLoaded', function() {
         attachEventListener('homekit-connection-row', 'click', toggleHomekitConnectionExpansion, 'Toggle HomeKit connection info');
         attachEventListener('homekit-technical-row', 'click', toggleHomekitTechnicalExpansion, 'Toggle HomeKit technical details');
         attachEventListener('tempest-compact-toggle', 'click', toggleCompactMode, 'Toggle compact/detailed view mode');
+        attachEventListener('alarm-compact-toggle', 'click', toggleAlarmCompactMode, 'Toggle alarm compact/detailed view mode');
         attachEventListener('lux-info-icon', 'click', toggleLuxTooltip, 'Show/hide lux information tooltip');
         attachEventListener('lux-tooltip-close', 'click', closeLuxTooltip, 'Close lux tooltip');
         attachEventListener('rain-info-icon', 'click', toggleRainTooltip, 'Show/hide rain information tooltip');
@@ -4619,6 +4706,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const tempestCard = document.getElementById('tempest-card');
         if (tempestCard) {
             tempestCard.classList.add('compact');
+        }
+    }
+
+    // Restore alarm compact mode from localStorage
+    const isAlarmCompact = storage ? storage.getItem('alarm-compact-mode') === 'true' : true; // Default to compact mode
+    if (isAlarmCompact) {
+        const alarmCard = document.getElementById('alarm-card');
+        if (alarmCard) {
+            alarmCard.classList.add('compact');
+        }
+        const toggleButton = document.getElementById('alarm-compact-toggle');
+        if (toggleButton) {
+            toggleButton.classList.add('active');
         }
     }
 
@@ -5080,6 +5180,8 @@ function updateAlarmStatus(data, opts) {
     const doc = optDoc || ((win && win.document) ? win.document : ((typeof global !== 'undefined' && global.document) ? global.document : (typeof document !== 'undefined' ? document : null)));
     if (!doc) return; // cannot operate without a document
 
+    const storage = win && win.localStorage ? win.localStorage : null;
+
     // Update status indicator
     const statusEl = doc.getElementById('alarm-status');
     if (statusEl) {
@@ -5235,14 +5337,7 @@ function updateAlarmStatus(data, opts) {
             const alarmItem = doc.createElement('div');
             alarmItem.className = 'alarm-item';
             
-            // Check for compact mode
-            const storage = (win && win.localStorage) || (typeof localStorage !== 'undefined' ? localStorage : null);
-            const isCompact = storage ? storage.getItem('alarm-compact-mode') === 'true' : false;
-            if (isCompact) {
-                alarmItem.classList.add('compact');
-            }
-            
-            // Check for expanded state
+            // Check for expanded state (disclosure triangles control visibility)
             const expandedSet = storage ? storage.getItem('alarm-expanded-set') : null;
             let expandedKeys = [];
             if (expandedSet) {
