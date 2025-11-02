@@ -4,6 +4,8 @@ package homekit
 
 import (
 	"context"
+	"os"
+	"strings"
 
 	"tempest-homekit-go/pkg/config"
 	"tempest-homekit-go/pkg/logger"
@@ -319,6 +321,29 @@ func (ws *WeatherSystemModern) GetAvailableSensors() []string {
 	return sensors
 }
 
+// countPairedDevices counts the number of paired devices by reading pairing files from the database
+func countPairedDevices() int {
+	dbDir := "./db"
+	entries, err := os.ReadDir(dbDir)
+	if err != nil {
+		logger.Warn("Failed to read database directory for paired devices count: %v", err)
+		return 0
+	}
+
+	count := 0
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".pairing") {
+			count++
+		}
+	}
+
+	if count > 0 {
+		logger.Debug("Found %d paired device(s) in database", count)
+	}
+
+	return count
+}
+
 // GetDetailedInfo returns detailed HomeKit bridge information
 func (ws *WeatherSystemModern) GetDetailedInfo() map[string]interface{} {
 	if ws.Bridge == nil || ws.Server == nil {
@@ -343,10 +368,9 @@ func (ws *WeatherSystemModern) GetDetailedInfo() map[string]interface{} {
 		"firmware":       ws.Bridge.Info.FirmwareRevision.Value(),
 	}
 
-	// Get paired devices count (if available from server)
-	// Note: The brutella/hap library doesn't expose paired devices directly
-	// We'll show 0 until paired, then "Unknown" after first pairing
-	info["pairedDevices"] = "Unknown"
+	// Get paired devices count by reading database files
+	pairedCount := countPairedDevices()
+	info["pairedDevices"] = pairedCount
 	info["reachability"] = true
 	info["lastRequest"] = "Active"
 

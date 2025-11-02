@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"time"
 
-	"tempest-homekit-go/pkg/weather"
+	"tempest-homekit-go/pkg/types"
 )
 
 // Season represents different weather seasons
@@ -42,8 +42,8 @@ type WeatherGenerator struct {
 	BaseTemperature        float64 // Celsius
 	BasePressure           float64 // mb
 	BaseHumidity           float64 // %
-	current                *weather.Observation
-	history                []*weather.Observation
+	current                *types.Observation
+	history                []*types.Observation
 	rng                    *rand.Rand
 	cumulativeRain         float64 // Total accumulated rain since station start (like real Tempest)
 	dailyRainTotal         float64 // Total rain for the current day (resets at midnight)
@@ -205,7 +205,7 @@ func (wg *WeatherGenerator) SetCurrentWeatherMode() {
 }
 
 // GenerateObservation creates a single realistic weather observation
-func (wg *WeatherGenerator) GenerateObservation() *weather.Observation {
+func (wg *WeatherGenerator) GenerateObservation() *types.Observation {
 	// Use CurrentTime if set (for historical data), otherwise use current time
 	observationTime := wg.CurrentTime
 	if observationTime.IsZero() {
@@ -243,7 +243,7 @@ func (wg *WeatherGenerator) GenerateObservation() *weather.Observation {
 	// Generate solar radiation
 	solar := wg.generateSolar(observationTime)
 
-	obs := &weather.Observation{
+	obs := &types.Observation{
 		Timestamp:            observationTime.Unix(),
 		WindLull:             math.Max(0, windSpeed-wg.rng.Float64()*2),
 		WindAvg:              windSpeed,
@@ -256,6 +256,7 @@ func (wg *WeatherGenerator) GenerateObservation() *weather.Observation {
 		UV:                   int(uv),
 		SolarRadiation:       solar,
 		RainAccumulated:      rain,
+		RainDailyTotal:       wg.dailyRainTotal,
 		PrecipitationType:    wg.generatePrecipitationType(temperature, rain),
 		LightningStrikeAvg:   wg.generateLightning(),
 		LightningStrikeCount: wg.generateLightningCount(),
@@ -408,18 +409,19 @@ func (wg *WeatherGenerator) generateRain() float64 {
 		rainChance *= 1.5
 	}
 
+	var incrementalRain float64
 	if wg.rng.Float64() < rainChance {
 		// Light to moderate rain (per minute/observation)
-		newRain := wg.rng.Float64() * 0.1 // 0-0.1 inches per observation
-		wg.cumulativeRain += newRain
+		incrementalRain = wg.rng.Float64() * 2.54 // 0-2.54 mm per observation (equivalent to 0-0.1 inches)
+		wg.cumulativeRain += incrementalRain
 
 		// Only add to daily total if not generating historical data
 		if !wg.isGeneratingHistorical {
-			wg.dailyRainTotal += newRain
+			wg.dailyRainTotal += incrementalRain
 		}
 	}
 
-	return wg.cumulativeRain
+	return incrementalRain
 }
 
 // generateSolar creates realistic solar radiation
@@ -484,8 +486,8 @@ func (wg *WeatherGenerator) generateLightningCount() int {
 }
 
 // GenerateHistoricalData creates a series of historical observations
-func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*weather.Observation {
-	observations := make([]*weather.Observation, count)
+func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*types.Observation {
+	observations := make([]*types.Observation, count)
 
 	// Save the current state to restore later (historical generation should not affect current day)
 	originalDailyTotal := wg.dailyRainTotal

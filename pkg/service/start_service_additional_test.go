@@ -50,7 +50,7 @@ func TestStartService_WithFakeDataSource(t *testing.T) {
 	orig := DataSourceFactory
 	defer func() { DataSourceFactory = orig }()
 
-	DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error) {
+	DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error) {
 		return &fakeDataSource{}, nil
 	}
 
@@ -71,7 +71,7 @@ func TestStartService_FactoryError(t *testing.T) {
 	orig := DataSourceFactory
 	defer func() { DataSourceFactory = orig }()
 
-	DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error) {
+	DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error) {
 		return nil, errors.New("factory failed")
 	}
 
@@ -85,7 +85,7 @@ func TestStartService_DataSourceStartError(t *testing.T) {
 	orig := DataSourceFactory
 	defer func() { DataSourceFactory = orig }()
 
-	DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error) {
+	DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error) {
 		return &failingStartDS{}, nil
 	}
 

@@ -1,121 +1,167 @@
 {
   "alarms": [
     {
-      "name": "Wind Change console",
-      "description": "Trigger on any wind change and send a console message",
+      "name": "Hot Outside",
+      "description": "Alert when temperature exceeds 85°F",
       "tags": [
-        "wind",
-        "rapid-change",
-        "console"
+        "temperature",
+        "heat",
+        "outdoor"
       ],
       "enabled": true,
-      "condition": "* wind_direction",
-      "cooldown": 300,
+      "condition": "temperature \u003e 85F",
+      "cooldown": 1800,
       "channels": [
         {
           "type": "console",
-          "template": "🚨 WEATHER ALARM TRIGGERED\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nAlarm:       {{alarm_name}}\nDescription: {{alarm_description}}\nStation:     {{station}}\nTime:        {{timestamp}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n{{sensor_info}}"
-        }
-      ]
-    },
-    {
-      "name": "Wind Change sms",
-      "tags": [
-        "wind",
-        "rapid-change",
-        "sms"
-      ],
-      "enabled": false,
-      "condition": "* wind_speed",
-      "cooldown": 300,
-      "channels": [
+          "template": "🚨 WEATHER ALARM TRIGGERED\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nAlarm:       {{alarm_name}}\nDescription: {{alarm_description}}\nStation:     {{station}}\nTime:        {{timestamp}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n{{sensor_info}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        },
         {
           "type": "sms",
           "sms": {
             "message": "⚠️ {{alarm_name}} at {{station}} - {{timestamp}}. {{alarm_description}}",
             "to": [
-              "+19516422747"
+              "+19516422757",
+              "+19513164325"
             ]
           }
         }
       ]
     },
     {
-      "name": "Wind Change webhook",
-      "description": "Trigger on any wind change and send a webhook",
+      "name": "Lightning Nearby",
+      "description": "Alert when lightning strikes within 2 miles",
       "tags": [
-        "wind",
-        "rapid-change",
-        "webhook"
+        "lightning",
+        "safety",
+        "severe"
       ],
-      "enabled": false,
-      "condition": "* wind_direction",
-      "cooldown": 30,
-      "channels": [
-        {
-          "type": "webhook",
-          "webhook": {
-            "url": "http://localhost:8082",
-            "method": "POST",
-            "headers": {
-              "Content-Type": "application/json",
-              "User-Agent": "Tempest-HomeKit-Alarm"
-            },
-            "body": "{\n  \"alarm\": {\n    \"name\": \"{{alarm_name}}\",\n    \"description\": \"{{alarm_description}}\",\n    \"condition\": \"{{alarm_condition}}\",\n    \"tags\": \"{{alarm_tags}}\"\n  },\n  \"station\": \"{{station}}\",\n  \"timestamp\": \"{{timestamp}}\",\n  \"sensors\": {\n    \"temperature_c\": {{temperature}},\n    \"temperature_f\": {{temperature_f}},\n    \"humidity\": {{humidity}},\n    \"pressure_mb\": {{pressure}},\n    \"wind_speed_ms\": {{wind_speed}},\n    \"wind_gust_ms\": {{wind_gust}},\n    \"wind_direction_deg\": {{wind_direction}},\n    \"illuminance_lux\": {{lux}},\n    \"uv_index\": {{uv}},\n    \"rain_rate_mmh\": {{rain_rate}},\n    \"rain_daily_mm\": {{rain_daily}},\n    \"lightning_count\": {{lightning_count}},\n    \"lightning_distance_km\": {{lightning_distance}}\n  },\n  \"app_info\": \"{{app_info}}\"\n}",
-            "content_type": "application/json"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Emoji test",
-      "description": "Testing the emoji editor",
-      "enabled": false,
-      "condition": "*wind_direction",
-      "cooldown": 30,
+      "enabled": true,
+      "condition": "lightning_count \u003e 0 \u0026\u0026 lightning_distance \u003c 2",
+      "cooldown": 300,
       "channels": [
         {
           "type": "console",
-          "template": "🚨 WEATHER ALARM TRIGGERED\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nAlarm:       {{alarm_name}}\nDescription: {{alarm_description}}\nStation:     {{station}}\nTime:        {{timestamp}}\n\n✅\n\n{{sensor_info}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          "template": "Tempest-Alarm [lightning-nearby]: Lightning detected {{lightning_distance}} miles away at {{timestamp}}"
         }
       ]
     },
     {
-      "name": "Rapid Change JSON",
-      "description": "Trigger the JSON delivery on almost any change",
+      "name": "Hot and Humid",
+      "description": "Alert for dangerous heat index conditions",
       "tags": [
-        "rapid-change"
+        "temperature",
+        "humidity",
+        "heat-index",
+        "health"
       ],
       "enabled": true,
-      "condition": "* humidity || * lux || * pressure || * temperature || * wind_direction || * wind_speed",
-      "cooldown": 30,
+      "condition": "temperature \u003e 85F \u0026\u0026 humidity \u003e 80%",
+      "cooldown": 3600,
       "channels": [
         {
-          "type": "json",
-          "json": {
-            "path": "/tmp/tempest-alarms.json",
-            "max_days": 30,
-            "message": "{\"timestamp\": \"{{timestamp}}\", \"message\": \"ALARM: {{alarm_name}} triggered\", \"alarm\": {{alarm_info}}, \"sensors\": {{sensor_info}}}"
+          "type": "console",
+          "template": "Tempest-Alarm [hot-and-humid]: Dangerous conditions - Temp: {{temperature}}°C, Humidity: {{humidity}}% at {{timestamp}}"
+        },
+        {
+          "type": "email",
+          "email": {
+            "subject": "Heat Index Warning: {{temperature}}°C / {{humidity}}%",
+            "body": "Dangerous heat index conditions detected.\n\nTemperature: {{temperature}}°C ({{temperature_f}}°F)\nHumidity: {{humidity}}%\nHeat Index: High Risk\n\nTime: {{timestamp}}\nStation: {{station}}\n\nRecommendations:\n- Stay hydrated\n- Avoid strenuous outdoor activities\n- Check on vulnerable individuals",
+            "to": [
+              "admin@example.com",
+              "safety@example.com"
+            ]
           }
         }
       ]
     },
     {
-      "name": "Rapid Change csv",
-      "description": "Trigger for csv",
+      "name": "Raining",
+      "description": "Simple rain detection alert",
       "tags": [
-        "rapid-change"
+        "rain",
+        "precipitation"
       ],
       "enabled": true,
-      "condition": "* humidity || * lux || * pressure || * temperature || * uv || * wind_direction || * wind_speed",
-      "cooldown": 30,
+      "condition": "rain_rate \u003e 0",
+      "cooldown": 7200,
       "channels": [
         {
-          "type": "csv",
-          "csv": {
-            "path": "/tmp/tempest-alarms.csv",
-            "max_days": 30,
-            "message": "{{alarm_name}},{{alarm_description}},{{temperature}},{{humidity}},{{pressure}},{{wind_speed}},{{lux}},{{uv}},{{rain_daily}},{{message}}"
+          "type": "console",
+          "template": "Tempest-Alarm [raining]: Rain detected - Rate: {{rain_rate}} in/hr, Daily: {{rain_daily}} in at {{timestamp}}"
+        }
+      ]
+    },
+    {
+      "name": "High UV Index",
+      "description": "Alert for dangerous UV exposure levels",
+      "tags": [
+        "uv",
+        "health",
+        "sun-exposure"
+      ],
+      "enabled": true,
+      "condition": "uv \u003e= 8",
+      "cooldown": 10800,
+      "channels": [
+        {
+          "type": "console",
+          "template": "Tempest-Alarm [high-uv-index]: Very high UV index detected: {{uv}} at {{timestamp}}"
+        },
+        {
+          "type": "email",
+          "email": {
+            "subject": "High UV Alert: Index {{uv}}",
+            "body": "Very high UV exposure detected.\n\nUV Index: {{uv}} (Very High/Extreme)\nTime: {{timestamp}}\n\nProtection required:\n- Use SPF 30+ sunscreen\n- Wear protective clothing\n- Seek shade during peak hours\n- Wear sunglasses",
+            "to": [
+              "family@example.com"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "pressure-drop",
+      "description": "Rapid pressure drop indicating storm approach",
+      "tags": [
+        "pressure",
+        "weather-change",
+        "storm"
+      ],
+      "enabled": true,
+      "condition": "pressure \u003c 29.5",
+      "cooldown": 3600,
+      "channels": [
+        {
+          "type": "console",
+          "template": "Tempest-Alarm [pressure-drop]: Low pressure detected: {{pressure}} inHg at {{timestamp}} - Storm conditions possible"
+        }
+      ]
+    },
+    {
+      "name": "Freezing Outside",
+      "description": "It’s freezing outside",
+      "tags": [
+        "temperature",
+        "weather-change"
+      ],
+      "enabled": true,
+      "condition": "temperature \u003c= 32F",
+      "cooldown": 1800,
+      "channels": [
+        {
+          "type": "console",
+          "template": "🚨 WEATHER ALARM TRIGGERED\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nAlarm:       {{alarm_name}}\nDescription: {{alarm_description}}\nStation:     {{station}}\nTime:        {{timestamp}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n{{sensor_info}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        },
+        {
+          "type": "sms",
+          "sms": {
+            "message": "⚠️ {{alarm_name}} at {{station}} - {{timestamp}}. {{alarm_description}}",
+            "to": [
+              "+19516422757",
+              "+19513164325"
+            ]
           }
         }
       ]

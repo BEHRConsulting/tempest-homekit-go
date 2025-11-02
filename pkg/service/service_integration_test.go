@@ -52,7 +52,7 @@ func TestStartService_WithFakeDataSource(t *testing.T) {
 	orig := svc.DataSourceFactory
 	defer func() { svc.DataSourceFactory = orig }()
 
-	svc.DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error) {
+	svc.DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error) {
 		return &fakeDataSource{}, nil
 	}
 

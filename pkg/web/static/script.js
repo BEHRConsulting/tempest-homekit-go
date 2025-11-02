@@ -4299,6 +4299,17 @@ function toggleCompactMode() {
         tempestCard.classList.toggle('compact');
         const isCompact = tempestCard.classList.contains('compact');
         localStorage.setItem('tempest-compact-mode', isCompact ? 'true' : 'false');
+        
+        // Update toggle button appearance
+        const toggleButton = document.getElementById('tempest-compact-toggle');
+        if (toggleButton) {
+            if (isCompact) {
+                toggleButton.classList.add('active');
+            } else {
+                toggleButton.classList.remove('active');
+            }
+        }
+        
         debugLog(logLevels.DEBUG, 'Compact mode toggled', { compact: isCompact });
     }
 }
@@ -4706,6 +4717,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const tempestCard = document.getElementById('tempest-card');
         if (tempestCard) {
             tempestCard.classList.add('compact');
+        }
+        const toggleButton = document.getElementById('tempest-compact-toggle');
+        if (toggleButton) {
+            toggleButton.classList.add('active');
         }
     }
 

@@ -21,7 +21,7 @@ func TestCreateDataSource_UDPStatusReflectsListener(t *testing.T) {
 	// populate observations
 	m.observations = []weather.Observation{{Timestamp: 1}, {Timestamp: 2}, {Timestamp: 3}}
 
-	ds, err := CreateDataSource(cfg, station, m)
+	ds, err := CreateDataSource(cfg, station, m, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating UDP data source: %v", err)
 	}

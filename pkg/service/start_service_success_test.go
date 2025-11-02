@@ -48,7 +48,7 @@ func TestCreateDataSource_UDPBranch(t *testing.T) {
 	cfg := &config.Config{UDPStream: true}
 	listener := &fakeUDPListener2{}
 
-	ds, err := CreateDataSource(cfg, &weather.Station{StationID: 1, StationName: "s"}, listener)
+	ds, err := CreateDataSource(cfg, &weather.Station{StationID: 1, StationName: "s"}, listener, nil)
 	if err != nil {
 		t.Fatalf("expected UDP datasource creation to succeed, got error: %v", err)
 	}

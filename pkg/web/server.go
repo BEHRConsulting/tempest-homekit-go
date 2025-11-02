@@ -48,6 +48,7 @@ type WebServer struct {
 	unitsPressure          string                // pressure units: inHg or mb
 	logLevel               string                // log level for filtering debug messages
 	alarmManager           AlarmManagerInterface // alarm manager for status display
+	alarmConfig            string                // alarm configuration path or content
 	startTime              time.Time
 	historicalDataLoaded   bool
 	historicalDataCount    int
@@ -132,6 +133,7 @@ type StatusResponse struct {
 	HomeKit                map[string]interface{} `json:"homekit"`
 	DataHistory            []WeatherResponse      `json:"dataHistory"`
 	ObservationCount       int                    `json:"observationCount"`
+	MaxHistorySize         int                    `json:"maxHistorySize"`
 	HistoricalDataLoaded   bool                   `json:"historicalDataLoaded"`
 	HistoricalDataCount    int                    `json:"historicalDataCount"`
 	HistoryLoadingProgress struct {
@@ -377,7 +379,7 @@ func getPressureWeatherForecast(pressure float64, trend string) string {
 	}
 }
 
-func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, stationURL string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface, units string, unitsPressure string, historyPoints int, chartHistoryHours int) *WebServer {
+func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, stationURL string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface, units string, unitsPressure string, historyPoints int, chartHistoryHours int, alarmConfig string) *WebServer {
 	// Validate history size to prevent excessive memory allocation
 	if historyPoints > 100000 {
 		logger.Warn("History size %d is very large, capping at 100000 to prevent memory issues", historyPoints)
@@ -403,6 +405,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 		weatherGenerator:  weatherGenerator,
 		units:             units,
 		unitsPressure:     unitsPressure,
+		alarmConfig:       alarmConfig,
 		homekitStatus: map[string]interface{}{
 			"bridge":      false,
 			"accessories": 0,
@@ -442,7 +445,14 @@ func (ws *WebServer) Start() error {
 	// Start status manager for periodic scraping
 	ws.statusManager.Start()
 
-	return ws.server.ListenAndServe()
+	ws.logInfo("Web server calling ListenAndServe on :%s", ws.port)
+	err := ws.server.ListenAndServe()
+	if err != nil {
+		ws.logError("Web server ListenAndServe failed: %v", err)
+		fmt.Printf("WEB SERVER ERROR: ListenAndServe failed: %v\n", err)
+		return err
+	}
+	return nil
 }
 
 func (ws *WebServer) UpdateWeather(obs *weather.Observation) {
@@ -793,6 +803,7 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 		HomeKit:              ws.homekitStatus,
 		DataHistory:          history,
 		ObservationCount:     len(ws.dataHistory),
+		MaxHistorySize:       ws.maxHistorySize,
 		HistoricalDataLoaded: ws.historicalDataLoaded,
 		HistoricalDataCount:  ws.historicalDataCount,
 		GeneratedWeather:     ws.generatedWeather,
@@ -905,13 +916,17 @@ func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request
 
 	ws.mu.RLock()
 	alarmMgr := ws.alarmManager
+	alarmConfig := ws.alarmConfig
 	ws.mu.RUnlock()
 
-	// If no alarm manager, return disabled status
+	// Determine if alarms are enabled (configured or manager exists)
+	enabled := alarmConfig != "" || alarmMgr != nil
+
+	// If no alarm manager, return basic status
 	if alarmMgr == nil {
 		json.NewEncoder(w).Encode(AlarmStatusResponse{
-			Enabled:       false,
-			ConfigPath:    "Not configured",
+			Enabled:       enabled,
+			ConfigPath:    alarmConfig,
 			LastReadTime:  "N/A",
 			TotalAlarms:   0,
 			EnabledAlarms: 0,
@@ -968,7 +983,7 @@ func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request
 	}
 
 	response := AlarmStatusResponse{
-		Enabled:       true,
+		Enabled:       enabled,
 		ConfigPath:    configPath,
 		LastReadTime:  lastReadTimeStr,
 		TotalAlarms:   totalAlarms,
@@ -1762,6 +1777,7 @@ func (ws *WebServer) getDashboardHTML() string {
                 <div class="card-header">
                     <span class="card-icon">🚨</span>
                     <span class="card-title">Alarm Status</span>
+                    <button class="alarm-compact-toggle" id="alarm-compact-toggle" title="Toggle compact/detailed view">⚙️</button>
                 </div>
                 <div class="alarm-status-content">
                     <div class="alarm-info-row">
@@ -1819,6 +1835,9 @@ func (ws *WebServer) getDashboardHTML() string {
     `
 	}() + `
     
+	<!-- QR Code Library -->
+	<script src="/pkg/web/static/qrcode.min.js"></script>
+	
 	<!-- Main Application Script -->
 	<script src="/pkg/web/static/alarm-utils.js"></script>
 	<script src="pkg/web/static/script.js?v=` + fmt.Sprintf("%d", time.Now().UnixNano()) + `"></script>

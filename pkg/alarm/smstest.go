@@ -11,18 +11,26 @@ import (
 
 // TestSMSConfiguration tests the SMS configuration by sending a test SMS
 func TestSMSConfiguration(alarmsJSON, stationName string) error {
+	log.Printf("[SMS-TEST] Starting SMS configuration test for station: %s", stationName)
+
 	// Load alarm config to get provider configuration
 	config, err := LoadAlarmConfig(alarmsJSON)
 	if err != nil {
+		log.Printf("[SMS-TEST] ERROR: Failed to load alarm configuration: %v", err)
 		return fmt.Errorf("failed to load alarm configuration: %w", err)
 	}
 
+	log.Printf("[SMS-TEST] Successfully loaded alarm configuration with %d alarms", len(config.Alarms))
+
 	// Check if SMS is configured
 	if config.SMS == nil {
+		log.Printf("[SMS-TEST] ERROR: No SMS configuration found")
 		return fmt.Errorf("no SMS configuration found - set TWILIO_* or AWS_* environment variables in .env")
 	}
 
 	provider := config.SMS.Provider
+	log.Printf("[SMS-TEST] SMS provider configured: %s", provider)
+
 	fmt.Println()
 	fmt.Println("================================================================")
 	fmt.Println("SMS CONFIGURATION TEST")
@@ -40,6 +48,7 @@ func TestSMSConfiguration(alarmsJSON, stationName string) error {
 		fmt.Printf("  From Number: %s\n", config.SMS.FromNumber)
 		fmt.Println()
 		if config.SMS.AccountSID == "" || config.SMS.AuthToken == "" || config.SMS.FromNumber == "" {
+			log.Printf("[SMS-TEST] ERROR: Missing Twilio credentials")
 			fmt.Println("⚠️  WARNING: Missing Twilio credentials")
 			fmt.Println("   Required environment variables:")
 			fmt.Println("   - TWILIO_ACCOUNT_SID")
@@ -57,6 +66,7 @@ func TestSMSConfiguration(alarmsJSON, stationName string) error {
 		}
 		fmt.Println()
 		if config.SMS.AWSAccessKey == "" || config.SMS.AWSSecretKey == "" || config.SMS.AWSRegion == "" {
+			log.Printf("[SMS-TEST] ERROR: Missing AWS SNS credentials")
 			fmt.Println("⚠️  WARNING: Missing AWS SNS credentials")
 			fmt.Println("   Required environment variables:")
 			fmt.Println("   - AWS_ACCESS_KEY_ID")
@@ -65,31 +75,39 @@ func TestSMSConfiguration(alarmsJSON, stationName string) error {
 			return fmt.Errorf("incomplete AWS SNS configuration")
 		}
 	default:
+		log.Printf("[SMS-TEST] ERROR: Unsupported SMS provider: %s", provider)
 		return fmt.Errorf("unsupported SMS provider: %s", provider)
 	}
 
 	// Recipient phone comes from command line parameter
 	recipientNumber := os.Getenv("TEST_SMS_RECIPIENT")
 	if recipientNumber == "" {
+		log.Printf("[SMS-TEST] ERROR: No recipient phone number provided")
 		return fmt.Errorf("no recipient phone number provided")
 	}
 
+	log.Printf("[SMS-TEST] Test SMS recipient: %s", recipientNumber)
+
 	// Validate E.164 format
 	if !strings.HasPrefix(recipientNumber, "+") {
+		log.Printf("[SMS-TEST] ERROR: Phone number must start with + (E.164 format required)")
 		return fmt.Errorf("phone number must start with + (E.164 format required)")
 	}
 	fmt.Println("================================================================")
 
 	fmt.Println()
 	fmt.Println("Sending test SMS...")
-	fmt.Println()
+	log.Printf("[SMS-TEST] Attempting to send test SMS to %s", recipientNumber)
 
 	// Create SMS notifier using factory (same path as real alarms)
 	factory := NewNotifierFactory(config)
 	smsNotifier, err := factory.GetNotifier("sms")
 	if err != nil {
+		log.Printf("[SMS-TEST] ERROR: Failed to create SMS notifier: %v", err)
 		return fmt.Errorf("failed to create SMS notifier: %w", err)
 	}
+
+	log.Printf("[SMS-TEST] Successfully created SMS notifier")
 
 	testAlarm := &Alarm{
 		Name:        "Test SMS",
@@ -114,11 +132,16 @@ func TestSMSConfiguration(alarmsJSON, stationName string) error {
 		StationPressure:  1013.25,
 	}
 
+	log.Printf("[SMS-TEST] Created test alarm and observation, sending SMS...")
+
 	// Send test SMS
 	err = smsNotifier.Send(testAlarm, testChannel, testObs, stationName)
 	if err != nil {
+		log.Printf("[SMS-TEST] ERROR: Failed to send test SMS: %v", err)
 		return fmt.Errorf("failed to send test SMS: %w", err)
 	}
+
+	log.Printf("[SMS-TEST] SUCCESS: Test SMS sent successfully to %s", recipientNumber)
 
 	fmt.Println()
 	fmt.Println("✅ Test SMS sent successfully!")
@@ -147,15 +170,23 @@ func TestSMSConfiguration(alarmsJSON, stationName string) error {
 	fmt.Println()
 	fmt.Println("================================================================")
 
+	log.Printf("[SMS-TEST] SMS configuration test completed successfully")
+
 	return nil
 }
 
 // RunSMSTest is a convenience function that wraps TestSMSConfiguration and exits
 func RunSMSTest(alarmsJSON, stationName string) {
+	log.Printf("[SMS-TEST] Starting isolated SMS test mode")
+	log.Printf("[SMS-TEST] This test will send a test SMS and exit - no alarm processing will occur")
+
 	err := TestSMSConfiguration(alarmsJSON, stationName)
 	if err != nil {
+		log.Printf("[SMS-TEST] SMS test failed: %v", err)
 		log.Fatalf("SMS test failed: %v", err)
 	}
+
+	log.Printf("[SMS-TEST] SMS test completed successfully - exiting")
 	os.Exit(0)
 }
 

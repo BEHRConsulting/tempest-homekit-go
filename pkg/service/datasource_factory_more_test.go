@@ -31,7 +31,7 @@ func TestCreateDataSource_UDP_Success(t *testing.T) {
 	cfg := &config.Config{UDPStream: true, DisableInternet: true}
 	var st *weather.Station = &weather.Station{StationID: 123, StationName: "Test"}
 
-	ds, err := CreateDataSource(cfg, st, &fakeUDPListener{})
+	ds, err := CreateDataSource(cfg, st, &fakeUDPListener{}, nil)
 	if err != nil {
 		t.Fatalf("CreateDataSource UDP returned error: %v", err)
 	}

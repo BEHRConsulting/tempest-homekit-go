@@ -251,8 +251,9 @@ body {
     flex: 1;
 }
 
-/* Compact Mode Toggle Button */
-.compact-toggle {
+/* Compact Mode Toggle Button - Common style for all compact toggles */
+.compact-toggle,
+.alarm-compact-toggle {
     margin-left: auto;
     background: none;
     border: 1px solid rgba(0, 123, 255, 0.3);
@@ -264,39 +265,21 @@ body {
     color: #666;
 }
 
-.compact-toggle:hover {
+.compact-toggle:hover,
+.alarm-compact-toggle:hover {
     background-color: rgba(0, 123, 255, 0.1);
     border-color: rgba(0, 123, 255, 0.5);
 }
 
-.compact-toggle:active {
+.compact-toggle:active,
+.alarm-compact-toggle:active {
     transform: scale(0.95);
-}
-
-/* Alarm compact toggle (small icon inside alarm header controls) */
-.alarm-compact-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 6px;
-    background: transparent;
-    border: 1px solid rgba(0,0,0,0.06);
-    margin-left: 8px;
-    cursor: pointer;
-    color: var(--card-text-light);
-    font-size: 0.95rem;
 }
 
 .alarm-compact-toggle.active {
     background: rgba(0,123,255,0.08);
     border-color: rgba(0,123,255,0.25);
     color: #0753a6;
-}
-
-.alarm-compact-toggle:hover {
-    background: rgba(0,0,0,0.02);
 }
 
 .card-value {
@@ -428,8 +411,9 @@ body {
 .signal-bar.active.fair { background-color: #ffc107; }
 .signal-bar.active.poor { background-color: #dc3545; }
 
-/* Compact Mode */
-.card.compact .info-row {
+/* Compact Mode - Common styles for all compact cards */
+.card.compact .info-row,
+.card.compact .alarm-info-row {
     padding: 2px 0;
     font-size: 0.85rem;
 }
@@ -442,11 +426,13 @@ body {
     font-size: 0.9rem;
 }
 
-.card.compact .info-label {
+.card.compact .info-label,
+.card.compact .alarm-label {
     font-size: 0.85rem;
 }
 
-.card.compact .info-value {
+.card.compact .info-value,
+.card.compact .alarm-value {
     font-size: 0.85rem;
 }
 
@@ -1610,48 +1596,39 @@ body {
     font-size: 0.85rem;
 }
 
-/* Compact representation for alarm items: show only 2 lines of summary
-   and hide less-important metadata. Click the item to expand. */
-.alarm-item.compact {
-    padding: 8px;
-    cursor: pointer;
+/* Compact mode: smaller fonts and spacing (consistent with general compact styles) */
+#alarm-card.compact .alarm-item {
+    padding: 6px;
 }
 
-.alarm-item.compact .alarm-item-name {
-    font-size: 0.95rem;
+#alarm-card.compact .alarm-item-name {
+    font-size: 0.85rem;
     margin-bottom: 6px;
 }
 
-/* Limit the details area to two lines using line-clamp where available */
-.alarm-item.compact .alarm-item-details {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    max-height: 3.2em; /* fallback for non-webkit */
+#alarm-card.compact .alarm-item-details {
+    font-size: 0.85rem;
+    gap: 3px;
 }
 
-.alarm-item.compact .alarm-item-channels,
-.alarm-item.compact .alarm-item-tags,
-.alarm-item.compact .alarm-item-triggered-count,
-.alarm-item.compact .alarm-item-cooldown {
+#alarm-card.compact .alarm-list-header {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+#alarm-card.compact .alarm-status-content {
+    gap: 8px;
+    padding: 8px 0;
+}
+
+/* Disclosure triangles control visibility: hide details when not expanded */
+.alarm-item:not(.expanded) .alarm-item-details {
     display: none;
 }
 
-/* When explicitly expanded (by clicking), reveal all details */
-.alarm-item.expanded .alarm-item-channels,
-.alarm-item.expanded .alarm-item-tags,
-.alarm-item.expanded .alarm-item-triggered-count,
-.alarm-item.expanded .alarm-item-cooldown {
-    display: block;
-}
-
+/* When explicitly expanded, show all details */
 .alarm-item.expanded .alarm-item-details {
     display: flex;
-    -webkit-line-clamp: unset;
-    -webkit-box-orient: unset;
-    overflow: visible;
-    max-height: none;
 }
 
 .alarm-item.compact:hover {
@@ -1671,4 +1648,27 @@ body {
 .alarm-item-channels {
     color: var(--card-text-light);
     font-size: 0.8rem;
+}
+
+/* Alarm expand button styles */
+.alarm-expand-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--card-text-light);
+    padding: 2px 4px;
+    margin-right: 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s, color 0.2s;
+    user-select: none;
+}
+
+.alarm-expand-button:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+    color: var(--link-color);
+}
+
+.alarm-expand-button:active {
+    transform: scale(0.95);
 }

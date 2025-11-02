@@ -176,6 +176,7 @@ func (e *Evaluator) getFieldValue(field string, obs *weather.Observation) (float
 // Supports:
 //   - Temperature: 80F or 80f -> Celsius, 32C or 32c -> Celsius (no conversion)
 //   - Wind: 25mph -> m/s, 10m/s or 10 -> m/s (no conversion)
+//   - Humidity: 80% -> 80 (no conversion, just strip %)
 func (e *Evaluator) parseValueWithUnits(valueStr string, field string) (float64, error) {
 	valueStr = strings.TrimSpace(valueStr)
 	field = strings.ToLower(field)
@@ -218,6 +219,13 @@ func (e *Evaluator) parseValueWithUnits(valueStr string, field string) (float64,
 			valueStr = strings.TrimSuffix(valueStr, "M/S")
 		} else if strings.HasSuffix(strings.ToLower(valueStr), "ms") {
 			valueStr = strings.TrimSuffix(strings.TrimSuffix(valueStr, "ms"), "MS")
+		}
+	}
+
+	// Check for humidity fields (stored as percentage, strip % if present)
+	if field == "humidity" {
+		if strings.HasSuffix(valueStr, "%") {
+			valueStr = strings.TrimSuffix(valueStr, "%")
 		}
 	}
 
@@ -457,6 +465,10 @@ func (e *Evaluator) formatValue(value string) string {
 	}
 	if strings.HasSuffix(value, "m/s") {
 		return value[:len(value)-3] + " m/s"
+	}
+	// Check for humidity percentage
+	if strings.HasSuffix(value, "%") {
+		return value
 	}
 	return value
 }

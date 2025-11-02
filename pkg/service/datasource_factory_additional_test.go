@@ -28,7 +28,7 @@ func (s *simpleFakeUDP) GetHubStatus() interface{}    { return nil }
 func TestCreateDataSource_UDPWithListener(t *testing.T) {
 	cfg := &config.Config{UDPStream: true, DisableInternet: true}
 	station := &weather.Station{StationID: 123, StationName: "Test"}
-	ds, err := CreateDataSource(cfg, station, &simpleFakeUDP{})
+	ds, err := CreateDataSource(cfg, station, &simpleFakeUDP{}, nil)
 	if err != nil {
 		t.Fatalf("CreateDataSource UDP failed: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestCreateDataSource_UDPWithListener(t *testing.T) {
 func TestCreateDataSource_UseGeneratedWeatherDefaults(t *testing.T) {
 	cfg := &config.Config{UseGeneratedWeather: true}
 	station := &weather.Station{StationID: 0, StationName: "Gen"}
-	ds, err := CreateDataSource(cfg, station, nil)
+	ds, err := CreateDataSource(cfg, station, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateDataSource generated failed: %v", err)
 	}

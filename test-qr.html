@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Code Test</title>
+    <script src="/pkg/web/static/qrcode.min.js"></script>
+</head>
+<body>
+    <h1>QR Code Test</h1>
+    <canvas id="test-qr" width="200" height="200"></canvas>
+    <p>Setup Code: 00102003</p>
+
+    <script>
+        function testQRCode() {
+            const canvas = document.getElementById('test-qr');
+            if (!canvas) {
+                console.error('Canvas not found');
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+            const size = 200;
+            canvas.width = size;
+            canvas.height = size;
+
+            // Clear canvas
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, size, size);
+
+            try {
+                const qrContent = 'X-HM://1234567890123456789012345678901234567890';
+
+                if (typeof qrcode !== 'undefined') {
+                    console.log('QRCode library found');
+
+                    // Create QR code object
+                    const qr = qrcode(0, 'M'); // Error correction level M
+                    qr.addData(qrContent);
+                    qr.make();
+
+                    // Calculate module size to fit in canvas
+                    const moduleCount = qr.getModuleCount();
+                    const moduleSize = size / moduleCount;
+
+                    console.log('Module count:', moduleCount, 'Module size:', moduleSize);
+
+                    // Clear canvas with white background
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, size, size);
+
+                    // Draw QR code modules
+                    ctx.fillStyle = 'black';
+                    for (let row = 0; row < moduleCount; row++) {
+                        for (let col = 0; col < moduleCount; col++) {
+                            if (qr.isDark(row, col)) {
+                                ctx.fillRect(
+                                    col * moduleSize,
+                                    row * moduleSize,
+                                    moduleSize,
+                                    moduleSize
+                                );
+                            }
+                        }
+                    }
+
+                    console.log('QR code generated successfully');
+                } else {
+                    console.error('QRCode library not found');
+                    ctx.fillStyle = 'red';
+                    ctx.fillText('QR Library Not Found', 10, 50);
+                }
+            } catch (error) {
+                console.error('Failed to generate QR code:', error);
+                ctx.fillStyle = 'red';
+                ctx.fillText('Error: ' + error.message, 10, 50);
+            }
+        }
+
+        // Test immediately
+        testQRCode();
+    </script>
+</body>
+</html>

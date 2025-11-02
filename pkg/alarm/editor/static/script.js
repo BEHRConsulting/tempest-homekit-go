@@ -488,14 +488,60 @@ function editAlarm(name) {
     currentAlarm = alarms.find(a => a.name === name);
     if (!currentAlarm) return;
     
-    document.getElementById('alarmName').value = currentAlarm.name;
+    // Clear all form fields first to prevent values from previous edits
+    document.getElementById('alarmName').value = '';
     document.getElementById('alarmName').readOnly = false;
+    document.getElementById('alarmDescription').value = '';
+    document.getElementById('alarmCondition').value = '';
+    document.getElementById('alarmCooldown').value = '1800';
+    document.getElementById('alarmEnabled').checked = true;
+    
+    // Clear all delivery method checkboxes
+    document.getElementById('deliveryConsole').checked = false;
+    document.getElementById('deliverySyslog').checked = false;
+    document.getElementById('deliveryOslog').checked = false;
+    document.getElementById('deliveryEventlog').checked = false;
+    document.getElementById('deliveryEmail').checked = false;
+    document.getElementById('deliverySMS').checked = false;
+    document.getElementById('deliveryWebhook').checked = false;
+    document.getElementById('deliveryCSV').checked = false;
+    document.getElementById('deliveryJSON').checked = false;
+    
+    // Clear all message fields
+    document.getElementById('consoleMessage').value = '';
+    document.getElementById('syslogMessage').value = '';
+    document.getElementById('oslogMessage').value = '';
+    document.getElementById('eventlogMessage').value = '';
+    document.getElementById('emailTo').value = '';
+    document.getElementById('emailSubject').value = '';
+    document.getElementById('emailBody').value = '';
+    document.getElementById('emailHtml').checked = true;
+    document.getElementById('smsTo').value = '';
+    document.getElementById('smsMessage').value = '';
+    document.getElementById('webhookUrl').value = '';
+    document.getElementById('webhookMethod').value = 'POST';
+    document.getElementById('webhookHeaders').value = '';
+    document.getElementById('webhookBody').value = '';
+    document.getElementById('webhookContentType').value = 'application/json';
+    document.getElementById('csvPath').value = '';
+    document.getElementById('csvMaxDays').value = 30;
+    document.getElementById('csvMessage').value = '';
+    document.getElementById('jsonPath').value = '';
+    document.getElementById('jsonMaxDays').value = 30;
+    document.getElementById('jsonMessage').value = '';
+    
+    // Clear tags
+    selectedTags = [];
+    renderSelectedTags();
+    document.getElementById('tagSearchInput').value = '';
+    
+    // Now populate with current alarm data
+    document.getElementById('alarmName').value = currentAlarm.name;
     document.getElementById('alarmDescription').value = currentAlarm.description || '';
     document.getElementById('alarmCondition').value = currentAlarm.condition;
     
     selectedTags = currentAlarm.tags || [];
     renderSelectedTags();
-    document.getElementById('tagSearchInput').value = '';
     
     document.getElementById('alarmCooldown').value = currentAlarm.cooldown || 1800;
     document.getElementById('alarmEnabled').checked = currentAlarm.enabled;

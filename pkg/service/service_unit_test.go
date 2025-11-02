@@ -27,11 +27,11 @@ func TestDataSourceFactoryOverride(t *testing.T) {
 	orig := DataSourceFactory
 	defer func() { DataSourceFactory = orig }()
 
-	DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error) {
+	DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error) {
 		return &fakeDS{}, nil
 	}
 
-	ds, err := DataSourceFactory(nil, nil, nil)
+	ds, err := DataSourceFactory(nil, nil, nil, nil)
 	if err != nil || ds == nil {
 		t.Fatalf("factory override failed: %v", err)
 	}

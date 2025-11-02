@@ -22,14 +22,14 @@ func (s *simpleFakeDS) GetType() weather.DataSourceType            { return weat
 func TestCreateDataSource_GeneratedAndUDP(t *testing.T) {
 	// UDP case: create with type UDP should produce UDPDataSource or error when nil listener is used
 	cfg := &config.Config{}
-	_, err := CreateDataSource(cfg, nil, nil)
+	_, err := CreateDataSource(cfg, nil, nil, nil)
 	if err == nil {
 		// expected error because station is required for default API datasource when not using generated or UDP
 	}
 
 	// Generated case: set UseGeneratedWeather so factory returns generated API data source
 	cfg2 := &config.Config{UseGeneratedWeather: true}
-	ds, err := CreateDataSource(cfg2, &weather.Station{StationID: 1, StationName: "s"}, nil)
+	ds, err := CreateDataSource(cfg2, &weather.Station{StationID: 1, StationName: "s"}, nil, nil)
 	if err != nil {
 		t.Fatalf("expected generated datasource, got error: %v", err)
 	}

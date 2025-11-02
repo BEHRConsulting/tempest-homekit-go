@@ -4,6 +4,8 @@ package service
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"tempest-homekit-go/pkg/alarm"
@@ -154,15 +156,77 @@ func StartService(cfg *config.Config, version string) error {
 	// Determine the effective station URL that will be used for weather data
 	effectiveStationURL := cfg.StationURL
 	if effectiveStationURL == "" {
-		// Construct the actual Tempest API URL that will be used
+		// Get station information from WeatherFlow API
+		stations, err := weather.GetStations(cfg.Token)
+		if err != nil {
+			return fmt.Errorf("failed to get stations: %v", err)
+		}
+		station = weather.FindStationByName(stations, cfg.StationName)
+		if station == nil {
+			return fmt.Errorf("station '%s' not found", cfg.StationName)
+		}
 		effectiveStationURL = fmt.Sprintf("https://swd.weatherflow.com/swd/rest/observations/station/%d?token=%s", station.StationID, cfg.Token)
+		logger.Info("Found station: %s (ID: %d)", station.Name, station.StationID)
+	} else if cfg.UseGeneratedWeather {
+		// For generated weather, use a dummy station since we don't need a real station ID
+		station = &weather.Station{
+			StationID: 999999, // Dummy ID for generated weather
+			Name:      cfg.StationName,
+		}
+		logger.Info("Using generated weather for station: %s", station.Name)
+	} else {
+		// Station URL provided, extract station ID for web server
+		// Parse station ID from URL like: https://swd.weatherflow.com/swd/rest/observations/station/12345?token=...
+		parts := strings.Split(effectiveStationURL, "/station/")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid station URL format: %s", effectiveStationURL)
+		}
+		idPart := parts[1]
+		if idx := strings.Index(idPart, "?"); idx > 0 {
+			idPart = idPart[:idx]
+		}
+		stationID, err := strconv.Atoi(idPart)
+		if err != nil {
+			return fmt.Errorf("failed to parse station ID from URL: %v", err)
+		}
+		station = &weather.Station{
+			StationID: stationID,
+			Name:      cfg.StationName, // Use configured name
+		}
+		logger.Info("Using provided station URL for station ID: %d", stationID)
+	}
+
+	// Initialize alarm manager if alarms are configured
+	var alarmManager *alarm.Manager
+	if cfg.Alarms != "" {
+		logger.Info("Initializing alarm manager with config: %s", cfg.Alarms)
+		var err error
+		// Use station Name if StationName is empty (API sometimes only populates Name field)
+		stationDisplayName := station.StationName
+		if stationDisplayName == "" {
+			stationDisplayName = station.Name
+		}
+		alarmManager, err = alarm.NewManager(cfg.Alarms, stationDisplayName)
+		if err != nil {
+			logger.Error("Failed to initialize alarm manager: %v", err)
+			logger.Error("Continuing without alarms - fix configuration to enable alarm notifications")
+		} else {
+			logger.Info("Alarm manager initialized with %d alarms (%d enabled)",
+				alarmManager.GetAlarmCount(), alarmManager.GetEnabledAlarmCount())
+		}
+	}
+	if alarmManager != nil {
+		defer alarmManager.Stop()
 	}
 
 	// Create web server only if not disabled
 	var webServer *web.WebServer
 	if !cfg.DisableWebConsole {
-		webServer = web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, effectiveStationURL, generatedWeatherInfo, weatherGen, cfg.Units, cfg.UnitsPressure, cfg.HistoryPoints, cfg.ChartHistoryHours)
+		webServer = web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, effectiveStationURL, generatedWeatherInfo, weatherGen, cfg.Units, cfg.UnitsPressure, cfg.HistoryPoints, cfg.ChartHistoryHours, cfg.Alarms)
 		webServer.SetStationName(station.Name)
+		if alarmManager != nil {
+			webServer.SetAlarmManager(alarmManager)
+		}
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
@@ -319,7 +383,11 @@ func StartService(cfg *config.Config, version string) error {
 	// Create appropriate data source using factory pattern. Use the
 	// injectable DataSourceFactory so tests can override behavior.
 	logger.Info("Creating data source...")
-	dataSource, err := DataSourceFactory(cfg, station, udpListener)
+	var generatorPtr *generator.WeatherGenerator
+	if cfg.UseGeneratedWeather && weatherGen != nil {
+		generatorPtr = weatherGen
+	}
+	dataSource, err := DataSourceFactory(cfg, station, udpListener, generatorPtr)
 	if err != nil {
 		return fmt.Errorf("failed to create data source: %v", err)
 	}
@@ -348,33 +416,6 @@ func StartService(cfg *config.Config, version string) error {
 		initialStatus := dataSource.GetStatus()
 		webServer.UpdateDataSourceStatus(initialStatus)
 		logger.Debug("Initial data source status set: type=%s", initialStatus.Type)
-	}
-
-	// Initialize alarm manager if alarms are configured
-	var alarmManager *alarm.Manager
-	if cfg.Alarms != "" {
-		logger.Info("Initializing alarm manager with config: %s", cfg.Alarms)
-		var err error
-		// Use station Name if StationName is empty (API sometimes only populates Name field)
-		stationDisplayName := station.StationName
-		if stationDisplayName == "" {
-			stationDisplayName = station.Name
-		}
-		alarmManager, err = alarm.NewManager(cfg.Alarms, stationDisplayName)
-		if err != nil {
-			logger.Error("Failed to initialize alarm manager: %v", err)
-			logger.Error("Continuing without alarms - fix configuration to enable alarm notifications")
-		} else {
-			logger.Info("Alarm manager initialized with %d alarms (%d enabled)",
-				alarmManager.GetAlarmCount(), alarmManager.GetEnabledAlarmCount())
-			// Connect alarm manager to web server for status display
-			if webServer != nil {
-				webServer.SetAlarmManager(alarmManager)
-			}
-		}
-	}
-	if alarmManager != nil {
-		defer alarmManager.Stop()
 	}
 
 	// Main observation processing loop - unified for all data sources!

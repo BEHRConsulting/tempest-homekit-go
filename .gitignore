@@ -80,6 +80,11 @@ logs/
 *.tmp
 *.temp
 
+# Python virtual environment
+.venv/
+venv/
+ENV/
+
 # Node.js files (if not needed)
 package.json
 package-lock.json

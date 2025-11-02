@@ -15,7 +15,7 @@ func (f fakeUDPListener) GetLatestObservation() *weather.Observation { return ni
 
 func TestCreateDataSource_UDPRequiresListener(t *testing.T) {
 	cfg := &config.Config{UDPStream: true}
-	_, err := CreateDataSource(cfg, nil, nil)
+	_, err := CreateDataSource(cfg, nil, nil, nil)
 	if err == nil {
 		t.Fatalf("expected error when UDPStream enabled but listener is nil")
 	}
@@ -23,7 +23,7 @@ func TestCreateDataSource_UDPRequiresListener(t *testing.T) {
 
 func TestCreateDataSource_CustomStationURL(t *testing.T) {
 	cfg := &config.Config{StationURL: "https://example.com/foo", DisableInternet: false}
-	ds, err := CreateDataSource(cfg, &weather.Station{StationID: 42, StationName: "S"}, nil)
+	ds, err := CreateDataSource(cfg, &weather.Station{StationID: 42, StationName: "S"}, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating API data source: %v", err)
 	}
@@ -34,7 +34,7 @@ func TestCreateDataSource_CustomStationURL(t *testing.T) {
 
 func TestCreateDataSource_GeneratedWeatherDefaults(t *testing.T) {
 	cfg := &config.Config{UseGeneratedWeather: true}
-	ds, err := CreateDataSource(cfg, &weather.Station{StationID: 1, StationName: "S"}, nil)
+	ds, err := CreateDataSource(cfg, &weather.Station{StationID: 1, StationName: "S"}, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating generated weather data source: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestCreateDataSource_UDPMode(t *testing.T) {
 	station := mockStation()
 	udpListener := newMockUDPListener()
 
-	dataSource, err := CreateDataSource(cfg, station, udpListener)
+	dataSource, err := CreateDataSource(cfg, station, udpListener, nil)
 	if err != nil {
 		t.Fatalf("Failed to create UDP data source: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestCreateDataSource_CustomURL(t *testing.T) {
 
 	station := mockStation()
 
-	dataSource, err := CreateDataSource(cfg, station, nil)
+	dataSource, err := CreateDataSource(cfg, station, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create custom URL data source: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestCreateDataSource_GeneratedWeather(t *testing.T) {
 
 	station := mockStation()
 
-	dataSource, err := CreateDataSource(cfg, station, nil)
+	dataSource, err := CreateDataSource(cfg, station, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create generated weather data source: %v", err)
 	}
@@ -216,7 +216,7 @@ func TestCreateDataSource_RealAPI(t *testing.T) {
 
 	station := mockStation()
 
-	dataSource, err := CreateDataSource(cfg, station, nil)
+	dataSource, err := CreateDataSource(cfg, station, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create API data source: %v", err)
 	}
@@ -249,7 +249,7 @@ func TestCreateDataSource_Priority(t *testing.T) {
 	station := mockStation()
 	udpListener := newMockUDPListener()
 
-	dataSource, err := CreateDataSource(cfg, station, udpListener)
+	dataSource, err := CreateDataSource(cfg, station, udpListener, nil)
 	if err != nil {
 		t.Fatalf("Failed to create data source: %v", err)
 	}
@@ -270,7 +270,7 @@ func TestCreateDataSource_CustomURLPriorityOverGenerated(t *testing.T) {
 
 	station := mockStation()
 
-	dataSource, err := CreateDataSource(cfg, station, nil)
+	dataSource, err := CreateDataSource(cfg, station, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create data source: %v", err)
 	}
@@ -289,7 +289,7 @@ func TestCreateDataSource_UDPWithoutListener(t *testing.T) {
 
 	station := mockStation()
 
-	_, err := CreateDataSource(cfg, station, nil)
+	_, err := CreateDataSource(cfg, station, nil, nil)
 	if err == nil {
 		t.Error("Expected error when UDP mode enabled but no listener provided")
 	}
@@ -305,7 +305,7 @@ func TestCreateDataSource_InvalidUDPListenerType(t *testing.T) {
 	station := mockStation()
 	invalidListener := "not a listener" // Wrong type
 
-	_, err := CreateDataSource(cfg, station, invalidListener)
+	_, err := CreateDataSource(cfg, station, invalidListener, nil)
 	if err == nil {
 		t.Error("Expected error when invalid listener type provided")
 	}
@@ -317,7 +317,7 @@ func TestCreateDataSource_NilStation(t *testing.T) {
 		Token:       "test-token",
 	}
 
-	_, err := CreateDataSource(cfg, nil, nil)
+	_, err := CreateDataSource(cfg, nil, nil, nil)
 	if err == nil {
 		t.Fatal("Expected error when creating API data source with nil station")
 	}
@@ -336,7 +336,7 @@ func TestDataSourceStatus_Structure(t *testing.T) {
 
 	station := mockStation()
 
-	dataSource, err := CreateDataSource(cfg, station, nil)
+	dataSource, err := CreateDataSource(cfg, station, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create data source: %v", err)
 	}
@@ -364,7 +364,7 @@ func TestDataSourceInterfaces(t *testing.T) {
 
 	station := mockStation()
 
-	dataSource, err := CreateDataSource(cfg, station, nil)
+	dataSource, err := CreateDataSource(cfg, station, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create data source: %v", err)
 	}
@@ -406,7 +406,7 @@ func TestCreateDataSource_StationURLConstruction(t *testing.T) {
 
 	station := mockStation()
 
-	ds, err := CreateDataSource(cfg, station, nil)
+	ds, err := CreateDataSource(cfg, station, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateDataSource failed: %v", err)
 	}
@@ -431,7 +431,7 @@ func TestCreateDataSource_GeneratedDefaults(t *testing.T) {
 
 	station := mockStation()
 
-	ds, err := CreateDataSource(cfg, station, nil)
+	ds, err := CreateDataSource(cfg, station, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateDataSource failed: %v", err)
 	}
@@ -451,7 +451,7 @@ func TestCreateDataSource_CustomURLWithNilStation(t *testing.T) {
 		Token:      "test-token",
 	}
 
-	ds, err := CreateDataSource(cfg, nil, nil)
+	ds, err := CreateDataSource(cfg, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("CreateDataSource failed when station nil with custom URL: %v", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"tempest-homekit-go/pkg/config"
+	"tempest-homekit-go/pkg/generator"
 	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/weather"
 )
@@ -12,7 +13,7 @@ import (
 // DataSourceFactoryFunc is the signature used to create a DataSource. Tests can
 // override the package-level DataSourceFactory variable to inject fake data
 // sources without changing production code.
-type DataSourceFactoryFunc func(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error)
+type DataSourceFactoryFunc func(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error)
 
 // DataSourceFactory is the default factory used by StartService. It points to
 // CreateDataSource but can be replaced in tests.
@@ -21,12 +22,12 @@ var DataSourceFactory DataSourceFactoryFunc = CreateDataSource
 // CreateDataSource examines config flags and returns the appropriate DataSource implementation.
 // This is the only place in the codebase that needs to know about different data source types.
 // For UDP mode, the udpListener parameter must be provided as interface{} (pass nil for other modes).
-// This uses interface{} to avoid import cycle between weather and udp packages.
-func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error) {
+// For generated weather, the generator parameter can be provided as interface{} (pass nil to create new).
+func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error) {
 	// Priority order:
 	// 1. UDP Stream (if enabled)
-	// 2. Custom Station URL (if provided)
-	// 3. Generated Weather (if enabled)
+	// 2. Generated Weather (if enabled)
+	// 3. Custom Station URL (if provided)
 	// 4. WeatherFlow API (default)
 
 	if cfg.UDPStream {
@@ -57,6 +58,36 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 		return dataSource, nil
 	}
 
+	if cfg.UseGeneratedWeather {
+		logger.Info("Creating generated data source")
+
+		var gen *generator.WeatherGenerator
+		if genParam != nil {
+			// Use the provided generator
+			if g, ok := genParam.(*generator.WeatherGenerator); ok {
+				gen = g
+			} else {
+				logger.Warn("Invalid generator type provided, creating new one")
+				gen = generator.NewWeatherGenerator()
+			}
+		} else {
+			// Create a new generator
+			gen = generator.NewWeatherGenerator()
+		}
+
+		// Create a fake station for the generated location
+		location := gen.GetLocation()
+		station = &weather.Station{
+			StationID:   99999, // Fake station ID
+			Name:        location.Name,
+			StationName: location.Name,
+		}
+
+		dataSource := weather.NewGeneratedDataSource(station.StationID, cfg.Token, station.StationName, *gen)
+		logger.Info("Generated data source created")
+		return dataSource, nil
+	}
+
 	if cfg.StationURL != "" {
 		logger.Info("Creating API data source with custom URL: %s", cfg.StationURL)
 
@@ -70,35 +101,6 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 
 		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, weather.APIDataSourceOptions{CustomURL: cfg.StationURL, GeneratedPath: cfg.GeneratedWeatherPath})
 		logger.Info("API data source created with custom URL")
-		return dataSource, nil
-	}
-
-	if cfg.UseGeneratedWeather {
-		logger.Info("Creating API data source with generated weather")
-
-		// Generated weather uses the internal endpoint
-		var stationID int
-		var stationName string
-		if station != nil {
-			stationID = station.StationID
-			stationName = station.StationName
-		}
-
-		// Ensure we construct the generated URL using the configured path.
-		// Tests sometimes construct a Config manually and may leave WebPort or
-		// GeneratedWeatherPath empty; default to historical defaults so behavior
-		// remains predictable in those cases.
-		port := cfg.WebPort
-		if port == "" {
-			port = "8080"
-		}
-		path := cfg.GeneratedWeatherPath
-		if path == "" {
-			path = "/api/generate-weather"
-		}
-		generatedURL := fmt.Sprintf("http://localhost:%s%s", port, path)
-		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, weather.APIDataSourceOptions{CustomURL: generatedURL, GeneratedPath: cfg.GeneratedWeatherPath})
-		logger.Info("Generated weather data source created")
 		return dataSource, nil
 	}
 
