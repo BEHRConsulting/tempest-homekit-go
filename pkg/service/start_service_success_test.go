@@ -59,7 +59,7 @@ func TestCreateDataSource_UDPBranch(t *testing.T) {
 
 func TestStartService_SucceedsWithFakeDataSource(t *testing.T) {
 	origFactory := DataSourceFactory
-	DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error) {
+	DataSourceFactory = func(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error) {
 		return &fakeDataSource2{}, nil
 	}
 	defer func() { DataSourceFactory = origFactory }()

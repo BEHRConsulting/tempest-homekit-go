@@ -26,8 +26,8 @@ var DataSourceFactory DataSourceFactoryFunc = CreateDataSource
 func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error) {
 	// Priority order:
 	// 1. UDP Stream (if enabled)
-	// 2. Generated Weather (if enabled)
-	// 3. Custom Station URL (if provided)
+	// 2. Custom Station URL (if provided)
+	// 3. Generated Weather (if enabled)
 	// 4. WeatherFlow API (default)
 
 	if cfg.UDPStream {
@@ -58,6 +58,22 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 		return dataSource, nil
 	}
 
+	if cfg.StationURL != "" {
+		logger.Info("Creating API data source with custom URL: %s", cfg.StationURL)
+
+		// Custom station URL (generated weather, etc.)
+		var stationID int
+		var stationName string
+		if station != nil {
+			stationID = station.StationID
+			stationName = station.StationName
+		}
+
+		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, weather.APIDataSourceOptions{CustomURL: cfg.StationURL, GeneratedPath: cfg.GeneratedWeatherPath})
+		logger.Info("API data source created with custom URL")
+		return dataSource, nil
+	}
+
 	if cfg.UseGeneratedWeather {
 		logger.Info("Creating generated data source")
 
@@ -85,22 +101,6 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 
 		dataSource := weather.NewGeneratedDataSource(station.StationID, cfg.Token, station.StationName, *gen)
 		logger.Info("Generated data source created")
-		return dataSource, nil
-	}
-
-	if cfg.StationURL != "" {
-		logger.Info("Creating API data source with custom URL: %s", cfg.StationURL)
-
-		// Custom station URL (generated weather, etc.)
-		var stationID int
-		var stationName string
-		if station != nil {
-			stationID = station.StationID
-			stationName = station.StationName
-		}
-
-		dataSource := weather.NewAPIDataSource(stationID, cfg.Token, stationName, weather.APIDataSourceOptions{CustomURL: cfg.StationURL, GeneratedPath: cfg.GeneratedWeatherPath})
-		logger.Info("API data source created with custom URL")
 		return dataSource, nil
 	}
 

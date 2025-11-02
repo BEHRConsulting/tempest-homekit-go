@@ -9,7 +9,7 @@ import (
 )
 
 // dsErrorFactory returns an error when called to simulate factory failure
-func dsErrorFactory(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error) {
+func dsErrorFactory(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error) {
 	return nil, errors.New("factory failed")
 }
 
@@ -27,7 +27,7 @@ func (f *fakeDataSourceStartError) GetStatus() weather.DataSourceStatus {
 }
 func (f *fakeDataSourceStartError) GetType() weather.DataSourceType { return "fake" }
 
-func dsStartErrorFactory(cfg *config.Config, station *weather.Station, udpListener interface{}) (weather.DataSource, error) {
+func dsStartErrorFactory(cfg *config.Config, station *weather.Station, udpListener interface{}, genParam interface{}) (weather.DataSource, error) {
 	return &fakeDataSourceStartError{}, nil
 }
 

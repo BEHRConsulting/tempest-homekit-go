@@ -411,11 +411,16 @@ func TestCreateDataSource_StationURLConstruction(t *testing.T) {
 		t.Fatalf("CreateDataSource failed: %v", err)
 	}
 
+	// For generated weather, the data source type should be Generated
+	if ds.GetType() != weather.DataSourceGenerated {
+		t.Fatalf("expected Generated data source type, got %s", ds.GetType())
+	}
+
 	status := ds.GetStatus()
 
-	expected := "http://localhost:12345/api/custom-generate"
-	if status.CustomURL != expected {
-		t.Fatalf("expected StationURL %s, got %s", expected, status.CustomURL)
+	// For generated data sources, CustomURL is not applicable
+	if status.CustomURL != "" {
+		t.Fatalf("expected empty CustomURL for generated data source, got %s", status.CustomURL)
 	}
 }
 
@@ -436,11 +441,16 @@ func TestCreateDataSource_GeneratedDefaults(t *testing.T) {
 		t.Fatalf("CreateDataSource failed: %v", err)
 	}
 
+	// For generated weather, the data source type should be Generated
+	if ds.GetType() != weather.DataSourceGenerated {
+		t.Fatalf("expected Generated data source type, got %s", ds.GetType())
+	}
+
 	status := ds.GetStatus()
 
-	expected := "http://localhost:8080/api/generate-weather"
-	if status.CustomURL != expected {
-		t.Fatalf("expected default StationURL %s, got %s", expected, status.CustomURL)
+	// For generated data sources, CustomURL is not applicable
+	if status.CustomURL != "" {
+		t.Fatalf("expected empty CustomURL for generated data source, got %s", status.CustomURL)
 	}
 }
 

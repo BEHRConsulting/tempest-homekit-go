@@ -155,7 +155,17 @@ func StartService(cfg *config.Config, version string) error {
 
 	// Determine the effective station URL that will be used for weather data
 	effectiveStationURL := cfg.StationURL
-	if effectiveStationURL == "" {
+	if cfg.UseGeneratedWeather {
+		// For generated weather, use a dummy URL and station since we don't need real ones
+		effectiveStationURL = "http://localhost:8080/api/generate-weather"
+		if station == nil {
+			station = &weather.Station{
+				StationID: 999999, // Dummy ID for generated weather
+				Name:      "Generated Weather",
+			}
+		}
+		logger.Info("Using generated weather - no station URL needed")
+	} else if effectiveStationURL == "" {
 		// Get station information from WeatherFlow API
 		stations, err := weather.GetStations(cfg.Token)
 		if err != nil {
@@ -167,13 +177,6 @@ func StartService(cfg *config.Config, version string) error {
 		}
 		effectiveStationURL = fmt.Sprintf("https://swd.weatherflow.com/swd/rest/observations/station/%d?token=%s", station.StationID, cfg.Token)
 		logger.Info("Found station: %s (ID: %d)", station.Name, station.StationID)
-	} else if cfg.UseGeneratedWeather {
-		// For generated weather, use a dummy station since we don't need a real station ID
-		station = &weather.Station{
-			StationID: 999999, // Dummy ID for generated weather
-			Name:      cfg.StationName,
-		}
-		logger.Info("Using generated weather for station: %s", station.Name)
 	} else {
 		// Station URL provided, extract station ID for web server
 		// Parse station ID from URL like: https://swd.weatherflow.com/swd/rest/observations/station/12345?token=...
