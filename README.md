@@ -13,36 +13,8 @@ Table of Contents
 
 <!-- Version history moved to VERSIONS.md -->
 
-## Research Methodology: Vibe Programming
-
-### Definition of Vibe Programming
-
-**Vibe Programming** represents a novel software development methodology that leverages the intuitive, context-aware capabilities of Large Language Models (LLMs) to enable rapid prototyping and iterative development through natural language interaction. This approach emphasizes:
-
-- **Contextual Understanding**: LLMs maintain awareness of project architecture, requirements, and existing codebase
-- **Iterative Refinement**: Continuous feedback loops between developer intent and AI-generated implementations
-- **Natural Language Specifications**: Requirements expressed in conversational terms rather than formal specifications
-- **Emergent Architecture**: System design evolving organically through AI-assisted exploration of possibilities
-- **Real-time Problem Solving**: Immediate debugging and enhancement through conversational programming
-
-### Technical Implementation Environment
-
-**Primary Development Tools:**
-- **IDE**: Visual Studio Code on macOS (Apple Silicon)
-- **AI Assistants**:  - **Claude Sonnet 4.5** - Primary architectural design and complex problem resolution
- - **GitHub Copilot with Grok Code Fast 1 (preview)** - Code completion and rapid prototyping
- - **GPT-5 mini** - Auxiliary AI assistant used for targeted code edits and documentation updates
-- **Version Control**: Git with GitHub integration
-- **Platform**: macOS development environment with cross-platform deployment
-
-### Vibe Programming Validation Results
-
-This project successfully demonstrates the efficacy of vibe programming techniques in producing production-ready software with:
-- **Rapid Development Cycle**: Complete application developed through iterative AI assistance
-- **Adaptive Problem Solving**: Real-time debugging and feature enhancement through conversational programming
-- **Quality Assurance**: 60.3% test coverage achieved through AI-assisted test generation
-- **Professional Standards**: Production-ready deployment with cross-platform service management
-
+<!-- Brief research note: detailed methodology moved to docs for readability -->
+This project was developed with assistance from AI tools and iterative, research-driven workflows. For details on the development methodology and research notes, see the `docs/` directory.
 ## Important Sensor Notes
 
 Warning: **HomeKit Sensor Compliance**: Due to HomeKit's limited native sensor types, the **Pressure** and **UV Index** sensors use the standard HomeKit **Light Sensor** service for compliance. In the Home app, these will appear as "Light Sensor" with units showing as "lux" - **please ignore the "lux" unit** for these sensors as they represent atmospheric pressure (mb) and UV index values respectively. This is a HomeKit limitation, not an application issue.
@@ -211,10 +183,10 @@ The alarm system enables rule-based weather alerting with multiple notification 
 **Quick Start:**
 ```bash
 # Run with alarm configuration
-./tempest-homekit-go --token "your-token" --alarms @alarms.json
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --alarms @alarms.json
 
 # Test email configuration before deploying
-./tempest-homekit-go --email-test --alarms @alarms.json
+./tempest-homekit-go --email-test --station "Your Station Name" --alarms @alarms.json
 
 # Edit alarm configuration (standalone editor mode)
 ./tempest-homekit-go --alarms-edit @alarms.json --alarms-edit-port 8081
@@ -443,12 +415,14 @@ The alarm status refreshes automatically every 10 seconds, providing real-time v
 **Example:**
 ```bash
 # Start service with alarms - web console will show alarm status card
-./tempest-homekit-go --token "your-token" --alarms @tempest-alarms.json
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --alarms @tempest-alarms.json
 
 # Open http://localhost:8080 to view dashboard with alarm status
 ```
 
 ## Quick Start
+
+Note: When using the WeatherFlow API token (`--token` or the `TEMPEST_TOKEN` env var), you must also specify the station name with `--station "Your Station Name"` or set `TEMPEST_STATION_NAME`. Examples in this README have been updated to include `--station` where `--token` is used.
 
 ### Prerequisites
 - Go 1.24.2 or later
@@ -461,7 +435,7 @@ The alarm status refreshes automatically every 10 seconds, providing real-time v
 git clone https://github.com/BEHRConsulting/tempest-homekit-go.git
 cd tempest-homekit-go
 go build
-./tempest-homekit-go --token "your-api-token"
+./tempest-homekit-go --token "your-api-token" --station "Your Station Name"
 ```
 
 ### Test with Generated Weather
@@ -486,7 +460,7 @@ STATION_URL=http://localhost:8080/api/generate-weather ./tempest-homekit-go
 
 ### Install as System Service
 ```bash
-sudo ./scripts/install-service.sh --token "your-api-token"
+sudo ./scripts/install-service.sh --token "your-api-token" --station "Your Station Name"
 ```
 
 ## Installation
@@ -515,13 +489,13 @@ This builds optimized binaries for Linux, macOS, and Windows from any platform.
 For production deployment, install as a system service:
 ```bash
 # Linux (systemd)
-sudo ./scripts/install-service.sh --token "your-api-token"
+sudo ./scripts/install-service.sh --token "your-api-token" --station "Your Station Name"
 
 # macOS (launchd)
-sudo ./scripts/install-service.sh --token "your-api-token"
+sudo ./scripts/install-service.sh --token "your-api-token" --station "Your Station Name"
 
 # Windows (NSSM)
-./scripts/install-service.sh --token "your-api-token"
+./scripts/install-service.sh --token "your-api-token" --station "Your Station Name"
 ```
 
 ### Dependencies
@@ -536,7 +510,7 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 
 ```bash
 # WeatherFlow API (requires token)
-./tempest-homekit-go --token "your-weatherflow-token"
+./tempest-homekit-go --token "your-weatherflow-token" --station "Your Station Name"
 
 # Custom station URL (no WeatherFlow token required)
 ./tempest-homekit-go --station-url http://localhost:8080/api/generate-weather
@@ -617,66 +591,66 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 ### Sensor Configuration Examples
 ```bash
 # Using sensor aliases (recommended for readability)
-./tempest-homekit-go --token "your-token" --sensors "temperature,light,uvi"
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --sensors "temperature,light,uvi"
 
 # Traditional sensor names (also supported)
-./tempest-homekit-go --token "your-token" --sensors "temp,lux,uv"
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --sensors "temp,lux,uv"
 
 # Mixed aliases and traditional names
-./tempest-homekit-go --token "your-token" --sensors "temperature,humidity,light,wind"
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --sensors "temperature,humidity,light,wind"
 
 # All available sensors
-./tempest-homekit-go --token "your-token" --sensors "all"
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --sensors "all"
 
 # Minimal sensor set
-./tempest-homekit-go --token "your-token" --sensors "min"
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --sensors "min"
 ```
 
 ### Offline Mode Examples
 ```bash
 # Valid: Full offline mode with UDP stream (real station)
-./tempest-homekit-go --token "your-token" --udp-stream --disable-internet
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --udp-stream --disable-internet
 
 # Valid: Full offline mode with generated weather (testing/simulation)
 ./tempest-homekit-go --disable-internet --use-generated-weather
 
 # Valid: Offline with custom sensors
-./tempest-homekit-go --token "your-token" --udp-stream --disable-internet --sensors "temp,humidity,pressure"
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --udp-stream --disable-internet --sensors "temp,humidity,pressure"
 
 # Invalid: Missing data source
-./tempest-homekit-go --token "your-token" --disable-internet
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --disable-internet
 # ERROR: --disable-internet mode requires --udp-stream or --use-generated-weather (need a local data source)
 
 # Invalid: Can't use web scraping in offline mode
-./tempest-homekit-go --token "your-token" --udp-stream --disable-internet --use-web-status
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --udp-stream --disable-internet --use-web-status
 # ERROR: --use-web-status cannot be used with --disable-internet (requires internet access)
 
 # Invalid: Can't preload history in offline mode
-./tempest-homekit-go --token "your-token" --udp-stream --disable-internet --read-history
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --udp-stream --disable-internet --read-history
 # ERROR: --read-history cannot be used with --disable-internet (requires WeatherFlow API access)
 ```
 
 ### HomeKit Only Mode Examples
 ```bash
 # Valid: HomeKit only, no web console
-./tempest-homekit-go --token "your-token" --disable-webconsole
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --disable-webconsole
 
 # Valid: Offline HomeKit with UDP stream, no web console
-./tempest-homekit-go --token "your-token" --udp-stream --disable-internet --disable-webconsole
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --udp-stream --disable-internet --disable-webconsole
 
 # Invalid: Can't disable both HomeKit and web console
-./tempest-homekit-go --token "your-token" --disable-homekit --disable-webconsole
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --disable-homekit --disable-webconsole
 # ERROR: cannot disable both HomeKit (--disable-homekit) and web console (--disable-webconsole) - at least one service must be enabled
 ```
 
 ### Validation Examples
 ```bash
 # Invalid elevation (too high) - shows helpful error message
-./tempest-homekit-go --token "your-token" --elevation 10000
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --elevation 10000
 # Error: elevation must be between -430m and 8848m (Earth's surface range)
 
 # Invalid sensor name - shows available options
-./tempest-homekit-go --token "your-token" --sensors "invalid-sensor"
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --sensors "invalid-sensor"
 # Error: invalid sensor 'invalid-sensor'. Available: temp/temperature, lux/light, uv/uvi, humidity, wind, rain, pressure, lightning
 
 # Missing required token - shows usage
@@ -689,6 +663,7 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 # Run web dashboard only without HomeKit services
 ./tempest-homekit-go \
  --token "your-api-token" \
+ --station "Your Station Name" \
  --disable-homekit \
  --web-port 8080 \
  --loglevel info
@@ -700,10 +675,10 @@ Enable detailed device status monitoring with the `--use-web-status` flag:
 
 ```bash
 # Basic usage with device status scraping
-./tempest-homekit-go --token "your-token" --use-web-status
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --use-web-status
 
 # With full configuration
-./tempest-homekit-go --token "your-token" --use-web-status --loglevel debug
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --use-web-status --loglevel debug
 ```
 
 **Requirements:**
@@ -771,13 +746,13 @@ When your internet connection goes down, the WeatherFlow API becomes unavailable
 **1. Hybrid Mode (UDP + Internet)**
 ```bash
 # UDP for real-time observations, API for forecast/history (recommended for most users)
-./tempest-homekit-go --udp-stream --token "your-token"
+./tempest-homekit-go --udp-stream --token "your-token" --station "Your Station Name"
 
 # Add historical data preloading from API
-./tempest-homekit-go --udp-stream --read-history --token "your-token" # preloads up to HISTORY_POINTS observations
+./tempest-homekit-go --udp-stream --read-history --token "your-token" --station "Your Station Name" # preloads up to HISTORY_POINTS observations
 
 # Enable UDP status updates in web console (battery, RSSI, uptime, firmware)
-./tempest-homekit-go --udp-stream --token "your-token"
+./tempest-homekit-go --udp-stream --token "your-token" --station "Your Station Name"
 ```
 - Real-time UDP observations every 60 seconds
 - Forecast data from WeatherFlow API
@@ -804,10 +779,10 @@ When your internet connection goes down, the WeatherFlow API becomes unavailable
 **3. HomeKit Only Mode (No Web Console)**
 ```bash
 # HomeKit accessories only, disable web dashboard
-./tempest-homekit-go --token "your-token" --disable-webconsole
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --disable-webconsole
 
 # HomeKit only with offline mode
-./tempest-homekit-go --token "your-token" --udp-stream --disable-internet --disable-webconsole
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --udp-stream --disable-internet --disable-webconsole
 ```
 - HomeKit accessories enabled
 - Web dashboard disabled (port not opened)
@@ -1028,7 +1003,7 @@ Tests a specific alarm trigger:
 
 ## HomeKit Setup
 
-1. Start the application with your WeatherFlow API token
+1. Start the application with your WeatherFlow API token and specify your station (use `--station "Your Station Name"` or set `TEMPEST_STATION_NAME`)
 2. On your iOS device, open the Home app
 3. Tap the "+" icon to add an accessory
 4. Select "Don't have a code or can't scan?"
@@ -1181,12 +1156,12 @@ tempest-homekit-go/
 2025-09-21 10:30:00 Starting web server on port 8080
 ```
 
-## Service Management
+### Service Management
 
 ### Linux (systemd)
 ```bash
 # Install
-sudo ./scripts/install-service.sh --token "your-token"
+sudo ./scripts/install-service.sh --token "your-token" --station "Your Station Name"
 
 # Check status
 sudo systemctl status tempest-homekit-go
@@ -1201,7 +1176,7 @@ sudo ./scripts/remove-service.sh
 ### macOS (launchd)
 ```bash
 # Install
-sudo ./scripts/install-service.sh --token "your-token"
+sudo ./scripts/install-service.sh --token "your-token" --station "Your Station Name"
 
 # Check status
 sudo launchctl list | grep tempest
@@ -1216,7 +1191,7 @@ sudo ./scripts/remove-service.sh
 ### Windows (NSSM)
 ```bash
 # Install
-./scripts/install-service.sh --token "your-token"
+./scripts/install-service.sh --token "your-token" --station "Your Station Name"
 
 # Check status
 sc query tempest-homekit-go
@@ -1381,7 +1356,7 @@ pkill -f tempest-homekit-go
 ./tempest-homekit-go --cleardb
 
 # Restart the service normally
-./tempest-homekit-go --token "your-api-token"
+./tempest-homekit-go --token "your-api-token" --station "Your Station Name"
 ```
 
 #### Manual Database Reset
@@ -1411,7 +1386,7 @@ If you prefer to do it manually:
 3. **Restart the Application**
  ```bash
  # Start the application again
- ./tempest-homekit-go --token "your-api-token"
+ ./tempest-homekit-go --token "your-api-token" --station "Your Station Name"
   # Or restart the service
  sudo systemctl start tempest-homekit-go # Linux
  sudo launchctl start tempest-homekit-go # macOS
@@ -1457,7 +1432,7 @@ rm -f ./db/accessories.json
 ### Debug Mode
 Enable detailed logging for troubleshooting:
 ```bash
-./tempest-homekit-go --loglevel debug --token "your-token"
+./tempest-homekit-go --loglevel debug --token "your-token" --station "Your Station Name"
 ```
 
 Filter logs to show only specific messages (case-insensitive):
@@ -1466,7 +1441,7 @@ Filter logs to show only specific messages (case-insensitive):
 ./tempest-homekit-go --loglevel debug --logfilter "udp" --udp-stream
 
 # Show only forecast-related messages
-./tempest-homekit-go --loglevel info --logfilter "forecast" --token "your-token"
+./tempest-homekit-go --loglevel info --logfilter "forecast" --token "your-token" --station "Your Station Name"
 
 # Show only observation parsing messages
 ./tempest-homekit-go --loglevel debug --logfilter "parsed" --udp-stream
@@ -1479,7 +1454,7 @@ Filter logs to show only specific messages (case-insensitive):
 
 # Restart service
 ./scripts/remove-service.sh
-./scripts/install-service.sh --token "your-token"
+./scripts/install-service.sh --token "your-token" --station "Your Station Name"
 ```
 
 ## Development
