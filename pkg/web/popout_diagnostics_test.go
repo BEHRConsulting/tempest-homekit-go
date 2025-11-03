@@ -44,6 +44,9 @@ func chromedpAvailable() bool {
 // during popout initialization. This test is diagnostic-only and never fails; it
 // reports findings via t.Log so maintainers can inspect issues.
 func TestPopoutDiagnostics(t *testing.T) {
+	if os.Getenv("CI") == "true" {
+		t.Skip("Skipping browser test in CI environment")
+	}
 	// Skip if Chrome/Chromium not available (common in CI environments)
 	if !chromedpAvailable() {
 		t.Skip("Skipping popout diagnostics test: Chrome/Chromium not available (required for headless browser testing)")

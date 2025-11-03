@@ -65,7 +65,7 @@ func main() {
 	// Handle alarm editor mode
 	if cfg.AlarmsEdit != "" {
 		logger.Info("Alarm editor mode detected, starting alarm editor...")
-		editorServer, err := editor.NewServer(cfg.AlarmsEdit, cfg.AlarmsEditPort, "1.8.0")
+		editorServer, err := editor.NewServer(cfg.AlarmsEdit, cfg.AlarmsEditPort, "1.8.0", cfg.EnvFile)
 		if err != nil {
 			log.Fatalf("Failed to create alarm editor: %v", err)
 		}

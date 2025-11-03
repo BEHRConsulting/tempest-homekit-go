@@ -1,0 +1,19 @@
+{
+  "alarms": [
+    {
+      "name": "test-alarm",
+      "description": "Test alarm for editor",
+      "condition": "temperature > 80",
+      "enabled": true,
+      "channels": [
+        {
+          "type": "console",
+          "enabled": true,
+          "message": "Test alarm triggered"
+        }
+      ],
+      "tags": ["test"],
+      "cooldown": 1800
+    }
+  ]
+}

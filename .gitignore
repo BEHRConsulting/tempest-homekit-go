@@ -49,6 +49,7 @@ tempest-homekit-go-windows
 .env
 .env.*
 .env.bak*
+.env.backup
 .env.backup*
 .env.old*
 *.env.bak*

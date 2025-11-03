@@ -440,7 +440,8 @@ func validateConfig(cfg *Config) error {
 	// The WeatherFlow API token is required only when using the WeatherFlow API as the
 	// data source. If a custom station URL is provided via --station-url, the
 	// --use-generated-weather flag is set, or --udp-stream is enabled, a WeatherFlow token is not necessary.
-	if cfg.StationURL == "" && !cfg.UseGeneratedWeather && !cfg.UDPStream {
+	// Also skip token requirement for alarm editor mode.
+	if cfg.StationURL == "" && !cfg.UseGeneratedWeather && !cfg.UDPStream && cfg.AlarmsEdit == "" {
 		if cfg.Token == "" {
 			return fmt.Errorf("WeatherFlow API token is required when using the WeatherFlow API as the data source. Set via --token flag or TEMPEST_TOKEN environment variable, or use --station-url/--use-generated-weather/--udp-stream for token-less modes")
 		}
@@ -466,7 +467,7 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("--disable-homekit and --disable-webconsole cannot be used together (would disable everything)")
 	}
 
-	if cfg.StationName == "" {
+	if cfg.StationName == "" && cfg.AlarmsEdit == "" {
 		return fmt.Errorf("station name is required. Set via --station flag or TEMPEST_STATION_NAME environment variable")
 	}
 

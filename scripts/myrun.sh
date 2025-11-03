@@ -14,5 +14,5 @@ set -e
 go build
 
 ./tempest-homekit-go --alarms @tempest-alarms.json "$@" &
-./tempest-homekit-go --alarms-edit @tempest-alarms.json &
+./tempest-homekit-go --alarms-edit @tempest-alarms.json "$@" å&
 ./tempest-homekit-go --webhook-listener-port 8082 &

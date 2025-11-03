@@ -531,7 +531,7 @@ const indexHTML = `<!DOCTYPE html>
             <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeEditContactsModal()">Cancel</button>
                 <button type="button" class="btn btn-success" onclick="saveContacts('json')">💾 Save as JSON File</button>
-                <button type="button" class="btn btn-info" onclick="saveContacts('env')">📝 Update .env File</button>
+                <button type="button" class="btn btn-info" onclick="saveContacts('env')">📝 Update {{.EnvFile}} File</button>
             </div>
         </div>
     </div>
@@ -546,7 +546,7 @@ const indexHTML = `<!DOCTYPE html>
             <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeEditTagsModal()">Cancel</button>
                 <button type="button" class="btn btn-success" onclick="saveTags('json')">💾 Save as JSON File</button>
-                <button type="button" class="btn btn-info" onclick="saveTags('env')">📝 Update .env File</button>
+                <button type="button" class="btn btn-info" onclick="saveTags('env')">📝 Update {{.EnvFile}} File</button>
             </div>
         </div>
     </div>

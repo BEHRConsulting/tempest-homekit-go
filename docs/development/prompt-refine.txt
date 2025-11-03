@@ -155,7 +155,7 @@
 
 [x] add a tag list in the .env and .env.example that holds a set of common tags that the user can then add/remove from. pre-fill this list with would be common tags for weather alerts. the drop downs in the alarm editor use these tags, plus the user entered tags in the existing alarms for the drop down.
 
-[] add buttons to the alarm editor to edit contacts and tags. when saving, options to save as a json file or update the specific --env file
+[x] add buttons to the alarm editor to edit contacts and tags. when saving, options to save as a json file or update the specific --env file
 
 [] Homekit QR code not working
     

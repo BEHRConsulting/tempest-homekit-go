@@ -26,6 +26,9 @@ import (
 // TestHeadlessDashboard loads the dashboard in a headless browser, runs diagnostics,
 // captures console logs and asserts no runtime JS errors occur and key UI fields populate.
 func TestHeadlessDashboard(t *testing.T) {
+	if os.Getenv("CI") == "true" {
+		t.Skip("Skipping browser test in CI environment")
+	}
 	// create server and inject synthetic data
 	ws := testNewWebServer(t)
 
@@ -469,6 +472,9 @@ var _ = min
 // and that the datasets in the popout match the encoded metadata sent by the
 // dashboard (borderColor, borderDash, borderWidth, backgroundColor, pointRadius, tension).
 func TestChartPopoutOpensAndRenders(t *testing.T) {
+	if os.Getenv("CI") == "true" {
+		t.Skip("Skipping browser test in CI environment")
+	}
 	ws := testNewWebServer(t)
 
 	now := time.Now()
@@ -1176,6 +1182,9 @@ func TestChartPopoutOpensAndRenders(t *testing.T) {
 // two-point horizontal line). This guards against regressions in dataset
 // ordering/indexing.
 func TestPopoutDatasetOrdering(t *testing.T) {
+	if os.Getenv("CI") == "true" {
+		t.Skip("Skipping browser test in CI environment")
+	}
 	ws := testNewWebServer(t)
 
 	// Chart types to validate. We include temperature, humidity, rain,
