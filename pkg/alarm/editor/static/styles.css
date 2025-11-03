@@ -515,6 +515,129 @@ body {
     font-size: 14px;
 }
 
+/* Contact selector styles (similar to tag selector but for email/SMS contacts) */
+.contact-selector-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.selected-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--light-bg);
+    align-items: center;
+}
+
+.selected-contacts:empty::before {
+    content: "No contacts selected";
+    color: var(--card-text-light);
+    font-size: 13px;
+}
+
+.selected-contact {
+    background: var(--success-color);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.selected-contact .remove-contact {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.selected-contact .remove-contact:hover {
+    opacity: 1;
+}
+
+.contact-dropdown-wrapper {
+    position: relative;
+}
+
+.contact-search-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.contact-search-input:focus {
+    outline: none;
+    border-color: var(--success-color);
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+}
+
+.contact-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 4px 6px var(--shadow-color);
+    z-index: 100;
+    margin-top: -1px;
+}
+
+.contact-dropdown.active {
+    display: block;
+}
+
+.contact-dropdown-item {
+    padding: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 14px;
+}
+
+.contact-dropdown-item:hover {
+    background: var(--light-bg);
+}
+
+.contact-dropdown-item.selected {
+    background: var(--tag-bg);
+    color: var(--tag-color);
+}
+
+.contact-dropdown-item.new-contact {
+    background: var(--success-color);
+    color: white;
+    font-weight: 600;
+    border-top: 1px solid var(--success-hover);
+}
+
+.contact-dropdown-item.new-contact:hover {
+    background: var(--success-hover);
+}
+
+.contact-dropdown-empty {
+    padding: 10px;
+    color: var(--card-text-light);
+    text-align: center;
+    font-style: italic;
+    font-size: 14px;
+}
+
 .modal-actions {
     display: flex;
     gap: 10px;

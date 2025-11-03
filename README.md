@@ -1260,6 +1260,8 @@ The application supports configuration via environment variables, which can be s
 | `ALARMS` | *(empty)* | Alarm configuration: @filename.json or inline JSON |
 | `ALARMS_EDIT` | *(empty)* | Run alarm editor for specified config file |
 | `ALARMS_EDIT_PORT` | `8081` | Port for alarm editor web UI |
+| `TAG_LIST` | *(empty)* | Predefined tags for alarm editor dropdown (JSON array) |
+| `CONTACT_LIST` | *(empty)* | Contact list for alarm notifications (JSON array) |
 | `SMTP_HOST` | *(empty)* | SMTP server hostname |
 | `SMTP_PORT` | `587` | SMTP server port |
 | `SMTP_USERNAME` | *(empty)* | SMTP authentication username |

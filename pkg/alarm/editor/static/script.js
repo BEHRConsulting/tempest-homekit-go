@@ -2,6 +2,9 @@ let alarms = [];
 let currentAlarm = null;
 let allTags = [];
 let selectedTags = [];
+let contacts = [];
+let selectedEmailContacts = [];
+let selectedSMSContacts = [];
 
 // ============================================
 // Theme Switching System
@@ -41,10 +44,12 @@ function applyTheme(themeName) {
 async function init() {
     await loadAlarms();
     await loadTags();
+    await loadContacts();
     document.getElementById('searchName').addEventListener('input', filterAlarms);
     document.getElementById('filterTag').addEventListener('change', filterAlarms);
     document.getElementById('alarmForm').addEventListener('submit', handleSubmit);
-    initTagSelector();
+    initContactSelectors();
+    initTagSelectors();
     
     // Update last update timestamp
     updateLastUpdateTimestamp();
@@ -63,6 +68,46 @@ async function loadTags() {
     updateTagFilter();
 }
 
+async function loadContacts() {
+    try {
+        const response = await fetch('/api/contacts');
+        contacts = await response.json();
+    } catch (error) {
+        console.warn('Failed to load contacts:', error);
+        contacts = [];
+    }
+}
+
+function addContactEmail() {
+    const select = document.getElementById('emailContactSelect');
+    const contactIndex = select.value;
+    
+    if (!contactIndex) return;
+    
+    const contact = contacts[parseInt(contactIndex)];
+    if (!contact || !contact.email) return;
+    
+    addContact('email', contact.email);
+    
+    // Reset dropdown
+    select.value = '';
+}
+
+function addContactSMS() {
+    const select = document.getElementById('smsContactSelect');
+    const contactIndex = select.value;
+    
+    if (!contactIndex) return;
+    
+    const contact = contacts[parseInt(contactIndex)];
+    if (!contact || !contact.sms) return;
+    
+    addContact('sms', contact.sms);
+    
+    // Reset dropdown
+    select.value = '';
+}
+
 function updateTagFilter() {
     const select = document.getElementById('filterTag');
     const currentValue = select.value;
@@ -76,27 +121,88 @@ function updateTagFilter() {
     });
 }
 
-function initTagSelector() {
-    const searchInput = document.getElementById('tagSearchInput');
-    const dropdown = document.getElementById('tagDropdown');
+function initContactSelectors() {
+    // Email contact selector
+    const emailSearchInput = document.getElementById('emailContactSearch');
+    const emailDropdown = document.getElementById('emailContactDropdown');
     
-    searchInput.addEventListener('focus', () => {
-        updateTagDropdown();
-        dropdown.classList.add('active');
+    emailSearchInput.addEventListener('focus', () => {
+        updateContactDropdown('email', '');
+        emailDropdown.classList.add('active');
     });
     
-    searchInput.addEventListener('input', (e) => {
+    emailSearchInput.addEventListener('input', (e) => {
+        updateContactDropdown('email', e.target.value);
+    });
+    
+    emailSearchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const value = emailSearchInput.value.trim();
+            if (value) {
+                addContact('email', value);
+                emailSearchInput.value = '';
+                updateContactDropdown('email', '');
+            }
+        }
+    });
+    
+    // SMS contact selector
+    const smsSearchInput = document.getElementById('smsContactSearch');
+    const smsDropdown = document.getElementById('smsContactDropdown');
+    
+    smsSearchInput.addEventListener('focus', () => {
+        updateContactDropdown('sms', '');
+        smsDropdown.classList.add('active');
+    });
+    
+    smsSearchInput.addEventListener('input', (e) => {
+        updateContactDropdown('sms', e.target.value);
+    });
+    
+    smsSearchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const value = smsSearchInput.value.trim();
+            if (value) {
+                addContact('sms', value);
+                smsSearchInput.value = '';
+                updateContactDropdown('sms', '');
+            }
+        }
+    });
+    
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.contact-dropdown-wrapper') && !e.target.closest('.contact-dropdown')) {
+            emailDropdown.classList.remove('active');
+            smsDropdown.classList.remove('active');
+        }
+    });
+}
+
+function initTagSelectors() {
+    // Tag selector
+    const tagSearchInput = document.getElementById('tagSearchInput');
+    const tagDropdown = document.getElementById('tagDropdown');
+    
+    tagSearchInput.addEventListener('focus', () => {
+        updateTagDropdown('');
+        tagDropdown.classList.add('active');
+    });
+    
+    tagSearchInput.addEventListener('input', (e) => {
         updateTagDropdown(e.target.value);
     });
     
-    searchInput.addEventListener('keydown', (e) => {
+    tagSearchInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const value = searchInput.value.trim();
+            const value = tagSearchInput.value.trim();
             if (value) {
                 addTag(value);
-                searchInput.value = '';
-                updateTagDropdown();
+                tagSearchInput.value = '';
+                updateTagDropdown('');
             }
         }
     });
@@ -104,9 +210,104 @@ function initTagSelector() {
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.tag-dropdown-wrapper') && !e.target.closest('.tag-dropdown')) {
-            dropdown.classList.remove('active');
+            tagDropdown.classList.remove('active');
         }
     });
+}
+
+function updateContactDropdown(type, searchTerm) {
+    const dropdown = document.getElementById(type + 'ContactDropdown');
+    const searchLower = searchTerm.toLowerCase();
+    
+    // Get already selected contacts for this type
+    const selectedContacts = type === 'email' ? selectedEmailContacts : selectedSMSContacts;
+    
+    // Filter available contacts (not already selected)
+    const availableContacts = contacts.filter(contact => {
+        const contactValue = type === 'email' ? contact.email : contact.sms;
+        return contactValue && !selectedContacts.includes(contactValue) && 
+               (contact.name.toLowerCase().includes(searchLower) || contactValue.toLowerCase().includes(searchLower));
+    });
+    
+    dropdown.innerHTML = '';
+    
+    if (availableContacts.length === 0 && !searchTerm) {
+        dropdown.innerHTML = '<div class="contact-dropdown-empty">No contacts available</div>';
+        return;
+    }
+    
+    // Show matching existing contacts
+    availableContacts.forEach((contact, index) => {
+        const contactValue = type === 'email' ? contact.email : contact.sms;
+        const item = document.createElement('div');
+        item.className = 'contact-dropdown-item';
+        item.textContent = `${contact.name} (${contactValue})`;
+        item.addEventListener('click', () => {
+            addContact(type, contactValue);
+            document.getElementById(type + 'ContactSearch').value = '';
+            updateContactDropdown(type, '');
+        });
+        dropdown.appendChild(item);
+    });
+    
+    // Show "add new contact" option if searching and not already a contact
+    if (searchTerm && !contacts.some(c => {
+        const contactValue = type === 'email' ? c.email : c.sms;
+        return contactValue === searchTerm;
+    }) && !selectedContacts.includes(searchTerm)) {
+        const newContactItem = document.createElement('div');
+        newContactItem.className = 'contact-dropdown-item new-contact';
+        newContactItem.textContent = `+ Add new ${type}: "${searchTerm}"`;
+        newContactItem.addEventListener('click', () => {
+            addContact(type, searchTerm);
+            document.getElementById(type + 'ContactSearch').value = '';
+            updateContactDropdown(type, '');
+        });
+        dropdown.appendChild(newContactItem);
+    }
+    
+    if (dropdown.children.length === 0 && searchTerm) {
+        dropdown.innerHTML = '<div class="contact-dropdown-empty">No matching contacts</div>';
+    }
+}
+
+function addContact(type, contactValue) {
+    const trimmedContact = contactValue.trim();
+    if (!trimmedContact) return;
+    
+    const selectedContacts = type === 'email' ? selectedEmailContacts : selectedSMSContacts;
+    
+    if (!selectedContacts.includes(trimmedContact)) {
+        selectedContacts.push(trimmedContact);
+        renderSelectedContacts(type);
+    }
+}
+
+function removeContact(type, contact) {
+    const selectedContacts = type === 'email' ? selectedEmailContacts : selectedSMSContacts;
+    const index = selectedContacts.indexOf(contact);
+    if (index > -1) {
+        selectedContacts.splice(index, 1);
+        renderSelectedContacts(type);
+        updateContactDropdown(type, '');
+    }
+}
+
+function renderSelectedContacts(type) {
+    const container = document.getElementById('selected' + (type === 'email' ? 'Email' : 'SMS') + 'Contacts');
+    const selectedContacts = type === 'email' ? selectedEmailContacts : selectedSMSContacts;
+    
+    if (selectedContacts.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.innerHTML = selectedContacts.map(contact => 
+        '<div class="selected-contact">' +
+            '<span>' + contact + '</span>' +
+            '<span class="remove-contact" onclick="removeContact(\'' + type + '\', \'' + contact.replace(/'/g, "\\'") + '\')">×</span>' +
+        '</div>'
+    ).join('');
 }
 
 function updateTagDropdown(searchTerm = '') {
@@ -372,7 +573,6 @@ Sensor Data:
     
     // Email: Professional HTML-ready format
     // Will be populated from env defaults after modal opens
-    document.getElementById('emailTo').value = '';
     document.getElementById('emailSubject').value = '⚠️ Weather Alert: {{alarm_name}}';
     document.getElementById('emailHtml').checked = true;
     document.getElementById('emailBody').value = `<h2 style="color: #d9534f;">⚠️ Weather Alarm Triggered</h2>
@@ -407,7 +607,6 @@ Sensor Data:
     
     // SMS: Very concise
     // Will be populated from env defaults after modal opens
-    document.getElementById('smsTo').value = '';
     document.getElementById('smsMessage').value = `⚠️ {{alarm_name}} at {{station}} - {{timestamp}}. {{alarm_description}}`;
     
     // Webhook: JSON payload with alarm and sensor data
@@ -458,6 +657,15 @@ Sensor Data:
     selectedTags = [];
     renderSelectedTags();
     document.getElementById('tagSearchInput').value = '';
+    updateTagDropdown('');
+    
+    // Clear contacts
+    selectedEmailContacts = [];
+    selectedSMSContacts = [];
+    renderSelectedContacts('email');
+    renderSelectedContacts('sms');
+    document.getElementById('emailContactSearch').value = '';
+    document.getElementById('smsContactSearch').value = '';
     
     toggleMessageSections();
     
@@ -465,6 +673,9 @@ Sensor Data:
     
     // Load environment defaults for email/SMS addresses
     loadEnvDefaults();
+    
+    // Populate contact dropdowns
+    // populateContactDropdowns(); // No longer needed with dynamic dropdowns
 }
 
 async function loadEnvDefaults() {
@@ -472,12 +683,18 @@ async function loadEnvDefaults() {
         const response = await fetch('/api/env-defaults');
         const defaults = await response.json();
         
-        // Only set defaults if fields are empty (don't override user input)
-        if (defaults.emailTo && !document.getElementById('emailTo').value) {
-            document.getElementById('emailTo').value = defaults.emailTo;
+        // Only set defaults if contact arrays are empty (don't override user selections)
+        if (defaults.emailTo && selectedEmailContacts.length === 0) {
+            // Parse comma-separated emails and add them
+            const emails = defaults.emailTo.split(',').map(e => e.trim()).filter(e => e);
+            selectedEmailContacts = emails;
+            renderSelectedContacts('email');
         }
-        if (defaults.smsTo && !document.getElementById('smsTo').value) {
-            document.getElementById('smsTo').value = defaults.smsTo;
+        if (defaults.smsTo && selectedSMSContacts.length === 0) {
+            // Parse comma-separated numbers and add them
+            const numbers = defaults.smsTo.split(',').map(n => n.trim()).filter(n => n);
+            selectedSMSContacts = numbers;
+            renderSelectedContacts('sms');
         }
     } catch (error) {
         console.warn('Failed to load environment defaults:', error);
@@ -512,11 +729,9 @@ function editAlarm(name) {
     document.getElementById('syslogMessage').value = '';
     document.getElementById('oslogMessage').value = '';
     document.getElementById('eventlogMessage').value = '';
-    document.getElementById('emailTo').value = '';
     document.getElementById('emailSubject').value = '';
     document.getElementById('emailBody').value = '';
     document.getElementById('emailHtml').checked = true;
-    document.getElementById('smsTo').value = '';
     document.getElementById('smsMessage').value = '';
     document.getElementById('webhookUrl').value = '';
     document.getElementById('webhookMethod').value = 'POST';
@@ -534,14 +749,22 @@ function editAlarm(name) {
     selectedTags = [];
     renderSelectedTags();
     document.getElementById('tagSearchInput').value = '';
+    updateTagDropdown('');
     
-    // Now populate with current alarm data
+    // Clear contacts
+    selectedEmailContacts = [];
+    selectedSMSContacts = [];
+    renderSelectedContacts('email');
+    renderSelectedContacts('sms');
+    document.getElementById('emailContactSearch').value = '';
+    document.getElementById('smsContactSearch').value = '';
     document.getElementById('alarmName').value = currentAlarm.name;
     document.getElementById('alarmDescription').value = currentAlarm.description || '';
     document.getElementById('alarmCondition').value = currentAlarm.condition;
     
     selectedTags = currentAlarm.tags || [];
     renderSelectedTags();
+    updateTagDropdown('');
     
     document.getElementById('alarmCooldown').value = currentAlarm.cooldown || 1800;
     document.getElementById('alarmEnabled').checked = currentAlarm.enabled;
@@ -571,12 +794,12 @@ function editAlarm(name) {
         } else if (channel.type === 'eventlog' && channel.template) {
             document.getElementById('eventlogMessage').value = channel.template;
         } else if (channel.type === 'email' && channel.email) {
-            document.getElementById('emailTo').value = (channel.email.to || []).join(', ');
+            selectedEmailContacts = channel.email.to || [];
             document.getElementById('emailSubject').value = channel.email.subject || '';
             document.getElementById('emailBody').value = channel.email.body || '';
             document.getElementById('emailHtml').checked = channel.email.html || false;
         } else if (channel.type === 'sms' && channel.sms) {
-            document.getElementById('smsTo').value = (channel.sms.to || []).join(', ');
+            selectedSMSContacts = channel.sms.to || [];
             document.getElementById('smsMessage').value = channel.sms.message || '';
         } else if (channel.type === 'webhook' && channel.webhook) {
             document.getElementById('webhookUrl').value = channel.webhook.url || '';
@@ -595,9 +818,16 @@ function editAlarm(name) {
         }
     });
     
+    // Render contacts
+    renderSelectedContacts('email');
+    renderSelectedContacts('sms');
+    
     toggleMessageSections();
     
     document.getElementById('editModal').classList.add('active');
+    
+    // Populate contact dropdowns
+    // populateContactDropdowns(); // No longer needed with dynamic dropdowns
 }
 
 function closeModal() {
@@ -842,7 +1072,6 @@ async function handleSubmit(e) {
         });
     }
     if (document.getElementById('deliveryEmail').checked) {
-        const emailTo = document.getElementById('emailTo').value;
         const emailSubject = document.getElementById('emailSubject').value || 'Tempest Alert: {{alarm_name}}';
         const emailBody = document.getElementById('emailBody').value || '{{alarm_info}}\n\n{{sensor_info}}';
         const emailHtml = document.getElementById('emailHtml').checked;
@@ -850,7 +1079,7 @@ async function handleSubmit(e) {
         channels.push({ 
             type: 'email',
             email: {
-                to: emailTo ? emailTo.split(',').map(e => e.trim()).filter(e => e) : ['admin@example.com'],
+                to: selectedEmailContacts.length > 0 ? selectedEmailContacts : ['admin@example.com'],
                 subject: emailSubject,
                 body: emailBody,
                 html: emailHtml
@@ -858,13 +1087,12 @@ async function handleSubmit(e) {
         });
     }
     if (document.getElementById('deliverySMS').checked) {
-        const smsTo = document.getElementById('smsTo').value;
         const smsMessage = document.getElementById('smsMessage').value;
         
         channels.push({ 
             type: 'sms',
             sms: {
-                to: smsTo ? smsTo.split(',').map(p => p.trim()).filter(p => p) : ['+1234567890'],
+                to: selectedSMSContacts.length > 0 ? selectedSMSContacts : ['+1234567890'],
                 message: smsMessage || 'ALARM: {{alarm_name}} at {{timestamp}}'
             }
         });

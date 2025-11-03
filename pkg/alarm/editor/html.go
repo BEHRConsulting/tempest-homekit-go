@@ -246,7 +246,20 @@ const indexHTML = `<!DOCTYPE html>
                             </div>
                         </div>
                         <label for="emailTo" style="font-weight: 600;">To: <span style="color: red;">*</span></label>
-                        <input type="text" id="emailTo" placeholder="recipient@example.com (comma-separated for multiple)" />
+                        <div class="contact-selector-container">
+                            <div class="selected-contacts" id="selectedEmailContacts"></div>
+                            <div class="contact-dropdown-wrapper">
+                                <input type="text" 
+                                       id="emailContactSearch" 
+                                       class="contact-search-input" 
+                                       placeholder="Search contacts or enter email..." 
+                                       autocomplete="off" />
+                                <select id="emailContactSelect" onchange="addContactEmail()" style="display: none;">
+                                    <option value="">📋 Add Contact...</option>
+                                </select>
+                                <div id="emailContactDropdown" class="contact-dropdown"></div>
+                            </div>
+                        </div>
                         <label for="emailSubject" style="margin-top: 10px; font-weight: 600;">Subject:</label>
                         <input type="text" id="emailSubject" placeholder="Tempest Alert: {{ "{{" }}alarm_name{{ "}}" }}" />
                         <label style="margin-top: 10px;">
@@ -275,7 +288,20 @@ const indexHTML = `<!DOCTYPE html>
                             </div>
                         </div>
                         <label for="smsTo" style="font-weight: 600;">To: <span style="color: red;">*</span></label>
-                        <input type="text" id="smsTo" placeholder="Phone number(s) (comma-separated)" />
+                        <div class="contact-selector-container">
+                            <div class="selected-contacts" id="selectedSMSContacts"></div>
+                            <div class="contact-dropdown-wrapper">
+                                <input type="text" 
+                                       id="smsContactSearch" 
+                                       class="contact-search-input" 
+                                       placeholder="Search contacts or enter phone number..." 
+                                       autocomplete="off" />
+                                <select id="smsContactSelect" onchange="addContactSMS()" style="display: none;">
+                                    <option value="">📋 Add Contact...</option>
+                                </select>
+                                <div id="smsContactDropdown" class="contact-dropdown"></div>
+                            </div>
+                        </div>
                         <label for="smsMessage" style="margin-top: 10px; font-weight: 600;">Message:</label>
                         <textarea id="smsMessage" rows="3" placeholder="SMS message (keep it short)..."></textarea>
                     </div>

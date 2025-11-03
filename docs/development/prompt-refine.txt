@@ -151,7 +151,9 @@
 
 [x] alarm editor for json and csv running on macos, default to /tmp/tempest-alarms. for windows, the default is %TEMP%\tempest-alarms. Add a note in readme.md that on macOS, all files in /tmp removed at system boot, and as needed by the system. And Windows periodically cleans up this directory.
 
-[] add a contact list in the .env and .env.example that holds name, email, sms informaiton. Use this for drop downs in the alarm email and sms config blocks. This should make entering email and sms entries better for the user
+[x] add a contact list in the .env and .env.example that holds name, email, sms informaiton. Use this for drop downs in the alarm email and sms config blocks. This should make entering email and sms entries better for the user
+
+[x] add a tag list in the .env and .env.example that holds a set of common tags that the user can then add/remove from. pre-fill this list with would be common tags for weather alerts. the drop downs in the alarm editor use these tags, plus the user entered tags in the existing alarms for the drop down.
 
 [] Homekit QR code not working
     
