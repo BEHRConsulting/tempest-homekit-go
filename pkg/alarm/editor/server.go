@@ -664,7 +664,7 @@ func (s *Server) handleValidateJSON(w http.ResponseWriter, r *http.Request) {
 		RainAccumulated:      2.5,
 		RainDailyTotal:       15.2,
 		LightningStrikeCount: 3,
-		LightningStrikeAvg:   2.1,
+		// LightningStrikeAvg is not used in template validation
 	}
 
 	testAlarm := &alarm.Alarm{

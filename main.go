@@ -986,7 +986,7 @@ func runAPITests(cfg *config.Config) {
 		fmt.Println("\n--- RAW STATIONS DATA ---")
 		stationsJSON, _ := json.MarshalIndent(stations, "", "  ")
 		fmt.Println(string(stationsJSON))
-		fmt.Println("--- END RAW DATA ---\n")
+		fmt.Println("--- END RAW DATA ---")
 	}
 
 	fmt.Printf("Found %d stations\n", len(stations))
@@ -1012,7 +1012,7 @@ func runAPITests(cfg *config.Config) {
 		fmt.Println("\n--- RAW STATION DETAILS DATA ---")
 		detailsJSON, _ := json.MarshalIndent(stationDetails, "", "  ")
 		fmt.Println(string(detailsJSON))
-		fmt.Println("--- END RAW DATA ---\n")
+		fmt.Println("--- END RAW DATA ---")
 	}
 
 	fmt.Printf("Station has %d devices\n", len(stationDetails.Devices))
@@ -1040,7 +1040,7 @@ func runAPITests(cfg *config.Config) {
 		fmt.Println("\n--- RAW OBSERVATION DATA ---")
 		obsJSON, _ := json.MarshalIndent(obs, "", "  ")
 		fmt.Println(string(obsJSON))
-		fmt.Println("--- END RAW DATA ---\n")
+		fmt.Println("--- END RAW DATA ---")
 	}
 
 	obsTime := time.Unix(obs.Timestamp, 0)
@@ -1118,7 +1118,7 @@ func runAPITests(cfg *config.Config) {
 		fmt.Println("\n--- RAW FORECAST DATA ---")
 		forecastJSON, _ := json.MarshalIndent(forecast, "", "  ")
 		fmt.Println(string(forecastJSON))
-		fmt.Println("--- END RAW DATA ---\n")
+		fmt.Println("--- END RAW DATA ---")
 	}
 
 	fmt.Printf("Forecast data retrieved\n")

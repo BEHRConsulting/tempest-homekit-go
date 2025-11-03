@@ -94,8 +94,8 @@ func CreateDataSource(cfg *config.Config, station *weather.Station, udpListener 
 		// Create a fake station for the generated location
 		location := gen.GetLocation()
 		station = &weather.Station{
-			StationID:   99999, // Fake station ID
-			Name:        location.Name,
+			StationID: 99999, // Fake station ID
+			// Name field not needed for generated weather source
 			StationName: location.Name,
 		}
 

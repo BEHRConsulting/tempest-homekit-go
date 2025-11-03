@@ -224,9 +224,7 @@ func (e *Evaluator) parseValueWithUnits(valueStr string, field string) (float64,
 
 	// Check for humidity fields (stored as percentage, strip % if present)
 	if field == "humidity" {
-		if strings.HasSuffix(valueStr, "%") {
-			valueStr = strings.TrimSuffix(valueStr, "%")
-		}
+		valueStr = strings.TrimSuffix(valueStr, "%")
 	}
 
 	// Parse as plain number
