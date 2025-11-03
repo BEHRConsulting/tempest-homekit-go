@@ -185,7 +185,7 @@ func TestHandleGetTags(t *testing.T) {
 	var tags []string
 	json.NewDecoder(w.Body).Decode(&tags)
 
-	// Check that we get unique tags
+	// Check that we get unique tags sorted alphabetically
 	expectedTags := map[string]bool{
 		"temperature": false,
 		"heat":        false,
@@ -202,6 +202,82 @@ func TestHandleGetTags(t *testing.T) {
 	for tag, found := range expectedTags {
 		if !found {
 			t.Errorf("Expected tag '%s' not found", tag)
+		}
+	}
+
+	// Check that tags are sorted alphabetically
+	if len(tags) > 1 {
+		for i := 1; i < len(tags); i++ {
+			if tags[i-1] > tags[i] {
+				t.Errorf("Tags not sorted alphabetically: %v", tags)
+				break
+			}
+		}
+	}
+}
+
+func TestHandleGetTags_WithPredefinedTags(t *testing.T) {
+	// Set up environment with predefined tags
+	originalTagList := os.Getenv("TAG_LIST")
+	defer os.Setenv("TAG_LIST", originalTagList)
+
+	os.Setenv("TAG_LIST", `["weather", "alert", "storm", "temperature"]`)
+
+	config := &alarm.AlarmConfig{
+		Alarms: []alarm.Alarm{
+			{
+				Name: "alarm1",
+				Tags: []string{"temperature", "heat"},
+			},
+			{
+				Name: "alarm2",
+				Tags: []string{"lightning"},
+			},
+		},
+	}
+
+	server := &Server{
+		configPath: "test.json",
+		port:       "8081",
+		config:     config,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/tags", nil)
+	w := httptest.NewRecorder()
+	server.handleGetTags(w, req)
+
+	var tags []string
+	json.NewDecoder(w.Body).Decode(&tags)
+
+	// Check that we get both alarm tags and predefined tags
+	expectedTags := map[string]bool{
+		"temperature": false, // from alarm
+		"heat":        false, // from alarm
+		"lightning":   false, // from alarm
+		"weather":     false, // from predefined
+		"alert":       false, // from predefined
+		"storm":       false, // from predefined
+	}
+
+	for _, tag := range tags {
+		if _, exists := expectedTags[tag]; exists {
+			expectedTags[tag] = true
+		}
+	}
+
+	for tag, found := range expectedTags {
+		if !found {
+			t.Errorf("Expected tag '%s' not found", tag)
+		}
+	}
+
+	// Check that tags are sorted alphabetically
+	if len(tags) > 1 {
+		for i := 1; i < len(tags); i++ {
+			if tags[i-1] > tags[i] {
+				t.Errorf("Tags not sorted alphabetically: %v", tags)
+				break
+			}
 		}
 	}
 }
@@ -289,6 +365,280 @@ func TestHandleGetFields(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("Expected field '%s' not found in result", expected)
+		}
+	}
+}
+
+func TestLoadContacts_ValidJSON(t *testing.T) {
+	// Set up environment with valid contact list
+	originalContactList := os.Getenv("CONTACT_LIST")
+	defer os.Setenv("CONTACT_LIST", originalContactList)
+
+	validContacts := `[
+		{"name": "John Doe", "email": "john@example.com", "sms": "+1234567890"},
+		{"name": "Jane Smith", "email": "jane@example.com", "sms": "+0987654321"}
+	]`
+	os.Setenv("CONTACT_LIST", validContacts)
+
+	server := &Server{}
+	err := server.loadContacts()
+	if err != nil {
+		t.Fatalf("Expected no error for valid JSON, got: %v", err)
+	}
+
+	if len(server.contacts) != 2 {
+		t.Errorf("Expected 2 contacts, got %d", len(server.contacts))
+	}
+
+	if server.contacts[0].Name != "John Doe" {
+		t.Errorf("Expected first contact name 'John Doe', got '%s'", server.contacts[0].Name)
+	}
+}
+
+func TestLoadContacts_InvalidJSON(t *testing.T) {
+	// Set up environment with invalid JSON
+	originalContactList := os.Getenv("CONTACT_LIST")
+	defer os.Setenv("CONTACT_LIST", originalContactList)
+
+	invalidJSON := `[{"name": "John", "email": "john@example.com", "sms": "+1234567890"` // Missing closing bracket
+	os.Setenv("CONTACT_LIST", invalidJSON)
+
+	server := &Server{}
+	err := server.loadContacts()
+	if err == nil {
+		t.Fatal("Expected error for invalid JSON, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "failed to parse CONTACT_LIST JSON") {
+		t.Errorf("Expected parse error message, got: %v", err)
+	}
+}
+
+func TestLoadContacts_ValidationWarnings(t *testing.T) {
+	// Set up environment with contacts that should generate warnings
+	originalContactList := os.Getenv("CONTACT_LIST")
+	defer os.Setenv("CONTACT_LIST", originalContactList)
+
+	contactsWithWarnings := `[
+		{"name": "", "email": "john@example.com", "sms": "+1234567890"},
+		{"name": "Jane", "email": "", "sms": ""},
+		{"name": "Bob", "email": "invalid-email", "sms": "+1234567890"},
+		{"name": "Alice", "email": "alice@example.com", "sms": "1234567890"}
+	]`
+	os.Setenv("CONTACT_LIST", contactsWithWarnings)
+
+	server := &Server{}
+	err := server.loadContacts()
+	if err != nil {
+		t.Fatalf("Expected no error despite warnings, got: %v", err)
+	}
+
+	if len(server.contacts) != 4 {
+		t.Errorf("Expected 4 contacts, got %d", len(server.contacts))
+	}
+
+	// The warnings would be logged but we can't easily test log output in this test
+	// In a real scenario, these would generate warnings:
+	// - Contact 1: empty name
+	// - Contact 2: neither email nor SMS
+	// - Contact 3: invalid email format
+	// - Contact 4: SMS without + prefix
+}
+
+func TestHandleGetTags_InvalidJSON(t *testing.T) {
+	// Set up environment with invalid TAG_LIST JSON
+	originalTagList := os.Getenv("TAG_LIST")
+	defer os.Setenv("TAG_LIST", originalTagList)
+
+	invalidJSON := `["temperature", "heat", "storm"` // Missing closing bracket
+	os.Setenv("TAG_LIST", invalidJSON)
+
+	config := &alarm.AlarmConfig{
+		Alarms: []alarm.Alarm{
+			{
+				Name: "alarm1",
+				Tags: []string{"temperature"},
+			},
+		},
+	}
+
+	server := &Server{
+		configPath: "test.json",
+		port:       "8081",
+		config:     config,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/tags", nil)
+	w := httptest.NewRecorder()
+	server.handleGetTags(w, req)
+
+	// Should still return tags from alarms even if TAG_LIST is invalid
+	var tags []string
+	json.NewDecoder(w.Body).Decode(&tags)
+
+	if len(tags) != 1 || tags[0] != "temperature" {
+		t.Errorf("Expected ['temperature'] when TAG_LIST is invalid, got %v", tags)
+	}
+}
+
+func TestHandleGetTags_ValidationWarnings(t *testing.T) {
+	// Set up environment with TAG_LIST that should generate warnings
+	originalTagList := os.Getenv("TAG_LIST")
+	defer os.Setenv("TAG_LIST", originalTagList)
+
+	tagsWithWarnings := `["temperature", "", "tag with spaces", "verylongtagnameexceedingfiftycharacterslimitforatag", "normal-tag"]`
+	os.Setenv("TAG_LIST", tagsWithWarnings)
+
+	config := &alarm.AlarmConfig{
+		Alarms: []alarm.Alarm{
+			{
+				Name: "alarm1",
+				Tags: []string{"existing-tag"},
+			},
+		},
+	}
+
+	server := &Server{
+		configPath: "test.json",
+		port:       "8081",
+		config:     config,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/tags", nil)
+	w := httptest.NewRecorder()
+	server.handleGetTags(w, req)
+
+	var tags []string
+	json.NewDecoder(w.Body).Decode(&tags)
+
+	// Should include valid tags (excluding empty one) and be sorted alphabetically
+	expectedTags := map[string]bool{
+		"existing-tag":    true,
+		"temperature":     true,
+		"tag with spaces": true, // Still included despite warning
+		"verylongtagnameexceedingfiftycharacterslimitforatag": true, // Still included despite warning
+		"normal-tag": true,
+	}
+
+	for _, tag := range tags {
+		if _, exists := expectedTags[tag]; exists {
+			expectedTags[tag] = false // Mark as found
+		}
+	}
+
+	for tag, notFound := range expectedTags {
+		if notFound {
+			t.Errorf("Expected tag '%s' not found in result", tag)
+		}
+	}
+
+	// Check that tags are sorted alphabetically
+	if len(tags) > 1 {
+		for i := 1; i < len(tags); i++ {
+			if tags[i-1] > tags[i] {
+				t.Errorf("Tags not sorted alphabetically: %v", tags)
+				break
+			}
+		}
+	}
+
+	// The warnings would be logged but we can't easily test log output in this test
+	// In a real scenario, these would generate warnings:
+	// - Tag 2: empty or whitespace-only
+	// - Tag 3: contains spaces
+	// - Tag 4: very long
+}
+
+func TestHandleGetTags_ValidJSON(t *testing.T) {
+	// Set up environment with valid TAG_LIST JSON
+	originalTagList := os.Getenv("TAG_LIST")
+	defer os.Setenv("TAG_LIST", originalTagList)
+
+	validTags := `["temperature", "heat", "storm", "lightning"]`
+	os.Setenv("TAG_LIST", validTags)
+
+	config := &alarm.AlarmConfig{
+		Alarms: []alarm.Alarm{
+			{
+				Name: "alarm1",
+				Tags: []string{"temperature", "custom-tag"},
+			},
+		},
+	}
+
+	server := &Server{
+		configPath: "test.json",
+		port:       "8081",
+		config:     config,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/tags", nil)
+	w := httptest.NewRecorder()
+	server.handleGetTags(w, req)
+
+	var tags []string
+	json.NewDecoder(w.Body).Decode(&tags)
+
+	// Should include both alarm tags and predefined tags
+	expectedTags := map[string]bool{
+		"temperature": true,
+		"custom-tag":  true,
+		"heat":        true,
+		"storm":       true,
+		"lightning":   true,
+	}
+
+	for _, tag := range tags {
+		if _, exists := expectedTags[tag]; exists {
+			expectedTags[tag] = false // Mark as found
+		}
+	}
+
+	for tag, notFound := range expectedTags {
+		if notFound {
+			t.Errorf("Expected tag '%s' not found in result", tag)
+		}
+	}
+
+	// Check that tags are sorted alphabetically
+	if len(tags) > 1 {
+		for i := 1; i < len(tags); i++ {
+			if tags[i-1] > tags[i] {
+				t.Errorf("Tags not sorted alphabetically: %v", tags)
+				break
+			}
+		}
+	}
+}
+
+func TestHandleGetContacts_SortedAlphabetically(t *testing.T) {
+	// Create server with contacts in non-alphabetical order
+	server := &Server{
+		configPath: "test.json",
+		port:       "8081",
+		contacts: []Contact{
+			{Name: "Charlie", Email: "charlie@example.com", SMS: "+1111111111"},
+			{Name: "Alice", Email: "alice@example.com", SMS: "+2222222222"},
+			{Name: "Bob", Email: "bob@example.com", SMS: "+3333333333"},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/contacts", nil)
+	w := httptest.NewRecorder()
+	server.handleGetContacts(w, req)
+
+	var contacts []Contact
+	json.NewDecoder(w.Body).Decode(&contacts)
+
+	// Check that contacts are sorted alphabetically by name
+	if len(contacts) != 3 {
+		t.Errorf("Expected 3 contacts, got %d", len(contacts))
+	}
+
+	expectedOrder := []string{"Alice", "Bob", "Charlie"}
+	for i, contact := range contacts {
+		if contact.Name != expectedOrder[i] {
+			t.Errorf("Expected contact %d to be '%s', got '%s'", i, expectedOrder[i], contact.Name)
 		}
 	}
 }

@@ -155,3 +155,70 @@ func TestHandleGetEnvDefaults_ReturnsEnvValues(t *testing.T) {
 		t.Fatalf("unexpected smsTo: %v", result["smsTo"])
 	}
 }
+
+func TestHandleGetContacts_ReturnsContactList(t *testing.T) {
+	// Set up test contact list
+	contactListJSON := `[
+		{"name": "John Doe", "email": "john@example.com", "sms": "+15551234567"},
+		{"name": "Jane Smith", "email": "jane@example.com", "sms": "+15559876543"}
+	]`
+	os.Setenv("CONTACT_LIST", contactListJSON)
+	defer os.Unsetenv("CONTACT_LIST")
+
+	server := &Server{}
+	// Load contacts
+	if err := server.loadContacts(); err != nil {
+		t.Fatalf("failed to load contacts: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/contacts", nil)
+	w := httptest.NewRecorder()
+	server.handleGetContacts(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("contacts handler returned status %d", w.Code)
+	}
+
+	var result []Contact
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("failed to decode contacts: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Fatalf("expected 2 contacts, got %d", len(result))
+	}
+
+	if result[0].Name != "Jane Smith" || result[0].Email != "jane@example.com" || result[0].SMS != "+15559876543" {
+		t.Fatalf("unexpected first contact: %+v", result[0])
+	}
+
+	if result[1].Name != "John Doe" || result[1].Email != "john@example.com" || result[1].SMS != "+15551234567" {
+		t.Fatalf("unexpected second contact: %+v", result[1])
+	}
+}
+
+func TestHandleGetContacts_EmptyList(t *testing.T) {
+	// No CONTACT_LIST environment variable set
+	server := &Server{}
+	// Load contacts (should be empty)
+	if err := server.loadContacts(); err != nil {
+		t.Fatalf("failed to load contacts: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/contacts", nil)
+	w := httptest.NewRecorder()
+	server.handleGetContacts(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("contacts handler returned status %d", w.Code)
+	}
+
+	var result []Contact
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("failed to decode contacts: %v", err)
+	}
+
+	if len(result) != 0 {
+		t.Fatalf("expected empty contact list, got %d contacts", len(result))
+	}
+}

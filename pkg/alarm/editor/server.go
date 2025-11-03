@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -21,6 +22,14 @@ type Server struct {
 	version      string
 	config       *alarm.AlarmConfig
 	lastLoadTime time.Time
+	contacts     []Contact
+}
+
+// Contact represents a contact entry for alarm notifications
+type Contact struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	SMS   string `json:"sms"`
 }
 
 // NewServer creates a new alarm editor server
@@ -32,6 +41,12 @@ func NewServer(configPath, port, version string) (*Server, error) {
 		configPath: path,
 		port:       port,
 		version:    version,
+	}
+
+	// Load contact list from environment
+	if err := s.loadContacts(); err != nil {
+		logger.Warn("Failed to load contact list: %v", err)
+		// Continue with empty contact list
 	}
 
 	// Load existing config or create new one
@@ -82,6 +97,41 @@ func (s *Server) saveConfig() error {
 	return nil
 }
 
+// loadContacts loads the contact list from the CONTACT_LIST environment variable
+func (s *Server) loadContacts() error {
+	contactListJSON := os.Getenv("CONTACT_LIST")
+	if contactListJSON == "" {
+		// No contact list configured, use empty list
+		s.contacts = []Contact{}
+		return nil
+	}
+
+	var contacts []Contact
+	if err := json.Unmarshal([]byte(contactListJSON), &contacts); err != nil {
+		return fmt.Errorf("failed to parse CONTACT_LIST JSON: %w", err)
+	}
+
+	// Validate contact structure
+	for i, contact := range contacts {
+		if contact.Name == "" {
+			logger.Warn("CONTACT_LIST: Contact %d has empty name field", i+1)
+		}
+		if contact.Email == "" && contact.SMS == "" {
+			logger.Warn("CONTACT_LIST: Contact %d (%s) has neither email nor SMS configured", i+1, contact.Name)
+		}
+		if contact.Email != "" && !strings.Contains(contact.Email, "@") {
+			logger.Warn("CONTACT_LIST: Contact %d (%s) has invalid email format: %s", i+1, contact.Name, contact.Email)
+		}
+		if contact.SMS != "" && !strings.HasPrefix(contact.SMS, "+") {
+			logger.Warn("CONTACT_LIST: Contact %d (%s) SMS number should start with '+': %s", i+1, contact.Name, contact.SMS)
+		}
+	}
+
+	s.contacts = contacts
+	logger.Info("Loaded %d contacts from CONTACT_LIST", len(contacts))
+	return nil
+}
+
 // Start starts the alarm editor web server
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
@@ -104,6 +154,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/validate-json", s.handleValidateJSON)
 	mux.HandleFunc("/api/fields", s.handleGetFields)
 	mux.HandleFunc("/api/env-defaults", s.handleGetEnvDefaults)
+	mux.HandleFunc("/api/contacts", s.handleGetContacts)
 
 	addr := ":" + s.port
 	logger.Info("Starting Alarm Editor on http://localhost%s", addr)
@@ -376,9 +427,36 @@ func (s *Server) handleDeleteAlarm(w http.ResponseWriter, r *http.Request) {
 // handleGetTags returns all unique tags from all alarms
 func (s *Server) handleGetTags(w http.ResponseWriter, r *http.Request) {
 	tagSet := make(map[string]bool)
+
+	// Add tags from existing alarms
 	for _, a := range s.config.Alarms {
 		for _, tag := range a.Tags {
 			tagSet[tag] = true
+		}
+	}
+
+	// Add predefined tags from environment
+	predefinedTagsJSON := os.Getenv("TAG_LIST")
+	if predefinedTagsJSON != "" {
+		var predefinedTags []string
+		if err := json.Unmarshal([]byte(predefinedTagsJSON), &predefinedTags); err != nil {
+			logger.Warn("Failed to parse TAG_LIST JSON: %v", err)
+		} else {
+			// Validate tag format
+			for i, tag := range predefinedTags {
+				tag = strings.TrimSpace(tag)
+				if tag == "" {
+					logger.Warn("TAG_LIST: Tag %d is empty or whitespace-only", i+1)
+					continue
+				}
+				if strings.Contains(tag, " ") {
+					logger.Warn("TAG_LIST: Tag %d contains spaces (use hyphens or underscores): %s", i+1, tag)
+				}
+				if len(tag) > 50 {
+					logger.Warn("TAG_LIST: Tag %d is very long (%d chars), consider shortening: %s", i+1, len(tag), tag)
+				}
+				tagSet[tag] = true
+			}
 		}
 	}
 
@@ -386,6 +464,9 @@ func (s *Server) handleGetTags(w http.ResponseWriter, r *http.Request) {
 	for tag := range tagSet {
 		tags = append(tags, tag)
 	}
+
+	// Sort tags alphabetically
+	sort.Strings(tags)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tags)
@@ -572,4 +653,19 @@ func (s *Server) handleGetEnvDefaults(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(defaults)
+}
+
+// handleGetContacts returns the contact list for dropdowns
+func (s *Server) handleGetContacts(w http.ResponseWriter, r *http.Request) {
+	// Create a copy of contacts to sort
+	sortedContacts := make([]Contact, len(s.contacts))
+	copy(sortedContacts, s.contacts)
+
+	// Sort contacts alphabetically by name
+	sort.Slice(sortedContacts, func(i, j int) bool {
+		return sortedContacts[i].Name < sortedContacts[j].Name
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(sortedContacts)
 }
