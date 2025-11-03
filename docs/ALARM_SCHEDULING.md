@@ -156,7 +156,26 @@ Active based on sunrise and sunset times for your location.
 
 This is active from 30 minutes before sunrise until 30 minutes after sunset.
 
-**Location for Sun Calculations**: You can specify latitude/longitude in the schedule:
+**Location for Sun Calculations**:
+
+By default, the system will use your configured location (from the alarm manager). You have three options:
+
+1. **Use Weather Station Location** (recommended if you want alarms based on actual station location):
+
+```json
+{
+  "schedule": {
+    "type": "sun",
+    "sun_event": "sunrise",
+    "sun_event_end": "sunset",
+    "use_station_location": true
+  }
+}
+```
+
+This uses the latitude/longitude from your Tempest weather station. This is useful when your timezone differs from the station location, or when you want sunrise/sunset times precisely where the station is located.
+
+2. **Custom Location** (for specific coordinates):
 
 ```json
 {
@@ -170,7 +189,21 @@ This is active from 30 minutes before sunrise until 30 minutes after sunset.
 }
 ```
 
-If not specified, the system will use the weather station's location (if available).
+3. **Default Location** (omit all location fields):
+
+```json
+{
+  "schedule": {
+    "type": "sun",
+    "sun_event": "sunrise",
+    "sun_event_end": "sunset"
+  }
+}
+```
+
+Uses the default location configured for the alarm manager.
+
+**Note**: `use_station_location` takes precedence over custom `latitude`/`longitude` if both are specified.
 
 ## Examples
 
@@ -321,8 +354,9 @@ The schedule is set on a per-alarm basis by including a `schedule` object in the
 | `sun_event_end` | string | Optional for sun | `"sunrise"` or `"sunset"` (defines range end) |
 | `sun_offset` | integer | Optional for sun | Minutes offset from `sun_event` (negative=before, positive=after) |
 | `sun_offset_end` | integer | Optional for sun | Minutes offset from `sun_event_end` |
-| `latitude` | float | Optional for sun | Override latitude for sun calculations |
-| `longitude` | float | Optional for sun | Override longitude for sun calculations |
+| `use_station_location` | boolean | Optional for sun | Use weather station coordinates for sun calculations (default: false) |
+| `latitude` | float | Optional for sun | Custom latitude for sun calculations (ignored if `use_station_location` is true) |
+| `longitude` | float | Optional for sun | Custom longitude for sun calculations (ignored if `use_station_location` is true) |
 
 ## Validation
 

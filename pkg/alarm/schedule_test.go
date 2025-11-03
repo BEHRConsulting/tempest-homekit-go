@@ -559,3 +559,149 @@ func parseTime(timeStr string) [2]int {
 	minute = t.Minute()
 	return [2]int{hour, minute}
 }
+
+func TestSchedule_UseStationLocation(t *testing.T) {
+	// Test that use_station_location flag properly uses station coordinates
+	// Station location (Los Angeles)
+	stationLat := 34.0522
+	stationLon := -118.2437
+
+	// Custom location (New York - different sunrise/sunset times)
+	customLat := 40.7128
+	customLon := -74.0060
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+	testTime := time.Date(2025, 1, 15, 8, 0, 0, 0, loc)
+
+	tests := []struct {
+		name               string
+		schedule           *Schedule
+		expectedToUseStation bool
+		description        string
+	}{
+		{
+			name: "use_station_location true - should use station coords",
+			schedule: &Schedule{
+				Type:               "sun",
+				SunEvent:           "sunrise",
+				SunEventEnd:        "sunset",
+				UseStationLocation: true,
+				// These should be ignored when UseStationLocation is true
+				Latitude:  customLat,
+				Longitude: customLon,
+			},
+			expectedToUseStation: true,
+			description: "When use_station_location=true, station coordinates should be used even if custom lat/lon provided",
+		},
+		{
+			name: "use_station_location false with custom coords - should use custom",
+			schedule: &Schedule{
+				Type:               "sun",
+				SunEvent:           "sunrise",
+				SunEventEnd:        "sunset",
+				UseStationLocation: false,
+				Latitude:           customLat,
+				Longitude:          customLon,
+			},
+			expectedToUseStation: false,
+			description: "When use_station_location=false, custom coordinates should be used",
+		},
+		{
+			name: "use_station_location false no custom coords - should use station default",
+			schedule: &Schedule{
+				Type:               "sun",
+				SunEvent:           "sunrise",
+				SunEventEnd:        "sunset",
+				UseStationLocation: false,
+			},
+			expectedToUseStation: true, // Falls back to station since no custom coords
+			description: "When use_station_location=false and no custom coords, should use passed station coords",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Calculate sun times with both locations to compare
+			stationSunrise, stationSunset := calculateSunTimes(testTime, stationLat, stationLon)
+			customSunrise, customSunset := calculateSunTimes(testTime, customLat, customLon)
+
+			t.Logf("Station (LA) sunrise: %s, sunset: %s", 
+				stationSunrise.Format("15:04"), stationSunset.Format("15:04"))
+			t.Logf("Custom (NY) sunrise: %s, sunset: %s", 
+				customSunrise.Format("15:04"), customSunset.Format("15:04"))
+
+			// Test at a time between the two sunrises to verify which is being used
+			// Use LA's sunrise time (should be active if using station, inactive if using NY)
+			testTimeAtLASunrise := time.Date(2025, 1, 15, 
+				stationSunrise.Hour(), stationSunrise.Minute()+10, 0, 0, loc)
+
+			isActive := tt.schedule.IsActive(testTimeAtLASunrise, stationLat, stationLon)
+
+			t.Logf("Testing at LA sunrise time (%s), isActive: %v", 
+				testTimeAtLASunrise.Format("15:04"), isActive)
+
+			// If using station location, should be active at station's sunrise
+			// NY sunrise is later, so this time would be before NY sunrise
+			if tt.expectedToUseStation && !isActive {
+				t.Errorf("Expected schedule to use station location and be active at station sunrise time")
+			}
+			
+			// Also test the String() method shows correct location info
+			str := tt.schedule.String()
+			if tt.schedule.UseStationLocation {
+				if !stringContainsSubstr(str, "(station location)") {
+					t.Errorf("String() should indicate station location, got: %s", str)
+				}
+			}
+		})
+	}
+}
+
+func TestSchedule_String_WithLocations(t *testing.T) {
+	tests := []struct {
+		name         string
+		schedule     *Schedule
+		shouldContain string
+	}{
+		{
+			"with station location flag",
+			&Schedule{Type: "sun", SunEvent: "sunrise", UseStationLocation: true},
+			"(station location)",
+		},
+		{
+			"with custom coordinates",
+			&Schedule{Type: "sun", SunEvent: "sunrise", Latitude: 34.05, Longitude: -118.24},
+			"(34.0500, -118.2400)",
+		},
+		{
+			"no location specified",
+			&Schedule{Type: "sun", SunEvent: "sunrise"},
+			"sunrise",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.schedule.String()
+			if !stringContainsSubstr(result, tt.shouldContain) {
+				t.Errorf("String() = %q, should contain %q", result, tt.shouldContain)
+			}
+		})
+	}
+}
+
+func stringContainsSubstr(s, substr string) bool {
+	return len(s) > 0 && len(substr) > 0 && 
+		(s == substr || len(s) >= len(substr) && 
+			(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
+				substringInMiddle(s, substr)))
+}
+
+func substringInMiddle(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

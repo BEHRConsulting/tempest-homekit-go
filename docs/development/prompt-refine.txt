@@ -159,7 +159,7 @@
 
 [] Homekit QR code not working
     
-[] Lets add a per-alarm scheduling system. daily by hour, sunrise, sunset, days per week, start time, end time. Any other standard scheduled options? I.e.: (1) Every date from sunrise to sunset. (2) Monday through Friday from 10:00-20:00. (3) No schedule defaults to Everyday, all day.
+[x] Lets add a per-alarm scheduling system. daily by hour, sunrise, sunset, days per week, start time, end time. Any other standard scheduled options? I.e.: (1) Every date from sunrise to sunset. (2) Monday through Friday from 10:00-20:00. (3) No schedule defaults to Everyday, all day.
 
 [] Lets add deleivery method to add a JSON record to local/remote Maria/MySQL database using a secure protocol. Add checkbox to allow fallback to plain text. Use a uuid primary key, index timestamp, alarm name, then json blob that contains all weather sensors. .env should have database host, database, user, password. Add --test-db. In the readme.md create a section with example database create command and sample data. Show that the db server should be run with --require_secure_transport or equivalent. The user should be created with the min permissions to insert a record.
 

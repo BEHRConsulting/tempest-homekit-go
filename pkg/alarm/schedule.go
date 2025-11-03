@@ -34,6 +34,11 @@ type Schedule struct {
 	// Location for sun calculations (latitude, longitude)
 	Latitude  float64 `json:"latitude,omitempty"`
 	Longitude float64 `json:"longitude,omitempty"`
+
+	// UseStationLocation - if true, use the weather station's coordinates for sun calculations
+	// instead of the latitude/longitude specified above or the manager's default location.
+	// This is useful when you want sunrise/sunset times based on the actual station location.
+	UseStationLocation bool `json:"use_station_location,omitempty"`
 }
 
 // IsActive checks if the alarm should be active at the given time
@@ -122,11 +127,19 @@ func (s *Schedule) isActiveWeekly(now time.Time) bool {
 
 // isActiveSun checks if current time is within sunrise/sunset based schedule
 func (s *Schedule) isActiveSun(now time.Time, lat, lon float64) bool {
-	// Use schedule's lat/lon if provided, otherwise use provided defaults
-	if s.Latitude != 0 || s.Longitude != 0 {
-		lat = s.Latitude
-		lon = s.Longitude
+	// Priority order for location:
+	// 1. If UseStationLocation is true, use lat/lon passed from manager (station location)
+	// 2. If schedule has explicit lat/lon, use those
+	// 3. Otherwise use manager's default lat/lon
+	
+	if !s.UseStationLocation {
+		// Only override if not using station location and schedule has explicit coordinates
+		if s.Latitude != 0 || s.Longitude != 0 {
+			lat = s.Latitude
+			lon = s.Longitude
+		}
 	}
+	// If UseStationLocation is true, we use the lat/lon passed in (from manager/station)
 
 	// If no location provided, can't calculate sun times
 	if lat == 0 && lon == 0 {
@@ -365,6 +378,13 @@ func (s *Schedule) String() string {
 			}
 		}
 
+		locationStr := ""
+		if s.UseStationLocation {
+			locationStr = " (station location)"
+		} else if s.Latitude != 0 || s.Longitude != 0 {
+			locationStr = fmt.Sprintf(" (%.4f, %.4f)", s.Latitude, s.Longitude)
+		}
+
 		if s.SunEventEnd != "" {
 			endOffsetStr := ""
 			if s.SunOffsetEnd != 0 {
@@ -374,10 +394,10 @@ func (s *Schedule) String() string {
 					endOffsetStr = fmt.Sprintf(" %dm", s.SunOffsetEnd)
 				}
 			}
-			return fmt.Sprintf("%s%s to %s%s", s.SunEvent, offsetStr, s.SunEventEnd, endOffsetStr)
+			return fmt.Sprintf("%s%s to %s%s%s", s.SunEvent, offsetStr, s.SunEventEnd, endOffsetStr, locationStr)
 		}
 
-		return fmt.Sprintf("After %s%s", s.SunEvent, offsetStr)
+		return fmt.Sprintf("After %s%s%s", s.SunEvent, offsetStr, locationStr)
 
 	default:
 		return fmt.Sprintf("Unknown schedule type: %s", s.Type)

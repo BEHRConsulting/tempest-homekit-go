@@ -140,12 +140,13 @@
       "condition": "uv >= 8",
       "cooldown": 10800,
       "schedule": {
-        "_comment": "Only during sunlight hours (sunrise to sunset)",
+        "_comment": "Only during sunlight hours (sunrise to sunset) at the weather station's location",
         "type": "sun",
         "sun_event": "sunrise",
         "sun_event_end": "sunset",
         "sun_offset": 0,
-        "sun_offset_end": 0
+        "sun_offset_end": 0,
+        "use_station_location": true
       },
       "channels": [
         {

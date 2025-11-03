@@ -33,6 +33,8 @@ type Station struct {
 	StationID   int      `json:"station_id"`
 	Name        string   `json:"name"`
 	StationName string   `json:"station_name"`
+	Latitude    float64  `json:"latitude"`
+	Longitude   float64  `json:"longitude"`
 	Devices     []Device `json:"devices"`
 }
 
