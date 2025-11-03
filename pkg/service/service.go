@@ -199,9 +199,9 @@ func StartService(cfg *config.Config, version string) error {
 		logger.Info("Using provided station URL for station ID: %d", stationID)
 	}
 
-	// Initialize alarm manager if alarms are configured
+	// Initialize alarm manager if alarms are configured and not disabled
 	var alarmManager *alarm.Manager
-	if cfg.Alarms != "" {
+	if cfg.Alarms != "" && !cfg.DisableAlarms && !cfg.TestAPILocal {
 		logger.Info("Initializing alarm manager with config: %s", cfg.Alarms)
 		var err error
 		// Use station Name if StationName is empty (API sometimes only populates Name field)

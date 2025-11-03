@@ -531,6 +531,7 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `--alarms-edit`: Run alarm editor for specified config file: @filename.json (default: none)
 - `--alarms-edit-port`: Port for alarm editor web UI (default: 8081). Env: ALARMS_EDIT_PORT
 - `--cleardb`: Clear HomeKit database and reset device pairing
+- `--disable-alarms`: Disable alarm initialization and processing (useful for testing or reducing resource usage)
 - `--disable-homekit`: Disable HomeKit services and run web console only
 - `--elevation`: Station elevation in meters (default: auto-detect, valid range: -430m to 8848m)
 - `--env`: Custom environment file to load (default: ".env"). Env: ENV_FILE
@@ -876,6 +877,26 @@ Tests all WeatherFlow API endpoints:
 - Current observations
 - Historical data retrieval
 - Performance metrics
+
+**Test Local Web Server API Endpoints** (`--test-api-local`)
+```bash
+# Test with default port 8084 (avoids conflicts with running service)
+./tempest-homekit-go --test-api-local --use-generated-weather
+
+# Test with custom port
+./tempest-homekit-go --test-api-local --web-port 9090 --use-generated-weather
+
+# Test with debug output
+./tempest-homekit-go --test-api-local --use-generated-weather --loglevel debug
+```
+Tests all local web server API endpoints:
+- **Standalone Test Mode**: Runs in isolation on port 8084 by default (avoids conflicts with port 8080)
+- **No HomeKit**: HomeKit services automatically disabled for testing
+- **No Alarms**: Alarm system automatically disabled for testing
+- **Clean Output**: Service logs suppressed unless `--loglevel debug` is specified
+- **Endpoints Tested**: /api/weather, /api/status, /api/alarm-status, /api/history, /api/units, /api/generate-weather
+- **Custom Port**: Override default port with `--web-port` flag
+- **Use Cases**: Validate API responses, test web integrations, debug endpoint issues without affecting running service
 
 **Test UDP Broadcast Listener** (`--test-udp [seconds]`)
 ```bash

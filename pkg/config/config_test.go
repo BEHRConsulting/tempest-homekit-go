@@ -262,10 +262,143 @@ func TestClearDatabaseNonExistentDir(t *testing.T) {
 	}
 }
 
+// TestValidateTokenAndStationRequired tests that both token and station are required for API mode
+func TestValidateTokenAndStationRequired(t *testing.T) {
+	tests := []struct {
+		name        string
+		cfg         *Config
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "API mode with token but no station",
+			cfg: &Config{
+				Token:       "test-token",
+				StationName: "",
+				LogLevel:    "error",
+				Units:       "imperial",
+				WebPort:     "8080",
+				Pin:         "12345678",
+			},
+			expectError: true,
+			errorMsg:    "both --token and --station are required",
+		},
+		{
+			name: "API mode with station but no token",
+			cfg: &Config{
+				Token:       "",
+				StationName: "Test Station",
+				LogLevel:    "error",
+				Units:       "imperial",
+				WebPort:     "8080",
+				Pin:         "12345678",
+			},
+			expectError: true,
+			errorMsg:    "WeatherFlow API token is required",
+		},
+		{
+			name: "API mode with both token and station",
+			cfg: &Config{
+				Token:       "test-token",
+				StationName: "Test Station",
+				LogLevel:    "error",
+				Units:       "imperial",
+				WebPort:     "8080",
+				Pin:         "12345678",
+			},
+			expectError: false,
+		},
+		{
+			name: "Generated weather mode without token",
+			cfg: &Config{
+				Token:               "",
+				StationName:         "Generated",
+				UseGeneratedWeather: true,
+				LogLevel:            "error",
+				Units:               "imperial",
+				WebPort:             "8080",
+				Pin:                 "12345678",
+			},
+			expectError: false,
+		},
+		{
+			name: "UDP stream mode without token",
+			cfg: &Config{
+				Token:       "",
+				StationName: "Test Station",
+				UDPStream:   true,
+				LogLevel:    "error",
+				Units:       "imperial",
+				WebPort:     "8080",
+				Pin:         "12345678",
+			},
+			expectError: false,
+		},
+		{
+			name: "Custom station URL without token",
+			cfg: &Config{
+				Token:       "",
+				StationName: "Test Station",
+				StationURL:  "http://localhost:8080/api/weather",
+				LogLevel:    "error",
+				Units:       "imperial",
+				WebPort:     "8080",
+				Pin:         "12345678",
+			},
+			expectError: false,
+		},
+		{
+			name: "Alarm editor mode without token or station",
+			cfg: &Config{
+				Token:       "",
+				StationName: "",
+				AlarmsEdit:  "@alarms.json",
+				LogLevel:    "error",
+				Units:       "imperial",
+				WebPort:     "8080",
+				Pin:         "12345678",
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.cfg)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error containing '%s', got nil", tt.errorMsg)
+				} else if tt.errorMsg != "" && !contains(err.Error(), tt.errorMsg) {
+					t.Errorf("Expected error containing '%s', got '%s'", tt.errorMsg, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error, got: %v", err)
+				}
+			}
+		})
+	}
+}
+
 // Helper function for floating point comparison
 func abs(x float64) float64 {
 	if x < 0 {
 		return -x
 	}
 	return x
+}
+
+// Helper function for substring checking
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && indexOfSubstring(s, substr) >= 0))
+}
+
+func indexOfSubstring(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }

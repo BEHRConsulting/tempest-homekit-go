@@ -91,6 +91,10 @@ fmt.Printf("Elevation: %.2f meters\n", elevation) // Output: 300.00 meters
 | `--elevation` | string | "" | Station elevation (e.g., "1000ft", "300m") |
 | `--read-history` | bool | false | Load historical weather data (preloads observations up to `HISTORY_POINTS`) |
 | `--cleardb` | bool | false | Reset HomeKit database |
+| `--disable-alarms` | bool | false | Disable alarm initialization and processing |
+| `--disable-homekit` | bool | false | Disable HomeKit services (web console only mode) |
+| `--test-api` | bool | false | Test WeatherFlow API endpoints and exit |
+| `--test-api-local` | bool | false | Test local web server API endpoints and exit (uses port 8084 by default) |
 
 ## Environment Variables
 

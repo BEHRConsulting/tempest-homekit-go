@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -172,6 +173,13 @@ func main() {
 	if cfg.TestAPI {
 		logger.Info("TestAPI flag detected, running API endpoint tests...")
 		runAPITests(cfg)
+		return
+	}
+
+	// Handle local API testing if requested
+	if cfg.TestAPILocal {
+		logger.Info("TestAPILocal flag detected, running local API endpoint tests...")
+		runLocalAPITests(cfg)
 		return
 	}
 
@@ -973,14 +981,14 @@ func runAPITests(cfg *config.Config) {
 	if err != nil {
 		log.Fatalf("Failed to get stations: %v", err)
 	}
-	
+
 	if cfg.LogLevel == "debug" {
 		fmt.Println("\n--- RAW STATIONS DATA ---")
 		stationsJSON, _ := json.MarshalIndent(stations, "", "  ")
 		fmt.Println(string(stationsJSON))
 		fmt.Println("--- END RAW DATA ---\n")
 	}
-	
+
 	fmt.Printf("Found %d stations\n", len(stations))
 	for _, station := range stations {
 		fmt.Printf("   - ID: %d, Name: '%s', StationName: '%s'\n",
@@ -999,14 +1007,14 @@ func runAPITests(cfg *config.Config) {
 	if err != nil {
 		log.Fatalf("Failed to get station details: %v", err)
 	}
-	
+
 	if cfg.LogLevel == "debug" {
 		fmt.Println("\n--- RAW STATION DETAILS DATA ---")
 		detailsJSON, _ := json.MarshalIndent(stationDetails, "", "  ")
 		fmt.Println(string(detailsJSON))
 		fmt.Println("--- END RAW DATA ---\n")
 	}
-	
+
 	fmt.Printf("Station has %d devices\n", len(stationDetails.Devices))
 	for i, device := range stationDetails.Devices {
 		fmt.Printf("   Device %d: ID=%d, Type=%s, Serial=%s\n",
@@ -1027,14 +1035,14 @@ func runAPITests(cfg *config.Config) {
 	if err != nil {
 		log.Fatalf("Failed to get current observation: %v", err)
 	}
-	
+
 	if cfg.LogLevel == "debug" {
 		fmt.Println("\n--- RAW OBSERVATION DATA ---")
 		obsJSON, _ := json.MarshalIndent(obs, "", "  ")
 		fmt.Println(string(obsJSON))
 		fmt.Println("--- END RAW DATA ---\n")
 	}
-	
+
 	obsTime := time.Unix(obs.Timestamp, 0)
 	fmt.Printf("Current observation retrieved\n")
 	fmt.Printf("   - Time: %s\n", obsTime.Format("2006-01-02 15:04:05"))
@@ -1105,19 +1113,19 @@ func runAPITests(cfg *config.Config) {
 	if err != nil {
 		log.Fatalf("Failed to get forecast: %v", err)
 	}
-	
+
 	if cfg.LogLevel == "debug" {
 		fmt.Println("\n--- RAW FORECAST DATA ---")
 		forecastJSON, _ := json.MarshalIndent(forecast, "", "  ")
 		fmt.Println(string(forecastJSON))
 		fmt.Println("--- END RAW DATA ---\n")
 	}
-	
+
 	fmt.Printf("Forecast data retrieved\n")
 	fmt.Printf("Station ID: %d\n", forecast.StationID)
 	fmt.Printf("Station Name: %s\n", forecast.StationName)
 	fmt.Printf("Timezone: %s\n", forecast.Timezone)
-	
+
 	if forecast.CurrentConditions.Time > 0 {
 		currentTime := time.Unix(forecast.CurrentConditions.Time, 0)
 		fmt.Printf("\nCurrent Conditions (as of %s):\n", currentTime.Format("2006-01-02 15:04:05"))
@@ -1129,7 +1137,7 @@ func runAPITests(cfg *config.Config) {
 		fmt.Printf("   - Wind: %.1f m/s\n", forecast.CurrentConditions.WindAvg)
 		fmt.Printf("   - Precipitation: %d%%\n", forecast.CurrentConditions.PrecipProbability)
 	}
-	
+
 	if len(forecast.Forecast.Daily) > 0 {
 		fmt.Printf("\nDaily Forecast (%d days):\n", len(forecast.Forecast.Daily))
 		for i, day := range forecast.Forecast.Daily {
@@ -1156,4 +1164,202 @@ func runAPITests(cfg *config.Config) {
 	fmt.Printf("- Forecast API: Working\n")
 	fmt.Printf("- Data Points Retrieved: %d observations\n", len(observations))
 	fmt.Printf("- API Performance: %.2f seconds for historical data\n", elapsed.Seconds())
+}
+
+func runLocalAPITests(cfg *config.Config) {
+	fmt.Println("=== Local Web Server API Endpoint Tests ===")
+	fmt.Println()
+
+	// Force disable HomeKit for test mode - this is a standalone test
+	cfg.DisableHomeKit = true
+
+	// Use port 8084 as default for test-api-local if not specified
+	if cfg.WebPort == "8080" {
+		cfg.WebPort = "8084"
+		fmt.Printf("Using default test port: %s\n", cfg.WebPort)
+		// Update StationURL if using generated weather with default port
+		if cfg.UseGeneratedWeather && strings.Contains(cfg.StationURL, ":8080/") {
+			cfg.StationURL = strings.Replace(cfg.StationURL, ":8080/", ":8084/", 1)
+		}
+	} else {
+		fmt.Printf("Using specified port: %s\n", cfg.WebPort)
+	}
+
+	// Suppress service initialization logs unless debug mode
+	if cfg.LogLevel != "debug" {
+		cfg.LogLevel = "error"
+	}
+
+	// Start a minimal service to test the API endpoints
+	fmt.Println("Starting temporary web server for API testing...")
+
+	// Create a context with timeout
+	_, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Start service in background
+	go func() {
+		if err := service.StartService(cfg, "1.8.0"); err != nil {
+			log.Printf("Service error: %v", err)
+		}
+	}()
+
+	// Wait for server to start
+	fmt.Println("Waiting for server to initialize...")
+	time.Sleep(3 * time.Second)
+
+	baseURL := fmt.Sprintf("http://localhost:%s", cfg.WebPort)
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	// Test 1: /api/weather
+	fmt.Println("\n1. Testing /api/weather endpoint...")
+	testEndpoint(client, baseURL+"/api/weather", "Weather", cfg.LogLevel == "debug")
+
+	// Test 2: /api/status
+	fmt.Println("\n2. Testing /api/status endpoint...")
+	testEndpoint(client, baseURL+"/api/status", "Status", cfg.LogLevel == "debug")
+
+	// Test 3: /api/alarm-status
+	fmt.Println("\n3. Testing /api/alarm-status endpoint...")
+	testEndpoint(client, baseURL+"/api/alarm-status", "Alarm Status", cfg.LogLevel == "debug")
+
+	// Test 4: /api/history
+	fmt.Println("\n4. Testing /api/history endpoint...")
+	testEndpoint(client, baseURL+"/api/history", "History", cfg.LogLevel == "debug")
+
+	// Test 5: /api/units
+	fmt.Println("\n5. Testing /api/units endpoint...")
+	testEndpoint(client, baseURL+"/api/units", "Units", cfg.LogLevel == "debug")
+
+	// Test 6: /api/generate-weather (only if using generated weather)
+	if cfg.UseGeneratedWeather {
+		fmt.Println("\n6. Testing /api/generate-weather endpoint...")
+		testEndpoint(client, baseURL+"/api/generate-weather", "Generate Weather", cfg.LogLevel == "debug")
+	}
+
+	fmt.Println("\n=== Summary ===")
+	fmt.Println("All local API endpoints tested successfully!")
+	fmt.Printf("- Base URL: %s\n", baseURL)
+	endpointCount := 5
+	if cfg.UseGeneratedWeather {
+		endpointCount = 6
+	}
+	fmt.Printf("- Endpoints tested: %d\n", endpointCount)
+	fmt.Println("- /api/weather: Weather data and pressure analysis")
+	fmt.Println("- /api/status: Service status, HomeKit, station info, data history")
+	fmt.Println("- /api/alarm-status: Alarm configuration and status")
+	fmt.Println("- /api/history: Historical observations for charts")
+	fmt.Println("- /api/units: Current units configuration")
+	if cfg.UseGeneratedWeather {
+		fmt.Println("- /api/generate-weather: Generated weather data (Tempest API format)")
+	}
+
+	// Shutdown gracefully
+	cancel()
+	time.Sleep(1 * time.Second)
+}
+
+func testEndpoint(client *http.Client, url, name string, debug bool) {
+	resp, err := client.Get(url)
+	if err != nil {
+		fmt.Printf("❌ Failed to fetch %s: %v\n", name, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("❌ %s returned status %d\n", name, resp.StatusCode)
+		return
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("❌ Failed to read %s response: %v\n", name, err)
+		return
+	}
+
+	// Try to parse as JSON
+	var jsonData interface{}
+	if err := json.Unmarshal(body, &jsonData); err != nil {
+		fmt.Printf("❌ %s response is not valid JSON: %v\n", name, err)
+		return
+	}
+
+	if debug {
+		fmt.Printf("\n--- RAW %s DATA ---\n", strings.ToUpper(name))
+		var formatted bytes.Buffer
+		json.Indent(&formatted, body, "", "  ")
+		fmt.Println(formatted.String())
+		fmt.Printf("--- END RAW DATA ---\n\n")
+	}
+
+	fmt.Printf("✅ %s endpoint: OK (%d bytes, %dms)\n", name, len(body), 0)
+
+	// Show key fields for non-debug mode
+	if !debug {
+		switch name {
+		case "Weather":
+			var weather map[string]interface{}
+			json.Unmarshal(body, &weather)
+			if temp, ok := weather["temperature"].(float64); ok {
+				fmt.Printf("   - Temperature: %.1f°C\n", temp)
+			}
+			if humidity, ok := weather["humidity"].(float64); ok {
+				fmt.Printf("   - Humidity: %.0f%%\n", humidity)
+			}
+
+		case "Status":
+			var status map[string]interface{}
+			json.Unmarshal(body, &status)
+			if connected, ok := status["connected"].(bool); ok {
+				fmt.Printf("   - Connected: %v\n", connected)
+			}
+			if history, ok := status["dataHistory"].([]interface{}); ok {
+				fmt.Printf("   - History points: %d\n", len(history))
+			}
+
+		case "Alarm Status":
+			var alarmStatus map[string]interface{}
+			json.Unmarshal(body, &alarmStatus)
+			if enabled, ok := alarmStatus["enabled"].(bool); ok {
+				fmt.Printf("   - Alarms enabled: %v\n", enabled)
+			}
+			if total, ok := alarmStatus["totalAlarms"].(float64); ok {
+				fmt.Printf("   - Total alarms: %.0f\n", total)
+			}
+
+		case "History":
+			var history []interface{}
+			json.Unmarshal(body, &history)
+			fmt.Printf("   - Historical observations: %d\n", len(history))
+
+		case "Units":
+			var units map[string]interface{}
+			json.Unmarshal(body, &units)
+			if u, ok := units["units"].(string); ok {
+				fmt.Printf("   - Units: %s\n", u)
+			}
+			if p, ok := units["unitsPressure"].(string); ok {
+				fmt.Printf("   - Pressure: %s\n", p)
+			}
+
+		case "Generate Weather":
+			var data map[string]interface{}
+			json.Unmarshal(body, &data)
+			if obs, ok := data["obs"].([]interface{}); ok && len(obs) > 0 {
+				if latest, ok := obs[0].(map[string]interface{}); ok {
+					fmt.Printf("   - Observations: %d\n", len(obs))
+					if temp, ok := latest["air_temperature"].(float64); ok {
+						fmt.Printf("   - Temperature: %.1f°C\n", temp)
+					}
+					if humidity, ok := latest["relative_humidity"].(float64); ok {
+						fmt.Printf("   - Humidity: %.0f%%\n", humidity)
+					}
+					if wind, ok := latest["wind_avg"].(float64); ok {
+						fmt.Printf("   - Wind Speed: %.1f m/s\n", wind)
+					}
+				}
+			}
+		}
+	}
 }

@@ -27,9 +27,11 @@ type Config struct {
 	ClearDB             bool
 	DisableHomeKit      bool // Disable HomeKit services and run web console only
 	DisableWebConsole   bool // Disable web server (HomeKit only mode)
+	DisableAlarms       bool // Disable alarm initialization and processing
 	Sensors             string
 	ReadHistory         bool
 	TestAPI             bool
+	TestAPILocal        bool    // Test local web API endpoints and exit
 	TestEmail           string  // Send test email to this address and exit
 	TestSMS             string  // Send test SMS to this phone number and exit
 	TestWebhook         string  // Send test webhook to this URL and exit
@@ -135,6 +137,8 @@ ALARM OPTIONS:
   --alarms <config>             Enable alarm system with configuration
                                 Format: @filename.json or inline JSON string
                                 Env: ALARMS
+  --disable-alarms              Disable alarm initialization and processing
+                                Useful for testing or reducing resource usage
   --alarms-edit <file>          Run alarm editor for config file (standalone mode)
                                 Format: @filename.json
                                 Opens web UI at http://localhost:<port>
@@ -155,6 +159,8 @@ LOGGING & DEBUG OPTIONS:
 
 TESTING OPTIONS:
   --test-api                    Test WeatherFlow API endpoints and exit
+  --test-api-local              Test local web server API endpoints and exit
+                                Uses port 8084 by default (override with --web-port)
   --test-email <email>          Send test email to specified address and exit
   --test-sms <phone>            Send test SMS to specified phone number and exit
   --test-webhook <url>          Send test webhook to specified URL and exit
@@ -176,28 +182,28 @@ EXAMPLES:
   tempest-homekit-go --token "your-token" --station "My Station"
 
   # Offline mode with UDP stream (survives internet outages)
-  tempest-homekit-go --token "your-token" --udp-stream --disable-internet
+  tempest-homekit-go --token "your-token" --station "My Station" --udp-stream --disable-internet
 
   # Testing with simulated weather data
-  tempest-homekit-go --use-generated-weather
+  tempest-homekit-go --use-generated-weather --station "Generated"
 
   # Hybrid mode: UDP for real-time + API for forecast
-  tempest-homekit-go --token "your-token" --udp-stream --read-history
+  tempest-homekit-go --token "your-token" --station "My Station" --udp-stream --read-history
 
   # Web console only (no HomeKit)
-  tempest-homekit-go --token "your-token" --disable-homekit
+  tempest-homekit-go --token "your-token" --station "My Station" --disable-homekit
 
   # HomeKit only (no web console)
-  tempest-homekit-go --token "your-token" --disable-webconsole
+  tempest-homekit-go --token "your-token" --station "My Station" --disable-webconsole
 
   # Custom sensors with debug logging
-  tempest-homekit-go --token "your-token" --sensors "temp,humidity,pressure" --loglevel debug
+  tempest-homekit-go --token "your-token" --station "My Station" --sensors "temp,humidity,pressure" --loglevel debug
 
   # Filter logs for UDP messages only
-  tempest-homekit-go --token "your-token" --udp-stream --loglevel debug --logfilter "UDP"
+  tempest-homekit-go --token "your-token" --station "My Station" --udp-stream --loglevel debug --logfilter "UDP"
 
   # Run with alarm notifications
-  tempest-homekit-go --token "your-token" --alarms @alarms.json
+  tempest-homekit-go --token "your-token" --station "My Station" --alarms @alarms.json
 
   # Edit alarm configuration (standalone)
   tempest-homekit-go --alarms-edit @alarms.json --alarms-edit-port 8081
@@ -257,8 +263,10 @@ func LoadConfig() *Config {
 	flag.StringVar(&elevationStr, "elevation", "", "Station elevation (e.g., 903ft, 275m). If not provided, elevation will be auto-detected from coordinates")
 	flag.BoolVar(&cfg.ClearDB, "cleardb", false, "Clear HomeKit database and reset device pairing")
 	flag.BoolVar(&cfg.DisableHomeKit, "disable-homekit", false, "Disable HomeKit services and run web console only")
+	flag.BoolVar(&cfg.DisableAlarms, "disable-alarms", false, "Disable alarm initialization and processing")
 	flag.BoolVar(&cfg.ReadHistory, "read-history", cfg.ReadHistory, "Preload historical observations from Tempest API up to HISTORY_POINTS")
 	flag.BoolVar(&cfg.TestAPI, "test-api", false, "Test WeatherFlow API endpoints and data points")
+	flag.BoolVar(&cfg.TestAPILocal, "test-api-local", false, "Test local web server API endpoints and exit")
 	flag.StringVar(&cfg.TestEmail, "test-email", "", "Send a test email to the specified address and exit")
 	flag.StringVar(&cfg.TestSMS, "test-sms", "", "Send a test SMS to the specified phone number (E.164 format) and exit")
 	flag.StringVar(&cfg.TestWebhook, "test-webhook", "", "Send a test webhook to the specified URL and exit")
@@ -436,14 +444,19 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("invalid HomeKit PIN '%s'. PIN must contain only digits", cfg.Pin)
 	}
 
-	// Validate required fields
+	// Validate required fields for WeatherFlow API mode
 	// The WeatherFlow API token is required only when using the WeatherFlow API as the
 	// data source. If a custom station URL is provided via --station-url, the
 	// --use-generated-weather flag is set, or --udp-stream is enabled, a WeatherFlow token is not necessary.
 	// Also skip token requirement for alarm editor mode.
-	if cfg.StationURL == "" && !cfg.UseGeneratedWeather && !cfg.UDPStream && cfg.AlarmsEdit == "" {
+	usingWeatherFlowAPI := cfg.StationURL == "" && !cfg.UseGeneratedWeather && !cfg.UDPStream && cfg.AlarmsEdit == ""
+
+	if usingWeatherFlowAPI {
 		if cfg.Token == "" {
 			return fmt.Errorf("WeatherFlow API token is required when using the WeatherFlow API as the data source. Set via --token flag or TEMPEST_TOKEN environment variable, or use --station-url/--use-generated-weather/--udp-stream for token-less modes")
+		}
+		if cfg.StationName == "" {
+			return fmt.Errorf("both --token and --station are required when using the WeatherFlow API. Set station via --station flag or TEMPEST_STATION_NAME environment variable")
 		}
 	}
 
@@ -467,7 +480,8 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("--disable-homekit and --disable-webconsole cannot be used together (would disable everything)")
 	}
 
-	if cfg.StationName == "" && cfg.AlarmsEdit == "" {
+	// Station name is required for non-alarm-editor modes (already checked above for API mode)
+	if cfg.StationName == "" && cfg.AlarmsEdit == "" && !usingWeatherFlowAPI {
 		return fmt.Errorf("station name is required. Set via --station flag or TEMPEST_STATION_NAME environment variable")
 	}
 

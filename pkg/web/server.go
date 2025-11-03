@@ -1862,20 +1862,21 @@ func (ws *WebServer) handleGenerateWeatherAPI(w http.ResponseWriter, r *http.Req
 	}
 
 	ws.mu.RLock()
-	defer ws.mu.RUnlock()
+	generator := ws.weatherGenerator
+	ws.mu.RUnlock()
 
 	// Check if we have a weather generator
-	if ws.weatherGenerator == nil {
+	if generator == nil {
 		ws.logDebug("No weather generator available - cannot generate weather data")
 		http.Error(w, "Weather generator not available", http.StatusServiceUnavailable)
 		return
 	}
 
 	// Ensure we're in current weather mode (not historical)
-	ws.weatherGenerator.SetCurrentWeatherMode()
+	generator.SetCurrentWeatherMode()
 
 	// Generate a fresh observation
-	obs := ws.weatherGenerator.GenerateObservation()
+	obs := generator.GenerateObservation()
 	if obs == nil {
 		ws.logDebug("Failed to generate weather observation")
 		http.Error(w, "Failed to generate weather data", http.StatusInternalServerError)

@@ -269,7 +269,7 @@ func TestValidateConfigEmptyRequiredFields(t *testing.T) {
 		expectError string
 	}{
 		{"empty token", "", "Test Station", "WeatherFlow API token is required"},
-		{"empty station name", "valid-token", "", "station name is required"},
+		{"empty station name", "valid-token", "", "both --token and --station are required"},
 		{"both empty", "", "", "WeatherFlow API token is required"}, // Should catch token first
 	}
 

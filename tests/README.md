@@ -41,6 +41,28 @@ Scripts
 - `test-wind-previous-value.sh` — long run to verify previous/current wind values are handled correctly.
 - `test-enhanced-alarm-message.sh` — long run to exercise enhanced alarm message formatting.
 
+Testing Flags
+-------------
+The application provides several standalone testing flags that run in isolation without affecting existing services:
+
+- `--test-api` — Tests WeatherFlow API endpoints (station discovery, observations, historical data)
+- `--test-api-local` — Tests local web server API endpoints (uses port 8084 by default, avoids conflicts)
+  - Automatically disables HomeKit and alarms for clean testing
+  - Can override port with `--web-port` flag
+  - Suppresses service logs unless `--loglevel debug` is specified
+- `--test-email <email>` — Tests email notification delivery
+- `--test-sms <phone>` — Tests SMS notification delivery
+- `--test-webhook <url>` — Tests webhook notification delivery
+- `--test-console` — Tests console notification delivery
+- `--test-syslog` — Tests syslog notification delivery
+- `--test-oslog` — Tests macOS OSLog notification delivery
+- `--test-eventlog` — Tests Windows Event Log notification delivery
+- `--test-homekit` — Tests HomeKit bridge setup (dry-run, doesn't start bridge)
+- `--test-web-status` — Tests web status scraping capability
+- `--test-alarm <name>` — Tests a specific alarm trigger
+
+All test flags exit after completion and do not start the main service.
+
 Contributing
 ------------
 If you convert any script into a unit/integration test under `pkg/` or `tests/` (Go), please
