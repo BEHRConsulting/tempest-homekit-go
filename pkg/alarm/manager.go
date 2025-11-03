@@ -24,6 +24,8 @@ type Manager struct {
 	notifierFactory *NotifierFactory
 	watcher         *fsnotify.Watcher
 	stationName     string
+	latitude        float64 // Station latitude for sun calculations
+	longitude       float64 // Station longitude for sun calculations
 	mu              sync.RWMutex
 	stopChan        chan struct{}
 }
@@ -40,6 +42,8 @@ func NewManager(configInput string, stationName string) (*Manager, error) {
 		evaluator:       NewEvaluator(),
 		notifierFactory: NewNotifierFactory(config),
 		stationName:     stationName,
+		latitude:        0, // Will be set via SetLocation if available
+		longitude:       0,
 		stopChan:        make(chan struct{}),
 		lastLoadTime:    time.Now(),
 	}
@@ -327,6 +331,15 @@ func (m *Manager) ProcessObservation(obs *weather.Observation) {
 			continue
 		}
 
+		// Check if alarm is within its schedule
+		if alarm.Schedule != nil {
+			now := time.Now()
+			if !alarm.Schedule.IsActive(now, m.latitude, m.longitude) {
+				logger.Debug("Alarm %s outside scheduled time: %s", alarm.Name, alarm.Schedule.String())
+				continue
+			}
+		}
+
 		if !alarm.CanFire() {
 			logger.Debug("Alarm %s in cooldown, skipping (last fired: %v)", alarm.Name, alarm.lastFired)
 			continue
@@ -449,4 +462,20 @@ func (m *Manager) GetLastLoadTime() time.Time {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.lastLoadTime
+}
+
+// SetLocation sets the geographic location for sunrise/sunset calculations in schedules
+func (m *Manager) SetLocation(latitude, longitude float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.latitude = latitude
+	m.longitude = longitude
+	logger.Debug("Alarm manager location set to: lat=%.4f, lon=%.4f", latitude, longitude)
+}
+
+// GetLocation returns the current location settings
+func (m *Manager) GetLocation() (latitude, longitude float64) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.latitude, m.longitude
 }

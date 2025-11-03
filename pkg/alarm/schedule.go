@@ -1,0 +1,405 @@
+package alarm
+
+import (
+	"encoding/json"
+	"fmt"
+	"math"
+	"time"
+)
+
+// Schedule defines when an alarm is active
+type Schedule struct {
+	// Type of schedule: "always" (default), "time", "daily", "weekly", "sun"
+	Type string `json:"type,omitempty"`
+
+	// TimeSchedule: specific time range (24-hour format)
+	// Example: {"start": "09:00", "end": "17:00"}
+	StartTime string `json:"start_time,omitempty"`
+	EndTime   string `json:"end_time,omitempty"`
+
+	// WeeklySchedule: days of week (0=Sunday, 1=Monday, ..., 6=Saturday)
+	// Example: [1,2,3,4,5] for Monday-Friday
+	DaysOfWeek []int `json:"days_of_week,omitempty"`
+
+	// SunSchedule: sunrise/sunset based
+	// Values: "sunrise", "sunset", "civil_twilight_begin", "civil_twilight_end", etc.
+	SunEvent    string `json:"sun_event,omitempty"`     // "sunrise", "sunset"
+	SunEventEnd string `json:"sun_event_end,omitempty"` // Optional: for ranges like "sunrise" to "sunset"
+
+	// Offset from sun event in minutes (can be negative for "before" or positive for "after")
+	// Example: -30 means 30 minutes before sunrise
+	SunOffset    int `json:"sun_offset,omitempty"`
+	SunOffsetEnd int `json:"sun_offset_end,omitempty"`
+
+	// Location for sun calculations (latitude, longitude)
+	Latitude  float64 `json:"latitude,omitempty"`
+	Longitude float64 `json:"longitude,omitempty"`
+}
+
+// IsActive checks if the alarm should be active at the given time
+// Returns true if no schedule is defined (always active) or if current time is within schedule
+func (s *Schedule) IsActive(now time.Time, lat, lon float64) bool {
+	// No schedule or type="always" means always active
+	if s == nil || s.Type == "" || s.Type == "always" {
+		return true
+	}
+
+	switch s.Type {
+	case "time":
+		return s.isActiveTimeRange(now)
+	case "daily":
+		return s.isActiveDaily(now)
+	case "weekly":
+		return s.isActiveWeekly(now)
+	case "sun":
+		return s.isActiveSun(now, lat, lon)
+	default:
+		// Unknown type, default to active
+		return true
+	}
+}
+
+// isActiveTimeRange checks if current time is within start_time and end_time
+func (s *Schedule) isActiveTimeRange(now time.Time) bool {
+	if s.StartTime == "" || s.EndTime == "" {
+		return true // Missing required fields, default to active
+	}
+
+	start, err := parseTimeOfDay(s.StartTime)
+	if err != nil {
+		return true // Parse error, default to active
+	}
+
+	end, err := parseTimeOfDay(s.EndTime)
+	if err != nil {
+		return true
+	}
+
+	nowMinutes := now.Hour()*60 + now.Minute()
+
+	// Handle overnight ranges (e.g., 22:00 to 06:00)
+	if end < start {
+		return nowMinutes >= start || nowMinutes <= end
+	}
+
+	return nowMinutes >= start && nowMinutes <= end
+}
+
+// isActiveDaily checks both time range and applies it daily
+func (s *Schedule) isActiveDaily(now time.Time) bool {
+	return s.isActiveTimeRange(now)
+}
+
+// isActiveWeekly checks if current day of week is in the allowed list and time is in range
+func (s *Schedule) isActiveWeekly(now time.Time) bool {
+	if len(s.DaysOfWeek) == 0 {
+		return true // No day restriction, always active
+	}
+
+	// Get current day of week (0=Sunday, 1=Monday, ..., 6=Saturday)
+	currentDay := int(now.Weekday())
+
+	// Check if current day is in the allowed list
+	dayAllowed := false
+	for _, day := range s.DaysOfWeek {
+		if day == currentDay {
+			dayAllowed = true
+			break
+		}
+	}
+
+	if !dayAllowed {
+		return false
+	}
+
+	// If time range is specified, check that too
+	if s.StartTime != "" && s.EndTime != "" {
+		return s.isActiveTimeRange(now)
+	}
+
+	return true
+}
+
+// isActiveSun checks if current time is within sunrise/sunset based schedule
+func (s *Schedule) isActiveSun(now time.Time, lat, lon float64) bool {
+	// Use schedule's lat/lon if provided, otherwise use provided defaults
+	if s.Latitude != 0 || s.Longitude != 0 {
+		lat = s.Latitude
+		lon = s.Longitude
+	}
+
+	// If no location provided, can't calculate sun times
+	if lat == 0 && lon == 0 {
+		return true // Default to active if no location
+	}
+
+	// Calculate sunrise and sunset for today
+	sunrise, sunset := calculateSunTimes(now, lat, lon)
+
+	// Apply offsets
+	var startTime, endTime time.Time
+
+	switch s.SunEvent {
+	case "sunrise":
+		startTime = sunrise.Add(time.Duration(s.SunOffset) * time.Minute)
+	case "sunset":
+		startTime = sunset.Add(time.Duration(s.SunOffset) * time.Minute)
+	default:
+		return true // Unknown sun event, default to active
+	}
+
+	// If no end event, check if we're past the start
+	if s.SunEventEnd == "" {
+		return now.After(startTime) || now.Equal(startTime)
+	}
+
+	// Calculate end time
+	switch s.SunEventEnd {
+	case "sunrise":
+		endTime = sunrise.Add(time.Duration(s.SunOffsetEnd) * time.Minute)
+	case "sunset":
+		endTime = sunset.Add(time.Duration(s.SunOffsetEnd) * time.Minute)
+	default:
+		return true
+	}
+
+	// Check if current time is between start and end
+	return (now.After(startTime) || now.Equal(startTime)) && (now.Before(endTime) || now.Equal(endTime))
+}
+
+// parseTimeOfDay parses "HH:MM" format and returns minutes since midnight
+func parseTimeOfDay(timeStr string) (int, error) {
+	t, err := time.Parse("15:04", timeStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid time format (use HH:MM): %w", err)
+	}
+	return t.Hour()*60 + t.Minute(), nil
+}
+
+// calculateSunTimes calculates sunrise and sunset times for a given date and location
+// Uses simplified algorithm (adequate for scheduling purposes, not astronomical precision)
+// Algorithm based on NOAA solar calculator
+func calculateSunTimes(date time.Time, latitude, longitude float64) (sunrise, sunset time.Time) {
+	// Convert to Julian day
+	y := date.Year()
+	m := int(date.Month())
+	d := date.Day()
+
+	if m <= 2 {
+		y--
+		m += 12
+	}
+
+	a := y / 100
+	b := 2 - a + a/4
+	jd := math.Floor(365.25*float64(y+4716)) + math.Floor(30.6001*float64(m+1)) + float64(d) + float64(b) - 1524.5
+
+	// Days since J2000.0
+	n := jd - 2451545.0
+
+	// Mean solar time
+	j := n - longitude/360.0
+
+	// Solar mean anomaly
+	m0 := 357.5291 + 0.98560028*j
+	m0 = math.Mod(m0, 360.0)
+
+	// Equation of center
+	c := 1.9148*math.Sin(m0*math.Pi/180.0) + 0.0200*math.Sin(2*m0*math.Pi/180.0) + 0.0003*math.Sin(3*m0*math.Pi/180.0)
+
+	// Ecliptic longitude
+	lambda := math.Mod(m0+c+180.0+102.9372, 360.0)
+
+	// Solar transit
+	jTransit := 2451545.0 + j + 0.0053*math.Sin(m0*math.Pi/180.0) - 0.0069*math.Sin(2*lambda*math.Pi/180.0)
+
+	// Declination of the sun
+	delta := math.Asin(math.Sin(lambda*math.Pi/180.0) * math.Sin(23.44*math.Pi/180.0))
+
+	// Hour angle
+	cosOmega := (math.Sin(-0.833*math.Pi/180.0) - math.Sin(latitude*math.Pi/180.0)*math.Sin(delta)) /
+		(math.Cos(latitude*math.Pi/180.0) * math.Cos(delta))
+
+	// Handle polar day/night
+	if cosOmega > 1 {
+		// Sun never rises
+		sunrise = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+		sunset = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+		return
+	}
+	if cosOmega < -1 {
+		// Sun never sets
+		sunrise = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+		sunset = time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 0, date.Location())
+		return
+	}
+
+	omega := math.Acos(cosOmega) * 180.0 / math.Pi
+
+	// Julian dates for sunrise and sunset
+	jRise := jTransit - omega/360.0
+	jSet := jTransit + omega/360.0
+
+	// Convert back to UTC time
+	sunriseUTC := (jRise - jd) * 24.0 // Hours since midnight
+	sunsetUTC := (jSet - jd) * 24.0    // Hours since midnight
+
+	// Normalize
+	for sunriseUTC < 0 {
+		sunriseUTC += 24
+	}
+	for sunriseUTC >= 24 {
+		sunriseUTC -= 24
+	}
+	for sunsetUTC < 0 {
+		sunsetUTC += 24
+	}
+	for sunsetUTC >= 24 {
+		sunsetUTC -= 24
+	}
+
+	// Convert to time.Time in local timezone
+	sunriseHour := int(sunriseUTC)
+	sunriseMin := int((sunriseUTC - float64(sunriseHour)) * 60)
+	sunsetHour := int(sunsetUTC)
+	sunsetMin := int((sunsetUTC - float64(sunsetHour)) * 60)
+
+	sunrise = time.Date(date.Year(), date.Month(), date.Day(), sunriseHour, sunriseMin, 0, 0, date.Location())
+	sunset = time.Date(date.Year(), date.Month(), date.Day(), sunsetHour, sunsetMin, 0, 0, date.Location())
+
+	return sunrise, sunset
+}
+
+// Validate checks if the schedule configuration is valid
+func (s *Schedule) Validate() error {
+	if s == nil || s.Type == "" || s.Type == "always" {
+		return nil
+	}
+
+	switch s.Type {
+	case "time", "daily":
+		if s.StartTime == "" || s.EndTime == "" {
+			return fmt.Errorf("start_time and end_time are required for type '%s'", s.Type)
+		}
+		if _, err := parseTimeOfDay(s.StartTime); err != nil {
+			return fmt.Errorf("invalid start_time: %w", err)
+		}
+		if _, err := parseTimeOfDay(s.EndTime); err != nil {
+			return fmt.Errorf("invalid end_time: %w", err)
+		}
+
+	case "weekly":
+		if len(s.DaysOfWeek) == 0 {
+			return fmt.Errorf("days_of_week is required for type 'weekly'")
+		}
+		for _, day := range s.DaysOfWeek {
+			if day < 0 || day > 6 {
+				return fmt.Errorf("invalid day of week: %d (must be 0-6, where 0=Sunday)", day)
+			}
+		}
+		// Time range is optional for weekly
+		if s.StartTime != "" || s.EndTime != "" {
+			if s.StartTime == "" || s.EndTime == "" {
+				return fmt.Errorf("both start_time and end_time must be specified if using time range with weekly schedule")
+			}
+			if _, err := parseTimeOfDay(s.StartTime); err != nil {
+				return fmt.Errorf("invalid start_time: %w", err)
+			}
+			if _, err := parseTimeOfDay(s.EndTime); err != nil {
+				return fmt.Errorf("invalid end_time: %w", err)
+			}
+		}
+
+	case "sun":
+		if s.SunEvent == "" {
+			return fmt.Errorf("sun_event is required for type 'sun' (e.g., 'sunrise' or 'sunset')")
+		}
+		if s.SunEvent != "sunrise" && s.SunEvent != "sunset" {
+			return fmt.Errorf("invalid sun_event: %s (must be 'sunrise' or 'sunset')", s.SunEvent)
+		}
+		if s.SunEventEnd != "" {
+			if s.SunEventEnd != "sunrise" && s.SunEventEnd != "sunset" {
+				return fmt.Errorf("invalid sun_event_end: %s (must be 'sunrise' or 'sunset')", s.SunEventEnd)
+			}
+		}
+		// Note: Latitude/Longitude can be provided here or passed at evaluation time
+
+	default:
+		return fmt.Errorf("invalid schedule type: %s (must be 'always', 'time', 'daily', 'weekly', or 'sun')", s.Type)
+	}
+
+	return nil
+}
+
+// String returns a human-readable description of the schedule
+func (s *Schedule) String() string {
+	if s == nil || s.Type == "" || s.Type == "always" {
+		return "Always active (24/7)"
+	}
+
+	switch s.Type {
+	case "time", "daily":
+		return fmt.Sprintf("Daily from %s to %s", s.StartTime, s.EndTime)
+
+	case "weekly":
+		dayNames := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+		var days []string
+		for _, day := range s.DaysOfWeek {
+			if day >= 0 && day <= 6 {
+				days = append(days, dayNames[day])
+			}
+		}
+		daysStr := fmt.Sprintf("%v", days)
+		if s.StartTime != "" && s.EndTime != "" {
+			return fmt.Sprintf("%s from %s to %s", daysStr, s.StartTime, s.EndTime)
+		}
+		return fmt.Sprintf("%s (all day)", daysStr)
+
+	case "sun":
+		offsetStr := ""
+		if s.SunOffset != 0 {
+			if s.SunOffset > 0 {
+				offsetStr = fmt.Sprintf(" +%dm", s.SunOffset)
+			} else {
+				offsetStr = fmt.Sprintf(" %dm", s.SunOffset)
+			}
+		}
+
+		if s.SunEventEnd != "" {
+			endOffsetStr := ""
+			if s.SunOffsetEnd != 0 {
+				if s.SunOffsetEnd > 0 {
+					endOffsetStr = fmt.Sprintf(" +%dm", s.SunOffsetEnd)
+				} else {
+					endOffsetStr = fmt.Sprintf(" %dm", s.SunOffsetEnd)
+				}
+			}
+			return fmt.Sprintf("%s%s to %s%s", s.SunEvent, offsetStr, s.SunEventEnd, endOffsetStr)
+		}
+
+		return fmt.Sprintf("After %s%s", s.SunEvent, offsetStr)
+
+	default:
+		return fmt.Sprintf("Unknown schedule type: %s", s.Type)
+	}
+}
+
+// MarshalJSON implements custom JSON marshaling to handle nil schedules
+func (s *Schedule) MarshalJSON() ([]byte, error) {
+	if s == nil {
+		return json.Marshal(nil)
+	}
+
+	type Alias Schedule
+	return json.Marshal((*Alias)(s))
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling
+func (s *Schedule) UnmarshalJSON(data []byte) error {
+	type Alias Schedule
+	aux := (*Alias)(s)
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+	return nil
+}

@@ -69,6 +69,7 @@ type Alarm struct {
 	Enabled     bool      `json:"enabled"`
 	Condition   string    `json:"condition"`          // e.g., "temperature > 85", "humidity > 80 && temperature > 35", "*lightning_count"
 	Cooldown    int       `json:"cooldown,omitempty"` // Seconds between repeated notifications
+	Schedule    *Schedule `json:"schedule,omitempty"` // Optional schedule defining when alarm is active
 	Channels    []Channel `json:"channels"`
 	// TriggeredCount tracks how many times this alarm has been triggered since process start
 	TriggeredCount int                `json:"triggered_count,omitempty"`
@@ -307,6 +308,13 @@ func (c *AlarmConfig) Validate() error {
 
 		if alarm.Condition == "" {
 			return fmt.Errorf("alarm %s: condition is required", alarm.Name)
+		}
+
+		// Validate schedule if present
+		if alarm.Schedule != nil {
+			if err := alarm.Schedule.Validate(); err != nil {
+				return fmt.Errorf("alarm %s: invalid schedule: %w", alarm.Name, err)
+			}
 		}
 
 		if len(alarm.Channels) == 0 {

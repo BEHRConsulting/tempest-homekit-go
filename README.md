@@ -174,6 +174,11 @@ The alarm system enables rule-based weather alerting with multiple notification 
  - Example: `*lightning_count` triggers on any lightning strike
  - Example: `>rain_rate` triggers when rain intensifies
  - Example: `<lightning_distance` triggers when lightning gets closer
+- **Flexible scheduling**: Restrict alarms to specific times, days, or sunrise/sunset
+ - Daily time ranges (e.g., 9 AM to 5 PM)
+ - Weekly schedules (e.g., Monday-Friday only)
+ - Sunrise/sunset based (e.g., only during daylight hours)
+ - See [Alarm Scheduling Documentation](docs/ALARM_SCHEDULING.md)
 - Template-based messages with runtime value interpolation (`{{temperature}}`, `{{timestamp}}`, etc.)
 - Cooldown periods to prevent notification storms
 - Cross-platform file watching for live configuration reloads
@@ -1632,18 +1637,19 @@ This project was developed using various technologies, libraries, and tools. Bel
 ## Additional Documentation
 
 ### Alarm System Documentation
+- **[ALARM_SCHEDULING.md](docs/ALARM_SCHEDULING.md)** - Complete scheduling system: time ranges, weekly schedules, sunrise/sunset
 - **[ALARM_LOGGING.md](pkg/alarm/docs/ALARM_LOGGING.md)** - Alarm logging behavior (always visible regardless of log level)
--- **[ALARM_COOLDOWN_STATUS.md](pkg/alarm/docs/ALARM_COOLDOWN_STATUS.md)** - Real-time cooldown status display in web console
--- **[OSLOG_NOTIFIER.md](docs/development/OSLOG_NOTIFIER.md)** - macOS unified logging integration for alarms
+- **[ALARM_COOLDOWN_STATUS.md](pkg/alarm/docs/ALARM_COOLDOWN_STATUS.md)** - Real-time cooldown status display in web console
+- **[OSLOG_NOTIFIER.md](docs/development/OSLOG_NOTIFIER.md)** - macOS unified logging integration for alarms
 - **[docs/webhook-delivery.md](docs/webhook-delivery.md)** - Complete webhook delivery method documentation with Go server example
--- **[CHANGE_DETECTION_OPERATORS.md](docs/development/CHANGE_DETECTION_OPERATORS.md)** - Complete technical reference for change detection operators (*field, >field, <field)
--- **[CHANGE_DETECTION_QUICKREF.md](docs/development/CHANGE_DETECTION_QUICKREF.md)** - Quick reference guide with examples
--- **[CHANGE_DETECTION_VISUAL.md](docs/development/CHANGE_DETECTION_VISUAL.md)** - Visual diagrams and state transition timelines
--- **[CHANGE_DETECTION_SUMMARY.md](docs/development/CHANGE_DETECTION_SUMMARY.md)** - Implementation summary and architecture
--- **[ALARM_EDITOR_MESSAGES.md](pkg/alarm/docs/ALARM_EDITOR_MESSAGES.md)** - Message configuration with variable templates
--- **[ALARM_EDITOR_CHANNEL_FIX.md](pkg/alarm/docs/ALARM_EDITOR_CHANNEL_FIX.md)** - Documentation of alarm channel save fix
--- **[WEB_ALARM_STATUS_CARD.md](docs/development/WEB_ALARM_STATUS_CARD.md)** - Web console alarm status card implementation
--- **[examples/alarms-with-change-detection.json](examples/alarms-with-change-detection.json)** - Ready-to-use alarm configurations
+- **[CHANGE_DETECTION_OPERATORS.md](docs/development/CHANGE_DETECTION_OPERATORS.md)** - Complete technical reference for change detection operators (*field, >field, <field)
+- **[CHANGE_DETECTION_QUICKREF.md](docs/development/CHANGE_DETECTION_QUICKREF.md)** - Quick reference guide with examples
+- **[CHANGE_DETECTION_VISUAL.md](docs/development/CHANGE_DETECTION_VISUAL.md)** - Visual diagrams and state transition timelines
+- **[CHANGE_DETECTION_SUMMARY.md](docs/development/CHANGE_DETECTION_SUMMARY.md)** - Implementation summary and architecture
+- **[ALARM_EDITOR_MESSAGES.md](pkg/alarm/docs/ALARM_EDITOR_MESSAGES.md)** - Message configuration with variable templates
+- **[ALARM_EDITOR_CHANNEL_FIX.md](pkg/alarm/docs/ALARM_EDITOR_CHANNEL_FIX.md)** - Documentation of alarm channel save fix
+- **[WEB_ALARM_STATUS_CARD.md](docs/development/WEB_ALARM_STATUS_CARD.md)** - Web console alarm status card implementation
+- **[examples/alarms-with-change-detection.json](examples/alarms-with-change-detection.json)** - Ready-to-use alarm configurations
 
 ### Package Documentation
 Each package includes detailed README files:

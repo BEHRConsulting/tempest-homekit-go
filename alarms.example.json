@@ -24,6 +24,12 @@
       "enabled": true,
       "condition": "temperature > 85",
       "cooldown": 1800,
+      "schedule": {
+        "_comment": "Only check during daytime hours (9 AM to 5 PM)",
+        "type": "daily",
+        "start_time": "09:00",
+        "end_time": "17:00"
+      },
       "channels": [
         {
           "type": "console",
@@ -71,6 +77,13 @@
       "enabled": true,
       "condition": "temperature > 35 && humidity > 80",
       "cooldown": 3600,
+      "schedule": {
+        "_comment": "Monday through Friday, business hours",
+        "type": "weekly",
+        "days_of_week": [1, 2, 3, 4, 5],
+        "start_time": "08:00",
+        "end_time": "18:00"
+      },
       "channels": [
         {
           "type": "console",
@@ -126,6 +139,14 @@
       "enabled": true,
       "condition": "uv >= 8",
       "cooldown": 10800,
+      "schedule": {
+        "_comment": "Only during sunlight hours (sunrise to sunset)",
+        "type": "sun",
+        "sun_event": "sunrise",
+        "sun_event_end": "sunset",
+        "sun_offset": 0,
+        "sun_offset_end": 0
+      },
       "channels": [
         {
           "type": "console",
