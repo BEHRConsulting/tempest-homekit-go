@@ -519,68 +519,97 @@ function toggleMessageSections() {
 }
 
 function toggleScheduleFields() {
-    const scheduleType = document.getElementById('scheduleType').value;
+    const scheduleTypeEl = document.getElementById('scheduleType');
+    if (!scheduleTypeEl) return;
+    
+    const scheduleType = scheduleTypeEl.value;
     
     // Hide all schedule sections
-    document.getElementById('timeScheduleSection').style.display = 'none';
-    document.getElementById('weeklyScheduleSection').style.display = 'none';
-    document.getElementById('sunScheduleSection').style.display = 'none';
+    const timeSection = document.getElementById('timeScheduleSection');
+    const weeklySection = document.getElementById('weeklyScheduleSection');
+    const sunSection = document.getElementById('sunScheduleSection');
+    
+    if (timeSection) timeSection.style.display = 'none';
+    if (weeklySection) weeklySection.style.display = 'none';
+    if (sunSection) sunSection.style.display = 'none';
     
     // Show relevant section based on type
     if (scheduleType === 'time' || scheduleType === 'daily') {
-        document.getElementById('timeScheduleSection').style.display = 'block';
+        if (timeSection) timeSection.style.display = 'block';
     } else if (scheduleType === 'weekly') {
-        document.getElementById('weeklyScheduleSection').style.display = 'block';
+        if (weeklySection) weeklySection.style.display = 'block';
     } else if (scheduleType === 'sun') {
-        document.getElementById('sunScheduleSection').style.display = 'block';
+        if (sunSection) sunSection.style.display = 'block';
     }
 }
 
 function toggleWeeklyTimeRange() {
-    const checked = document.getElementById('weeklyTimeRange').checked;
-    document.getElementById('weeklyTimeRangeFields').style.display = checked ? 'block' : 'none';
+    const checkbox = document.getElementById('weeklyTimeRange');
+    const fields = document.getElementById('weeklyTimeRangeFields');
+    if (!checkbox || !fields) return;
+    
+    fields.style.display = checkbox.checked ? 'block' : 'none';
 }
 
 function toggleSunEndEvent() {
-    const checked = document.getElementById('sunHasEndEvent').checked;
-    document.getElementById('sunEndEventFields').style.display = checked ? 'block' : 'none';
+    const checkbox = document.getElementById('sunHasEndEvent');
+    const fields = document.getElementById('sunEndEventFields');
+    if (!checkbox || !fields) return;
+    
+    fields.style.display = checkbox.checked ? 'block' : 'none';
 }
 
 function toggleCustomLocation() {
-    const checked = document.getElementById('sunHasCustomLocation').checked;
-    document.getElementById('customLocationInputs').style.display = checked ? 'block' : 'none';
+    const checkbox = document.getElementById('sunHasCustomLocation');
+    const inputs = document.getElementById('customLocationInputs');
+    if (!checkbox || !inputs) return;
+    
+    inputs.style.display = checkbox.checked ? 'block' : 'none';
 }
 
 function clearScheduleForm() {
+    // Helper to safely clear an element if it exists
+    const safeSet = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+    };
+    
+    const safeCheck = (id, checked) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = checked;
+    };
+    
     // Reset schedule type
-    document.getElementById('scheduleType').value = '';
+    safeSet('scheduleType', '');
     
     // Clear time/daily fields
-    document.getElementById('scheduleStartTime').value = '';
-    document.getElementById('scheduleEndTime').value = '';
+    safeSet('scheduleStartTime', '');
+    safeSet('scheduleEndTime', '');
     
     // Clear weekly fields
     document.querySelectorAll('.schedule-day').forEach(cb => cb.checked = false);
-    document.getElementById('weeklyTimeRange').checked = false;
-    document.getElementById('weeklyStartTime').value = '';
-    document.getElementById('weeklyEndTime').value = '';
+    safeCheck('weeklyTimeRange', false);
+    safeSet('weeklyStartTime', '');
+    safeSet('weeklyEndTime', '');
     
     // Clear sun fields
-    document.getElementById('scheduleSunEvent').value = 'sunrise';
-    document.getElementById('scheduleSunOffset').value = '0';
-    document.getElementById('sunHasEndEvent').checked = false;
-    document.getElementById('scheduleSunEventEnd').value = 'sunset';
-    document.getElementById('scheduleSunOffsetEnd').value = '0';
-    document.getElementById('scheduleUseStationLocation').checked = false;
-    document.getElementById('sunHasCustomLocation').checked = false;
-    document.getElementById('scheduleLatitude').value = '';
-    document.getElementById('scheduleLongitude').value = '';
+    safeSet('scheduleSunEvent', 'sunrise');
+    safeSet('scheduleSunOffset', '0');
+    safeCheck('sunHasEndEvent', false);
+    safeSet('scheduleSunEventEnd', 'sunset');
+    safeSet('scheduleSunOffsetEnd', '0');
+    safeCheck('scheduleUseStationLocation', false);
+    safeCheck('sunHasCustomLocation', false);
+    safeSet('scheduleLatitude', '');
+    safeSet('scheduleLongitude', '');
     
-    // Hide all sections
-    toggleScheduleFields();
-    toggleWeeklyTimeRange();
-    toggleSunEndEvent();
-    toggleCustomLocation();
+    // Hide all sections (only if elements exist)
+    if (document.getElementById('scheduleType')) {
+        toggleScheduleFields();
+        toggleWeeklyTimeRange();
+        toggleSunEndEvent();
+        toggleCustomLocation();
+    }
 }
 
 function loadScheduleIntoForm(schedule) {
