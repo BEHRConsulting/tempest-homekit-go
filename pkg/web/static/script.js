@@ -4745,15 +4745,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Start data fetching - fetch status first to determine data source type
-    debugLog(logLevels.INFO, 'Starting periodic data fetching (10-second intervals)');
+    debugLog(logLevels.INFO, 'Starting periodic data fetching (weather: 5s, status/alarms: 10s)');
     console.log('🚀 DEBUG: Starting initial data fetch');
     // Fetch status first to set currentDataSourceType before weather fetch attempts
     fetchStatus().then(() => fetchWeather());
     
+    // Weather data updates every 5 seconds for real-time chart updates
     setInterval(() => {
-        console.log('🚀 DEBUG: Periodic data fetch triggered');
-        debugLog(logLevels.DEBUG, 'Periodic data fetch triggered');
+        console.log('🚀 DEBUG: Periodic weather fetch triggered');
+        debugLog(logLevels.DEBUG, 'Periodic weather fetch triggered');
         fetchWeather();
+    }, 5000);
+    
+    // Status and alarm status updates every 10 seconds
+    setInterval(() => {
+        console.log('🚀 DEBUG: Periodic status/alarm fetch triggered');
+        debugLog(logLevels.DEBUG, 'Periodic status/alarm fetch triggered');
         fetchStatus();
         fetchAlarmStatus();
     }, 10000);
