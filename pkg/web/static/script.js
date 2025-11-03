@@ -3501,9 +3501,20 @@ function updateDetailedStationStatus(status) {
 function updateForecastDisplay(status) {
     debugLog(logLevels.DEBUG, 'Updating forecast display', status.forecast);
 
+    const forecastCard = document.getElementById('forecast-card');
+    
     if (!status.forecast) {
         debugLog(logLevels.DEBUG, 'No forecast data available');
+        // Hide the forecast card when no data
+        if (forecastCard) {
+            forecastCard.style.display = 'none';
+        }
         return;
+    }
+
+    // Show the forecast card when data is available
+    if (forecastCard) {
+        forecastCard.style.display = 'block';
     }
 
     const forecast = status.forecast;
@@ -3732,13 +3743,15 @@ function populateChartsWithHistoricalData(dataHistory) {
     const hasActualTimestamps = dataHistory.some(obs => obs.lastUpdate);
     const currentDataLength = charts.temperature.data.datasets[0].data.length;
     
-    // Always process historical data if it has actual timestamps (real weather data)
-    // or if charts are completely empty (generated weather data)
-    const shouldPopulate = hasActualTimestamps || currentDataLength === 0;
+    // Only populate historical data if:
+    // 1. Charts are empty (initial load)
+    // 2. We have MORE historical data points than current chart data (new historical data loaded)
+    // This prevents clearing charts on every status update when dataHistory has fewer points
+    const shouldPopulate = currentDataLength === 0 || (hasActualTimestamps && dataHistory.length > currentDataLength + 5);
     
     if (shouldPopulate) {
         debugLog(logLevels.INFO, 'Processing historical data', {
-            reason: hasActualTimestamps ? 'has actual timestamps' : 'charts empty',
+            reason: currentDataLength === 0 ? 'charts empty' : 'new historical data loaded',
             currentDataPoints: currentDataLength,
             historicalDataPoints: dataHistory.length
         });
@@ -3754,7 +3767,10 @@ function populateChartsWithHistoricalData(dataHistory) {
             charts.uv.data.datasets[0].data = [];
         }
     } else {
-        debugLog(logLevels.INFO, 'Skipping historical data population - charts already have live data without timestamps');
+        debugLog(logLevels.INFO, 'Skipping historical data population - charts already have live data', {
+            currentDataPoints: currentDataLength,
+            historicalDataPoints: dataHistory.length
+        });
         return; // Don't overwrite existing live data
     }
 
@@ -4732,7 +4748,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Restore alarm compact mode from localStorage
-    const isAlarmCompact = storage ? storage.getItem('alarm-compact-mode') === 'true' : true; // Default to compact mode
+    const isAlarmCompact = localStorage.getItem('alarm-compact-mode') === 'true';
     if (isAlarmCompact) {
         const alarmCard = document.getElementById('alarm-card');
         if (alarmCard) {
