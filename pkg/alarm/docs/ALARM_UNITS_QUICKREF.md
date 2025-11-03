@@ -146,5 +146,5 @@ humidity > 80% (% not supported)
 
 - **Full Documentation:** See `UNIT_CONVERSION_SUPPORT.md`
 - **Config File Info:** See `CONFIG_FILE_WATCHING.md`
-- **Examples:** See `example-alarms.json`
+- **Examples:** See `examples/example-alarms.json`
 - **Editor Guide:** See `ALARM_EDITOR_ENHANCEMENTS.md`

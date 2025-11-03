@@ -282,7 +282,7 @@ See `.env.example` for complete setup instructions with provider-specific exampl
 
 ## See Also
 
-- `/alarms.example.json`: Complete example configuration
+- `/examples/alarms.example.json`: Complete example configuration
 - `/.env.example`: Environment variable template
 - [EMAIL_O365_IMPLEMENTATION.md](docs/EMAIL_O365_IMPLEMENTATION.md): Microsoft 365 setup guide
 - [alarms-o365-email.json](docs/examples/alarms-o365-email.json): Example O365 alarm configuration

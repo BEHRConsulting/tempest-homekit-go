@@ -223,7 +223,7 @@ Warning: **Critical**: Due to HomeKit's limited native sensor types, the **Press
 
 **See Also:**
 - `pkg/alarm/README.md`: Complete alarm system documentation
-- `alarms.example.json`: Example alarm configurations
+- `examples/alarms.example.json`: Example alarm configurations
 - `.env.example`: Environment variable setup for all notification providers
 - `AWS_SNS_IMPLEMENTATION.md`: AWS SNS implementation details
 - `docs/EMAIL_O365_IMPLEMENTATION.md`: Microsoft 365 email setup guide

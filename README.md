@@ -198,9 +198,9 @@ The alarm system enables rule-based weather alerting with multiple notification 
 ```
 
 **Example Alarm Configuration Files:**
-- `alarms.example.json` - Complete alarm examples (works with any provider)
-- `alarms-ms365.example.json` - Same alarms, shows MS365 setup instructions
-- `alarms-aws.example.json` - Same alarms, shows AWS SNS setup instructions
+- `examples/alarms.example.json` - Complete alarm examples (works with any provider)
+- `examples/alarms-ms365.example.json` - Same alarms, shows MS365 setup instructions
+- `examples/alarms-aws.example.json` - Same alarms, shows AWS SNS setup instructions
 
 **Important:** All email/SMS credentials are configured in `.env` file only - NOT in alarm JSON files! The alarm JSON files contain only alarm rules. Configure your provider credentials in `.env` (see `.env.example` for details), then use any of the alarm example files above.
 

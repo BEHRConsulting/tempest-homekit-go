@@ -165,6 +165,8 @@
 
 [] Lets add deleivery method to add a JSON record to local/remote Maria/MySQL database using a secure protocol. Add checkbox to allow fallback to plain text. Use a uuid primary key, index timestamp, alarm name, then json blob that contains all weather sensors. .env should have database host, database, user, password. Add --test-db. In the readme.md create a section with example database create command and sample data. Show that the db server should be run with --require_secure_transport or equivalent. The user should be created with the min permissions to insert a record.
 
+[] Allow --station to be a list of stations to support multi-stations. the web console will have a drop down to select which station we are viewing. both command line and env variable. Make an alias of --station as --stations.
+
 [] Request this every 3-4 major changes or monthly:
 "Perform a comprehensive documentation audit comparing REQUIREMENTS.md, README.md, and CODE_REVIEW.md against the current codebase. 
 

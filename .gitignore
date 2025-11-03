@@ -15,6 +15,7 @@
 *.out
 coverage.html
 *.cover
+/.coverage/
 
 # Go toolchain
 go.work
@@ -38,6 +39,7 @@ tempest-homekit-go-windows
 /dist/
 /bin/
 /tmp/
+/.build/
 
 # Database files
 /db/
@@ -76,6 +78,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+/.logs/
 
 # Temporary files
 *.tmp

@@ -35,7 +35,7 @@ This file tracks released versions and the notable changes implemented in each r
 - Cross-platform file watching for live alarm config reloads
 - Interactive web-based alarm editor with search, filter, and live validation
 - CLI flags: --alarms, --alarms-edit, --alarms-edit-port
-- Example configuration: alarms.example.json
+- Example configuration: examples/alarms.example.json
 - Full test suite for alarm editor (6 tests, 100% pass rate)
 
 ## v1.5.0

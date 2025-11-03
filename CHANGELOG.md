@@ -92,7 +92,7 @@ The format is based on "Keep a Changelog" and this project adheres to Semantic V
  - Visual status indicators for enabled/disabled alarms
  - Auto-save to JSON configuration file
  - Standalone mode accessible at `http://localhost:8081`
-- Example alarm configuration: `alarms.example.json`
+- Example alarm configuration: `examples/alarms.example.json`
 - Environment variables for SMTP, SMS providers (Twilio, AWS SNS), and Syslog
 
 ### Changed

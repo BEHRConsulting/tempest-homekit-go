@@ -29,7 +29,7 @@ func TestRunEmailTestValidation(t *testing.T) {
 			name: "valid config",
 			cfg: &config.Config{
 				TestEmail:   "test@example.com",
-				Alarms:      "@alarms.example.json",
+				Alarms:      "@examples/alarms.example.json",
 				StationName: "TestStation",
 			},
 			shouldError: false,
@@ -75,7 +75,7 @@ func TestRunSMSTestValidation(t *testing.T) {
 			name: "valid config",
 			cfg: &config.Config{
 				TestSMS:     "+15555551234",
-				Alarms:      "@alarms.example.json",
+				Alarms:      "@examples/alarms.example.json",
 				StationName: "TestStation",
 			},
 			shouldError: false,
@@ -482,7 +482,7 @@ func TestRunAlarmTestValidation(t *testing.T) {
 			name: "valid config",
 			cfg: &config.Config{
 				TestAlarm:   "test-alarm",
-				Alarms:      "@alarms.example.json",
+				Alarms:      "@examples/alarms.example.json",
 				StationName: "TestStation",
 			},
 			shouldError: false,
