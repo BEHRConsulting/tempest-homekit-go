@@ -2,6 +2,28 @@
 
 The alarm system supports flexible scheduling to control when alarms are active. This allows you to restrict alarms to specific times of day, days of week, or based on sunrise/sunset times.
 
+## Timezone Support
+
+All time-based schedules support an optional `timezone` field. If not specified, the system's local timezone is used.
+
+```json
+{
+  "schedule": {
+    "type": "daily",
+    "start_time": "09:00",
+    "end_time": "17:00",
+    "timezone": "America/New_York"
+  }
+}
+```
+
+**Supported Timezones**: Any valid IANA timezone name (e.g., `America/New_York`, `Europe/London`, `Asia/Tokyo`, `UTC`)
+
+**Use Cases**:
+- Monitor a weather station in one timezone while running the service in another
+- Coordinate alarms across multiple stations in different timezones
+- Use consistent business hours regardless of daylight saving time changes
+
 ## Schedule Types
 
 ### 1. Always Active (Default)
@@ -311,6 +333,37 @@ Uses the default location configured for the alarm manager.
 }
 ```
 
+### Example 5: Multi-Timezone Monitoring
+
+Monitor station during East Coast business hours even if service runs elsewhere:
+
+```json
+{
+  "name": "east-coast-office-hours",
+  "description": "Alert during EST business hours regardless of server timezone",
+  "enabled": true,
+  "condition": "temperature > 90",
+  "schedule": {
+    "type": "weekly",
+    "days_of_week": [1, 2, 3, 4, 5],
+    "start_time": "09:00",
+    "end_time": "17:00",
+    "timezone": "America/New_York"
+  },
+  "cooldown": 3600,
+  "channels": [
+    {
+      "type": "email",
+      "email": {
+        "to": ["east-coast-team@company.com"],
+        "subject": "Office Temperature Alert (EST)",
+        "body": "Temperature is {{temperature}}°F at {{timestamp}}"
+      }
+    }
+  ]
+}
+```
+
 ## How It Works
 
 1. **Evaluation**: Before checking alarm conditions, the system evaluates the schedule
@@ -347,6 +400,7 @@ The schedule is set on a per-alarm basis by including a `schedule` object in the
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `type` | string | Yes | `"always"`, `"time"`, `"daily"`, `"weekly"`, or `"sun"` |
+| `timezone` | string | Optional | IANA timezone name (e.g., `"America/New_York"`, `"UTC"`). Defaults to system timezone if not specified. |
 | `start_time` | string | For time/daily/weekly | HH:MM format (24-hour) |
 | `end_time` | string | For time/daily/weekly | HH:MM format (24-hour) |
 | `days_of_week` | array | For weekly | Array of integers 0-6 (0=Sunday, 6=Saturday) |

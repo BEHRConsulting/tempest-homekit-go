@@ -528,10 +528,16 @@ function toggleScheduleFields() {
     const timeSection = document.getElementById('timeScheduleSection');
     const weeklySection = document.getElementById('weeklyScheduleSection');
     const sunSection = document.getElementById('sunScheduleSection');
+    const timezoneSection = document.getElementById('timezoneSection');
     
     if (timeSection) timeSection.style.display = 'none';
     if (weeklySection) weeklySection.style.display = 'none';
     if (sunSection) sunSection.style.display = 'none';
+    
+    // Show timezone field for all schedule types except empty (always active)
+    if (timezoneSection) {
+        timezoneSection.style.display = scheduleType ? 'block' : 'none';
+    }
     
     // Show relevant section based on type
     if (scheduleType === 'time' || scheduleType === 'daily') {
@@ -582,6 +588,9 @@ function clearScheduleForm() {
     // Reset schedule type
     safeSet('scheduleType', '');
     
+    // Clear timezone
+    safeSet('scheduleTimezone', '');
+    
     // Clear time/daily fields
     safeSet('scheduleStartTime', '');
     safeSet('scheduleEndTime', '');
@@ -620,6 +629,12 @@ function loadScheduleIntoForm(schedule) {
     
     // Set schedule type
     document.getElementById('scheduleType').value = schedule.type;
+    
+    // Set timezone
+    const timezoneEl = document.getElementById('scheduleTimezone');
+    if (timezoneEl && schedule.timezone) {
+        timezoneEl.value = schedule.timezone;
+    }
     
     // Load type-specific fields
     if (schedule.type === 'time' || schedule.type === 'daily') {
@@ -679,6 +694,12 @@ function serializeScheduleFromForm() {
     const schedule = {
         type: scheduleType
     };
+    
+    // Add timezone if specified
+    const timezoneEl = document.getElementById('scheduleTimezone');
+    if (timezoneEl && timezoneEl.value.trim()) {
+        schedule.timezone = timezoneEl.value.trim();
+    }
     
     if (scheduleType === 'time' || scheduleType === 'daily') {
         schedule.start_time = document.getElementById('scheduleStartTime').value;

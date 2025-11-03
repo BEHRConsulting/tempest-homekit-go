@@ -454,6 +454,25 @@ const indexHTML = `<!DOCTYPE html>
                     <small>Control when this alarm checks conditions</small>
                 </div>
                 
+                <div id="timezoneSection" class="form-group" style="display:none; margin-left: 20px;">
+                    <label>🌍 Timezone</label>
+                    <input type="text" id="scheduleTimezone" placeholder="America/New_York" list="timezone-suggestions" />
+                    <datalist id="timezone-suggestions">
+                        <option value="America/New_York">Eastern Time</option>
+                        <option value="America/Chicago">Central Time</option>
+                        <option value="America/Denver">Mountain Time</option>
+                        <option value="America/Los_Angeles">Pacific Time</option>
+                        <option value="America/Anchorage">Alaska Time</option>
+                        <option value="Pacific/Honolulu">Hawaii Time</option>
+                        <option value="Europe/London">London</option>
+                        <option value="Europe/Paris">Paris</option>
+                        <option value="Asia/Tokyo">Tokyo</option>
+                        <option value="Australia/Sydney">Sydney</option>
+                        <option value="UTC">UTC</option>
+                    </datalist>
+                    <small>IANA timezone name (leave blank for system timezone). Examples: America/New_York, Europe/London, Asia/Tokyo</small>
+                </div>
+                
                 <div id="timeScheduleSection" class="form-group" style="display:none; margin-left: 20px;">
                     <label>Start Time (HH:MM)</label>
                     <input type="time" id="scheduleStartTime" />

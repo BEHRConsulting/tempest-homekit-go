@@ -164,6 +164,36 @@
       ]
     },
     {
+      "name": "business-hours-temperature",
+      "description": "Monitor temperature during East Coast business hours",
+      "tags": ["temperature", "business-hours", "timezone"],
+      "enabled": true,
+      "condition": "temperature > 90",
+      "cooldown": 3600,
+      "schedule": {
+        "_comment": "Active Mon-Fri 9am-5pm EST, regardless of server timezone",
+        "type": "weekly",
+        "days_of_week": [1, 2, 3, 4, 5],
+        "start_time": "09:00",
+        "end_time": "17:00",
+        "timezone": "America/New_York"
+      },
+      "channels": [
+        {
+          "type": "console",
+          "template": "Tempest-Alarm [business-hours-temperature]: Temperature {{temperature}}°F during EST business hours at {{timestamp}}"
+        },
+        {
+          "type": "email",
+          "email": {
+            "to": ["team@example.com"],
+            "subject": "High Temperature During Business Hours",
+            "body": "Temperature alert during EST business hours.\n\nCurrent: {{temperature}}°F\nThreshold: 90°F\nTime: {{timestamp}}\n\nSchedule: Weekdays 9am-5pm EST"
+          }
+        }
+      ]
+    },
+    {
       "name": "pressure-drop",
       "description": "Rapid pressure drop indicating storm approach",
       "tags": ["pressure", "weather-change", "storm"],

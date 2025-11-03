@@ -39,6 +39,11 @@ type Schedule struct {
 	// instead of the latitude/longitude specified above or the manager's default location.
 	// This is useful when you want sunrise/sunset times based on the actual station location.
 	UseStationLocation bool `json:"use_station_location,omitempty"`
+
+	// Timezone - IANA timezone name (e.g., "America/New_York", "Europe/London")
+	// If not specified, uses system's local timezone
+	// Examples: "America/Los_Angeles", "America/Chicago", "America/New_York", "UTC"
+	Timezone string `json:"timezone,omitempty"`
 }
 
 // IsActive checks if the alarm should be active at the given time
@@ -47,6 +52,15 @@ func (s *Schedule) IsActive(now time.Time, lat, lon float64) bool {
 	// No schedule or type="always" means always active
 	if s == nil || s.Type == "" || s.Type == "always" {
 		return true
+	}
+
+	// Convert time to schedule's timezone if specified
+	if s.Timezone != "" {
+		loc, err := time.LoadLocation(s.Timezone)
+		if err == nil {
+			now = now.In(loc)
+		}
+		// If timezone load fails, continue with original time (system timezone)
 	}
 
 	switch s.Type {
@@ -289,6 +303,13 @@ func (s *Schedule) Validate() error {
 		return nil
 	}
 
+	// Validate timezone if specified
+	if s.Timezone != "" {
+		if _, err := time.LoadLocation(s.Timezone); err != nil {
+			return fmt.Errorf("invalid timezone: %w", err)
+		}
+	}
+
 	switch s.Type {
 	case "time", "daily":
 		if s.StartTime == "" || s.EndTime == "" {
@@ -350,9 +371,15 @@ func (s *Schedule) String() string {
 		return "Always active (24/7)"
 	}
 
+	// Add timezone suffix if specified
+	tzSuffix := ""
+	if s.Timezone != "" {
+		tzSuffix = fmt.Sprintf(" [%s]", s.Timezone)
+	}
+
 	switch s.Type {
 	case "time", "daily":
-		return fmt.Sprintf("Daily from %s to %s", s.StartTime, s.EndTime)
+		return fmt.Sprintf("Daily from %s to %s%s", s.StartTime, s.EndTime, tzSuffix)
 
 	case "weekly":
 		dayNames := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
@@ -364,9 +391,9 @@ func (s *Schedule) String() string {
 		}
 		daysStr := fmt.Sprintf("%v", days)
 		if s.StartTime != "" && s.EndTime != "" {
-			return fmt.Sprintf("%s from %s to %s", daysStr, s.StartTime, s.EndTime)
+			return fmt.Sprintf("%s from %s to %s%s", daysStr, s.StartTime, s.EndTime, tzSuffix)
 		}
-		return fmt.Sprintf("%s (all day)", daysStr)
+		return fmt.Sprintf("%s (all day)%s", daysStr, tzSuffix)
 
 	case "sun":
 		offsetStr := ""

@@ -705,3 +705,162 @@ func substringInMiddle(s, substr string) bool {
 	}
 	return false
 }
+
+func TestSchedule_Timezone(t *testing.T) {
+	tests := []struct {
+		name     string
+		schedule *Schedule
+		// Test time in UTC
+		utcTime  time.Time
+		expected bool
+	}{
+		{
+			name: "9am-5pm PST schedule, checked at 5pm UTC (9am PST)",
+			schedule: &Schedule{
+				Type:      "time",
+				StartTime: "09:00",
+				EndTime:   "17:00",
+				Timezone:  "America/Los_Angeles",
+			},
+			utcTime:  time.Date(2025, 1, 15, 17, 0, 0, 0, time.UTC), // 5pm UTC = 9am PST
+			expected: true,
+		},
+		{
+			name: "9am-5pm PST schedule, checked at 2am UTC (6pm PST - outside range)",
+			schedule: &Schedule{
+				Type:      "time",
+				StartTime: "09:00",
+				EndTime:   "17:00",
+				Timezone:  "America/Los_Angeles",
+			},
+			utcTime:  time.Date(2025, 1, 15, 2, 0, 0, 0, time.UTC), // 2am UTC = 6pm PST (previous day)
+			expected: false,
+		},
+		{
+			name: "9am-5pm EST schedule, checked at 2pm UTC (9am EST)",
+			schedule: &Schedule{
+				Type:      "time",
+				StartTime: "09:00",
+				EndTime:   "17:00",
+				Timezone:  "America/New_York",
+			},
+			utcTime:  time.Date(2025, 1, 15, 14, 0, 0, 0, time.UTC), // 2pm UTC = 9am EST
+			expected: true,
+		},
+		{
+			name: "Invalid timezone - should use system time and still work",
+			schedule: &Schedule{
+				Type:      "time",
+				StartTime: "09:00",
+				EndTime:   "17:00",
+				Timezone:  "Invalid/Timezone",
+			},
+			utcTime:  time.Date(2025, 1, 15, 12, 0, 0, 0, time.UTC),
+			expected: true, // Noon UTC should be in 9am-5pm range in UTC
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.schedule.IsActive(tt.utcTime, 0, 0)
+			if result != tt.expected {
+				t.Errorf("IsActive() = %v, want %v (checking %v)", result, tt.expected, tt.utcTime)
+			}
+		})
+	}
+}
+
+func TestSchedule_Validate_Timezone(t *testing.T) {
+	tests := []struct {
+		name      string
+		schedule  *Schedule
+		wantError bool
+	}{
+		{
+			name: "valid timezone",
+			schedule: &Schedule{
+				Type:      "time",
+				StartTime: "09:00",
+				EndTime:   "17:00",
+				Timezone:  "America/New_York",
+			},
+			wantError: false,
+		},
+		{
+			name: "invalid timezone",
+			schedule: &Schedule{
+				Type:      "time",
+				StartTime: "09:00",
+				EndTime:   "17:00",
+				Timezone:  "Invalid/Timezone",
+			},
+			wantError: true,
+		},
+		{
+			name: "no timezone",
+			schedule: &Schedule{
+				Type:      "time",
+				StartTime: "09:00",
+				EndTime:   "17:00",
+			},
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.schedule.Validate()
+			if (err != nil) != tt.wantError {
+				t.Errorf("Validate() error = %v, wantError %v", err, tt.wantError)
+			}
+		})
+	}
+}
+
+func TestSchedule_String_WithTimezone(t *testing.T) {
+	tests := []struct {
+		name          string
+		schedule      *Schedule
+		shouldContain string
+	}{
+		{
+			name: "time schedule with timezone",
+			schedule: &Schedule{
+				Type:      "time",
+				StartTime: "09:00",
+				EndTime:   "17:00",
+				Timezone:  "America/New_York",
+			},
+			shouldContain: "[America/New_York]",
+		},
+		{
+			name: "weekly schedule with timezone",
+			schedule: &Schedule{
+				Type:       "weekly",
+				DaysOfWeek: []int{1, 2, 3, 4, 5},
+				StartTime:  "09:00",
+				EndTime:    "17:00",
+				Timezone:   "Europe/London",
+			},
+			shouldContain: "[Europe/London]",
+		},
+		{
+			name: "schedule without timezone",
+			schedule: &Schedule{
+				Type:      "time",
+				StartTime: "09:00",
+				EndTime:   "17:00",
+			},
+			shouldContain: "Daily from 09:00 to 17:00",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.schedule.String()
+			if !stringContainsSubstr(result, tt.shouldContain) {
+				t.Errorf("String() = %q, should contain %q", result, tt.shouldContain)
+			}
+		})
+	}
+}
