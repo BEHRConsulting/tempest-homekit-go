@@ -868,3 +868,77 @@ body {
 .theme-selector select:hover {
     border-color: var(--bg-gradient-start);
 }
+
+/* Contacts and Tags Editor Styles */
+.contacts-editor, .tags-editor {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 20px 0;
+}
+
+.contacts-list, .tags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.contact-item, .tag-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: var(--light-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+.contact-item input, .tag-item input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.contact-item input:focus, .tag-item input:focus {
+    outline: none;
+    border-color: var(--success-color);
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.1);
+}
+
+.contact-item .remove-btn, .tag-item .remove-btn {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+.contact-item .remove-btn:hover, .tag-item .remove-btn:hover {
+    background: var(--danger-hover);
+}
+
+.contact-fields {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+}
+
+.contact-fields input {
+    flex: 1;
+}
+
+.contact-fields input:first-child {
+    min-width: 150px;
+}
+
+.contact-fields input:nth-child(2) {
+    min-width: 200px;
+}
+
+.contact-fields input:nth-child(3) {
+    min-width: 150px;
+}

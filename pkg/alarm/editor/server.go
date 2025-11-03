@@ -150,11 +150,13 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/alarms/update", s.handleUpdateAlarm)
 	mux.HandleFunc("/api/alarms/delete", s.handleDeleteAlarm)
 	mux.HandleFunc("/api/tags", s.handleGetTags)
+	mux.HandleFunc("/api/tags/save", s.handleSaveTags)
 	mux.HandleFunc("/api/validate", s.handleValidate)
 	mux.HandleFunc("/api/validate-json", s.handleValidateJSON)
 	mux.HandleFunc("/api/fields", s.handleGetFields)
 	mux.HandleFunc("/api/env-defaults", s.handleGetEnvDefaults)
 	mux.HandleFunc("/api/contacts", s.handleGetContacts)
+	mux.HandleFunc("/api/contacts/save", s.handleSaveContacts)
 
 	addr := ":" + s.port
 	logger.Info("Starting Alarm Editor on http://localhost%s", addr)
@@ -668,4 +670,205 @@ func (s *Server) handleGetContacts(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(sortedContacts)
+}
+
+// handleSaveContacts saves the contact list
+func (s *Server) handleSaveContacts(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Contacts []Contact `json:"contacts"`
+		SaveType string    `json:"saveType"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Validate contacts
+	for i, contact := range req.Contacts {
+		if contact.Name == "" {
+			http.Error(w, fmt.Sprintf("Contact %d has empty name", i+1), http.StatusBadRequest)
+			return
+		}
+		if contact.Email == "" && contact.SMS == "" {
+			http.Error(w, fmt.Sprintf("Contact %d (%s) must have either email or SMS", i+1, contact.Name), http.StatusBadRequest)
+			return
+		}
+		if contact.Email != "" && !strings.Contains(contact.Email, "@") {
+			http.Error(w, fmt.Sprintf("Contact %d (%s) has invalid email format", i+1, contact.Name), http.StatusBadRequest)
+			return
+		}
+		if contact.SMS != "" && !strings.HasPrefix(contact.SMS, "+") {
+			http.Error(w, fmt.Sprintf("Contact %d (%s) SMS must start with '+'", i+1, contact.Name), http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Update server contacts
+	s.contacts = req.Contacts
+
+	// Save based on type
+	var message string
+	if req.SaveType == "json" {
+		// Save as JSON file
+		contactsJSON, err := json.MarshalIndent(req.Contacts, "", "  ")
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to marshal contacts: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		filename := "contacts.json"
+		if err := os.WriteFile(filename, contactsJSON, 0644); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to save contacts file: %v", err), http.StatusInternalServerError)
+			return
+		}
+		message = fmt.Sprintf("Contacts saved to %s", filename)
+	} else if req.SaveType == "env" {
+		// Update .env file
+		envFile := ".env"
+		if _, err := os.Stat(envFile); os.IsNotExist(err) {
+			envFile = ".env.example"
+		}
+
+		content, err := os.ReadFile(envFile)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to read env file: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		contactsJSON, err := json.Marshal(req.Contacts)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to marshal contacts: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		lines := strings.Split(string(content), "\n")
+		updated := false
+		for i, line := range lines {
+			if strings.HasPrefix(line, "CONTACT_LIST=") {
+				lines[i] = fmt.Sprintf("CONTACT_LIST=%s", string(contactsJSON))
+				updated = true
+				break
+			}
+		}
+
+		if !updated {
+			lines = append(lines, fmt.Sprintf("CONTACT_LIST=%s", string(contactsJSON)))
+		}
+
+		if err := os.WriteFile(envFile, []byte(strings.Join(lines, "\n")), 0644); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to update env file: %v", err), http.StatusInternalServerError)
+			return
+		}
+		message = fmt.Sprintf("Contacts updated in %s", envFile)
+	} else {
+		http.Error(w, "Invalid save type", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": message})
+}
+
+// handleSaveTags saves the tag list
+func (s *Server) handleSaveTags(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Tags    []string `json:"tags"`
+		SaveType string  `json:"saveType"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Validate tags
+	for i, tag := range req.Tags {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			http.Error(w, fmt.Sprintf("Tag %d is empty", i+1), http.StatusBadRequest)
+			return
+		}
+		if strings.Contains(tag, " ") {
+			http.Error(w, fmt.Sprintf("Tag %d contains spaces (use hyphens or underscores): %s", i+1, tag), http.StatusBadRequest)
+			return
+		}
+		if len(tag) > 50 {
+			http.Error(w, fmt.Sprintf("Tag %d is too long (%d chars, max 50): %s", i+1, len(tag), tag), http.StatusBadRequest)
+			return
+		}
+		req.Tags[i] = tag // Update with trimmed version
+	}
+
+	// Save based on type
+	var message string
+	if req.SaveType == "json" {
+		// Save as JSON file
+		tagsJSON, err := json.MarshalIndent(req.Tags, "", "  ")
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to marshal tags: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		filename := "tags.json"
+		if err := os.WriteFile(filename, tagsJSON, 0644); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to save tags file: %v", err), http.StatusInternalServerError)
+			return
+		}
+		message = fmt.Sprintf("Tags saved to %s", filename)
+	} else if req.SaveType == "env" {
+		// Update .env file
+		envFile := ".env"
+		if _, err := os.Stat(envFile); os.IsNotExist(err) {
+			envFile = ".env.example"
+		}
+
+		content, err := os.ReadFile(envFile)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to read env file: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		tagsJSON, err := json.Marshal(req.Tags)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to marshal tags: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		lines := strings.Split(string(content), "\n")
+		updated := false
+		for i, line := range lines {
+			if strings.HasPrefix(line, "TAG_LIST=") {
+				lines[i] = fmt.Sprintf("TAG_LIST=%s", string(tagsJSON))
+				updated = true
+				break
+			}
+		}
+
+		if !updated {
+			lines = append(lines, fmt.Sprintf("TAG_LIST=%s", string(tagsJSON)))
+		}
+
+		if err := os.WriteFile(envFile, []byte(strings.Join(lines, "\n")), 0644); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to update env file: %v", err), http.StatusInternalServerError)
+			return
+		}
+		message = fmt.Sprintf("Tags updated in %s", envFile)
+	} else {
+		http.Error(w, "Invalid save type", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": message})
 }

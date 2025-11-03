@@ -29,6 +29,8 @@ const indexHTML = `<!DOCTYPE html>
             </select>
             <button class="btn btn-primary" onclick="showCreateModal()">+ New Alarm</button>
             <button class="btn btn-info" onclick="showFullJSON()">📄 View Full JSON</button>
+            <button class="btn btn-warning" onclick="showEditContactsModal()">👥 Edit Contacts</button>
+            <button class="btn btn-warning" onclick="showEditTagsModal()">🏷️ Edit Tags</button>
             <button class="btn btn-success" onclick="saveAll()">💾 Save All</button>
         </div>
         
@@ -515,6 +517,36 @@ const indexHTML = `<!DOCTYPE html>
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeEmojiModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editContactsModal" class="modal">
+        <div class="modal-content wide">
+            <div class="modal-header">👥 Edit Contact List</div>
+            <div class="contacts-editor">
+                <div class="contacts-list" id="contactsList"></div>
+                <button class="btn btn-primary" onclick="addNewContact()" style="margin: 10px 0;">+ Add Contact</button>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeEditContactsModal()">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="saveContacts('json')">💾 Save as JSON File</button>
+                <button type="button" class="btn btn-info" onclick="saveContacts('env')">📝 Update .env File</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editTagsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">🏷️ Edit Tag List</div>
+            <div class="tags-editor">
+                <div class="tags-list" id="tagsList"></div>
+                <button class="btn btn-primary" onclick="addNewTag()" style="margin: 10px 0;">+ Add Tag</button>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeEditTagsModal()">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="saveTags('json')">💾 Save as JSON File</button>
+                <button type="button" class="btn btn-info" onclick="saveTags('env')">📝 Update .env File</button>
             </div>
         </div>
     </div>

@@ -155,6 +155,8 @@
 
 [x] add a tag list in the .env and .env.example that holds a set of common tags that the user can then add/remove from. pre-fill this list with would be common tags for weather alerts. the drop downs in the alarm editor use these tags, plus the user entered tags in the existing alarms for the drop down.
 
+[] add buttons to the alarm editor to edit contacts and tags. when saving, options to save as a json file or update the specific --env file
+
 [] Homekit QR code not working
     
 [] Lets add a per-alarm scheduling system. daily by hour, sunrise, sunset, days per week, start time, end time. Any other standard scheduled options? I.e.: (1) Every date from sunrise to sunset. (2) Monday through Friday from 10:00-20:00. (3) No schedule defaults to Everyday, all day.

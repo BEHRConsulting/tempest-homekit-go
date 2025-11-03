@@ -1266,6 +1266,224 @@ function updateLastUpdateTimestamp() {
 }
 
 // ============================================
+// Contacts and Tags Editor Functions
+// ============================================
+
+function showEditContactsModal() {
+    loadContactsForEditor();
+    document.getElementById('editContactsModal').classList.add('active');
+}
+
+function closeEditContactsModal() {
+    document.getElementById('editContactsModal').classList.remove('active');
+}
+
+function showEditTagsModal() {
+    loadTagsForEditor();
+    document.getElementById('editTagsModal').classList.add('active');
+}
+
+function closeEditTagsModal() {
+    document.getElementById('editTagsModal').classList.remove('active');
+}
+
+async function loadContactsForEditor() {
+    try {
+        const response = await fetch('/api/contacts');
+        const contacts = await response.json();
+        renderContactsEditor(contacts);
+    } catch (error) {
+        console.error('Failed to load contacts for editor:', error);
+        renderContactsEditor([]);
+    }
+}
+
+async function loadTagsForEditor() {
+    try {
+        // Get all tags from the server (this includes both alarm tags and predefined tags)
+        const response = await fetch('/api/tags');
+        const tags = await response.json();
+        renderTagsEditor(tags);
+    } catch (error) {
+        console.error('Failed to load tags for editor:', error);
+        renderTagsEditor([]);
+    }
+}
+
+function renderContactsEditor(contacts) {
+    const container = document.getElementById('contactsList');
+    container.innerHTML = '';
+
+    if (contacts.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--card-text-light); padding: 20px;">No contacts configured</p>';
+        return;
+    }
+
+    contacts.forEach((contact, index) => {
+        const item = document.createElement('div');
+        item.className = 'contact-item';
+        item.innerHTML = `
+            <input type="text" placeholder="Name" value="${contact.name || ''}" data-field="name" data-index="${index}">
+            <input type="email" placeholder="Email" value="${contact.email || ''}" data-field="email" data-index="${index}">
+            <input type="tel" placeholder="SMS (+1234567890)" value="${contact.sms || ''}" data-field="sms" data-index="${index}">
+            <button class="remove-btn" onclick="removeContactItem(${index})">Remove</button>
+        `;
+        container.appendChild(item);
+    });
+}
+
+function renderTagsEditor(tags) {
+    const container = document.getElementById('tagsList');
+    container.innerHTML = '';
+
+    if (tags.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--card-text-light); padding: 20px;">No tags configured</p>';
+        return;
+    }
+
+    tags.forEach((tag, index) => {
+        const item = document.createElement('div');
+        item.className = 'tag-item';
+        item.innerHTML = `
+            <input type="text" placeholder="Tag name" value="${tag}" data-index="${index}">
+            <button class="remove-btn" onclick="removeTagItem(${index})">Remove</button>
+        `;
+        container.appendChild(item);
+    });
+}
+
+function addNewContact() {
+    const container = document.getElementById('contactsList');
+    const item = document.createElement('div');
+    item.className = 'contact-item';
+    item.innerHTML = `
+        <input type="text" placeholder="Name" data-field="name" data-index="-1">
+        <input type="email" placeholder="Email" data-field="email" data-index="-1">
+        <input type="tel" placeholder="SMS (+1234567890)" data-field="sms" data-index="-1">
+        <button class="remove-btn" onclick="removeContactItem(-1)">Remove</button>
+    `;
+    container.appendChild(item);
+}
+
+function addNewTag() {
+    const container = document.getElementById('tagsList');
+    const item = document.createElement('div');
+    item.className = 'tag-item';
+    item.innerHTML = `
+        <input type="text" placeholder="Tag name" data-index="-1">
+        <button class="remove-btn" onclick="removeTagItem(-1)">Remove</button>
+    `;
+    container.appendChild(item);
+}
+
+function removeContactItem(index) {
+    const item = document.querySelector(`.contact-item input[data-index="${index}"]`);
+    if (item) {
+        item.closest('.contact-item').remove();
+    }
+}
+
+function removeTagItem(index) {
+    const item = document.querySelector(`.tag-item input[data-index="${index}"]`);
+    if (item) {
+        item.closest('.tag-item').remove();
+    }
+}
+
+function collectContactsFromEditor() {
+    const contacts = [];
+    const contactItems = document.querySelectorAll('.contact-item');
+
+    contactItems.forEach(item => {
+        const name = item.querySelector('input[data-field="name"]').value.trim();
+        const email = item.querySelector('input[data-field="email"]').value.trim();
+        const sms = item.querySelector('input[data-field="sms"]').value.trim();
+
+        if (name || email || sms) {
+            contacts.push({
+                name: name,
+                email: email,
+                sms: sms
+            });
+        }
+    });
+
+    return contacts;
+}
+
+function collectTagsFromEditor() {
+    const tags = [];
+    const tagItems = document.querySelectorAll('.tag-item input');
+
+    tagItems.forEach(input => {
+        const tag = input.value.trim();
+        if (tag) {
+            tags.push(tag);
+        }
+    });
+
+    return tags;
+}
+
+async function saveContacts(saveType) {
+    const contacts = collectContactsFromEditor();
+
+    try {
+        const response = await fetch('/api/contacts/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                contacts: contacts,
+                saveType: saveType
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(error);
+        }
+
+        const result = await response.json();
+        showNotification(result.message, 'success');
+        closeEditContactsModal();
+
+        // Reload contacts for the dropdowns
+        await loadContacts();
+    } catch (error) {
+        showNotification('Error saving contacts: ' + error.message, 'error');
+    }
+}
+
+async function saveTags(saveType) {
+    const tags = collectTagsFromEditor();
+
+    try {
+        const response = await fetch('/api/tags/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                tags: tags,
+                saveType: saveType
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(error);
+        }
+
+        const result = await response.json();
+        showNotification(result.message, 'success');
+        closeEditTagsModal();
+
+        // Reload tags for the dropdowns
+        await loadTags();
+    } catch (error) {
+        showNotification('Error saving tags: ' + error.message, 'error');
+    }
+}
+
+// ============================================
 // Emoji Picker Functions
 // ============================================
 
