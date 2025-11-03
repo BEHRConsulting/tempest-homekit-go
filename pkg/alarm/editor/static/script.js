@@ -518,6 +518,181 @@ function toggleMessageSections() {
     document.getElementById('jsonMessageSection').style.display = jsonChecked ? 'block' : 'none';
 }
 
+function toggleScheduleFields() {
+    const scheduleType = document.getElementById('scheduleType').value;
+    
+    // Hide all schedule sections
+    document.getElementById('timeScheduleSection').style.display = 'none';
+    document.getElementById('weeklyScheduleSection').style.display = 'none';
+    document.getElementById('sunScheduleSection').style.display = 'none';
+    
+    // Show relevant section based on type
+    if (scheduleType === 'time' || scheduleType === 'daily') {
+        document.getElementById('timeScheduleSection').style.display = 'block';
+    } else if (scheduleType === 'weekly') {
+        document.getElementById('weeklyScheduleSection').style.display = 'block';
+    } else if (scheduleType === 'sun') {
+        document.getElementById('sunScheduleSection').style.display = 'block';
+    }
+}
+
+function toggleWeeklyTimeRange() {
+    const checked = document.getElementById('weeklyTimeRange').checked;
+    document.getElementById('weeklyTimeRangeFields').style.display = checked ? 'block' : 'none';
+}
+
+function toggleSunEndEvent() {
+    const checked = document.getElementById('sunHasEndEvent').checked;
+    document.getElementById('sunEndEventFields').style.display = checked ? 'block' : 'none';
+}
+
+function toggleCustomLocation() {
+    const checked = document.getElementById('sunHasCustomLocation').checked;
+    document.getElementById('customLocationInputs').style.display = checked ? 'block' : 'none';
+}
+
+function clearScheduleForm() {
+    // Reset schedule type
+    document.getElementById('scheduleType').value = '';
+    
+    // Clear time/daily fields
+    document.getElementById('scheduleStartTime').value = '';
+    document.getElementById('scheduleEndTime').value = '';
+    
+    // Clear weekly fields
+    document.querySelectorAll('.schedule-day').forEach(cb => cb.checked = false);
+    document.getElementById('weeklyTimeRange').checked = false;
+    document.getElementById('weeklyStartTime').value = '';
+    document.getElementById('weeklyEndTime').value = '';
+    
+    // Clear sun fields
+    document.getElementById('scheduleSunEvent').value = 'sunrise';
+    document.getElementById('scheduleSunOffset').value = '0';
+    document.getElementById('sunHasEndEvent').checked = false;
+    document.getElementById('scheduleSunEventEnd').value = 'sunset';
+    document.getElementById('scheduleSunOffsetEnd').value = '0';
+    document.getElementById('scheduleUseStationLocation').checked = false;
+    document.getElementById('sunHasCustomLocation').checked = false;
+    document.getElementById('scheduleLatitude').value = '';
+    document.getElementById('scheduleLongitude').value = '';
+    
+    // Hide all sections
+    toggleScheduleFields();
+    toggleWeeklyTimeRange();
+    toggleSunEndEvent();
+    toggleCustomLocation();
+}
+
+function loadScheduleIntoForm(schedule) {
+    if (!schedule || !schedule.type) {
+        clearScheduleForm();
+        return;
+    }
+    
+    // Set schedule type
+    document.getElementById('scheduleType').value = schedule.type;
+    
+    // Load type-specific fields
+    if (schedule.type === 'time' || schedule.type === 'daily') {
+        document.getElementById('scheduleStartTime').value = schedule.start_time || '';
+        document.getElementById('scheduleEndTime').value = schedule.end_time || '';
+    } else if (schedule.type === 'weekly') {
+        // Set day checkboxes
+        if (schedule.days_of_week && Array.isArray(schedule.days_of_week)) {
+            schedule.days_of_week.forEach(day => {
+                const checkbox = document.querySelector(`.schedule-day[value="${day}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+        
+        // Set time range if present
+        if (schedule.start_time && schedule.end_time) {
+            document.getElementById('weeklyTimeRange').checked = true;
+            document.getElementById('weeklyStartTime').value = schedule.start_time;
+            document.getElementById('weeklyEndTime').value = schedule.end_time;
+        }
+    } else if (schedule.type === 'sun') {
+        document.getElementById('scheduleSunEvent').value = schedule.sun_event || 'sunrise';
+        document.getElementById('scheduleSunOffset').value = schedule.sun_offset || 0;
+        
+        // Set end event if present
+        if (schedule.sun_event_end) {
+            document.getElementById('sunHasEndEvent').checked = true;
+            document.getElementById('scheduleSunEventEnd').value = schedule.sun_event_end;
+            document.getElementById('scheduleSunOffsetEnd').value = schedule.sun_offset_end || 0;
+        }
+        
+        // Set location options
+        document.getElementById('scheduleUseStationLocation').checked = schedule.use_station_location || false;
+        
+        if (schedule.latitude !== undefined && schedule.longitude !== undefined) {
+            document.getElementById('sunHasCustomLocation').checked = true;
+            document.getElementById('scheduleLatitude').value = schedule.latitude;
+            document.getElementById('scheduleLongitude').value = schedule.longitude;
+        }
+    }
+    
+    // Trigger UI updates
+    toggleScheduleFields();
+    toggleWeeklyTimeRange();
+    toggleSunEndEvent();
+    toggleCustomLocation();
+}
+
+function serializeScheduleFromForm() {
+    const scheduleType = document.getElementById('scheduleType').value;
+    
+    // If no type selected, return null (always active)
+    if (!scheduleType) {
+        return null;
+    }
+    
+    const schedule = {
+        type: scheduleType
+    };
+    
+    if (scheduleType === 'time' || scheduleType === 'daily') {
+        schedule.start_time = document.getElementById('scheduleStartTime').value;
+        schedule.end_time = document.getElementById('scheduleEndTime').value;
+    } else if (scheduleType === 'weekly') {
+        // Collect selected days
+        const selectedDays = [];
+        document.querySelectorAll('.schedule-day:checked').forEach(cb => {
+            selectedDays.push(parseInt(cb.value));
+        });
+        schedule.days_of_week = selectedDays;
+        
+        // Add time range if specified
+        if (document.getElementById('weeklyTimeRange').checked) {
+            schedule.start_time = document.getElementById('weeklyStartTime').value;
+            schedule.end_time = document.getElementById('weeklyEndTime').value;
+        }
+    } else if (scheduleType === 'sun') {
+        schedule.sun_event = document.getElementById('scheduleSunEvent').value;
+        schedule.sun_offset = parseInt(document.getElementById('scheduleSunOffset').value) || 0;
+        
+        // Add end event if specified
+        if (document.getElementById('sunHasEndEvent').checked) {
+            schedule.sun_event_end = document.getElementById('scheduleSunEventEnd').value;
+            schedule.sun_offset_end = parseInt(document.getElementById('scheduleSunOffsetEnd').value) || 0;
+        }
+        
+        // Add location options
+        schedule.use_station_location = document.getElementById('scheduleUseStationLocation').checked;
+        
+        if (document.getElementById('sunHasCustomLocation').checked) {
+            const lat = parseFloat(document.getElementById('scheduleLatitude').value);
+            const lon = parseFloat(document.getElementById('scheduleLongitude').value);
+            if (!isNaN(lat) && !isNaN(lon)) {
+                schedule.latitude = lat;
+                schedule.longitude = lon;
+            }
+        }
+    }
+    
+    return schedule;
+}
+
 function showCreateModal() {
     currentAlarm = null;
     document.getElementById('alarmName').value = '';
@@ -666,6 +841,9 @@ Sensor Data:
     renderSelectedContacts('sms');
     document.getElementById('emailContactSearch').value = '';
     document.getElementById('smsContactSearch').value = '';
+    
+    // Clear schedule
+    clearScheduleForm();
     
     toggleMessageSections();
     
@@ -821,6 +999,9 @@ function editAlarm(name) {
     // Render contacts
     renderSelectedContacts('email');
     renderSelectedContacts('sms');
+    
+    // Load schedule
+    loadScheduleIntoForm(currentAlarm.schedule);
     
     toggleMessageSections();
     
@@ -1156,6 +1337,9 @@ async function handleSubmit(e) {
         });
     }
     
+    // Serialize schedule
+    const schedule = serializeScheduleFromForm();
+    
     const alarmData = {
         name: document.getElementById('alarmName').value,
         description: document.getElementById('alarmDescription').value,
@@ -1165,6 +1349,11 @@ async function handleSubmit(e) {
         enabled: document.getElementById('alarmEnabled').checked,
         channels: channels
     };
+    
+    // Only include schedule if it's not null (not always active)
+    if (schedule !== null) {
+        alarmData.schedule = schedule;
+    }
     
     // Track original name for updates (in case name changed)
     const originalName = currentAlarm ? currentAlarm.name : null;

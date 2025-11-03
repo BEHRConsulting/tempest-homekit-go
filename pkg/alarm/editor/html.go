@@ -443,6 +443,107 @@ const indexHTML = `<!DOCTYPE html>
                 </div>
                 
                 <div class="form-group">
+                    <label>🕐 Schedule (when alarm is active)</label>
+                    <select id="scheduleType" onchange="toggleScheduleFields()">
+                        <option value="">Always active (24/7)</option>
+                        <option value="time">Time Range (daily)</option>
+                        <option value="daily">Daily (same as time)</option>
+                        <option value="weekly">Weekly (specific days)</option>
+                        <option value="sun">Sunrise/Sunset based</option>
+                    </select>
+                    <small>Control when this alarm checks conditions</small>
+                </div>
+                
+                <div id="timeScheduleSection" class="form-group" style="display:none; margin-left: 20px;">
+                    <label>Start Time (HH:MM)</label>
+                    <input type="time" id="scheduleStartTime" />
+                    <label style="margin-top: 10px;">End Time (HH:MM)</label>
+                    <input type="time" id="scheduleEndTime" />
+                    <small>Active during this time range each day (supports overnight ranges like 22:00-06:00)</small>
+                </div>
+                
+                <div id="weeklyScheduleSection" class="form-group" style="display:none; margin-left: 20px;">
+                    <label>Active Days</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" class="schedule-day" value="0" /> Sunday
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" class="schedule-day" value="1" /> Monday
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" class="schedule-day" value="2" /> Tuesday
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" class="schedule-day" value="3" /> Wednesday
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" class="schedule-day" value="4" /> Thursday
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" class="schedule-day" value="5" /> Friday
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" class="schedule-day" value="6" /> Saturday
+                        </label>
+                    </div>
+                    <label>
+                        <input type="checkbox" id="weeklyTimeRange" onchange="toggleWeeklyTimeRange()" />
+                        Also restrict to specific hours
+                    </label>
+                    <div id="weeklyTimeRangeFields" style="display:none; margin-top: 10px;">
+                        <label>Start Time (HH:MM)</label>
+                        <input type="time" id="weeklyStartTime" />
+                        <label style="margin-top: 10px;">End Time (HH:MM)</label>
+                        <input type="time" id="weeklyEndTime" />
+                    </div>
+                </div>
+                
+                <div id="sunScheduleSection" class="form-group" style="display:none; margin-left: 20px;">
+                    <label>Start Event</label>
+                    <select id="scheduleSunEvent">
+                        <option value="sunrise">Sunrise</option>
+                        <option value="sunset">Sunset</option>
+                    </select>
+                    <label style="margin-top: 10px;">Start Offset (minutes)</label>
+                    <input type="number" id="scheduleSunOffset" value="0" placeholder="0" />
+                    <small>Use negative for before (-30 = 30 min before), positive for after</small>
+                    
+                    <label style="margin-top: 10px;">
+                        <input type="checkbox" id="sunHasEndEvent" onchange="toggleSunEndEvent()" />
+                        Set end time (create a range)
+                    </label>
+                    <div id="sunEndEventFields" style="display:none; margin-top: 10px;">
+                        <label>End Event</label>
+                        <select id="scheduleSunEventEnd">
+                            <option value="sunrise">Sunrise</option>
+                            <option value="sunset">Sunset</option>
+                        </select>
+                        <label style="margin-top: 10px;">End Offset (minutes)</label>
+                        <input type="number" id="scheduleSunOffsetEnd" value="0" placeholder="0" />
+                    </div>
+                    
+                    <label style="margin-top: 10px;">
+                        <input type="checkbox" id="scheduleUseStationLocation" />
+                        Use weather station's location for sun calculations
+                    </label>
+                    <small>If unchecked, uses default location. If checked, sunrise/sunset times based on actual station location.</small>
+                    
+                    <div id="customLocationFields" style="margin-top: 10px;">
+                        <label>
+                            <input type="checkbox" id="sunHasCustomLocation" onchange="toggleCustomLocation()" />
+                            Use custom location (overrides station location)
+                        </label>
+                        <div id="customLocationInputs" style="display:none; margin-top: 10px;">
+                            <label>Latitude</label>
+                            <input type="number" id="scheduleLatitude" step="0.0001" placeholder="34.0522" />
+                            <label style="margin-top: 10px;">Longitude</label>
+                            <input type="number" id="scheduleLongitude" step="0.0001" placeholder="-118.2437" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
                     <label>Tags</label>
                     <div class="tag-selector-container">
                         <div class="selected-tags" id="selectedTags"></div>
