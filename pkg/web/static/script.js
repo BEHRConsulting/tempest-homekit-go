@@ -3518,6 +3518,7 @@ function updateForecastDisplay(status) {
     }
 
     const forecast = status.forecast;
+    console.log('🌤️ RAW FORECAST DATA FROM API:', JSON.stringify(forecast, null, 2));
     debugLog(logLevels.DEBUG, 'Forecast data structure:', forecast);
 
     // Store forecast data globally for unit conversions
@@ -3689,6 +3690,7 @@ function updateDailyForecast(dailyForecast) {
             <div class="forecast-day-icon">${getWeatherIcon(day.icon)}</div>
             <div class="forecast-day-conditions">${day.conditions}</div>
             <div class="forecast-day-temps">
+                <span class="forecast-day-high">${Math.round(highTemp)}${tempUnit}</span>
                 <span class="forecast-day-low">/${Math.round(lowTemp)}${tempUnit}</span>
             </div>
             <div class="forecast-day-precip">${day.precip_probability}%</div>

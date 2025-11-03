@@ -973,6 +973,14 @@ func runAPITests(cfg *config.Config) {
 	if err != nil {
 		log.Fatalf("Failed to get stations: %v", err)
 	}
+	
+	if cfg.LogLevel == "debug" {
+		fmt.Println("\n--- RAW STATIONS DATA ---")
+		stationsJSON, _ := json.MarshalIndent(stations, "", "  ")
+		fmt.Println(string(stationsJSON))
+		fmt.Println("--- END RAW DATA ---\n")
+	}
+	
 	fmt.Printf("Found %d stations\n", len(stations))
 	for _, station := range stations {
 		fmt.Printf("   - ID: %d, Name: '%s', StationName: '%s'\n",
@@ -991,6 +999,14 @@ func runAPITests(cfg *config.Config) {
 	if err != nil {
 		log.Fatalf("Failed to get station details: %v", err)
 	}
+	
+	if cfg.LogLevel == "debug" {
+		fmt.Println("\n--- RAW STATION DETAILS DATA ---")
+		detailsJSON, _ := json.MarshalIndent(stationDetails, "", "  ")
+		fmt.Println(string(detailsJSON))
+		fmt.Println("--- END RAW DATA ---\n")
+	}
+	
 	fmt.Printf("Station has %d devices\n", len(stationDetails.Devices))
 	for i, device := range stationDetails.Devices {
 		fmt.Printf("   Device %d: ID=%d, Type=%s, Serial=%s\n",
@@ -1011,6 +1027,14 @@ func runAPITests(cfg *config.Config) {
 	if err != nil {
 		log.Fatalf("Failed to get current observation: %v", err)
 	}
+	
+	if cfg.LogLevel == "debug" {
+		fmt.Println("\n--- RAW OBSERVATION DATA ---")
+		obsJSON, _ := json.MarshalIndent(obs, "", "  ")
+		fmt.Println(string(obsJSON))
+		fmt.Println("--- END RAW DATA ---\n")
+	}
+	
 	obsTime := time.Unix(obs.Timestamp, 0)
 	fmt.Printf("Current observation retrieved\n")
 	fmt.Printf("   - Time: %s\n", obsTime.Format("2006-01-02 15:04:05"))
@@ -1075,6 +1099,53 @@ func runAPITests(cfg *config.Config) {
 		}
 	}
 
+	// Test 6: Get forecast data
+	fmt.Println("\n6. Testing Forecast API...")
+	forecast, err := weather.GetForecast(station.StationID, cfg.Token)
+	if err != nil {
+		log.Fatalf("Failed to get forecast: %v", err)
+	}
+	
+	if cfg.LogLevel == "debug" {
+		fmt.Println("\n--- RAW FORECAST DATA ---")
+		forecastJSON, _ := json.MarshalIndent(forecast, "", "  ")
+		fmt.Println(string(forecastJSON))
+		fmt.Println("--- END RAW DATA ---\n")
+	}
+	
+	fmt.Printf("Forecast data retrieved\n")
+	fmt.Printf("Station ID: %d\n", forecast.StationID)
+	fmt.Printf("Station Name: %s\n", forecast.StationName)
+	fmt.Printf("Timezone: %s\n", forecast.Timezone)
+	
+	if forecast.CurrentConditions.Time > 0 {
+		currentTime := time.Unix(forecast.CurrentConditions.Time, 0)
+		fmt.Printf("\nCurrent Conditions (as of %s):\n", currentTime.Format("2006-01-02 15:04:05"))
+		fmt.Printf("   - Temperature: %.1f°C\n", forecast.CurrentConditions.AirTemperature)
+		fmt.Printf("   - Feels Like: %.1f°C\n", forecast.CurrentConditions.FeelsLike)
+		fmt.Printf("   - Conditions: %s\n", forecast.CurrentConditions.Conditions)
+		fmt.Printf("   - Icon: %s\n", forecast.CurrentConditions.Icon)
+		fmt.Printf("   - Humidity: %d%%\n", forecast.CurrentConditions.RelativeHumidity)
+		fmt.Printf("   - Wind: %.1f m/s\n", forecast.CurrentConditions.WindAvg)
+		fmt.Printf("   - Precipitation: %d%%\n", forecast.CurrentConditions.PrecipProbability)
+	}
+	
+	if len(forecast.Forecast.Daily) > 0 {
+		fmt.Printf("\nDaily Forecast (%d days):\n", len(forecast.Forecast.Daily))
+		for i, day := range forecast.Forecast.Daily {
+			if i >= 5 {
+				break // Show only first 5 days
+			}
+			dayTime := time.Unix(day.Time, 0)
+			fmt.Printf("   Day %d (%s):\n", i+1, dayTime.Format("Mon Jan 2"))
+			fmt.Printf("      - Conditions: %s\n", day.Conditions)
+			fmt.Printf("      - Icon: %s\n", day.Icon)
+			fmt.Printf("      - Temp High: %.1f°C\n", day.AirTempHigh)
+			fmt.Printf("      - Temp Low: %.1f°C\n", day.AirTempLow)
+			fmt.Printf("      - Precipitation: %d%%\n", day.PrecipProbability)
+		}
+	}
+
 	fmt.Println("\nAll API endpoint tests completed successfully!")
 	fmt.Println("\n=== Summary ===")
 	fmt.Printf("- Stations API: Working\n")
@@ -1082,6 +1153,7 @@ func runAPITests(cfg *config.Config) {
 	fmt.Printf("- Device Discovery: Working\n")
 	fmt.Printf("- Current Observations: Working\n")
 	fmt.Printf("- Historical Observations (day_offset): Working\n")
+	fmt.Printf("- Forecast API: Working\n")
 	fmt.Printf("- Data Points Retrieved: %d observations\n", len(observations))
 	fmt.Printf("- API Performance: %.2f seconds for historical data\n", elapsed.Seconds())
 }
