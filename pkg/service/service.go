@@ -216,11 +216,11 @@ func StartService(cfg *config.Config, version string) error {
 		} else {
 			logger.Info("Alarm manager initialized with %d alarms (%d enabled)",
 				alarmManager.GetAlarmCount(), alarmManager.GetEnabledAlarmCount())
-			
+
 			// Set station location for sunrise/sunset calculations if available
 			if station.Latitude != 0 || station.Longitude != 0 {
 				alarmManager.SetLocation(station.Latitude, station.Longitude)
-				logger.Debug("Alarm manager location set to station coordinates: %.4f, %.4f", 
+				logger.Debug("Alarm manager location set to station coordinates: %.4f, %.4f",
 					station.Latitude, station.Longitude)
 			}
 		}

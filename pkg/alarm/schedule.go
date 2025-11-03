@@ -131,7 +131,7 @@ func (s *Schedule) isActiveSun(now time.Time, lat, lon float64) bool {
 	// 1. If UseStationLocation is true, use lat/lon passed from manager (station location)
 	// 2. If schedule has explicit lat/lon, use those
 	// 3. Otherwise use manager's default lat/lon
-	
+
 	if !s.UseStationLocation {
 		// Only override if not using station location and schedule has explicit coordinates
 		if s.Latitude != 0 || s.Longitude != 0 {
@@ -255,7 +255,7 @@ func calculateSunTimes(date time.Time, latitude, longitude float64) (sunrise, su
 
 	// Convert back to UTC time
 	sunriseUTC := (jRise - jd) * 24.0 // Hours since midnight
-	sunsetUTC := (jSet - jd) * 24.0    // Hours since midnight
+	sunsetUTC := (jSet - jd) * 24.0   // Hours since midnight
 
 	// Normalize
 	for sunriseUTC < 0 {

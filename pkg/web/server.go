@@ -121,6 +121,8 @@ type WeatherResponse struct {
 	LightningStrikeCount int               `json:"lightningStrikeCount"`
 	LastUpdate           string            `json:"lastUpdate"`
 	UnitHints            map[string]string `json:"unitHints,omitempty"`
+	ObservationCount     int               `json:"observationCount,omitempty"`
+	MaxHistorySize       int               `json:"maxHistorySize,omitempty"`
 }
 
 type StatusResponse struct {
@@ -721,8 +723,12 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		"rain":        "inches",
 	}
 
-	ws.logDebug("Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %d, Illuminance: %.0f lux",
-		response.Temperature, response.Humidity, response.UV, response.Illuminance)
+	// Add observation count and max history size for real-time updates in UI
+	response.ObservationCount = len(ws.dataHistory)
+	response.MaxHistorySize = ws.maxHistorySize
+
+	ws.logDebug("Weather API response prepared - Temperature: %.1f°C, Humidity: %.1f%%, UV: %d, Illuminance: %.0f lux, Observations: %d/%d",
+		response.Temperature, response.Humidity, response.UV, response.Illuminance, response.ObservationCount, response.MaxHistorySize)
 
 	// Marshal to JSON first so we can log the exact payload sent to clients
 	if b, err := json.Marshal(response); err == nil {

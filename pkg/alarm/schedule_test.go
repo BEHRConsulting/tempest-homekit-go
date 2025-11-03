@@ -574,10 +574,10 @@ func TestSchedule_UseStationLocation(t *testing.T) {
 	testTime := time.Date(2025, 1, 15, 8, 0, 0, 0, loc)
 
 	tests := []struct {
-		name               string
-		schedule           *Schedule
+		name                 string
+		schedule             *Schedule
 		expectedToUseStation bool
-		description        string
+		description          string
 	}{
 		{
 			name: "use_station_location true - should use station coords",
@@ -591,7 +591,7 @@ func TestSchedule_UseStationLocation(t *testing.T) {
 				Longitude: customLon,
 			},
 			expectedToUseStation: true,
-			description: "When use_station_location=true, station coordinates should be used even if custom lat/lon provided",
+			description:          "When use_station_location=true, station coordinates should be used even if custom lat/lon provided",
 		},
 		{
 			name: "use_station_location false with custom coords - should use custom",
@@ -604,7 +604,7 @@ func TestSchedule_UseStationLocation(t *testing.T) {
 				Longitude:          customLon,
 			},
 			expectedToUseStation: false,
-			description: "When use_station_location=false, custom coordinates should be used",
+			description:          "When use_station_location=false, custom coordinates should be used",
 		},
 		{
 			name: "use_station_location false no custom coords - should use station default",
@@ -615,7 +615,7 @@ func TestSchedule_UseStationLocation(t *testing.T) {
 				UseStationLocation: false,
 			},
 			expectedToUseStation: true, // Falls back to station since no custom coords
-			description: "When use_station_location=false and no custom coords, should use passed station coords",
+			description:          "When use_station_location=false and no custom coords, should use passed station coords",
 		},
 	}
 
@@ -625,19 +625,19 @@ func TestSchedule_UseStationLocation(t *testing.T) {
 			stationSunrise, stationSunset := calculateSunTimes(testTime, stationLat, stationLon)
 			customSunrise, customSunset := calculateSunTimes(testTime, customLat, customLon)
 
-			t.Logf("Station (LA) sunrise: %s, sunset: %s", 
+			t.Logf("Station (LA) sunrise: %s, sunset: %s",
 				stationSunrise.Format("15:04"), stationSunset.Format("15:04"))
-			t.Logf("Custom (NY) sunrise: %s, sunset: %s", 
+			t.Logf("Custom (NY) sunrise: %s, sunset: %s",
 				customSunrise.Format("15:04"), customSunset.Format("15:04"))
 
 			// Test at a time between the two sunrises to verify which is being used
 			// Use LA's sunrise time (should be active if using station, inactive if using NY)
-			testTimeAtLASunrise := time.Date(2025, 1, 15, 
+			testTimeAtLASunrise := time.Date(2025, 1, 15,
 				stationSunrise.Hour(), stationSunrise.Minute()+10, 0, 0, loc)
 
 			isActive := tt.schedule.IsActive(testTimeAtLASunrise, stationLat, stationLon)
 
-			t.Logf("Testing at LA sunrise time (%s), isActive: %v", 
+			t.Logf("Testing at LA sunrise time (%s), isActive: %v",
 				testTimeAtLASunrise.Format("15:04"), isActive)
 
 			// If using station location, should be active at station's sunrise
@@ -645,7 +645,7 @@ func TestSchedule_UseStationLocation(t *testing.T) {
 			if tt.expectedToUseStation && !isActive {
 				t.Errorf("Expected schedule to use station location and be active at station sunrise time")
 			}
-			
+
 			// Also test the String() method shows correct location info
 			str := tt.schedule.String()
 			if tt.schedule.UseStationLocation {
@@ -659,8 +659,8 @@ func TestSchedule_UseStationLocation(t *testing.T) {
 
 func TestSchedule_String_WithLocations(t *testing.T) {
 	tests := []struct {
-		name         string
-		schedule     *Schedule
+		name          string
+		schedule      *Schedule
 		shouldContain string
 	}{
 		{
@@ -691,8 +691,8 @@ func TestSchedule_String_WithLocations(t *testing.T) {
 }
 
 func stringContainsSubstr(s, substr string) bool {
-	return len(s) > 0 && len(substr) > 0 && 
-		(s == substr || len(s) >= len(substr) && 
+	return len(s) > 0 && len(substr) > 0 &&
+		(s == substr || len(s) >= len(substr) &&
 			(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
 				substringInMiddle(s, substr)))
 }

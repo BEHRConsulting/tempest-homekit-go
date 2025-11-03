@@ -158,6 +158,8 @@
 [x] add buttons to the alarm editor to edit contacts and tags. when saving, options to save as a json file or update the specific --env file
 
 [] Homekit QR code not working
+
+[] Cleanup the docs/ folder
     
 [x] Lets add a per-alarm scheduling system. daily by hour, sunrise, sunset, days per week, start time, end time. Any other standard scheduled options? I.e.: (1) Every date from sunrise to sunset. (2) Monday through Friday from 10:00-20:00. (3) No schedule defaults to Everyday, all day.
 

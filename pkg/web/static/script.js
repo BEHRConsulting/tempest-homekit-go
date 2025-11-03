@@ -2416,6 +2416,13 @@ function updateDisplay() {
         }
     }
     
+    // Update data count (real-time update as data is collected)
+    const tempestDataCount = document.getElementById('tempest-data-count');
+    if (tempestDataCount && weatherData.observationCount !== undefined && weatherData.maxHistorySize !== undefined) {
+        tempestDataCount.textContent = weatherData.observationCount > 0 ? `${weatherData.observationCount}/${weatherData.maxHistorySize}` : '0';
+        debugLog(logLevels.DEBUG, '📊 Data count updated:', `${weatherData.observationCount}/${weatherData.maxHistorySize}`);
+    }
+    
     debugLog(logLevels.INFO, 'Display update completed', {
         lastUpdate: weatherData.lastUpdate,
         formattedTime: lastUpdateText
