@@ -2,7 +2,16 @@
 
 This file tracks released versions and the notable changes implemented in each release. Its purpose is to keep the README concise and centralize the version-by-version changelog.
 
-## v1.8.0 (current)
+## v1.9.0 (current)
+- Enhanced alarm editor with full schedule editing capability
+- Contact management: add, edit, and delete contacts directly in the editor
+- SMS provider configuration editing in the alarm editor
+- --test-api-local flag for testing all local web API endpoints
+- --disable-alarms flag to skip alarm initialization
+- Validation requiring both --token and --station flags for API mode
+- Comprehensive unit tests for configuration validation
+
+## v1.8.0
 - AWS SNS SMS notifications with complete production setup
 - Cross-account SNS support with resource-based policies
 - Interactive setup script (scripts/setup-aws-sns.sh) for AWS CLI automation
