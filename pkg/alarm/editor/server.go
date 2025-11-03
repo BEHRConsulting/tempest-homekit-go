@@ -15,11 +15,12 @@ import (
 	"tempest-homekit-go/pkg/weather"
 )
 
-// Server provides the alarm editor web UI
+// Server represents the alarm editor web server
 type Server struct {
 	configPath   string
 	port         string
 	version      string
+	envFile      string
 	config       *alarm.AlarmConfig
 	lastLoadTime time.Time
 	contacts     []Contact
@@ -33,7 +34,7 @@ type Contact struct {
 }
 
 // NewServer creates a new alarm editor server
-func NewServer(configPath, port, version string) (*Server, error) {
+func NewServer(configPath, port, version, envFile string) (*Server, error) {
 	// Remove @ prefix if present
 	path := strings.TrimPrefix(configPath, "@")
 
@@ -41,6 +42,7 @@ func NewServer(configPath, port, version string) (*Server, error) {
 		configPath: path,
 		port:       port,
 		version:    version,
+		envFile:    envFile,
 	}
 
 	// Load contact list from environment
@@ -97,9 +99,49 @@ func (s *Server) saveConfig() error {
 	return nil
 }
 
-// loadContacts loads the contact list from the CONTACT_LIST environment variable
+// loadContacts loads the contact list from the CONTACT_LIST environment variable or from the env file
 func (s *Server) loadContacts() error {
-	contactListJSON := os.Getenv("CONTACT_LIST")
+	var contactListJSON string
+
+	if s.envFile != "" {
+		// Read from the specified env file
+		content, err := os.ReadFile(s.envFile)
+		if err != nil {
+			return fmt.Errorf("failed to read env file '%s': %w", s.envFile, err)
+		}
+
+		contentStr := string(content)
+		lines := strings.Split(contentStr, "\n")
+		inContactList := false
+		for _, line := range lines {
+			if strings.HasPrefix(line, "CONTACT_LIST=") {
+				// Find the opening quote
+				quoteIndex := strings.Index(line, "'")
+				if quoteIndex >= 0 {
+					contactListJSON += line[quoteIndex+1:]
+					if strings.HasSuffix(line, "'") {
+						// Single line
+						contactListJSON = strings.TrimSuffix(contactListJSON, "'")
+						break
+					} else {
+						inContactList = true
+					}
+				}
+			} else if inContactList {
+				contactListJSON += line + "\n"
+				if strings.Contains(line, "'") {
+					// Found closing quote
+					quoteIndex := strings.Index(line, "'")
+					contactListJSON = contactListJSON[:len(contactListJSON)-len(line)-1+quoteIndex]
+					break
+				}
+			}
+		}
+	} else {
+		// Read from environment variable
+		contactListJSON = os.Getenv("CONTACT_LIST")
+	}
+
 	if contactListJSON == "" {
 		// No contact list configured, use empty list
 		s.contacts = []Contact{}
@@ -206,6 +248,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		"ConfigPath": s.configPath,
 		"Port":       s.port,
 		"Version":    s.version,
+		"EnvFile":    s.envFile,
 		"LastLoad":   lastLoad,
 	}
 	if err := tmpl.Execute(w, data); err != nil {
@@ -438,7 +481,46 @@ func (s *Server) handleGetTags(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add predefined tags from environment
-	predefinedTagsJSON := os.Getenv("TAG_LIST")
+	var predefinedTagsJSON string
+	if s.envFile != "" {
+		// Read from the specified env file
+		content, err := os.ReadFile(s.envFile)
+		if err != nil {
+			logger.Warn("Failed to read env file '%s': %v", s.envFile, err)
+		} else {
+			contentStr := string(content)
+			lines := strings.Split(contentStr, "\n")
+			inTagList := false
+			for _, line := range lines {
+				if strings.HasPrefix(line, "TAG_LIST=") {
+					// Find the opening quote
+					quoteIndex := strings.Index(line, "'")
+					if quoteIndex >= 0 {
+						predefinedTagsJSON += line[quoteIndex+1:]
+						if strings.HasSuffix(line, "'") {
+							// Single line
+							predefinedTagsJSON = strings.TrimSuffix(predefinedTagsJSON, "'")
+							break
+						} else {
+							inTagList = true
+						}
+					}
+				} else if inTagList {
+					predefinedTagsJSON += line + "\n"
+					if strings.Contains(line, "'") {
+						// Found closing quote
+						quoteIndex := strings.Index(line, "'")
+						predefinedTagsJSON = predefinedTagsJSON[:len(predefinedTagsJSON)-len(line)-1+quoteIndex]
+						break
+					}
+				}
+			}
+		}
+	} else {
+		// Read from environment variable
+		predefinedTagsJSON = os.Getenv("TAG_LIST")
+	}
+
 	if predefinedTagsJSON != "" {
 		var predefinedTags []string
 		if err := json.Unmarshal([]byte(predefinedTagsJSON), &predefinedTags); err != nil {
@@ -730,7 +812,10 @@ func (s *Server) handleSaveContacts(w http.ResponseWriter, r *http.Request) {
 		message = fmt.Sprintf("Contacts saved to %s", filename)
 	} else if req.SaveType == "env" {
 		// Update .env file
-		envFile := ".env"
+		envFile := s.envFile
+		if envFile == "" {
+			envFile = ".env"
+		}
 		if _, err := os.Stat(envFile); os.IsNotExist(err) {
 			envFile = ".env.example"
 		}
@@ -741,27 +826,45 @@ func (s *Server) handleSaveContacts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		contactsJSON, err := json.Marshal(req.Contacts)
+		contactsJSON, err := json.MarshalIndent(req.Contacts, "", "  ")
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to marshal contacts: %v", err), http.StatusInternalServerError)
 			return
 		}
 
-		lines := strings.Split(string(content), "\n")
-		updated := false
+		// Replace CONTACT_LIST in .env file, handling multi-line values
+		contentStr := string(content)
+		lines := strings.Split(contentStr, "\n")
+		startLine := -1
+		endLine := -1
 		for i, line := range lines {
 			if strings.HasPrefix(line, "CONTACT_LIST=") {
-				lines[i] = fmt.Sprintf("CONTACT_LIST=%s", string(contactsJSON))
-				updated = true
-				break
+				startLine = i
+				if strings.HasSuffix(line, "'") {
+					endLine = i
+					break
+				}
+			} else if startLine != -1 {
+				if strings.Contains(line, "'") {
+					endLine = i
+					break
+				}
 			}
 		}
 
-		if !updated {
-			lines = append(lines, fmt.Sprintf("CONTACT_LIST=%s", string(contactsJSON)))
+		newLines := strings.Split(fmt.Sprintf("CONTACT_LIST='%s'", string(contactsJSON)), "\n")
+
+		if startLine != -1 {
+			// Replace the block
+			lines = append(lines[:startLine], append(newLines, lines[endLine+1:]...)...)
+		} else {
+			// Append
+			lines = append(lines, newLines...)
 		}
 
-		if err := os.WriteFile(envFile, []byte(strings.Join(lines, "\n")), 0644); err != nil {
+		contentStr = strings.Join(lines, "\n")
+
+		if err := os.WriteFile(envFile, []byte(contentStr), 0644); err != nil {
 			http.Error(w, fmt.Sprintf("Failed to update env file: %v", err), http.StatusInternalServerError)
 			return
 		}
@@ -783,8 +886,8 @@ func (s *Server) handleSaveTags(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Tags    []string `json:"tags"`
-		SaveType string  `json:"saveType"`
+		Tags     []string `json:"tags"`
+		SaveType string   `json:"saveType"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -828,7 +931,10 @@ func (s *Server) handleSaveTags(w http.ResponseWriter, r *http.Request) {
 		message = fmt.Sprintf("Tags saved to %s", filename)
 	} else if req.SaveType == "env" {
 		// Update .env file
-		envFile := ".env"
+		envFile := s.envFile
+		if envFile == "" {
+			envFile = ".env"
+		}
 		if _, err := os.Stat(envFile); os.IsNotExist(err) {
 			envFile = ".env.example"
 		}
@@ -839,27 +945,45 @@ func (s *Server) handleSaveTags(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		tagsJSON, err := json.Marshal(req.Tags)
+		tagsJSON, err := json.MarshalIndent(req.Tags, "", "  ")
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to marshal tags: %v", err), http.StatusInternalServerError)
 			return
 		}
 
-		lines := strings.Split(string(content), "\n")
-		updated := false
+		// Replace TAG_LIST in .env file, handling multi-line values
+		contentStr := string(content)
+		lines := strings.Split(contentStr, "\n")
+		startLine := -1
+		endLine := -1
 		for i, line := range lines {
 			if strings.HasPrefix(line, "TAG_LIST=") {
-				lines[i] = fmt.Sprintf("TAG_LIST=%s", string(tagsJSON))
-				updated = true
-				break
+				startLine = i
+				if strings.HasSuffix(line, "'") {
+					endLine = i
+					break
+				}
+			} else if startLine != -1 {
+				if strings.Contains(line, "'") {
+					endLine = i
+					break
+				}
 			}
 		}
 
-		if !updated {
-			lines = append(lines, fmt.Sprintf("TAG_LIST=%s", string(tagsJSON)))
+		newLines := strings.Split(fmt.Sprintf("TAG_LIST='%s'", string(tagsJSON)), "\n")
+
+		if startLine != -1 {
+			// Replace the block
+			lines = append(lines[:startLine], append(newLines, lines[endLine+1:]...)...)
+		} else {
+			// Append
+			lines = append(lines, newLines...)
 		}
 
-		if err := os.WriteFile(envFile, []byte(strings.Join(lines, "\n")), 0644); err != nil {
+		contentStr = strings.Join(lines, "\n")
+
+		if err := os.WriteFile(envFile, []byte(contentStr), 0644); err != nil {
 			http.Error(w, fmt.Sprintf("Failed to update env file: %v", err), http.StatusInternalServerError)
 			return
 		}
