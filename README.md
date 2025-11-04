@@ -47,6 +47,12 @@ This project represents a controlled experiment in AI-assisted software developm
 
 For a concise history of versions and notable changes, see `VERSIONS.md`.
 
+## Features
+
+![Tempest HomeKit Web Console](Tempest-HomeKit-WebConsole.png)
+
+*Modern web dashboard with real-time weather data, interactive charts, and alarm monitoring*
+
 - **Real-time Weather Monitoring**: Continuously polls WeatherFlow Tempest station data every 60 seconds
 - **HomeKit Integration**: Individual HomeKit accessories for each weather sensor
 - **Multiple Sensor Support**: Temperature, Humidity, Wind Speed, Wind Direction, Rain Accumulation, UV Index, Pressure, and Ambient Light
