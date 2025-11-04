@@ -27,6 +27,7 @@ type AlarmManagerInterface interface {
 	GetEnabledAlarmCount() int
 	GetConfigPath() string
 	GetLastLoadTime() time.Time
+	GetLocation() (latitude, longitude float64)
 }
 
 // WebServer provides HTTP endpoints and a web dashboard for weather monitoring.
@@ -914,6 +915,8 @@ type AlarmStatus struct {
 	CooldownRemaining int      `json:"cooldownRemaining"` // Seconds remaining in cooldown (0 if ready)
 	InCooldown        bool     `json:"inCooldown"`        // True if currently in cooldown
 	TriggeredCount    int      `json:"triggeredCount"`
+	HasSchedule       bool     `json:"hasSchedule"`       // True if alarm has a schedule defined
+	ScheduleActive    bool     `json:"scheduleActive"`    // True if schedule allows alarm to be active now
 }
 
 func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request) {
@@ -965,6 +968,14 @@ func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request
 		cooldownRemaining := alm.GetCooldownRemaining()
 		inCooldown := alm.IsInCooldown()
 
+		// Check schedule status
+		hasSchedule := alm.Schedule != nil && alm.Schedule.Type != "" && alm.Schedule.Type != "always"
+		scheduleActive := true
+		if hasSchedule {
+			lat, lon := alarmMgr.GetLocation()
+			scheduleActive = alm.Schedule.IsActive(time.Now(), lat, lon)
+		}
+
 		alarmStatuses = append(alarmStatuses, AlarmStatus{
 			Name:              alm.Name,
 			Description:       alm.Description,
@@ -977,6 +988,8 @@ func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request
 			CooldownRemaining: cooldownRemaining,
 			InCooldown:        inCooldown,
 			TriggeredCount:    alm.TriggeredCount,
+			HasSchedule:       hasSchedule,
+			ScheduleActive:    scheduleActive,
 		})
 	}
 

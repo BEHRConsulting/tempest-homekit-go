@@ -5432,6 +5432,24 @@ function updateAlarmStatus(data, opts) {
             alarmName.appendChild(expandButton);
             alarmName.appendChild(doc.createTextNode(` 🔔 ${alarm.name}`));
             
+            // Add schedule icon if alarm has a schedule
+            if (alarm.hasSchedule) {
+                const scheduleIcon = doc.createElement('span');
+                scheduleIcon.className = 'alarm-schedule-icon';
+                scheduleIcon.style.marginLeft = '8px';
+                scheduleIcon.style.fontSize = '0.9em';
+                if (alarm.scheduleActive) {
+                    scheduleIcon.textContent = '🕐✅';
+                    scheduleIcon.title = 'Scheduled alarm - Currently ACTIVE';
+                    scheduleIcon.style.color = 'var(--success-color, #4caf50)';
+                } else {
+                    scheduleIcon.textContent = '🕐⏸️';
+                    scheduleIcon.title = 'Scheduled alarm - Currently INACTIVE (outside schedule)';
+                    scheduleIcon.style.color = 'var(--warning-color, #ff9800)';
+                }
+                alarmName.appendChild(scheduleIcon);
+            }
+            
             const alarmDetails = doc.createElement('div');
             alarmDetails.className = 'alarm-item-details';
             
