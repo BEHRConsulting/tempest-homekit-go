@@ -752,6 +752,13 @@ function showCreateModal() {
     document.getElementById('alarmCooldown').value = '1800';
     document.getElementById('alarmEnabled').checked = true;
     
+    // Reset validation result
+    const validationResult = document.getElementById('validationResult');
+    if (validationResult) {
+        validationResult.style.display = 'none';
+        validationResult.innerHTML = '';
+    }
+    
     // Reset delivery methods to console only
     document.getElementById('deliveryConsole').checked = true;
     document.getElementById('deliverySyslog').checked = false;
@@ -940,6 +947,13 @@ function editAlarm(name) {
     document.getElementById('alarmCondition').value = '';
     document.getElementById('alarmCooldown').value = '1800';
     document.getElementById('alarmEnabled').checked = true;
+    
+    // Reset validation result
+    const validationResult = document.getElementById('validationResult');
+    if (validationResult) {
+        validationResult.style.display = 'none';
+        validationResult.innerHTML = '';
+    }
     
     // Clear all delivery method checkboxes
     document.getElementById('deliveryConsole').checked = false;
