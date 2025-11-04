@@ -232,7 +232,7 @@ func StartService(cfg *config.Config, version string) error {
 	// Create web server only if not disabled
 	var webServer *web.WebServer
 	if !cfg.DisableWebConsole {
-		webServer = web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, effectiveStationURL, generatedWeatherInfo, weatherGen, cfg.Units, cfg.UnitsPressure, cfg.HistoryPoints, cfg.ChartHistoryHours, cfg.Alarms)
+		webServer = web.NewWebServer(cfg.WebPort, cfg.Elevation, cfg.LogLevel, station.StationID, cfg.UseWebStatus, version, effectiveStationURL, generatedWeatherInfo, weatherGen, cfg.Units, cfg.UnitsPressure, cfg.HistoryPoints, cfg.ChartHistoryHours, cfg.Alarms, cfg.DisableAlarms)
 		webServer.SetStationName(station.Name)
 		if alarmManager != nil {
 			webServer.SetAlarmManager(alarmManager)

@@ -3162,18 +3162,18 @@ function updateStatusDisplay(status) {
     if (status.historyLoadingProgress && status.historyLoadingProgress.isLoading) {
         // Update status to show we're reading historical data
         if (tempestStatus) {
-            tempestStatus.textContent = 'Reading Historical Observations';
+            tempestStatus.textContent = '⏳ Reading Historical Observations';
             tempestStatus.style.color = '#ffc107'; // Yellow color for loading
         }
     } else {
         // Not loading - show normal connection status
         if (tempestStatus) {
             if (status.generatedWeather && status.generatedWeather.enabled) {
-                tempestStatus.textContent = 'Generated';
+                tempestStatus.textContent = '🔧 Generated';
                 tempestStatus.style.color = '#17a2b8'; // Info blue for generated
             } else if (!status.connected && status.dataSource && status.dataSource.type === 'udp') {
                 // UDP mode but not connected yet - show waiting message
-                tempestStatus.textContent = 'Waiting for UDP Stream';
+                tempestStatus.textContent = '⏳ Waiting for UDP Stream';
                 tempestStatus.style.color = '#ffc107'; // Yellow/warning color
                 // Also update the main header status
                 const mainStatus = document.getElementById('status');
@@ -3182,7 +3182,7 @@ function updateStatusDisplay(status) {
                     mainStatus.style.background = 'rgba(255, 193, 7, 0.1)'; // Yellow background
                 }
             } else {
-                tempestStatus.textContent = status.connected ? 'Connected' : 'Disconnected';
+                tempestStatus.textContent = status.connected ? '✅ Connected' : '❌ Disconnected';
                 tempestStatus.style.color = status.connected ? '#28a745' : '#dc3545';
             }
         }
@@ -3309,8 +3309,16 @@ function updateStatusDisplay(status) {
 
     const hk = status.homekit || {};
     if (homekitStatus) {
-        homekitStatus.textContent = hk.bridge ? 'Active' : 'Disabled';
-        homekitStatus.style.color = hk.bridge ? '#28a745' : '#dc3545';
+        if (hk.bridge) {
+            homekitStatus.textContent = '✅ Active';
+            homekitStatus.style.color = '#28a745';
+        } else if (hk.status && hk.status.includes('Disabled')) {
+            homekitStatus.textContent = '❌ Disabled';
+            homekitStatus.style.color = '#dc3545';
+        } else {
+            homekitStatus.textContent = '⚠️ Inactive';
+            homekitStatus.style.color = '#ffc107';
+        }
     }
     if (homekitAccessories) homekitAccessories.textContent = hk.accessories || '--';
     if (homekitBridge) homekitBridge.textContent = hk.name || '--';
@@ -3947,8 +3955,16 @@ function updateHomekitStatus(status) {
 
     const hk = status.homekit || {};
     if (homekitStatus) {
-        homekitStatus.textContent = hk.bridge ? 'Active' : 'Inactive';
-        homekitStatus.style.color = hk.bridge ? '#28a745' : '#dc3545';
+        if (hk.bridge) {
+            homekitStatus.textContent = '✅ Active';
+            homekitStatus.style.color = '#28a745';
+        } else if (hk.status && hk.status.includes('Disabled')) {
+            homekitStatus.textContent = '❌ Disabled';
+            homekitStatus.style.color = '#dc3545';
+        } else {
+            homekitStatus.textContent = '⚠️ Inactive';
+            homekitStatus.style.color = '#ffc107';
+        }
     }
     if (homekitAccessories) homekitAccessories.textContent = hk.accessories || '--';
     if (homekitBridge) homekitBridge.textContent = hk.name || '--';
@@ -5235,6 +5251,9 @@ function updateAlarmStatus(data, opts) {
         if (data.enabled) {
             statusEl.textContent = '✅ Active';
             statusEl.style.color = 'var(--success-color, #4caf50)';
+        } else if (data.disabled) {
+            statusEl.textContent = '❌ Disabled';
+            statusEl.style.color = 'var(--error-color, #dc3545)';
         } else {
             statusEl.textContent = '⚠️ Not Configured';
             statusEl.style.color = 'var(--warning-color, #ff9800)';

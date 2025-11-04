@@ -59,5 +59,5 @@ func testNewWebServer(t *testing.T) *WebServer {
 	gw := &GeneratedWeatherInfo{Enabled: false}
 	fg := newFakeGenerator(nil)
 	// Use info log level for tests by default to match test expectations
-	return NewWebServer("8080", 100.0, "info", 12345, false, "v1.3.0", "", gw, fg, "imperial", "mb", 1000, 24, "")
+	return NewWebServer("8080", 100.0, "info", 12345, false, "v1.3.0", "", gw, fg, "imperial", "mb", 1000, 24, "", false)
 }

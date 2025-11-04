@@ -50,6 +50,7 @@ type WebServer struct {
 	logLevel               string                // log level for filtering debug messages
 	alarmManager           AlarmManagerInterface // alarm manager for status display
 	alarmConfig            string                // alarm configuration path or content
+	disableAlarms          bool                  // whether alarms are disabled via --disable-alarms flag
 	startTime              time.Time
 	historicalDataLoaded   bool
 	historicalDataCount    int
@@ -382,7 +383,7 @@ func getPressureWeatherForecast(pressure float64, trend string) string {
 	}
 }
 
-func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, stationURL string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface, units string, unitsPressure string, historyPoints int, chartHistoryHours int, alarmConfig string) *WebServer {
+func NewWebServer(port string, elevation float64, logLevel string, stationID int, useWebStatus bool, version string, stationURL string, generatedWeather *GeneratedWeatherInfo, weatherGenerator WeatherGeneratorInterface, units string, unitsPressure string, historyPoints int, chartHistoryHours int, alarmConfig string, disableAlarms bool) *WebServer {
 	// Validate history size to prevent excessive memory allocation
 	if historyPoints > 100000 {
 		logger.Warn("History size %d is very large, capping at 100000 to prevent memory issues", historyPoints)
@@ -409,6 +410,7 @@ func NewWebServer(port string, elevation float64, logLevel string, stationID int
 		units:             units,
 		unitsPressure:     unitsPressure,
 		alarmConfig:       alarmConfig,
+		disableAlarms:     disableAlarms,
 		homekitStatus: map[string]interface{}{
 			"bridge":      false,
 			"accessories": 0,
@@ -895,6 +897,7 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 // AlarmStatusResponse represents the alarm status API response
 type AlarmStatusResponse struct {
 	Enabled       bool          `json:"enabled"`
+	Disabled      bool          `json:"disabled"`      // True if explicitly disabled via --disable-alarms
 	ConfigPath    string        `json:"configPath"`
 	LastReadTime  string        `json:"lastReadTime"`
 	TotalAlarms   int           `json:"totalAlarms"`
@@ -926,15 +929,17 @@ func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request
 	ws.mu.RLock()
 	alarmMgr := ws.alarmManager
 	alarmConfig := ws.alarmConfig
+	disableAlarms := ws.disableAlarms
 	ws.mu.RUnlock()
 
-	// Determine if alarms are enabled (configured or manager exists)
-	enabled := alarmConfig != "" || alarmMgr != nil
+	// Determine if alarms are enabled (configured, manager exists, and not disabled via flag)
+	enabled := (alarmConfig != "" || alarmMgr != nil) && !disableAlarms
 
 	// If no alarm manager, return basic status
 	if alarmMgr == nil {
 		json.NewEncoder(w).Encode(AlarmStatusResponse{
 			Enabled:       enabled,
+			Disabled:      disableAlarms,
 			ConfigPath:    alarmConfig,
 			LastReadTime:  "N/A",
 			TotalAlarms:   0,
@@ -1003,6 +1008,7 @@ func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request
 
 	response := AlarmStatusResponse{
 		Enabled:       enabled,
+		Disabled:      disableAlarms,
 		ConfigPath:    configPath,
 		LastReadTime:  lastReadTimeStr,
 		TotalAlarms:   totalAlarms,
