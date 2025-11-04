@@ -474,10 +474,10 @@ const indexHTML = `<!DOCTYPE html>
                 </div>
                 
                 <div id="timeScheduleSection" class="form-group" style="display:none; margin-left: 20px;">
-                    <label>Start Time (HH:MM)</label>
-                    <input type="time" id="scheduleStartTime" step="60" />
-                    <label style="margin-top: 10px;">End Time (HH:MM)</label>
-                    <input type="time" id="scheduleEndTime" step="60" />
+                    <label>Start Time (24-hour HH:MM)</label>
+                    <input type="text" id="scheduleStartTime" placeholder="09:00" pattern="[0-2][0-9]:[0-5][0-9]" title="24-hour format: HH:MM (e.g., 09:00, 15:30, 23:45)" />
+                    <label style="margin-top: 10px;">End Time (24-hour HH:MM)</label>
+                    <input type="text" id="scheduleEndTime" placeholder="17:00" pattern="[0-2][0-9]:[0-5][0-9]" title="24-hour format: HH:MM (e.g., 09:00, 15:30, 23:45)" />
                     <small>Active during this time range each day (supports overnight ranges like 22:00-06:00)</small>
                 </div>
                 
@@ -511,10 +511,10 @@ const indexHTML = `<!DOCTYPE html>
                         Also restrict to specific hours
                     </label>
                     <div id="weeklyTimeRangeFields" style="display:none; margin-top: 10px;">
-                        <label>Start Time (HH:MM)</label>
-                        <input type="time" id="weeklyStartTime" step="60" />
-                        <label style="margin-top: 10px;">End Time (HH:MM)</label>
-                        <input type="time" id="weeklyEndTime" step="60" />
+                        <label>Start Time (24-hour HH:MM)</label>
+                        <input type="text" id="weeklyStartTime" placeholder="09:00" pattern="[0-2][0-9]:[0-5][0-9]" title="24-hour format: HH:MM (e.g., 09:00, 15:30, 23:45)" />
+                        <label style="margin-top: 10px;">End Time (24-hour HH:MM)</label>
+                        <input type="text" id="weeklyEndTime" placeholder="17:00" pattern="[0-2][0-9]:[0-5][0-9]" title="24-hour format: HH:MM (e.g., 09:00, 15:30, 23:45)" />
                     </div>
                 </div>
                 
