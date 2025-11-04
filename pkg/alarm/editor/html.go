@@ -475,9 +475,9 @@ const indexHTML = `<!DOCTYPE html>
                 
                 <div id="timeScheduleSection" class="form-group" style="display:none; margin-left: 20px;">
                     <label>Start Time (HH:MM)</label>
-                    <input type="time" id="scheduleStartTime" />
+                    <input type="time" id="scheduleStartTime" step="60" />
                     <label style="margin-top: 10px;">End Time (HH:MM)</label>
-                    <input type="time" id="scheduleEndTime" />
+                    <input type="time" id="scheduleEndTime" step="60" />
                     <small>Active during this time range each day (supports overnight ranges like 22:00-06:00)</small>
                 </div>
                 
@@ -512,9 +512,9 @@ const indexHTML = `<!DOCTYPE html>
                     </label>
                     <div id="weeklyTimeRangeFields" style="display:none; margin-top: 10px;">
                         <label>Start Time (HH:MM)</label>
-                        <input type="time" id="weeklyStartTime" />
+                        <input type="time" id="weeklyStartTime" step="60" />
                         <label style="margin-top: 10px;">End Time (HH:MM)</label>
-                        <input type="time" id="weeklyEndTime" />
+                        <input type="time" id="weeklyEndTime" step="60" />
                     </div>
                 </div>
                 
