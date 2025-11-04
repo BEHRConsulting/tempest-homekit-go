@@ -165,6 +165,28 @@
           }
         }
       ]
+    },
+    {
+      "name": "Trigger Often Test",
+      "description": "This alarm will trigger way too many times - but great for a test",
+      "tags": [
+        "test"
+      ],
+      "enabled": false,
+      "condition": "*temperature || *wind_direction || *wind_speed || *lux",
+      "cooldown": 60,
+      "schedule": {
+        "type": "time",
+        "start_time": "16:00",
+        "end_time": "16:30",
+        "timezone": "America/Los_Angeles"
+      },
+      "channels": [
+        {
+          "type": "console",
+          "template": "🚨 WEATHER ALARM TRIGGERED\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nAlarm:       {{alarm_name}}\nDescription: {{alarm_description}}\nStation:     {{station}}\nTime:        {{timestamp}}\n{{sensor_info}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        }
+      ]
     }
   ]
 }

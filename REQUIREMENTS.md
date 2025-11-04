@@ -1,7 +1,7 @@
 # Tempest HomeKit Go Service - Requirements & Features
 # Vibe Programming Research Implementation
 
-**Version**: v1.8.0
+**Version**: v1.9.0
 
 ## Research Methodology Overview
 
@@ -175,6 +175,12 @@ Warning: **Critical**: Due to HomeKit's limited native sensor types, the **Press
 - Toggle alarm enabled/disabled state
 - Real-time preview of template expansion
 - Edit alarm names with duplicate detection (v1.8.0+)
+- Full schedule editing capability with UI forms (v1.9.0+)
+  - Daily time ranges with 24-hour HH:MM format
+  - Weekly schedules with day selection
+  - Sunrise/sunset based scheduling with time offsets
+- Contact management: add, edit, delete contacts directly (v1.9.0+)
+- SMS provider configuration editing in the editor (v1.9.0+)
 - Full test suite with 100% pass rate
 
 **Configuration Options:**
@@ -232,7 +238,7 @@ Warning: **Critical**: Due to HomeKit's limited native sensor types, the **Press
 
 #### Command-Line Flags (v1.3.0 Enhanced)
 - `--token`: WeatherFlow API personal access token (required when using the WeatherFlow API as the data source; optional when using `--station-url` or `--use-generated-weather`)
-- `--station`: Tempest station name (default: "Chino Hills")
+- `--station`: Tempest station name (required when using `--token` flag, default: "Chino Hills")
 - `--pin`: HomeKit pairing PIN (default: "00102003")
 - `--loglevel`: Logging verbosity - debug, info, warn/warning, error (default: "error")
 - `--web-port`: Web dashboard port (default: "8080")
@@ -252,11 +258,14 @@ Warning: **Critical**: Due to HomeKit's limited native sensor types, the **Press
 - `--version`: Display version information and exit
 - `--alarms`: Enable alarm system with configuration file or inline JSON (e.g., `@alarms.json` or JSON string)
 - `--alarms-edit`: Run alarm editor for configuration file in standalone mode (e.g., `@alarms.json`)
+- `--disable-alarms`: Disable alarm initialization and processing (NEW in v1.9.0)
+- `--test-api-local`: Test local web server API endpoints in standalone mode (NEW in v1.9.0)
 - `--webhook-listener`: Start webhook listener server to receive and inspect webhook requests
 - `--webhook-listener-port`: Port for webhook listener server (default: "8082")
 
-#### Comprehensive Validation (v1.3.0)
+#### Comprehensive Validation (v1.3.0+)
 - **Required Token Validation**: Clear error messages for missing WeatherFlow API token
+- **Station Name Validation**: Requires both `--token` and `--station` flags when using API mode (v1.9.0+)
 - **Sensor Validation**: Detailed error messages showing available sensors and aliases
 - **Elevation Validation**: Earth-realistic range enforcement with helpful error messages
 - **Usage Display**: Automatic usage information display on validation errors
@@ -639,8 +648,9 @@ type Observation struct {
 ### Testing Requirements
 
 #### Testing Infrastructure (v1.8.0+)
-- **Test Flags**: 11 comprehensive testing flags for pre-deployment validation
+- **Test Flags**: 12 comprehensive testing flags for pre-deployment validation
  - API endpoint testing (`--test-api`)
+ - Local API endpoint testing (`--test-api-local`) (v1.9.0+)
  - UDP broadcast testing (`--test-udp [seconds]`)
  - Email delivery testing (`--test-email <email>`)
  - SMS delivery testing (`--test-sms <phone>`)

@@ -915,8 +915,8 @@ type AlarmStatus struct {
 	CooldownRemaining int      `json:"cooldownRemaining"` // Seconds remaining in cooldown (0 if ready)
 	InCooldown        bool     `json:"inCooldown"`        // True if currently in cooldown
 	TriggeredCount    int      `json:"triggeredCount"`
-	HasSchedule       bool     `json:"hasSchedule"`       // True if alarm has a schedule defined
-	ScheduleActive    bool     `json:"scheduleActive"`    // True if schedule allows alarm to be active now
+	HasSchedule       bool     `json:"hasSchedule"`    // True if alarm has a schedule defined
+	ScheduleActive    bool     `json:"scheduleActive"` // True if schedule allows alarm to be active now
 }
 
 func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request) {
