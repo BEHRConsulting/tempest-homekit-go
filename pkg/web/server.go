@@ -897,7 +897,7 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 // AlarmStatusResponse represents the alarm status API response
 type AlarmStatusResponse struct {
 	Enabled       bool          `json:"enabled"`
-	Disabled      bool          `json:"disabled"`      // True if explicitly disabled via --disable-alarms
+	Disabled      bool          `json:"disabled"` // True if explicitly disabled via --disable-alarms
 	ConfigPath    string        `json:"configPath"`
 	LastReadTime  string        `json:"lastReadTime"`
 	TotalAlarms   int           `json:"totalAlarms"`
