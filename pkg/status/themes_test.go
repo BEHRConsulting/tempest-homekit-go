@@ -37,18 +37,18 @@ func TestGetTheme(t *testing.T) {
 
 func TestGetAllThemeNames(t *testing.T) {
 	names := GetAllThemeNames()
-	
+
 	// Should have exactly 12 themes
 	if len(names) != 12 {
 		t.Errorf("GetAllThemeNames() returned %d themes, want 12", len(names))
 	}
-	
+
 	// Should include known themes
 	expectedThemes := []string{
 		"dark-ocean", "dark-forest", "dark-sunset", "dark-twilight", "dark-matrix", "dark-cyberpunk",
 		"light-sky", "light-garden", "light-autumn", "light-lavender", "light-monochrome", "light-ocean",
 	}
-	
+
 	for _, expected := range expectedThemes {
 		found := false
 		for _, name := range names {
