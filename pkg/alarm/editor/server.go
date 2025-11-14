@@ -602,7 +602,7 @@ func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
 		} else {
 			parts = strings.Split(condition, "||")
 		}
-		
+
 		for i, part := range parts {
 			if strings.TrimSpace(part) == "" {
 				validationErr = fmt.Errorf("logical operator (&&/||) requires expressions on both sides (missing expression at position %d)", i+1)

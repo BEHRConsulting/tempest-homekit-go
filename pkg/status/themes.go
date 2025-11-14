@@ -287,7 +287,7 @@ func GetNextTheme(currentName string) *Theme {
 // ListThemes prints all available themes grouped by background type
 func ListThemes() {
 	fmt.Println("Available Status Console Themes")
-	fmt.Println("================================\n")
+	fmt.Println("================================")
 
 	fmt.Println("DARK BACKGROUND THEMES:")
 	fmt.Println("-----------------------")

@@ -1,7 +1,7 @@
 # Tempest HomeKit Go Service - Requirements & Features
 # Vibe Programming Research Implementation
 
-**Version**: v1.9.0
+**Version**: v1.10.0
 
 ## Research Methodology Overview
 
@@ -127,7 +127,7 @@ Warning: **Critical**: Due to HomeKit's limited native sensor types, the **Press
 - **Graceful Degradation**: Continue operation even if Chrome is not available
 - **Status API Integration**: Include scraped data in `/api/status` endpoint response
 
-#### Status Console System (v1.9.0+)
+#### Status Console System (v1.10.0)
 - **Terminal-Based Monitoring**: Real-time status display in curses-like terminal interface
 - **Multi-Panel Layout**: 7 responsive windows (logs, sensors, station, alarms, homekit, system, footer)
 - **Color Themes**: 12 themes (6 dark + 6 light) with smart log colorization

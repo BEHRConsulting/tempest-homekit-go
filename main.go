@@ -58,7 +58,7 @@ func main() {
 
 	// Handle version flag
 	if cfg.Version {
-		fmt.Println("tempest-homekit-go v1.9.0")
+		fmt.Println("tempest-homekit-go v1.10.0")
 		fmt.Println("Built with Go 1.24.2")
 		fmt.Println("HomeKit integration for WeatherFlow Tempest weather stations")
 		os.Exit(0)
@@ -73,25 +73,25 @@ func main() {
 	// Handle alarm editor mode
 	if cfg.AlarmsEdit != "" {
 		logger.Info("Alarm editor mode detected, starting alarm editor...")
-		
+
 		// Validate alarm file path
 		alarmsFile := cfg.AlarmsEdit
 		if strings.HasPrefix(alarmsFile, "@") {
 			alarmsFile = alarmsFile[1:]
 		}
-		
+
 		// Check if file exists and is readable
 		if _, err := os.Stat(alarmsFile); os.IsNotExist(err) {
 			log.Fatalf("ERROR: Alarm configuration file not found: %s\n\nUsage: --alarms-edit @filename.json\nExample: --alarms-edit @tempest-alarms.json\n\nThe file must exist before starting the alarm editor.", alarmsFile)
 		} else if err != nil {
 			log.Fatalf("ERROR: Cannot access alarm configuration file '%s': %v\n\nPlease check file permissions.", alarmsFile, err)
 		}
-		
+
 		// Verify it's a regular file (not a directory)
 		if info, err := os.Stat(alarmsFile); err == nil && info.IsDir() {
 			log.Fatalf("ERROR: '%s' is a directory, not a file.\n\nUsage: --alarms-edit @filename.json\nExample: --alarms-edit @tempest-alarms.json", alarmsFile)
 		}
-		
+
 		editorServer, err := editor.NewServer(cfg.AlarmsEdit, cfg.AlarmsEditPort, "1.9.0", cfg.EnvFile)
 		if err != nil {
 			log.Fatalf("Failed to create alarm editor: %v", err)
