@@ -172,15 +172,9 @@
       "tags": [
         "test"
       ],
-      "enabled": false,
+      "enabled": true,
       "condition": "*temperature || *wind_direction || *wind_speed || *lux",
       "cooldown": 60,
-      "schedule": {
-        "type": "time",
-        "start_time": "16:00",
-        "end_time": "16:30",
-        "timezone": "America/Los_Angeles"
-      },
       "channels": [
         {
           "type": "console",

@@ -593,14 +593,19 @@ func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
 		validationErr = fmt.Errorf("condition ends with incomplete operator (&&/||)")
 	} else if strings.HasPrefix(condition, "&&") || strings.HasPrefix(condition, "||") {
 		validationErr = fmt.Errorf("condition starts with incomplete operator (&&/||)")
-	} else if strings.Contains(condition, "&&") && strings.Contains(condition, "|| ") {
+	} else if strings.Contains(condition, "&&") || strings.Contains(condition, "||") {
 		// Check for empty parts in compound conditions
-		parts := strings.FieldsFunc(condition, func(r rune) bool {
-			return r == '&' || r == '|'
-		})
-		for _, part := range parts {
+		// Split on the actual operators, not individual characters
+		var parts []string
+		if strings.Contains(condition, "&&") {
+			parts = strings.Split(condition, "&&")
+		} else {
+			parts = strings.Split(condition, "||")
+		}
+		
+		for i, part := range parts {
 			if strings.TrimSpace(part) == "" {
-				validationErr = fmt.Errorf("logical operator (&&/||) requires expressions on both sides")
+				validationErr = fmt.Errorf("logical operator (&&/||) requires expressions on both sides (missing expression at position %d)", i+1)
 				break
 			}
 		}

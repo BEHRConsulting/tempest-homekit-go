@@ -7,6 +7,7 @@ Tempest HomeKit Go is a Go service that reads WeatherFlow Tempest station data a
 Table of Contents
 - [Quick Start](#quick-start)
 - [Features](#features)
+- [Status Console](#status-console)
 - [Configuration](#configuration)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -290,6 +291,207 @@ For Twilio SMS configuration (great for development and moderate volume), see de
 
 **Pricing**: ~$0.0079 per message (US), ~$1/month for phone number. Upgrade to paid account for unrestricted sending.
 
+## Status Console
+
+The status console provides a real-time terminal-based UI for monitoring your Tempest station without opening a web browser. It displays live weather data, logs, station status, alarm information, and HomeKit status in a responsive multi-panel interface.
+
+### Features
+
+- **Real-time Updates**: Auto-refresh every 5 seconds (configurable)
+- **Multi-Panel Layout**: 7 separate windows showing:
+  - **Console Logs**: Scrolling log output with color-coded messages
+  - **Tempest Sensors**: Current sensor readings (temperature, humidity, wind, pressure, UV, light, rain)
+  - **Station Status**: Device and hub information (battery, uptime, signal strength, firmware)
+  - **Alarm Status**: Triggered and cooling down alarms with timestamps
+  - **HomeKit Status**: Active/disabled status with published sensors
+  - **System Info**: Application metadata and runtime information
+  - **Footer**: Running time, refresh countdown, current theme, keyboard shortcuts
+- **12 Color Themes**: 6 dark and 6 light themes optimized for terminal readability
+- **Smart Log Colorization**: Automatic color coding for ERROR, WARN, INFO, DEBUG messages
+- **Responsive Layout**: Adapts to terminal size changes automatically
+- **Keyboard Controls**: Interactive controls for refresh, quit, and theme cycling
+- **Optional Timeout**: Auto-exit after specified duration
+
+### Quick Start
+
+```bash
+# Start status console with default settings (5 second refresh)
+./tempest-homekit-go --status --token "your-token" --station "Your Station"
+
+# Custom refresh interval (10 seconds)
+./tempest-homekit-go --status --status-refresh 10 --token "your-token" --station "Your Station"
+
+# With timeout (exit after 5 minutes)
+./tempest-homekit-go --status --status-timeout 300 --token "your-token" --station "Your Station"
+
+# With specific theme
+./tempest-homekit-go --status --status-theme dark-ocean --token "your-token" --station "Your Station"
+
+# List all available themes
+./tempest-homekit-go --status-theme-list
+```
+
+### Configuration Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--status` | `false` | Enable status console mode |
+| `--status-refresh` | `5` | Refresh interval in seconds |
+| `--status-timeout` | `0` | Auto-exit timeout in seconds (0=never) |
+| `--status-theme` | `dark-ocean` | Color theme name |
+| `--status-theme-list` | - | List all themes and exit |
+
+### Environment Variables
+
+```bash
+# In .env file
+STATUS=true
+STATUS_REFRESH=10
+STATUS_TIMEOUT=300
+STATUS_THEME=dark-forest
+```
+
+### Available Themes
+
+**Dark Themes** (optimized for dark terminal backgrounds):
+- `dark-ocean` (default) - Deep blue with cyan accents
+- `dark-forest` - Forest green with emerald highlights
+- `dark-sunset` - Warm amber and orange tones
+- `dark-twilight` - Purple and lavender palette
+- `dark-matrix` - Classic green terminal style
+- `dark-cyberpunk` - Neon pink and cyan accents
+
+**Light Themes** (optimized for light terminal backgrounds):
+- `light-sky` - Sky blue with navy accents
+- `light-garden` - Olive green with earth tones
+- `light-autumn` - Rust orange and brown palette
+- `light-lavender` - Soft purple and pink tones
+- `light-monochrome` - Clean black and gray
+- `light-ocean` - Teal and aqua accents
+
+### Keyboard Controls
+
+| Key | Action |
+|-----|--------|
+| `q` or `Q` | Quit the status console |
+| `r` or `R` | Refresh immediately (reset countdown) |
+| `t` or `T` | Cycle to next theme |
+| `ESC` | Quit the status console |
+| `Ctrl-C` | Quit the status console |
+
+### Display Panels
+
+#### Console Logs
+- Captures application log output in real-time
+- Color-coded by log level (ERROR=red, WARN=yellow, INFO=green, DEBUG=cyan)
+- Scrolls automatically to show latest messages
+- Strips ANSI escape sequences for clean display
+
+#### Tempest Sensors
+- Current temperature (°F or °C)
+- Relative humidity (%)
+- Wind speed and direction
+- Atmospheric pressure (mb or inHg)
+- UV index
+- Light level (lux)
+- Rain accumulation (daily and rate)
+- Lightning information
+
+#### Station Status
+- Device battery voltage and status
+- Device and hub uptime
+- Signal strength (RSSI)
+- Firmware versions
+- Serial numbers
+- Data source indicator (API, web-scraped, UDP)
+
+#### Alarm Status
+- **Triggered Alarms**: Active alarms with trigger timestamps
+- **Cooling Down**: Alarms in cooldown with remaining time
+- Alarm count summary (enabled/total)
+- Configuration file path and last reload time
+
+#### HomeKit Status
+- Service status (Active/Disabled)
+- Published sensors list when active
+- PIN and accessory information
+- Bridge status
+
+#### System Info
+- Application name and version
+- Station name
+- Current units (imperial/metric/sae)
+- Log level
+
+#### Footer
+- Running time (hh:mm:ss format)
+- Refresh countdown (hh:mm:ss format)
+- Current theme name
+- Keyboard shortcuts reminder
+
+### Technical Details
+
+**Implementation:**
+- Built with `tview` (Go terminal UI framework)
+- Non-blocking UI updates using `app.Draw()`
+- Goroutines for auto-refresh and timer updates
+- Context-based cancellation for clean shutdown
+- Synchronized state management with `sync.Mutex`
+- HTTP API polling with 500ms timeout
+- Log capture via `io.Pipe` redirection
+
+**API Endpoints Used:**
+- `/api/weather` - Current weather data
+- `/api/status` - Station and HomeKit status
+- `/api/alarm-status` - Alarm information
+
+**Performance:**
+- Minimal CPU usage (< 1% on modern systems)
+- Low memory footprint (< 5MB additional)
+- Responsive to terminal resize events
+- Graceful handling of API timeouts
+
+### Examples
+
+```bash
+# Monitor station with custom theme and refresh
+./tempest-homekit-go --status --status-theme dark-cyberpunk --status-refresh 3 \
+  --token "your-token" --station "Your Station"
+
+# Quick check with 2-minute timeout
+./tempest-homekit-go --status --status-timeout 120 \
+  --token "your-token" --station "Your Station"
+
+# Light theme for bright terminals
+./tempest-homekit-go --status --status-theme light-sky \
+  --token "your-token" --station "Your Station"
+
+# Combine with alarm monitoring
+./tempest-homekit-go --status --alarms @alarms.json \
+  --token "your-token" --station "Your Station"
+```
+
+### Troubleshooting
+
+**Console not updating:**
+- Check API token and station name are correct
+- Verify network connectivity
+- Increase `--status-refresh` if API is rate-limited
+
+**Colors look wrong:**
+- Try a different theme with `t` key
+- Use `--status-theme-list` to preview all themes
+- Light themes for light backgrounds, dark themes for dark backgrounds
+
+**Terminal too small:**
+- Resize terminal to at least 80x24 characters
+- Status console adapts to available space automatically
+
+**Logs not showing:**
+- Status console captures logs from the main application
+- Adjust `--loglevel` flag for more/less verbosity
+- Console logs show regardless of log level setting
+
 ### Testing Webhook Configuration
 
 Before deploying webhook alarms in production, test your webhook configuration:
@@ -553,7 +755,12 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
  - **Other sensors**: `humidity`, `wind`, `rain`, `pressure`, `lightning`
  - (default: "temp,lux,humidity")
 - `--station`: Tempest station name (default: "Chino Hills")
--- `--station-url`: Custom station URL for weather data (e.g., `http://localhost:8080/api/generate-weather`). Overrides Tempest API
+- `--station-url`: Custom station URL for weather data (e.g., `http://localhost:8080/api/generate-weather`). Overrides Tempest API
+- `--status`: Enable terminal-based status console with real-time monitoring
+- `--status-refresh`: Status console refresh interval in seconds (default: 5)
+- `--status-timeout`: Status console auto-exit timeout in seconds, 0=never (default: 0)
+- `--status-theme`: Status console color theme name (default: "dark-ocean")
+- `--status-theme-list`: List all available status console themes and exit
 -- `--token`: WeatherFlow API access token (required when using the WeatherFlow API as the data source)
 - `--units`: Units system - imperial, metric, or sae (default: "imperial")
 - `--units-pressure`: Pressure units - inHg or mb (default: "inHg")
@@ -583,6 +790,10 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `HOMEKIT_PIN`: HomeKit PIN
 - `LOG_LEVEL`: Logging level
 - `SENSORS`: Sensors to enable (default: "temp,lux,humidity")
+- `STATUS`: Enable status console (true/false)
+- `STATUS_REFRESH`: Status console refresh interval in seconds (default: 5)
+- `STATUS_TIMEOUT`: Status console auto-exit timeout in seconds (default: 0)
+- `STATUS_THEME`: Status console color theme name (default: "dark-ocean")
 - `UNITS`: Units system - imperial, metric, or sae (default: "imperial")
 - `UNITS_PRESSURE`: Pressure units - inHg or mb (default: "inHg")
 - `WEB_PORT`: Web dashboard port

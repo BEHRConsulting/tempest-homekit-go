@@ -127,6 +127,54 @@ Warning: **Critical**: Due to HomeKit's limited native sensor types, the **Press
 - **Graceful Degradation**: Continue operation even if Chrome is not available
 - **Status API Integration**: Include scraped data in `/api/status` endpoint response
 
+#### Status Console System (v1.9.0+)
+- **Terminal-Based Monitoring**: Real-time status display in curses-like terminal interface
+- **Multi-Panel Layout**: 7 responsive windows (logs, sensors, station, alarms, homekit, system, footer)
+- **Color Themes**: 12 themes (6 dark + 6 light) with smart log colorization
+- **Interactive Controls**: Keyboard shortcuts for refresh, quit, theme cycling
+- **Auto-Refresh**: Configurable refresh intervals (1-3600 seconds)
+- **Optional Timeout**: Auto-exit after specified duration
+- **Live Data**: Polls internal HTTP API endpoints for real-time updates
+- **Log Capture**: Redirects application logs to console log panel
+- **Responsive Design**: Adapts to terminal size changes
+- **Theme Cycling**: Press 't' to cycle through all available themes
+
+**Status Console Features:**
+- **Console Logs Panel**: Color-coded log messages (ERROR=red, WARN=yellow, INFO=green, DEBUG=cyan)
+- **Tempest Sensors Panel**: Current readings for all weather sensors
+- **Station Status Panel**: Battery, uptime, signal strength, firmware versions
+- **Alarm Status Panel**: Triggered alarms with timestamps, cooling down alarms with remaining time
+- **HomeKit Status Panel**: Active/disabled state, published sensors list
+- **System Info Panel**: Application metadata, station name, units, log level
+- **Footer**: Running time, refresh countdown, current theme, keyboard shortcuts
+
+**Configuration Flags:**
+- `--status`: Enable status console mode
+- `--status-refresh <seconds>`: Refresh interval (default: 5)
+- `--status-timeout <seconds>`: Auto-exit timeout, 0=never (default: 0)
+- `--status-theme <name>`: Color theme name (default: "dark-ocean")
+- `--status-theme-list`: List all themes and exit
+
+**Keyboard Controls:**
+- `q`/`Q`: Quit
+- `r`/`R`: Refresh immediately
+- `t`/`T`: Cycle to next theme
+- `ESC`: Quit
+- `Ctrl-C`: Quit
+
+**Available Themes:**
+- Dark: dark-ocean (default), dark-forest, dark-sunset, dark-twilight, dark-matrix, dark-cyberpunk
+- Light: light-sky, light-garden, light-autumn, light-lavender, light-monochrome, light-ocean
+
+**Technical Implementation:**
+- Built with `tview` v0.42.0 (Go terminal UI framework)
+- Non-blocking UI updates using `app.Draw()`
+- Context-based goroutine coordination
+- HTTP API polling with 500ms timeout
+- Log capture via `io.Pipe` redirection
+- Synchronized state management with `sync.Mutex`
+- Minimal resource usage (< 1% CPU, < 5MB memory)
+
 #### Alarm System (v1.6.0+)
 - **Rule-Based Weather Alerting**: Monitor weather conditions and trigger notifications automatically
 - **Multiple Notification Channels**: Console, email (SMTP, Microsoft 365), SMS (AWS SNS, Twilio), syslog, oslog, eventlog
@@ -245,6 +293,11 @@ Warning: **Critical**: Due to HomeKit's limited native sensor types, the **Press
 - `--cleardb`: Clear HomeKit database and reset device pairing
 - `--elevation`: Station elevation in meters (auto-detect or manual, Earth-realistic range: -430m to 8848m)
 - `--env`: Custom environment file to load (default: ".env") - Overrides default .env file location for multiple configurations or deployment environments
+- `--status`: Enable terminal-based status console with real-time monitoring (default: false). Env: STATUS
+- `--status-refresh`: Status console refresh interval in seconds (default: 5, range: 1-3600). Env: STATUS_REFRESH
+- `--status-timeout`: Status console auto-exit timeout in seconds, 0=never (default: 0). Env: STATUS_TIMEOUT
+- `--status-theme`: Status console color theme name (default: "dark-ocean"). Env: STATUS_THEME
+- `--status-theme-list`: List all available status console themes and exit
 - `--sensors`: Enhanced sensor configuration with aliases support:
  - **Sensor Aliases**: `temp`/`temperature`, `lux`/`light`, `uv`/`uvi`
  - **Preset Options**: `all` (all sensors), `min` (temp,humidity,lux)

@@ -15,6 +15,16 @@ require (
 )
 
 require (
+	github.com/gdamore/encoding v1.0.1 // indirect
+	github.com/gdamore/tcell/v2 v2.9.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/rivo/tview v0.42.0 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
+	golang.org/x/term v0.34.0 // indirect
+)
+
+require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.5.0 // indirect

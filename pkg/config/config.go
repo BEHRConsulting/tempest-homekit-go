@@ -72,6 +72,13 @@ type Config struct {
 
 	// Environment file
 	EnvFile string // Custom environment file (default: .env)
+
+	// Status console options
+	Status          bool   // Enable curses-based status console
+	StatusRefresh   int    // Status refresh interval in seconds (default: 5)
+	StatusTimeout   int    // Status timeout in seconds (0 = never, default: 0)
+	StatusTheme     string // Color theme name (default: "dark-ocean")
+	StatusThemeList bool   // List available themes and exit
 }
 
 // customUsage prints a well-formatted help message with grouped flags and examples
@@ -132,6 +139,24 @@ CONFIGURATION OPTIONS:
                                 Env: HISTORY_POINTS
   --chart-history <hours>       Hours of data to display in charts (default: 24, 0=all)
                                 Env: CHART_HISTORY_HOURS
+
+STATUS CONSOLE OPTIONS:
+  --status                      Enable curses-based status console (TUI mode)
+                                Displays real-time console logs, station status,
+                                alarm status, and HomeKit sensors
+                                Env: STATUS=true
+  --status-refresh <seconds>    Status refresh interval in seconds (default: 5)
+                                How often to refresh station/alarm/HomeKit data
+                                Env: STATUS_REFRESH
+  --status-timeout <seconds>    Auto-exit after N seconds (0 = never, default: 0)
+                                Useful for automated testing or temporary monitoring
+                                Env: STATUS_TIMEOUT
+  --status-theme <name>         Color theme for status console (default: "dark-ocean")
+                                Use --status-theme-list to see available themes
+                                Env: STATUS_THEME
+  --status-theme-list           List all available color themes and exit
+                                Shows theme names and descriptions for both
+                                light and dark background terminals
 
 ALARM OPTIONS:
   --alarms <config>             Enable alarm system with configuration
@@ -246,6 +271,10 @@ func LoadConfig() *Config {
 		WebhookListener:      getEnvOrDefault("WEBHOOK_LISTENER", "") == "true",
 		WebhookListenPort:    getEnvOrDefault("WEBHOOK_LISTEN_PORT", "8082"),
 		EnvFile:              getEnvOrDefault("ENV_FILE", ".env"),
+		Status:               getEnvOrDefault("STATUS", "") == "true",
+		StatusRefresh:        parseIntEnv("STATUS_REFRESH", 5),
+		StatusTimeout:        parseIntEnv("STATUS_TIMEOUT", 0),
+		StatusTheme:          getEnvOrDefault("STATUS_THEME", "dark-ocean"),
 	}
 
 	// Set custom usage function
@@ -295,6 +324,11 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.WebhookListener, "webhook-listener", cfg.WebhookListener, "Start webhook listener server (default port: 8082)")
 	flag.StringVar(&cfg.WebhookListenPort, "webhook-listener-port", cfg.WebhookListenPort, "Port for webhook listener server (default: 8082)")
 	flag.StringVar(&cfg.EnvFile, "env", cfg.EnvFile, "Custom environment file to load (default: .env)")
+	flag.BoolVar(&cfg.Status, "status", cfg.Status, "Enable curses-based status console (TUI mode)")
+	flag.IntVar(&cfg.StatusRefresh, "status-refresh", cfg.StatusRefresh, "Status refresh interval in seconds (default: 5)")
+	flag.IntVar(&cfg.StatusTimeout, "status-timeout", cfg.StatusTimeout, "Auto-exit after N seconds (0 = never, default: 0)")
+	flag.StringVar(&cfg.StatusTheme, "status-theme", cfg.StatusTheme, "Color theme for status console (default: dark-ocean)")
+	flag.BoolVar(&cfg.StatusThemeList, "status-theme-list", false, "List all available color themes and exit")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
 
 	// Parse flags but check if elevation was actually provided

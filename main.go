@@ -22,6 +22,7 @@ import (
 	"tempest-homekit-go/pkg/config"
 	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/service"
+	"tempest-homekit-go/pkg/status"
 	"tempest-homekit-go/pkg/udp"
 	"tempest-homekit-go/pkg/weather"
 
@@ -63,9 +64,34 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Handle status theme list flag
+	if cfg.StatusThemeList {
+		status.ListThemes()
+		os.Exit(0)
+	}
+
 	// Handle alarm editor mode
 	if cfg.AlarmsEdit != "" {
 		logger.Info("Alarm editor mode detected, starting alarm editor...")
+		
+		// Validate alarm file path
+		alarmsFile := cfg.AlarmsEdit
+		if strings.HasPrefix(alarmsFile, "@") {
+			alarmsFile = alarmsFile[1:]
+		}
+		
+		// Check if file exists and is readable
+		if _, err := os.Stat(alarmsFile); os.IsNotExist(err) {
+			log.Fatalf("ERROR: Alarm configuration file not found: %s\n\nUsage: --alarms-edit @filename.json\nExample: --alarms-edit @tempest-alarms.json\n\nThe file must exist before starting the alarm editor.", alarmsFile)
+		} else if err != nil {
+			log.Fatalf("ERROR: Cannot access alarm configuration file '%s': %v\n\nPlease check file permissions.", alarmsFile, err)
+		}
+		
+		// Verify it's a regular file (not a directory)
+		if info, err := os.Stat(alarmsFile); err == nil && info.IsDir() {
+			log.Fatalf("ERROR: '%s' is a directory, not a file.\n\nUsage: --alarms-edit @filename.json\nExample: --alarms-edit @tempest-alarms.json", alarmsFile)
+		}
+		
 		editorServer, err := editor.NewServer(cfg.AlarmsEdit, cfg.AlarmsEditPort, "1.9.0", cfg.EnvFile)
 		if err != nil {
 			log.Fatalf("Failed to create alarm editor: %v", err)
@@ -201,6 +227,15 @@ func main() {
 		}
 		logger.Info("WebhookListen flag detected, starting webhook listener on port %s...", port)
 		runWebhookListener(port)
+		return
+	}
+
+	// Handle status console mode
+	if cfg.Status {
+		// Launch status console first (it will handle output redirection and start service)
+		if err := status.RunStatusConsole(cfg, "1.9.0"); err != nil {
+			log.Fatalf("Status console failed: %v", err)
+		}
 		return
 	}
 
