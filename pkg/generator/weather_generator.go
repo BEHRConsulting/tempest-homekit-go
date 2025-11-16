@@ -49,6 +49,14 @@ type WeatherGenerator struct {
 	dailyRainTotal         float64 // Total rain for the current day (resets at midnight)
 	lastDayCheck           int     // Day of year for checking when to reset daily total
 	isGeneratingHistorical bool    // Flag to prevent historical generation from affecting daily totals
+	testPatternRain        *TestPattern
+	testPatternWind        *TestPattern
+	testPatternTemp        *TestPattern
+	testPatternHumidity    *TestPattern
+	testPatternPressure    *TestPattern
+	testPatternLux         *TestPattern
+	testPatternUV          *TestPattern
+	testPatternLightning   *TestPattern
 }
 
 // Predefined locations with different climates
@@ -130,10 +138,10 @@ func (wg *WeatherGenerator) initializeBaseValues() {
 	// Set base humidity based on climate zone
 	wg.BaseHumidity = wg.getClimateHumidity()
 
-	// Initialize cumulative rain and daily total
-	wg.cumulativeRain = 1.5 + wg.rng.Float64()*8.0 // Start with some pre-existing accumulation (1.5-9.5 inches)
-	wg.dailyRainTotal = 0.0                        // Start daily total at 0
-	wg.lastDayCheck = wg.CurrentTime.YearDay()     // Track current day
+	// Initialize cumulative rain and daily total (in millimeters)
+	wg.cumulativeRain = (1.5 + wg.rng.Float64()*8.0) * 25.4 // Start with some pre-existing accumulation (1.5-9.5 inches converted to mm)
+	wg.dailyRainTotal = 0.0                                 // Start daily total at 0
+	wg.lastDayCheck = wg.CurrentTime.YearDay()              // Track current day
 }
 
 // getSeasonalTemperature returns realistic temperatures for location and season
@@ -237,8 +245,11 @@ func (wg *WeatherGenerator) GenerateObservation() *types.Observation {
 	// Generate UV based on time of day and season
 	uv := wg.generateUV(observationTime)
 
-	// Generate rain based on season and climate
-	rain := wg.generateRain()
+	// Generate rain based on season and climate (skip if test pattern is active)
+	var rain float64
+	if wg.testPatternRain == nil {
+		rain = wg.generateRain()
+	}
 
 	// Generate solar radiation
 	solar := wg.generateSolar(observationTime)
@@ -255,7 +266,7 @@ func (wg *WeatherGenerator) GenerateObservation() *types.Observation {
 		Illuminance:          illuminance,
 		UV:                   int(uv),
 		SolarRadiation:       solar,
-		RainAccumulated:      rain,
+		RainAccumulated:      wg.cumulativeRain, // Use cumulative rain, not incremental
 		RainDailyTotal:       wg.dailyRainTotal,
 		PrecipitationType:    wg.generatePrecipitationType(temperature, rain),
 		LightningStrikeAvg:   wg.generateLightning(),
@@ -265,6 +276,50 @@ func (wg *WeatherGenerator) GenerateObservation() *types.Observation {
 	}
 
 	wg.current = obs
+
+	// Apply test patterns if enabled
+	// For historical generation, pass the historical time; for real-time, pass nil
+	var obsTimePtr *time.Time
+	if wg.isGeneratingHistorical {
+		obsTimePtr = &wg.CurrentTime
+	}
+
+	if wg.testPatternRain != nil {
+		incrementalRain := ApplyTestRainPattern(obs, wg.testPatternRain, obsTimePtr)
+		// Update daily total for real-time observations (not during historical generation)
+		if !wg.isGeneratingHistorical {
+			// Check if it's a new day and reset daily total if needed
+			currentDay := time.Now().YearDay()
+			if currentDay != wg.lastDayCheck {
+				wg.dailyRainTotal = 0.0 // Reset daily total at midnight
+				wg.lastDayCheck = currentDay
+			}
+			wg.dailyRainTotal += incrementalRain
+			obs.RainDailyTotal = wg.dailyRainTotal
+		}
+	}
+	if wg.testPatternWind != nil {
+		ApplyTestWindPattern(obs, wg.testPatternWind)
+	}
+	if wg.testPatternTemp != nil {
+		ApplyTestTempPattern(obs, wg.testPatternTemp)
+	}
+	if wg.testPatternHumidity != nil {
+		ApplyTestHumidityPattern(obs, wg.testPatternHumidity)
+	}
+	if wg.testPatternPressure != nil {
+		ApplyTestPressurePattern(obs, wg.testPatternPressure)
+	}
+	if wg.testPatternLux != nil {
+		ApplyTestLuxPattern(obs, wg.testPatternLux)
+	}
+	if wg.testPatternUV != nil {
+		ApplyTestUVPattern(obs, wg.testPatternUV)
+	}
+	if wg.testPatternLightning != nil {
+		ApplyTestLightningPattern(obs, wg.testPatternLightning)
+	}
+
 	return obs
 }
 
@@ -374,8 +429,8 @@ func (wg *WeatherGenerator) GetDailyRainTotal() float64 {
 
 // generateRain creates realistic precipitation and updates cumulative total
 func (wg *WeatherGenerator) generateRain() float64 {
-	// Only update daily totals if not generating historical data
-	if !wg.isGeneratingHistorical {
+	// Only update daily totals if not generating historical data and not using test patterns
+	if !wg.isGeneratingHistorical && wg.testPatternRain == nil {
 		// Check if it's a new day and reset daily total if needed
 		currentDay := time.Now().YearDay()
 		if currentDay != wg.lastDayCheck {
@@ -415,10 +470,8 @@ func (wg *WeatherGenerator) generateRain() float64 {
 		incrementalRain = wg.rng.Float64() * 2.54 // 0-2.54 mm per observation (equivalent to 0-0.1 inches)
 		wg.cumulativeRain += incrementalRain
 
-		// Only add to daily total if not generating historical data
-		if !wg.isGeneratingHistorical {
-			wg.dailyRainTotal += incrementalRain
-		}
+		// Add to daily total (even during historical generation for test patterns)
+		wg.dailyRainTotal += incrementalRain
 	}
 
 	return incrementalRain
@@ -498,8 +551,39 @@ func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*types.Observati
 	startTime := time.Now().Add(-24 * time.Hour)
 	interval := 24 * time.Hour / time.Duration(count)
 
+	// Adjust test pattern start times to historical start
+	// This ensures phase calculations work correctly during historical generation
+	if wg.testPatternRain != nil {
+		wg.testPatternRain.startTime = startTime
+	}
+	if wg.testPatternWind != nil {
+		wg.testPatternWind.startTime = startTime
+	}
+	if wg.testPatternTemp != nil {
+		wg.testPatternTemp.startTime = startTime
+	}
+	if wg.testPatternHumidity != nil {
+		wg.testPatternHumidity.startTime = startTime
+	}
+	if wg.testPatternPressure != nil {
+		wg.testPatternPressure.startTime = startTime
+	}
+	if wg.testPatternLux != nil {
+		wg.testPatternLux.startTime = startTime
+	}
+	if wg.testPatternUV != nil {
+		wg.testPatternUV.startTime = startTime
+	}
+	if wg.testPatternLightning != nil {
+		wg.testPatternLightning.startTime = startTime
+	}
+
 	// Set a flag to prevent rain generation from affecting daily totals during historical generation
 	wg.isGeneratingHistorical = true
+
+	// Calculate midnight of today for daily rain total calculation
+	now := time.Now()
+	midnightToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	for i := 0; i < count; i++ {
 		// Set the current time for this observation
@@ -508,6 +592,23 @@ func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*types.Observati
 		// Generate observation for this time
 		obs := wg.GenerateObservation()
 		obs.Timestamp = wg.CurrentTime.Unix()
+
+		// For test patterns, calculate daily total (rain since midnight today)
+		// Daily total should only include observations from today (after midnight)
+		if wg.testPatternRain != nil && !wg.CurrentTime.Before(midnightToday) {
+			// This observation is from today - include in daily total
+			if i > 0 {
+				prevObs := observations[i-1]
+				// Calculate incremental rain between this obs and previous
+				incrementalRain := obs.RainAccumulated - prevObs.RainAccumulated
+				wg.dailyRainTotal += incrementalRain
+			} else if wg.CurrentTime.Equal(midnightToday) || wg.CurrentTime.After(midnightToday) {
+				// First observation of today - its accumulated value is the incremental
+				wg.dailyRainTotal += obs.RainAccumulated
+			}
+			obs.RainDailyTotal = wg.dailyRainTotal
+		}
+
 		observations[i] = obs
 
 		// Add some continuity - slight drift in base values
@@ -525,8 +626,11 @@ func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*types.Observati
 	wg.isGeneratingHistorical = false
 
 	// Restore the original state (historical generation should not corrupt current day)
-	wg.dailyRainTotal = originalDailyTotal
-	wg.cumulativeRain = originalCumulativeRain
+	// NOTE: Don't restore rain totals if test patterns are active - let them continue from historical end
+	if wg.testPatternRain == nil {
+		wg.dailyRainTotal = originalDailyTotal
+		wg.cumulativeRain = originalCumulativeRain
+	}
 	wg.CurrentTime = originalTime
 
 	wg.history = observations
@@ -559,4 +663,239 @@ func (wg *WeatherGenerator) Regenerate() {
 // GenerateNewSeason generates a new random location and season (alias for Regenerate)
 func (wg *WeatherGenerator) GenerateNewSeason() {
 	wg.Regenerate()
+}
+
+// EnableTestPattern enables a test pattern for a specific sensor
+func (wg *WeatherGenerator) EnableTestPattern(sensor string) {
+	pattern := &TestPattern{
+		cycleCount: 0,
+		startTime:  time.Now(),
+	}
+
+	switch sensor {
+	case "rain":
+		// Initialize with current cumulative rain so test pattern continues from there
+		pattern.lastRainAccum = wg.cumulativeRain
+		wg.testPatternRain = pattern
+	case "wind":
+		wg.testPatternWind = pattern
+	case "temp":
+		wg.testPatternTemp = pattern
+	case "humidity":
+		wg.testPatternHumidity = pattern
+	case "pressure":
+		wg.testPatternPressure = pattern
+	case "lux":
+		wg.testPatternLux = pattern
+	case "uv":
+		wg.testPatternUV = pattern
+	case "lightning":
+		wg.testPatternLightning = pattern
+	}
+}
+
+// ResetTestPatternRain resets the rain test pattern accumulation to current cumulative rain
+// This is needed after historical data generation which resets cumulativeRain
+func (wg *WeatherGenerator) ResetTestPatternRain() {
+	if wg.testPatternRain != nil {
+		wg.testPatternRain.lastRainAccum = wg.cumulativeRain
+		wg.testPatternRain.lastUpdateTime = time.Now()
+	}
+}
+
+// TestPattern represents a cycling test pattern for sensor simulation
+type TestPattern struct {
+	cycleCount     int
+	startTime      time.Time
+	lastRainAccum  float64   // Track cumulative rain for rain pattern
+	lastUpdateTime time.Time // Track last update for rain rate calculation
+}
+
+// GetCyclePhase returns the current phase (0-3) based on elapsed time
+// Each complete cycle is 120 seconds (2 minutes), divided into 4 phases of 30 seconds each
+// When obsTime is provided (for historical generation), uses that instead of real time
+func (p *TestPattern) GetCyclePhase(obsTime *time.Time) int {
+	var elapsed float64
+	if obsTime != nil {
+		elapsed = obsTime.Sub(p.startTime).Seconds()
+	} else {
+		elapsed = time.Since(p.startTime).Seconds()
+	}
+	return (int(elapsed) / 30) % 4
+}
+
+// ApplyTestRainPattern applies a cycling rain pattern: 0 -> 0.5 -> 2.0 -> 10.0 mm/hr
+// RainAccumulated should be cumulative (always increasing) like real Tempest API
+// When obsTime is provided (for historical generation), uses that instead of real time
+// For historical generation with large intervals, uses constant 2 mm/hr to avoid phase integration issues
+// Returns the incremental rain amount so the generator can update dailyRainTotal
+func ApplyTestRainPattern(obs *types.Observation, pattern *TestPattern, obsTime *time.Time) float64 {
+	var rainRate float64
+
+	// Calculate time elapsed since last update (for first call, use 60 seconds)
+	var elapsedSeconds float64
+	if pattern.lastUpdateTime.IsZero() {
+		elapsedSeconds = 60 // Assume 60 second report interval for first call
+	} else {
+		if obsTime != nil {
+			// Historical generation: use the observation time
+			elapsedSeconds = obsTime.Sub(pattern.lastUpdateTime).Seconds()
+		} else {
+			// Real-time generation: use current time
+			elapsedSeconds = time.Since(pattern.lastUpdateTime).Seconds()
+		}
+	}
+
+	// For historical generation with intervals > 60 seconds, still use cycling phases
+	// based on the observation timestamp to show pattern variation in history
+	phase := pattern.GetCyclePhase(obsTime)
+	switch phase {
+	case 0:
+		rainRate = 2.0
+		obs.PrecipitationType = 1
+	case 1:
+		rainRate = 0.5
+		obs.PrecipitationType = 1
+	case 2:
+		rainRate = 2.0
+		obs.PrecipitationType = 1
+	case 3:
+		rainRate = 10.0
+		obs.PrecipitationType = 1
+	}
+
+	// Calculate incremental rain: (mm/hr) * (seconds/3600) = mm
+	// This is the rain that fell during this observation period
+	incrementalRain := rainRate * (elapsedSeconds / 3600.0)
+
+	// Accumulate rain (make it cumulative)
+	pattern.lastRainAccum += incrementalRain
+	obs.RainAccumulated = pattern.lastRainAccum
+
+	// Update last update time
+	if obsTime != nil {
+		pattern.lastUpdateTime = *obsTime
+	} else {
+		pattern.lastUpdateTime = time.Now()
+	}
+
+	return incrementalRain
+}
+
+// ApplyTestWindPattern applies a cycling wind pattern: 1 -> 4 -> 12 -> 22 m/s
+func ApplyTestWindPattern(obs *types.Observation, pattern *TestPattern) {
+	phase := pattern.GetCyclePhase(nil)
+	switch phase {
+	case 0:
+		obs.WindAvg = 1.0
+		obs.WindGust = 1.5
+	case 1:
+		obs.WindAvg = 4.0
+		obs.WindGust = 6.0
+	case 2:
+		obs.WindAvg = 12.0
+		obs.WindGust = 18.0
+	case 3:
+		obs.WindAvg = 22.0
+		obs.WindGust = 33.0
+	}
+	obs.WindDirection = float64((phase * 90) % 360)
+}
+
+// ApplyTestTempPattern applies a cycling temperature pattern: 0 -> 15 -> 25 -> 38 °C
+func ApplyTestTempPattern(obs *types.Observation, pattern *TestPattern) {
+	phase := pattern.GetCyclePhase(nil)
+	switch phase {
+	case 0:
+		obs.AirTemperature = 0.0
+	case 1:
+		obs.AirTemperature = 15.0
+	case 2:
+		obs.AirTemperature = 25.0
+	case 3:
+		obs.AirTemperature = 38.0
+	}
+}
+
+// ApplyTestHumidityPattern applies a cycling humidity pattern: 30 -> 50 -> 70 -> 95 %
+func ApplyTestHumidityPattern(obs *types.Observation, pattern *TestPattern) {
+	phase := pattern.GetCyclePhase(nil)
+	switch phase {
+	case 0:
+		obs.RelativeHumidity = 30.0
+	case 1:
+		obs.RelativeHumidity = 50.0
+	case 2:
+		obs.RelativeHumidity = 70.0
+	case 3:
+		obs.RelativeHumidity = 95.0
+	}
+}
+
+// ApplyTestPressurePattern applies a cycling pressure pattern: 980 -> 1000 -> 1020 -> 1040 mb
+func ApplyTestPressurePattern(obs *types.Observation, pattern *TestPattern) {
+	phase := pattern.GetCyclePhase(nil)
+	switch phase {
+	case 0:
+		obs.StationPressure = 980.0
+	case 1:
+		obs.StationPressure = 1000.0
+	case 2:
+		obs.StationPressure = 1020.0
+	case 3:
+		obs.StationPressure = 1040.0
+	}
+}
+
+// ApplyTestLuxPattern applies a cycling lux pattern: 0 -> 100 -> 10000 -> 50000 lux
+func ApplyTestLuxPattern(obs *types.Observation, pattern *TestPattern) {
+	phase := pattern.GetCyclePhase(nil)
+	switch phase {
+	case 0:
+		obs.Illuminance = 0.0
+		obs.SolarRadiation = 0
+	case 1:
+		obs.Illuminance = 100.0
+		obs.SolarRadiation = 10
+	case 2:
+		obs.Illuminance = 10000.0
+		obs.SolarRadiation = 500
+	case 3:
+		obs.Illuminance = 50000.0
+		obs.SolarRadiation = 1000
+	}
+}
+
+// ApplyTestUVPattern applies a cycling UV pattern: 0 -> 2 -> 7 -> 11 index
+func ApplyTestUVPattern(obs *types.Observation, pattern *TestPattern) {
+	phase := pattern.GetCyclePhase(nil)
+	switch phase {
+	case 0:
+		obs.UV = 0
+	case 1:
+		obs.UV = 2
+	case 2:
+		obs.UV = 7
+	case 3:
+		obs.UV = 11
+	}
+}
+
+// ApplyTestLightningPattern applies a cycling lightning pattern: none -> 1@20km -> 5@5km -> 10@1km
+func ApplyTestLightningPattern(obs *types.Observation, pattern *TestPattern) {
+	phase := pattern.GetCyclePhase(nil)
+	switch phase {
+	case 0:
+		obs.LightningStrikeCount = 0
+		obs.LightningStrikeAvg = 0
+	case 1:
+		obs.LightningStrikeCount = 1
+		obs.LightningStrikeAvg = 20.0
+	case 2:
+		obs.LightningStrikeCount = 5
+		obs.LightningStrikeAvg = 5.0
+	case 3:
+		obs.LightningStrikeCount = 10
+		obs.LightningStrikeAvg = 1.0
+	}
 }

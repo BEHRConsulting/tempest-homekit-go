@@ -109,6 +109,7 @@ type WeatherResponse struct {
 	WindGust             float64           `json:"windGust"`
 	WindDirection        float64           `json:"windDirection"`
 	RainAccum            float64           `json:"rainAccum"`
+	RainRate             float64           `json:"rainRate"` // Rain intensity in mm/hr
 	RainDailyTotal       float64           `json:"rainDailyTotal"`
 	PrecipitationType    int               `json:"precipitationType"`
 	Pressure             float64           `json:"pressure"`
@@ -673,26 +674,35 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 
 	// Use the precip_accum_local_day field from the WeatherFlow API as the daily total
 	// The WeatherFlow API provides this value in millimeters which resets at midnight local time
-	// Convert from mm to inches (1 inch = 25.4 mm)
-	dailyRainTotal := ws.weatherData.RainDailyTotal / 25.4
+	// Keep in mm for now, convert to user's preferred units in the frontend
+	dailyRainTotal := ws.weatherData.RainDailyTotal
 
-	// Calculate incremental rain since last sample
-	// The RainAccumulated field is the "precip" field which is also in mm, so convert it too
-	var incrementalRain float64
-	if len(ws.dataHistory) > 0 {
+	// Calculate incremental rain since last sample (in mm)
+	// The RainAccumulated field is cumulative rain in mm
+	var incrementalRainMm float64
+	var rainRate float64 // Rain intensity in mm/hr
+	if len(ws.dataHistory) > 1 {
 		// Use a sorted copy of history to ensure we get the chronologically latest reading
 		historyCopy := make([]weather.Observation, len(ws.dataHistory))
 		copy(historyCopy, ws.dataHistory)
 		sort.Slice(historyCopy, func(i, j int) bool { return historyCopy[i].Timestamp < historyCopy[j].Timestamp })
-		lastReading := historyCopy[len(historyCopy)-1].RainAccumulated
-		incrementalRain = math.Max(0, ws.weatherData.RainAccumulated-lastReading) / 25.4
+		// Use the SECOND-to-last reading to compare with current (weatherData is the same as last history item)
+		lastReading := historyCopy[len(historyCopy)-2].RainAccumulated
+		incrementalRainMm = math.Max(0, ws.weatherData.RainAccumulated-lastReading)
+
+		// Calculate rain rate in mm/hr
+		timeDiffSeconds := ws.weatherData.Timestamp - historyCopy[len(historyCopy)-2].Timestamp
+		if timeDiffSeconds > 0 {
+			rainRate = (incrementalRainMm / float64(timeDiffSeconds)) * 3600 // mm/hr
+		}
 	} else {
-		incrementalRain = 0 // No previous data
+		incrementalRainMm = 0 // No previous data
+		rainRate = 0
 	}
 
 	ws.logDebug("Pressure analysis calculated - Condition: %s, Trend: %s, Forecast: %s", pressureCondition, pressureTrend, weatherForecast)
 	ws.logDebug("Pressure values - Station: %.2f mb, Sea Level: %.2f mb (used for forecasting)", ws.weatherData.StationPressure, seaLevelPressure)
-	ws.logDebug("Rain data calculated - Incremental: %.3f in, Daily Total: %.3f in", incrementalRain, dailyRainTotal)
+	ws.logDebug("Rain data calculated - Incremental: %.3f mm, Daily Total: %.3f mm, Rate: %.2f mm/hr", incrementalRainMm, dailyRainTotal, rainRate)
 
 	response := WeatherResponse{
 		Temperature:          ws.weatherData.AirTemperature,
@@ -700,8 +710,9 @@ func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
 		WindSpeed:            ws.weatherData.WindAvg,
 		WindGust:             ws.weatherData.WindGust,
 		WindDirection:        ws.weatherData.WindDirection,
-		RainAccum:            incrementalRain, // Rain since last sample
-		RainDailyTotal:       dailyRainTotal,  // Total rain since 00:00
+		RainAccum:            incrementalRainMm, // Rain since last sample (mm)
+		RainRate:             rainRate,          // Rain intensity in mm/hr
+		RainDailyTotal:       dailyRainTotal,    // Total rain since 00:00 (mm)
 		PrecipitationType:    ws.weatherData.PrecipitationType,
 		Pressure:             ws.weatherData.StationPressure,
 		SeaLevelPressure:     seaLevelPressure,
@@ -772,15 +783,23 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(historyCopy, func(i, j int) bool { return historyCopy[i].Timestamp < historyCopy[j].Timestamp })
 
 	for i, obs := range historyCopy {
-		// Calculate incremental rain since last observation
-		var incrementalRain float64
+		// Calculate incremental rain since last observation (in mm)
+		var incrementalRainMm float64
+		var rainRate float64
 		if i > 0 {
-			incrementalRain = math.Max(0, obs.RainAccumulated-historyCopy[i-1].RainAccumulated)
+			// obs.RainAccumulated is cumulative rain in mm
+			incrementalRainMm = math.Max(0, obs.RainAccumulated-historyCopy[i-1].RainAccumulated)
+			// Calculate rain rate (mm/hr) from incremental rain and time difference
+			timeDiffSeconds := obs.Timestamp - historyCopy[i-1].Timestamp
+			if timeDiffSeconds > 0 {
+				rainRate = (incrementalRainMm / float64(timeDiffSeconds)) * 3600 // mm/hr
+			}
 		} else {
-			incrementalRain = 0 // First observation, no previous data
+			incrementalRainMm = 0 // First observation, no previous data
+			rainRate = 0
 		}
 
-		// Calculate daily total for this observation
+		// Calculate daily total for this observation (in mm)
 		obsTime := time.Unix(obs.Timestamp, 0)
 		startOfDay := time.Date(obsTime.Year(), obsTime.Month(), obsTime.Day(), 0, 0, 0, 0, obsTime.Location())
 		dailyTotal := ws.calculateDailyRainForTime(obsTime, startOfDay)
@@ -791,8 +810,9 @@ func (ws *WebServer) handleStatusAPI(w http.ResponseWriter, r *http.Request) {
 			WindSpeed:            obs.WindAvg,
 			WindGust:             obs.WindGust,
 			WindDirection:        obs.WindDirection,
-			RainAccum:            incrementalRain, // Incremental rain since last sample
-			RainDailyTotal:       dailyTotal,      // Total rain since 00:00
+			RainAccum:            incrementalRainMm, // Incremental rain since last sample (mm)
+			RainRate:             rainRate,          // Rain intensity in mm/hr
+			RainDailyTotal:       dailyTotal,        // Total rain since 00:00 (mm)
 			PrecipitationType:    obs.PrecipitationType,
 			Pressure:             obs.StationPressure,
 			Illuminance:          obs.Illuminance,
@@ -1103,6 +1123,7 @@ type HistoryResponse struct {
 	UV                   int     `json:"uv"`
 	SolarRadiation       float64 `json:"solar_radiation"`
 	RainAccum            float64 `json:"rainAccum"`        // Incremental rain since last reading
+	RainRate             float64 `json:"rainRate"`         // Rain intensity in mm/hr
 	RainAccumulated      float64 `json:"rain_accumulated"` // API's cumulative rain from midnight
 	PrecipitationType    int     `json:"precipitation_type"`
 	LightningStrikeAvg   float64 `json:"lightning_strike_avg_distance"`
@@ -1124,6 +1145,9 @@ func (ws *WebServer) handleHistoryAPI(w http.ResponseWriter, r *http.Request) {
 	copy(history, ws.dataHistory)
 	ws.mu.RUnlock()
 
+	// Sort history by timestamp to ensure chronological order for rate calculations
+	sort.Slice(history, func(i, j int) bool { return history[i].Timestamp < history[j].Timestamp })
+
 	// Convert to response format
 	// NOTE: We set rainAccum=0 for all historical observations because the WeatherFlow
 	// historical API returns data from different time periods mixed together, causing
@@ -1133,9 +1157,21 @@ func (ws *WebServer) handleHistoryAPI(w http.ResponseWriter, r *http.Request) {
 	// live going forward, not for preloaded historical data.
 	response := make([]HistoryResponse, 0, len(history))
 
-	for _, obs := range history {
-		// Convert rain from mm to inches (WeatherFlow API returns rain in mm)
-		rainInInches := obs.RainAccumulated / 25.4
+	for i, obs := range history {
+		// Keep rain in mm (native units), convert to user's preferred units in frontend
+		rainInMm := obs.RainAccumulated
+
+		// Calculate rain rate in mm/hr
+		var rainRate float64
+		if i > 0 {
+			prevObs := history[i-1]
+			timeDiffSeconds := obs.Timestamp - prevObs.Timestamp
+			if timeDiffSeconds > 0 {
+				// Rain accumulated is in mm, calculate rate
+				rainDiff := math.Max(0, obs.RainAccumulated-prevObs.RainAccumulated)
+				rainRate = (rainDiff / float64(timeDiffSeconds)) * 3600 // mm/hr
+			}
+		}
 
 		response = append(response, HistoryResponse{
 			Timestamp:            obs.Timestamp,
@@ -1149,8 +1185,9 @@ func (ws *WebServer) handleHistoryAPI(w http.ResponseWriter, r *http.Request) {
 			Illuminance:          obs.Illuminance,
 			UV:                   obs.UV,
 			SolarRadiation:       obs.SolarRadiation,
-			RainAccum:            rainInInches, // Incremental rain per observation in inches
-			RainAccumulated:      rainInInches, // Same value for backward compatibility
+			RainAccum:            rainInMm, // Incremental rain per observation in mm
+			RainRate:             rainRate, // Rain intensity in mm/hr
+			RainAccumulated:      rainInMm, // Same value for backward compatibility
 			PrecipitationType:    obs.PrecipitationType,
 			LightningStrikeAvg:   obs.LightningStrikeAvg,
 			LightningStrikeCount: obs.LightningStrikeCount,
@@ -1159,7 +1196,7 @@ func (ws *WebServer) handleHistoryAPI(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	ws.logDebug("Returning %d historical observations with calculated incremental rain", len(response))
+	ws.logDebug("Returning %d historical observations with calculated incremental rain and rates", len(response))
 
 	// Return the historical data with incremental rain
 	json.NewEncoder(w).Encode(response)

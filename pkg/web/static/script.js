@@ -377,28 +377,45 @@ function initCharts() {
                 });
             }
             
-            // Rain chart needs accumulated line and today total (on top of data)
+            // Rain chart needs Rain Intensity and Accumulation with dual Y-axes
             if (chartType === 'rain') {
+                // Replace first dataset with Rain Intensity (rate in mm/hr)
+                datasets[0] = {
+                    data: [],
+                    label: 'Rain Intensity',
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    yAxisID: 'y'
+                };
+                // Add Accumulation dataset on right Y-axis
                 datasets.push({
                     data: [],
-                    borderColor: '#00d4ff',
-                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'transparent',
                     borderWidth: 2,
                     fill: false,
                     pointRadius: 0,
-                    tension: 0,
-                    label: 'Window Total'
+                    tension: 0.4,
+                    label: 'Accumulation',
+                    yAxisID: 'y1'
                 });
+                // Add Today Total reference line
                 datasets.push({
                     data: [],
                     borderColor: '#ff6b35',
                     backgroundColor: 'rgba(255, 107, 53, 0.1)',
                     borderDash: [3, 3],
-                    borderWidth: 4,
+                    borderWidth: 3,
                     fill: false,
                     pointRadius: 0,
                     tension: 0,
-                    label: 'Today Total'
+                    label: 'Today Total',
+                    yAxisID: 'y1'
                 });
             }
             
@@ -432,7 +449,27 @@ function initCharts() {
                                     return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
                                 },
                                 label: function(context) {
-                                    return config.label + ': ' + context.parsed.y.toFixed(1) + ' ' + config.unit;
+                                    let value = context.parsed.y;
+                                    let label = context.dataset.label || '';
+                                    let formattedValue;
+                                    let unit = '';
+                                    
+                                    // Show more precision for rain data
+                                    if (chartType === 'rain') {
+                                        formattedValue = value.toFixed(3);
+                                        // Determine unit based on dataset
+                                        if (label === 'Rain Intensity') {
+                                            unit = units.rain === 'inches' ? 'in/hr' : 'mm/hr';
+                                        } else if (label === 'Accumulation' || label === 'Today Total') {
+                                            unit = units.rain === 'inches' ? 'in' : 'mm';
+                                        } else {
+                                            unit = config.unit;
+                                        }
+                                    } else {
+                                        formattedValue = value.toFixed(1);
+                                        unit = config.unit;
+                                    }
+                                    return label + ': ' + formattedValue + ' ' + unit;
                                 }
                             }
                         }
@@ -465,26 +502,57 @@ function initCharts() {
                             beginAtZero: (chartType === 'rain' || chartType === 'humidity' || chartType === 'uv' || chartType === 'light'),
                             suggestedMin: (chartType === 'rain' || chartType === 'humidity' || chartType === 'uv' || chartType === 'light') ? 0 : undefined,
                             suggestedMax: chartType === 'rain' ? 0.1 : undefined,
+                            position: chartType === 'rain' ? 'left' : 'left',
                             grid: { 
                                 display: true, 
-                                color: 'rgba(0,0,0,0.12)',
+                                color: chartType === 'rain' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(0,0,0,0.12)',
                                 lineWidth: 1
                             },
                             ticks: { 
                                 maxTicksLimit: 8, 
-                                color: '#333', 
+                                color: chartType === 'rain' ? '#3b82f6' : '#333', 
                                 font: { size: 14, weight: '500' },
                                 padding: 8,
-                                callback: function(value){ return value.toFixed(1); } 
+                                callback: function(value){ 
+                                    // For rain charts, show more decimal places for small values
+                                    if (chartType === 'rain') {
+                                        return value.toFixed(3);
+                                    }
+                                    return value.toFixed(1); 
+                                } 
                             },
                             title: { 
                                 display: true, 
-                                text: config.unit, 
-                                color: '#333', 
+                                text: chartType === 'rain' ? (units.rain === 'inches' ? 'Rain Intensity (in/hr)' : 'Rain Intensity (mm/hr)') : config.unit, 
+                                color: chartType === 'rain' ? '#3b82f6' : '#333', 
                                 font: { size: 16, weight: 'bold' },
                                 padding: { top: 10, bottom: 10 }
                             }
-                        }
+                        },
+                        y1: chartType === 'rain' ? {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#8b5cf6',
+                                font: { size: 14, weight: '500' },
+                                padding: 8,
+                                callback: function(value) {
+                                    return value.toFixed(3);
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: units.rain === 'inches' ? 'Accumulation (in)' : 'Accumulation (mm)',
+                                color: '#8b5cf6',
+                                font: { size: 16, weight: 'bold' },
+                                padding: { top: 10, bottom: 10 }
+                            }
+                        } : undefined
                     },
                     elements: {
                         // Default to no visible points on popout data lines; hover still highlights
@@ -813,6 +881,21 @@ function initCharts() {
                 tension: 0,
                 label: 'Average'
             }]
+        },
+        options: {
+            ...chartConfig.options,
+            scales: {
+                ...chartConfig.options.scales,
+                y: {
+                    ...chartConfig.options.scales.y,
+                    title: {
+                        display: true,
+                        text: units.temperature === 'celsius' ? '°C' : '°F',
+                        color: '#444',
+                        font: { size: 12, weight: '600' }
+                    }
+                }
+            }
         }
     });
         // clicking on a chart should open a pop-out detailed chart page
@@ -855,6 +938,21 @@ function initCharts() {
                 tension: 0,
                 label: 'Average'
             }]
+        },
+        options: {
+            ...chartConfig.options,
+            scales: {
+                ...chartConfig.options.scales,
+                y: {
+                    ...chartConfig.options.scales.y,
+                    title: {
+                        display: true,
+                        text: '%',
+                        color: '#444',
+                        font: { size: 12, weight: '600' }
+                    }
+                }
+            }
         }
     });
         document.getElementById('humidity-chart').addEventListener('click', function(){
@@ -896,6 +994,21 @@ function initCharts() {
                 tension: 0,
                 label: 'Average'
             }]
+        },
+        options: {
+            ...chartConfig.options,
+            scales: {
+                ...chartConfig.options.scales,
+                y: {
+                    ...chartConfig.options.scales.y,
+                    title: {
+                        display: true,
+                        text: units.wind === 'mph' ? 'mph' : 'kph',
+                        color: '#444',
+                        font: { size: 12, weight: '600' }
+                    }
+                }
+            }
         }
     });
         document.getElementById('wind-chart').addEventListener('click', function(){
@@ -911,43 +1024,25 @@ function initCharts() {
         data: {
             datasets: [{
                 data: [],
-                borderColor: '#9966ff',
-                backgroundColor: 'rgba(153, 102, 255, 0.1)',
-                fill: false,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                fill: true,
                 tension: 0.4,
                 spanGaps: false,
-                label: 'Rain (incremental)',
-                pointRadius: 2,
-                pointHoverRadius: 4
+                label: 'Rain Intensity',
+                pointRadius: 1,
+                pointHoverRadius: 4,
+                yAxisID: 'y'
             }, {
                 data: [],
-                borderColor: '#66ff66',
-                backgroundColor: 'rgba(102, 255, 102, 0.2)',
-                borderDash: [5, 5],
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
                 borderWidth: 3,
                 fill: false,
                 pointRadius: 0,
-                tension: 0,
-                label: 'Average'
-            }, {
-                data: [],
-                borderColor: '#00d4ff',
-                backgroundColor: 'rgba(0, 212, 255, 0.1)',
-                borderWidth: 2,
-                fill: false,
-                pointRadius: 0,
-                tension: 0,
-                label: 'Window Total'
-            }, {
-                data: [],
-                borderColor: '#ff6b35',
-                backgroundColor: 'rgba(255, 107, 53, 0.1)',
-                borderDash: [3, 3],
-                borderWidth: 4,
-                fill: false,
-                pointRadius: 0,
-                tension: 0,
-                label: 'Today Total'
+                tension: 0.4,
+                label: 'Rain Accumulation',
+                yAxisID: 'y1'
             }]
         },
         options: {
@@ -956,13 +1051,84 @@ function initCharts() {
                 intersect: false,
                 mode: 'index'
             },
+            scales: {
+                x: chartConfig.options.scales.x,
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: {
+                        display: window.innerWidth >= 600,
+                        text: units.rain === 'inches' ? 'Rain Intensity (in/hr)' : 'Rain Intensity (mm/hr)',
+                        color: '#3b82f6',
+                        font: { size: 11, weight: 'bold' }
+                    },
+                    grid: {
+                        display: true,
+                        color: 'rgba(59, 130, 246, 0.1)'
+                    },
+                    ticks: {
+                        display: window.innerWidth >= 600,
+                        color: '#3b82f6',
+                        font: { size: 8 },
+                        padding: 2,
+                        maxTicksLimit: 4,
+                        callback: function(value) {
+                            return value.toFixed(2);
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    suggestedMax: 1.0,
+                    title: {
+                        display: window.innerWidth >= 600,
+                        text: units.rain === 'inches' ? 'Accumulation (in)' : 'Accumulation (mm)',
+                        color: '#8b5cf6',
+                        font: { size: 11, weight: 'bold' }
+                    },
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        display: window.innerWidth >= 600,
+                        color: '#8b5cf6',
+                        font: { size: 8 },
+                        padding: 2,
+                        maxTicksLimit: 4,
+                        callback: function(value) {
+                            return value.toFixed(2);
+                        }
+                    }
+                }
+            },
             plugins: {
                 ...chartConfig.options.plugins,
                 tooltip: {
                     ...chartConfig.options.plugins.tooltip,
-                    filter: function(tooltipItem) {
-                        // Always show all datasets in rain chart tooltips
-                        return true;
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                if (context.datasetIndex === 0) {
+                                    // Rain Intensity
+                                    const unit = units.rain === 'inches' ? 'in/hr' : 'mm/hr';
+                                    label += context.parsed.y.toFixed(3) + ' ' + unit;
+                                } else {
+                                    // Rain Accumulation
+                                    const unit = units.rain === 'inches' ? 'in' : 'mm';
+                                    label += context.parsed.y.toFixed(3) + ' ' + unit;
+                                }
+                            }
+                            return label;
+                        }
                     }
                 }
             }
@@ -1008,6 +1174,21 @@ function initCharts() {
                 tension: 0,
                 label: 'Trend'
             }]
+        },
+        options: {
+            ...chartConfig.options,
+            scales: {
+                ...chartConfig.options.scales,
+                y: {
+                    ...chartConfig.options.scales.y,
+                    title: {
+                        display: true,
+                        text: units.pressure === 'mb' ? 'mb' : 'inHg',
+                        color: '#444',
+                        font: { size: 12, weight: '600' }
+                    }
+                }
+            }
         }
     });
         document.getElementById('pressure-chart').addEventListener('click', function(){
@@ -1030,6 +1211,21 @@ function initCharts() {
                 spanGaps: false,
                 label: 'Light'
             }]
+        },
+        options: {
+            ...chartConfig.options,
+            scales: {
+                ...chartConfig.options.scales,
+                y: {
+                    ...chartConfig.options.scales.y,
+                    title: {
+                        display: true,
+                        text: 'lux',
+                        color: '#444',
+                        font: { size: 12, weight: '600' }
+                    }
+                }
+            }
         }
     });
         document.getElementById('light-chart').addEventListener('click', function(){
@@ -1054,6 +1250,21 @@ function initCharts() {
                     spanGaps: false,
                     label: 'UV Index'
                 }]
+            },
+            options: {
+                ...chartConfig.options,
+                scales: {
+                    ...chartConfig.options.scales,
+                    y: {
+                        ...chartConfig.options.scales.y,
+                        title: {
+                            display: true,
+                            text: 'UVI',
+                            color: '#444',
+                            font: { size: 12, weight: '600' }
+                        }
+                    }
+                }
             }
         });
             debugLog(logLevels.DEBUG, 'UV chart created successfully');
@@ -1064,6 +1275,29 @@ function initCharts() {
     
     // Force all chart colors after creation
     forceChartColors();
+    
+    // Add window resize handler to update rain chart labels responsively
+    window.addEventListener('resize', function() {
+        if (charts.rain && charts.rain.options && charts.rain.options.scales) {
+            const width = window.innerWidth;
+            const showTitles = width >= 600;
+            const showTicks = width >= 600;
+            
+            if (charts.rain.options.scales.y && charts.rain.options.scales.y.title) {
+                charts.rain.options.scales.y.title.display = showTitles;
+            }
+            if (charts.rain.options.scales.y && charts.rain.options.scales.y.ticks) {
+                charts.rain.options.scales.y.ticks.display = showTicks;
+            }
+            if (charts.rain.options.scales.y1 && charts.rain.options.scales.y1.title) {
+                charts.rain.options.scales.y1.title.display = showTitles;
+            }
+            if (charts.rain.options.scales.y1 && charts.rain.options.scales.y1.ticks) {
+                charts.rain.options.scales.y1.ticks.display = showTicks;
+            }
+            charts.rain.update('none');
+        }
+    });
 }
 
 function forceChartColors() {
@@ -1329,43 +1563,85 @@ function toggleUnit(sensor) {
 }
 
 function updateChartLabels() {
-    // Update temperature chart label (use prettyUnitLabel for consistent formatting)
-    if (charts.temperature && charts.temperature.options && charts.temperature.options.scales) {
+    // Update temperature chart Y-axis label
+    if (charts.temperature && charts.temperature.options && charts.temperature.options.scales && charts.temperature.options.scales.y) {
         charts.temperature.options.scales.y.title = {
             display: true,
-            text: `Temperature (${prettyUnitLabel('temperature', units.temperature)})`
+            text: units.temperature === 'celsius' ? '°C' : '°F',
+            color: '#444',
+            font: { size: 12, weight: '600' }
         };
     }
     
-    // Update wind chart label
-    if (charts.wind && charts.wind.options && charts.wind.options.scales) {
-        let windUnit = 'm/s';
-        if (units.wind === 'mph') {
-            windUnit = 'mph';
-        } else if (units.wind === 'kmh') {
-            windUnit = 'km/h';
-        }
+    // Update humidity chart Y-axis label (static, no unit change but included for consistency)
+    if (charts.humidity && charts.humidity.options && charts.humidity.options.scales && charts.humidity.options.scales.y) {
+        charts.humidity.options.scales.y.title = {
+            display: true,
+            text: '%',
+            color: '#444',
+            font: { size: 12, weight: '600' }
+        };
+    }
+    
+    // Update wind chart Y-axis label
+    if (charts.wind && charts.wind.options && charts.wind.options.scales && charts.wind.options.scales.y) {
         charts.wind.options.scales.y.title = {
             display: true,
-            text: `Wind Speed (${prettyUnitLabel('wind', units.wind)})`
+            text: units.wind === 'mph' ? 'mph' : 'kph',
+            color: '#444',
+            font: { size: 12, weight: '600' }
         };
     }
     
-    // Update rain chart label
-    if (charts.rain && charts.rain.options && charts.rain.options.scales) {
-        const rainUnit = units.rain === 'inches' ? 'in' : 'mm';
-        charts.rain.options.scales.y.title = {
-            display: true,
-            text: `Rainfall (${prettyUnitLabel('rain', units.rain)})`
-        };
-    }
-    
-    // Update pressure chart label
-    if (charts.pressure && charts.pressure.options && charts.pressure.options.scales) {
-        const pressureUnit = units.pressure === 'inHg' ? 'inHg' : 'mb';
+    // Update pressure chart Y-axis label
+    if (charts.pressure && charts.pressure.options && charts.pressure.options.scales && charts.pressure.options.scales.y) {
         charts.pressure.options.scales.y.title = {
             display: true,
-            text: `Pressure (${prettyUnitLabel('pressure', units.pressure)})`
+            text: units.pressure === 'mb' ? 'mb' : 'inHg',
+            color: '#444',
+            font: { size: 12, weight: '600' }
+        };
+    }
+    
+    // Update rain chart labels - both Y-axes
+    if (charts.rain && charts.rain.options && charts.rain.options.scales) {
+        const intensityUnit = units.rain === 'inches' ? 'in/hr' : 'mm/hr';
+        const accumUnit = units.rain === 'inches' ? 'in' : 'mm';
+        if (charts.rain.options.scales.y) {
+            charts.rain.options.scales.y.title = {
+                display: true,
+                text: `Rain Intensity (${intensityUnit})`,
+                color: '#444',
+                font: { size: 12, weight: '600' }
+            };
+        }
+        if (charts.rain.options.scales.y1) {
+            charts.rain.options.scales.y1.title = {
+                display: true,
+                text: `Accumulation (${accumUnit})`,
+                color: '#444',
+                font: { size: 12, weight: '600' }
+            };
+        }
+    }
+    
+    // Update light chart Y-axis label (static, no unit change but included for consistency)
+    if (charts.light && charts.light.options && charts.light.options.scales && charts.light.options.scales.y) {
+        charts.light.options.scales.y.title = {
+            display: true,
+            text: 'lux',
+            color: '#444',
+            font: { size: 12, weight: '600' }
+        };
+    }
+    
+    // Update UV chart Y-axis label (static, no unit change but included for consistency)
+    if (charts.uv && charts.uv.options && charts.uv.options.scales && charts.uv.options.scales.y) {
+        charts.uv.options.scales.y.title = {
+            display: true,
+            text: 'UVI',
+            color: '#444',
+            font: { size: 12, weight: '600' }
         };
     }
     
@@ -1674,36 +1950,14 @@ function update24HourAccumulationLine(chart, rainDailyTotal, units) {
 
     chart.data.datasets[2].data = accumulationLineData;
     
-    // Adjust Y-axis scale to ensure both incremental rain data and daily total are visible
-    // This handles the case where rain data is near 0.0 but daily total is much higher
-    if (convertedDailyTotal > 0.001) { // Changed from > 0 to > 0.001 to handle very small values
-        const mainDataValues = mainData.map(point => point.y);
-        const minDataValue = Math.min(...mainDataValues, 0);
-        const maxDataValue = Math.max(...mainDataValues);
-        
-        // Ensure the scale includes both the data range and the daily total
-        const suggestedMin = Math.min(minDataValue, 0);
-        const suggestedMax = Math.max(maxDataValue, convertedDailyTotal * 1.1); // Add 10% padding above daily total
-        
-        chart.options.scales.y.min = suggestedMin;
-        chart.options.scales.y.max = suggestedMax;
-        
-        debugLog(logLevels.DEBUG, 'Rain chart Y-axis adjusted', {
-            minData: minDataValue,
-            maxData: maxDataValue,
-            dailyTotal: convertedDailyTotal,
-            scaleMin: suggestedMin,
-            scaleMax: suggestedMax
-        });
-    } else {
-        // For very small or zero daily totals, remove Y-axis constraints to allow auto-scaling
-        delete chart.options.scales.y.min;
-        delete chart.options.scales.y.max;
-        
-        debugLog(logLevels.DEBUG, 'Rain chart Y-axis reset to auto-scale', {
-            dailyTotal: convertedDailyTotal
-        });
-    }
+    // Note: With dual Y-axes, we let Chart.js auto-scale each axis independently
+    // The left Y-axis (y) scales to rain intensity data
+    // The right Y-axis (y1) scales to accumulation and daily total data
+    // No manual scale adjustment needed
+    
+    debugLog(logLevels.DEBUG, '24h accumulation line updated with dual Y-axes auto-scaling', {
+        dailyTotal: convertedDailyTotal
+    });
     
     debugLog(logLevels.DEBUG, '24h accumulation line updated', {
         originalTotal: rainDailyTotal,
@@ -2261,18 +2515,18 @@ function updateDisplay() {
     // Rain data
     // Prepare converted values for rain and wind to avoid referencing undefined variables
     // Server provides rain values as inches (incremental). Convert to millimeters for
-    // description and formatting functions which expect mm input.
-    const rainInInches = typeof weatherData.rainAccum === 'number' ? weatherData.rainAccum : 0;
-    const rainMm = inchesToMm(rainInInches);
+    // Rain data from backend is now in mm (native units)
+    // formatRain and getRainDescription expect mm input
+    const rainMm = typeof weatherData.rainAccum === 'number' ? weatherData.rainAccum : 0;
 
     // Display current incremental rain (formatRain expects mm input)
     document.getElementById('rain').textContent = formatRain(rainMm);
 
-    // Display daily rain total
+    // Display daily rain total (also in mm from backend)
     const dailyRainElement = document.getElementById('daily-rain-total');
-    const dailyRainInInches = typeof weatherData.rainDailyTotal === 'number' ? weatherData.rainDailyTotal : 0;
-    const dailyRainMm = inchesToMm(dailyRainInInches);
+    const dailyRainMm = typeof weatherData.rainDailyTotal === 'number' ? weatherData.rainDailyTotal : 0;
     if (dailyRainElement) {
+        // formatRain expects mm and handles unit conversion internally
         dailyRainElement.textContent = formatRain(dailyRainMm || 0);
     }
 
@@ -2494,17 +2748,34 @@ function updateCharts() {
         try { charts.wind.update(); } catch (e) { debugLog(logLevels.ERROR, 'Wind chart update failed', { error: e.message }); }
     }
 
-    // Rain chart (defensive)
-    let rainValue = (typeof weatherData.rainAccum === 'number' && Number.isFinite(weatherData.rainAccum)) ? weatherData.rainAccum : 0;
-    if (units.rain === 'mm') rainValue = inchesToMm(rainValue);
-    if (charts.rain && charts.rain.data && charts.rain.data.datasets && charts.rain.data.datasets[0]) {
-        charts.rain.data.datasets[0].data.push({ x: now, y: rainValue });
+    // Rain chart - now shows intensity (rate) and accumulation
+    // Rain rate comes from server in mm/hr, convert to inches/hr if user prefers inches
+    let rainRate = (typeof weatherData.rainRate === 'number' && Number.isFinite(weatherData.rainRate)) ? weatherData.rainRate : 0;
+    // Convert to inches/hr if user prefers inches
+    if (units.rain === 'inches') {
+        rainRate = mmToInches(rainRate);
+    }
+    if (charts.rain && charts.rain.data && charts.rain.data.datasets && charts.rain.data.datasets[0] && charts.rain.data.datasets[1]) {
+        // Dataset 0: Rain Intensity (rate in user's preferred units)
+        charts.rain.data.datasets[0].data.push({ x: now, y: rainRate });
         if (charts.rain.data.datasets[0].data.length > maxDataPoints) charts.rain.data.datasets[0].data.shift();
-        const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
-        updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
-        try { update24HourAccumulationLine(charts.rain, weatherData.rainDailyTotal, units); } catch (e) { debugLog(logLevels.ERROR, 'update24HourAccumulationLine failed', { error: e.message }); }
-        try { updateAccumulatedRainLine(charts.rain); } catch (e) { debugLog(logLevels.ERROR, 'updateAccumulatedRainLine failed', { error: e.message }); }
-        charts.rain.options.scales.y.title = { display: true, text: units.rain === 'inches' ? 'in' : 'mm' };
+        
+        // Dataset 1: Rain Accumulation (show cumulative rain over time)
+        let cumulativeRain = 0;
+        const accumulationData = [];
+        for (let i = 0; i < charts.rain.data.datasets[0].data.length; i++) {
+            const point = charts.rain.data.datasets[0].data[i];
+            if (i > 0) {
+                const prevPoint = charts.rain.data.datasets[0].data[i - 1];
+                const timeDiffHours = (point.x - prevPoint.x) / (1000 * 60 * 60); // Convert ms to hours
+                // point.y is already in user's preferred units (mm/hr or in/hr)
+                cumulativeRain += point.y * timeDiffHours; // rate * time = accumulation
+            }
+            // cumulativeRain is already in user's preferred units
+            accumulationData.push({ x: point.x, y: cumulativeRain });
+        }
+        charts.rain.data.datasets[1].data = accumulationData;
+        
         try { charts.rain.update(); } catch (e) { debugLog(logLevels.ERROR, 'Rain chart update failed', { error: e.message }); }
     }
 
@@ -2568,7 +2839,12 @@ function updateCharts() {
                 popoutValue = windValue;
                 break;
             case 'rain':
-                popoutValue = rainValue;
+                // Use rain rate (intensity) for rain popup charts
+                // Backend sends in mm/hr, convert to inches/hr if user prefers inches
+                popoutValue = (typeof weatherData.rainRate === 'number' && Number.isFinite(weatherData.rainRate)) ? weatherData.rainRate : 0;
+                if (units.rain === 'inches') {
+                    popoutValue = mmToInches(popoutValue); // Convert mm/hr to in/hr
+                }
                 break;
             case 'pressure':
                 popoutValue = pressureValue;
@@ -2621,25 +2897,34 @@ function updateCharts() {
                 charts.popout.data.datasets[2].data = trendData;
             }
             
-            // Update accumulated and today total lines for rain (datasets 2 and 3)
+            // Update accumulation and today total lines for rain (datasets 1 and 2)
+            // Rain intensity is dataset 0, accumulation is dataset 1, today total is dataset 2
             if (chartType === 'rain') {
-                // Update accumulated line (dataset 2)
-                if (charts.popout.data.datasets[2]) {
-                    let cumulativeSum = 0;
-                    const accumulatedData = mainData.map(point => {
-                        cumulativeSum += (point.y || 0);
-                        return { x: point.x, y: cumulativeSum };
-                    });
-                    charts.popout.data.datasets[2].data = accumulatedData;
+                // Calculate accumulation from intensity (rate * time)
+                if (charts.popout.data.datasets[1]) {
+                    let cumulativeRain = 0;
+                    const accumulationData = [];
+                    for (let i = 0; i < mainData.length; i++) {
+                        if (i > 0 && mainData[i] && mainData[i - 1]) {
+                            const timeDiffMs = mainData[i].x - mainData[i - 1].x;
+                            const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+                            const rainIntensity = mainData[i].y || 0; // mm/hr
+                            cumulativeRain += rainIntensity * timeDiffHours; // mm
+                        }
+                        // Convert to inches if user prefers inches
+                        const displayValue = units.rain === 'inches' ? mmToInches(cumulativeRain) : cumulativeRain;
+                        accumulationData.push({ x: mainData[i].x, y: displayValue });
+                    }
+                    charts.popout.data.datasets[1].data = accumulationData;
                 }
                 
-                // Update today total line (dataset 3)
-                if (charts.popout.data.datasets[3] && weatherData && weatherData.rainDailyTotal !== undefined) {
+                // Update today total line (dataset 2)
+                if (charts.popout.data.datasets[2] && weatherData && weatherData.rainDailyTotal !== undefined) {
                     let dailyTotal = weatherData.rainDailyTotal;
                     if (units.rain === 'mm') {
                         dailyTotal = inchesToMm(dailyTotal);
                     }
-                    charts.popout.data.datasets[3].data = [
+                    charts.popout.data.datasets[2].data = [
                         { x: firstX, y: dailyTotal },
                         { x: lastX, y: dailyTotal }
                     ];
@@ -2952,11 +3237,11 @@ async function loadHistoricalDataForPopout() {
                     }
                     break;
                 case 'rain':
-                    // Use rainAccum (incremental rain since last reading) for the chart
-                    // The history API now calculates this correctly, handling midnight resets
-                    value = obs.rainAccum || 0;
-                    if (units.rain === 'mm') {
-                        value = inchesToMm(value);
+                    // Use rainRate (rain intensity in mm/hr) for the intensity chart
+                    // Convert to inches/hr if user prefers inches
+                    value = obs.rainRate || 0;
+                    if (units.rain === 'inches') {
+                        value = mmToInches(value); // Convert mm/hr to in/hr
                     }
                     break;
                 case 'pressure':
@@ -3011,19 +3296,28 @@ async function loadHistoricalDataForPopout() {
             
             // Calculate accumulated line for rain (dataset[1]) and today total (dataset[2])
             if (chartType === 'rain') {
-                // Calculate accumulated line (cumulative sum of rain)
+                // Calculate accumulated line (cumulative sum of rain based on rate * time)
                 // popout dataset order: main(0), average(1), window total(2), today total(3)
                 if (charts.popout.data.datasets[2]) {
-                    let cumulativeSum = 0;
-                    const accumulatedData = mainData.map(point => {
-                        cumulativeSum += (point.y || 0);
-                        return { x: point.x, y: cumulativeSum };
-                    });
+                    let cumulativeRain = 0;
+                    const accumulatedData = [];
+                    for (let i = 0; i < mainData.length; i++) {
+                        if (i > 0 && mainData[i] && mainData[i - 1]) {
+                            const timeDiffMs = mainData[i].x - mainData[i - 1].x;
+                            const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+                            const rainIntensity = mainData[i].y || 0; // mm/hr
+                            cumulativeRain += rainIntensity * timeDiffHours; // mm
+                        }
+                        // Convert to inches if user prefers inches
+                        const displayValue = units.rain === 'inches' ? mmToInches(cumulativeRain) : cumulativeRain;
+                        accumulatedData.push({ x: mainData[i].x, y: displayValue });
+                    }
                     charts.popout.data.datasets[2].data = accumulatedData;
                     debugLog(logLevels.INFO, 'Rain accumulated line calculated for popout', {
                         dataPoints: accumulatedData.length,
                         mainDataPoints: mainData.length,
-                        finalTotal: cumulativeSum.toFixed(3),
+                        finalTotal: (units.rain === 'inches' ? mmToInches(cumulativeRain) : cumulativeRain).toFixed(3),
+                        unit: units.rain,
                         firstPoint: mainData[0] ? mainData[0].y : 'none',
                         lastPoint: mainData[mainData.length - 1] ? mainData[mainData.length - 1].y : 'none',
                         samplePoints: mainData.slice(0, 5).map(p => p.y)
@@ -3731,6 +4025,21 @@ function populateChartsWithHistoricalData(dataHistory) {
         dataPoints: dataHistory.length
     });
 
+    // Check if charts are initialized - if not, defer population
+    if (!charts.temperature || !charts.rain || !charts.temperature.data || !charts.rain.data) {
+        debugLog(logLevels.WARN, 'Charts not yet initialized - deferring historical data population', {
+            hasTemperatureChart: !!charts.temperature,
+            hasRainChart: !!charts.rain,
+            hasTempData: charts.temperature ? !!charts.temperature.data : false,
+            hasRainData: charts.rain ? !!charts.rain.data : false
+        });
+        // Store the data for later population once charts are ready
+        if (!window.__pendingHistoricalData) {
+            window.__pendingHistoricalData = dataHistory;
+        }
+        return;
+    }
+
     // Apply chart history filtering if configured
     let filteredHistory = dataHistory;
     if (statusData && statusData.chartHistoryHours > 0) {
@@ -3791,8 +4100,11 @@ function populateChartsWithHistoricalData(dataHistory) {
         // Use actual timestamp from historical data if available, otherwise create backwards timeline
         let timestamp;
         if (obs.lastUpdate) {
-            // Use the actual historical timestamp
+            // Use the actual historical timestamp (weather API format)
             timestamp = new Date(obs.lastUpdate);
+        } else if (obs.timestamp) {
+            // Use the timestamp field (history API format - Unix timestamp in seconds)
+            timestamp = new Date(obs.timestamp * 1000);
         } else {
             // Fallback to backwards timeline for generated data (for compatibility)
             const now = new Date();
@@ -3802,43 +4114,61 @@ function populateChartsWithHistoricalData(dataHistory) {
 
         debugLog(logLevels.DEBUG, `Historical data point ${i + 1}/${dataHistory.length}`, {
             timestamp: timestamp.toISOString(),
-            hasActualTimestamp: !!obs.lastUpdate,
-            temperature: obs.temperature,
-            rain: obs.rainAccum
+            hasActualTimestamp: !!(obs.lastUpdate || obs.timestamp),
+            temperature: obs.temperature || obs.air_temperature,
+            rain: obs.rainRate
         });
 
         // Defensive normalization for historical observation fields
         const safeNumber = (v, fallback = 0) => (typeof v === 'number' && Number.isFinite(v)) ? v : fallback;
 
-        // Temperature
-        let tempValue = safeNumber(obs.temperature, 0);
+        // Temperature - handle both formats (temperature or air_temperature)
+        let tempValue = safeNumber(obs.temperature || obs.air_temperature, 0);
         try { if (units.temperature === 'fahrenheit') tempValue = celsiusToFahrenheit(tempValue); } catch (e) { debugLog(logLevels.ERROR, 'Temperature conversion failed for historical point', { error: e.message }); }
         if (charts.temperature && charts.temperature.data && charts.temperature.data.datasets && charts.temperature.data.datasets[0]) {
             charts.temperature.data.datasets[0].data.push({ x: timestamp, y: tempValue });
         }
 
-        // Humidity
-        const humidityVal = safeNumber(obs.humidity, 0);
+        // Humidity - handle both formats (humidity or relative_humidity)
+        const humidityVal = safeNumber(obs.humidity || obs.relative_humidity, 0);
         if (charts.humidity && charts.humidity.data && charts.humidity.data.datasets && charts.humidity.data.datasets[0]) {
             charts.humidity.data.datasets[0].data.push({ x: timestamp, y: humidityVal });
         }
 
-        // Wind
-        let windValue = safeNumber(obs.windSpeed, 0);
+        // Wind - handle both formats (windSpeed or wind_avg)
+        let windValue = safeNumber(obs.windSpeed || obs.wind_avg, 0);
         try { if (units.wind === 'kph') windValue = mphToKph(windValue); } catch (e) { debugLog(logLevels.ERROR, 'Wind conversion failed for historical point', { error: e.message }); }
         if (charts.wind && charts.wind.data && charts.wind.data.datasets && charts.wind.data.datasets[0]) {
             charts.wind.data.datasets[0].data.push({ x: timestamp, y: windValue });
         }
 
-        // Rain
-        let rainValue = safeNumber(obs.rainAccum, 0);
-        try { if (units.rain === 'mm') rainValue = inchesToMm(rainValue); } catch (e) { debugLog(logLevels.ERROR, 'Rain conversion failed for historical point', { error: e.message }); }
+        // Rain - now using intensity (rate) and accumulation
+        let rainRate = safeNumber(obs.rainRate, 0);
+        // Convert to inches/hr if user prefers inches
+        if (units.rain === 'inches') {
+            rainRate = mmToInches(rainRate);
+        }
         if (charts.rain && charts.rain.data && charts.rain.data.datasets && charts.rain.data.datasets[0]) {
-            charts.rain.data.datasets[0].data.push({ x: timestamp, y: rainValue });
+            charts.rain.data.datasets[0].data.push({ x: timestamp, y: rainRate });
+            if (i < 3 || i === dataHistory.length - 1) {
+                debugLog(logLevels.INFO, `Rain data point ${i}`, {
+                    timestamp: timestamp.toISOString(),
+                    rainRate: rainRate,
+                    unit: units.rain,
+                    chartDataLength: charts.rain.data.datasets[0].data.length
+                });
+            }
+        } else {
+            debugLog(logLevels.ERROR, `Rain chart not ready for data point ${i}`, {
+                hasChart: !!charts.rain,
+                hasData: charts.rain ? !!charts.rain.data : false,
+                hasDatasets: charts.rain?.data ? !!charts.rain.data.datasets : false,
+                hasDataset0: charts.rain?.data?.datasets ? !!charts.rain.data.datasets[0] : false
+            });
         }
 
-        // Pressure
-        let pressureValue = safeNumber(obs.pressure, 0);
+        // Pressure - handle both formats (pressure or station_pressure)
+        let pressureValue = safeNumber(obs.pressure || obs.station_pressure, 0);
         try { if (units.pressure === 'inHg') pressureValue = mbToInHg(pressureValue); } catch (e) { debugLog(logLevels.ERROR, 'Pressure conversion failed for historical point', { error: e.message }); }
         if (charts.pressure && charts.pressure.data && charts.pressure.data.datasets && charts.pressure.data.datasets[0]) {
             charts.pressure.data.datasets[0].data.push({ x: timestamp, y: pressureValue });
@@ -3921,14 +4251,38 @@ function updateAverageAndTrendLines() {
         debugLog(logLevels.INFO, '🌬️ AFTER wind updateAverageLine - avg points:', charts.wind.data.datasets[1].data.length);
     }
 
-    // Update rain average
+    // Update rain - calculate accumulation from intensity data
     if (charts.rain.data.datasets[0].data.length > 0) {
         validateAndSortChartData(charts.rain);
-        const rainAvg = calculateAverage(charts.rain.data.datasets[0].data);
-        updateAverageLine(charts.rain, charts.rain.data.datasets[0].data);
-        // Update 24-hour accumulation line if weatherData is available
-        if (weatherData && weatherData.rainDailyTotal !== undefined) {
-            update24HourAccumulationLine(charts.rain, weatherData.rainDailyTotal, units);
+        
+        debugLog(logLevels.INFO, 'Calculating rain accumulation', {
+            intensityDataPoints: charts.rain.data.datasets[0].data.length,
+            hasAccumulationDataset: !!charts.rain.data.datasets[1]
+        });
+        
+        // Calculate cumulative accumulation from intensity data
+        let cumulativeRain = 0;
+        const accumulationData = [];
+        for (let i = 0; i < charts.rain.data.datasets[0].data.length; i++) {
+            const point = charts.rain.data.datasets[0].data[i];
+            if (i > 0) {
+                const prevPoint = charts.rain.data.datasets[0].data[i - 1];
+                const timeDiffHours = (point.x - prevPoint.x) / 3600000; // Convert ms to hours
+                // point.y is already in user's preferred units (mm/hr or in/hr)
+                cumulativeRain += point.y * timeDiffHours; // rate * time = accumulation
+            }
+            // cumulativeRain is already in user's preferred units
+            accumulationData.push({ x: point.x, y: cumulativeRain });
+        }
+        if (charts.rain.data.datasets[1]) {
+            charts.rain.data.datasets[1].data = accumulationData;
+            debugLog(logLevels.INFO, 'Rain accumulation calculated', {
+                accumulationDataPoints: accumulationData.length,
+                finalAccumulation: accumulationData[accumulationData.length - 1]?.y,
+                unit: units.rain
+            });
+        } else {
+            debugLog(logLevels.ERROR, 'Rain accumulation dataset not found');
         }
     }
 
@@ -4636,6 +4990,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('🚀 DEBUG: Temperature chart exists:', !!charts.temperature);
                     console.log('🚀 DEBUG: Rain chart exists:', !!charts.rain);
                     __chartsInitialized = true;
+                    
+                    // Process pending historical data if available
+                    if (window.__pendingHistoricalData) {
+                        debugLog(logLevels.INFO, 'Processing deferred historical data after chart initialization', {
+                            dataPoints: window.__pendingHistoricalData.length
+                        });
+                        populateChartsWithHistoricalData(window.__pendingHistoricalData);
+                        window.__pendingHistoricalData = null;
+                    }
+                    
                     trySetDashboardReady();
                 return;
             } catch (e) {
@@ -4649,6 +5013,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         initCharts();
                         __chartsInitialized = true;
                         debugLog(logLevels.INFO, 'Charts initialized after global destroy');
+                        
+                        // Process pending historical data if available
+                        if (window.__pendingHistoricalData) {
+                            debugLog(logLevels.INFO, 'Processing deferred historical data after chart recovery', {
+                                dataPoints: window.__pendingHistoricalData.length
+                            });
+                            populateChartsWithHistoricalData(window.__pendingHistoricalData);
+                            window.__pendingHistoricalData = null;
+                        }
+                        
                         return;
                     } catch (e2) {
                         debugLog(logLevels.ERROR, 'Second attempt to initCharts failed after destroyAllCharts', e2);

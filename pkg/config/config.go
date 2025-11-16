@@ -45,6 +45,14 @@ type Config struct {
 	TestAlarm           string  // Trigger a specific alarm by name for testing
 	UseWebStatus        bool    // Enable headless browser scraping of TempestWX status
 	UseGeneratedWeather bool    // Use generated weather data for testing instead of Tempest API
+	TestSensorRain      bool    // Test rain sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorWind      bool    // Test wind sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorTemp      bool    // Test temperature sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorHumidity  bool    // Test humidity sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorPressure  bool    // Test pressure sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorLux       bool    // Test lux sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorUV        bool    // Test UV sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorLightning bool    // Test lightning sensor with cycling pattern (requires --use-generated-weather)
 	UDPStream           bool    // Listen for UDP broadcasts from local Tempest station
 	DisableInternet     bool    // Disable all internet access (no API, no status scraping)
 	StationURL          string  // Custom station URL for weather data (overrides Tempest API)
@@ -98,6 +106,14 @@ DATA SOURCE OPTIONS:
                                 Env: UDP_STREAM=true
   --use-generated-weather       Use simulated weather data for testing
                                 Automatically sets --station-url to local generator
+  --test-sensor-rain            Test rain sensor with 2-min cycle: 0→0.5→2→10 mm/hr
+  --test-sensor-wind            Test wind sensor with 2-min cycle: 1→4→12→22 m/s
+  --test-sensor-temp            Test temperature sensor with 2-min cycle: 0→15→25→38 °C
+  --test-sensor-humidity        Test humidity sensor with 2-min cycle: 30→50→70→95 %%
+  --test-sensor-pressure        Test pressure sensor with 2-min cycle: 980→1000→1020→1040 mb
+  --test-sensor-lux             Test lux sensor with 2-min cycle: 0→100→10000→50000 lux
+  --test-sensor-uv              Test UV sensor with 2-min cycle: 0→2→7→11 index
+  --test-sensor-lightning       Test lightning sensor with 2-min cycle: 0→1@20km→5@5km→10@1km
   --station-url <url>           Custom station URL (e.g., http://localhost:8080/api/generate-weather)
                                 Overrides Tempest API, enables custom data sources
                                 Env: STATION_URL
@@ -330,17 +346,23 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.StatusTheme, "status-theme", cfg.StatusTheme, "Color theme for status console (default: dark-ocean)")
 	flag.BoolVar(&cfg.StatusThemeList, "status-theme-list", false, "List all available color themes and exit")
 	flag.BoolVar(&cfg.Version, "version", false, "Show version information and exit")
+	flag.BoolVar(&cfg.TestSensorRain, "test-sensor-rain", false, "Test rain sensor with cycling pattern")
+	flag.BoolVar(&cfg.TestSensorWind, "test-sensor-wind", false, "Test wind sensor with cycling pattern")
+	flag.BoolVar(&cfg.TestSensorTemp, "test-sensor-temp", false, "Test temperature sensor with cycling pattern")
+	flag.BoolVar(&cfg.TestSensorHumidity, "test-sensor-humidity", false, "Test humidity sensor with cycling pattern")
+	flag.BoolVar(&cfg.TestSensorPressure, "test-sensor-pressure", false, "Test pressure sensor with cycling pattern")
+	flag.BoolVar(&cfg.TestSensorLux, "test-sensor-lux", false, "Test lux sensor with cycling pattern")
+	flag.BoolVar(&cfg.TestSensorUV, "test-sensor-uv", false, "Test UV sensor with cycling pattern")
+	flag.BoolVar(&cfg.TestSensorLightning, "test-sensor-lightning", false, "Test lightning sensor with cycling pattern")
 
 	// Parse flags but check if elevation was actually provided
 	flag.Parse()
 
 	// Handle station URL configuration
-	if cfg.StationURL != "" {
-		// If station URL is provided, automatically enable generated weather mode
-		cfg.UseGeneratedWeather = true
-	} else if cfg.UseGeneratedWeather {
-		// If use-generated-weather is set but no custom URL, use default local endpoint
-		cfg.StationURL = fmt.Sprintf("http://localhost:%s%s", cfg.WebPort, cfg.GeneratedWeatherPath)
+	if cfg.StationURL != "" && !cfg.UseGeneratedWeather {
+		// If station URL is provided (but not for generated weather), keep it
+		// Note: Don't set StationURL for --use-generated-weather to ensure we use
+		// the direct generated data source instead of going through HTTP API
 	}
 
 	// Validate command line arguments
@@ -512,6 +534,13 @@ func validateConfig(cfg *Config) error {
 	// Validate DisableHomeKit and DisableWebConsole are mutually exclusive
 	if cfg.DisableHomeKit && cfg.DisableWebConsole {
 		return fmt.Errorf("--disable-homekit and --disable-webconsole cannot be used together (would disable everything)")
+	}
+
+	// Test sensor flags require --use-generated-weather
+	if (cfg.TestSensorRain || cfg.TestSensorWind || cfg.TestSensorTemp || cfg.TestSensorHumidity ||
+		cfg.TestSensorPressure || cfg.TestSensorLux || cfg.TestSensorUV || cfg.TestSensorLightning) &&
+		!cfg.UseGeneratedWeather {
+		return fmt.Errorf("test sensor flags require --use-generated-weather")
 	}
 
 	// Station name is required for non-alarm-editor modes (already checked above for API mode)

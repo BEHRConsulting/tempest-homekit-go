@@ -15,16 +15,6 @@
         {
           "type": "console",
           "template": "🚨 WEATHER ALARM TRIGGERED\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nAlarm:       {{alarm_name}}\nDescription: {{alarm_description}}\nStation:     {{station}}\nTime:        {{timestamp}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n{{sensor_info}}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        },
-        {
-          "type": "sms",
-          "sms": {
-            "message": "⚠️ {{alarm_name}} at {{station}} - {{timestamp}}. {{alarm_description}}",
-            "to": [
-              "+19516422757",
-              "+19513164325"
-            ]
-          }
         }
       ]
     },

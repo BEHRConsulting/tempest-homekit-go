@@ -92,6 +92,40 @@ func StartService(cfg *config.Config, version string) error {
 
 		logger.Info("Generated weather location: %s (%s, %s season)",
 			location.Name, location.ClimateZone, weatherGen.GetSeason().String())
+
+		// Enable test patterns if requested
+		if cfg.TestSensorRain {
+			weatherGen.EnableTestPattern("rain")
+			logger.Info("Test pattern enabled for rain sensor: 2-min cycle (0→0.5→2→10 mm/hr)")
+		}
+		if cfg.TestSensorWind {
+			weatherGen.EnableTestPattern("wind")
+			logger.Info("Test pattern enabled for wind sensor: 2-min cycle (1→4→12→22 m/s)")
+		}
+		if cfg.TestSensorTemp {
+			weatherGen.EnableTestPattern("temp")
+			logger.Info("Test pattern enabled for temperature sensor: 2-min cycle (0→15→25→38 °C)")
+		}
+		if cfg.TestSensorHumidity {
+			weatherGen.EnableTestPattern("humidity")
+			logger.Info("Test pattern enabled for humidity sensor: 2-min cycle (30→50→70→95 %%)")
+		}
+		if cfg.TestSensorPressure {
+			weatherGen.EnableTestPattern("pressure")
+			logger.Info("Test pattern enabled for pressure sensor: 2-min cycle (980→1000→1020→1040 mb)")
+		}
+		if cfg.TestSensorLux {
+			weatherGen.EnableTestPattern("lux")
+			logger.Info("Test pattern enabled for lux sensor: 2-min cycle (0→100→10000→50000 lux)")
+		}
+		if cfg.TestSensorUV {
+			weatherGen.EnableTestPattern("uv")
+			logger.Info("Test pattern enabled for UV sensor: 2-min cycle (0→2→7→11 index)")
+		}
+		if cfg.TestSensorLightning {
+			weatherGen.EnableTestPattern("lightning")
+			logger.Info("Test pattern enabled for lightning sensor: 2-min cycle (0→1@20km→5@5km→10@1km)")
+		}
 	} else {
 		// Use real Tempest API data
 		logger.Debug("Fetching stations from WeatherFlow API")
@@ -330,8 +364,15 @@ func StartService(cfg *config.Config, version string) error {
 
 	// Preload historical data if requested
 	if cfg.ReadHistory {
+		var dataSourceDesc string
+		if cfg.UseGeneratedWeather {
+			dataSourceDesc = "from generated weather"
+		} else {
+			dataSourceDesc = "from Tempest API"
+		}
+
 		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-			logger.Info("--read-history flag detected, preloading historical observations (up to HISTORY_POINTS points) from Tempest API...")
+			logger.Info("--read-history flag detected, preloading historical observations (up to HISTORY_POINTS points) %s...", dataSourceDesc)
 		}
 
 		// Create a progress callback function
@@ -379,6 +420,9 @@ func StartService(cfg *config.Config, version string) error {
 			if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
 				logger.Info("Historical data preload completed - loaded %d observations (up to configured HISTORY_POINTS)", len(historicalObs))
 			}
+
+			// NOTE: No need to reset test pattern rain anymore because we now preserve
+			// cumulativeRain during historical generation instead of restoring it
 		}
 	}
 
