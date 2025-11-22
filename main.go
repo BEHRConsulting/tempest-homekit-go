@@ -202,6 +202,15 @@ func main() {
 		return
 	}
 
+	// Handle history testing if requested
+	if cfg.TestHistory {
+		// Ensure INFO logs are visible for test output
+		logger.SetLogLevel("info")
+		logger.Info("TestHistory flag detected, fetching as much historical data as possible...")
+		runHistoryTest(cfg)
+		return
+	}
+
 	// Handle local API testing if requested
 	if cfg.TestAPILocal {
 		logger.Info("TestAPILocal flag detected, running local API endpoint tests...")
@@ -1199,6 +1208,70 @@ func runAPITests(cfg *config.Config) {
 	fmt.Printf("- Forecast API: Working\n")
 	fmt.Printf("- Data Points Retrieved: %d observations\n", len(observations))
 	fmt.Printf("- API Performance: %.2f seconds for historical data\n", elapsed.Seconds())
+}
+
+// runHistoryTest fetches as much historical data as possible and prints starting
+// timestamps for each 500-point block running back in time.
+func runHistoryTest(cfg *config.Config) {
+	fmt.Println("=== Historical Data Coverage Test ===")
+
+	// Get stations
+	stations, err := weather.GetStations(cfg.Token)
+	if err != nil {
+		log.Fatalf("Failed to get stations: %v", err)
+	}
+
+	station := weather.FindStationByName(stations, cfg.StationName)
+	if station == nil {
+		log.Fatalf("Station '%s' not found", cfg.StationName)
+	}
+	fmt.Printf("Found station: %s (ID: %d)\n", station.Name, station.StationID)
+
+	// Fetch historical observations across available days (up to 365)
+	fmt.Println("Collecting historical observations (this may take a while)...")
+	start := time.Now()
+	observations, err := weather.GetAllHistoricalObservations(station.StationID, cfg.Token, cfg.LogLevel, 365, cfg.HistoryReduceMethod, cfg.HistoryBinMinutes, cfg.HistoryKeepRecentHours, cfg.HistoryReduce, 0)
+	if err != nil {
+		log.Fatalf("Failed to fetch historical observations: %v", err)
+	}
+	duration := time.Since(start)
+	fmt.Printf("Fetched %d unique historical observations in %.2f seconds\n", len(observations), duration.Seconds())
+
+	// Print INFO line for the start (oldest) historic data point
+	if len(observations) > 0 {
+		oldestObs := observations[len(observations)-1]
+		utcStart := time.Unix(oldestObs.Timestamp, 0).UTC().Format("2006-01-02 15:04:05")
+		localStart := time.Unix(oldestObs.Timestamp, 0).Local().Format("2006-01-02 15:04:05 -0700 MST")
+		fmt.Printf("INFO: First historic data point (oldest): %s (UTC) / %s (Local)\n", utcStart, localStart)
+	}
+
+	if len(observations) == 0 {
+		fmt.Println("No historical observations were retrieved.")
+		return
+	}
+
+	// observations are newest-first. We'll report start time for each 500-point block
+	blockSize := 500
+	fmt.Println()
+	fmt.Printf("%-8s %-12s %-25s %-25s\n", "Block#", "StartIdx", "Timestamp (UTC)", "Timestamp (Local)")
+	fmt.Printf("%s\n", strings.Repeat("-", 78))
+
+	total := len(observations)
+	blockNum := 1
+	for idx := 0; idx < total; idx += blockSize {
+		obs := observations[idx]
+		utc := time.Unix(obs.Timestamp, 0).UTC().Format("2006-01-02 15:04:05")
+		local := time.Unix(obs.Timestamp, 0).Local().Format("2006-01-02 15:04:05 -0700 MST")
+		fmt.Printf("%-8d %-12d %-25s %-25s\n", blockNum, idx+1, utc, local)
+		blockNum++
+	}
+
+	// Summary: total coverage
+	oldest := time.Unix(observations[len(observations)-1].Timestamp, 0)
+	newest := time.Unix(observations[0].Timestamp, 0)
+	fmt.Println()
+	fmt.Printf("Total observations: %d\n", total)
+	fmt.Printf("Data coverage: %s to %s (%.2f hours)\n", oldest.Format("2006-01-02 15:04:05"), newest.Format("2006-01-02 15:04:05"), newest.Sub(oldest).Hours())
 }
 
 func runLocalAPITests(cfg *config.Config) {

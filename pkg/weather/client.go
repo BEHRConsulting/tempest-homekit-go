@@ -8,12 +8,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"tempest-homekit-go/pkg/logger"
 	"tempest-homekit-go/pkg/types"
 
 	"github.com/chromedp/chromedp"
@@ -537,6 +540,369 @@ func GetForecast(stationID int, token string) (*ForecastResponse, error) {
 	}
 
 	return &forecastResp, nil
+}
+
+// GetAllHistoricalObservations attempts to collect historical observations by
+// querying the device observations endpoint with increasing day_offset values
+// until no more data is returned or maxDays is reached. maxPoints limits the
+// total returned observations (0 = no limit).
+func GetAllHistoricalObservations(stationID int, token string, logLevel string, maxDays int, reduceMethod string, binMinutes int, keepRecentHours int, reduceFactor int, maxPoints int) ([]*Observation, error) {
+	// Resolve station details and Tempest device ID
+	stationDetails, err := GetStationDetails(stationID, token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get station details: %v", err)
+	}
+
+	deviceID, err := GetTempestDeviceID(stationDetails)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find Tempest device: %v", err)
+	}
+
+	if maxDays <= 0 {
+		maxDays = 365 // sane default
+	}
+
+	var allObservations []*Observation
+	consecutiveEmpty := 0
+
+	for dayOffset := 0; dayOffset < maxDays; dayOffset++ {
+		// Build URL
+		url := fmt.Sprintf("%s/observations/device/%d?day_offset=%d&token=%s", BaseURL, deviceID, dayOffset, token)
+
+		if logLevel == "debug" {
+			fmt.Printf("DEBUG: Fetching day_offset=%d from %s\n", dayOffset, url)
+		}
+
+		// Attempt request with retries for 429 (rate limit). Use Retry-After header if provided.
+		var resp *http.Response
+		var err error
+		maxRetries := 6
+		attempt := 0
+		for {
+			resp, err = http.Get(url)
+			if err != nil {
+				// On transient error, retry a few times
+				logger.Warn("API call failed for day_offset=%d: %v", dayOffset, err)
+				attempt++
+				if attempt > maxRetries {
+					consecutiveEmpty++
+					break
+				}
+				// small backoff with jitter
+				backoffMs := 150 + rand.Intn(200)
+				time.Sleep(time.Duration(backoffMs) * time.Millisecond)
+				continue
+			}
+
+			if resp.StatusCode == http.StatusTooManyRequests {
+				// Read Retry-After header if present
+				ra := resp.Header.Get("Retry-After")
+				resp.Body.Close()
+				waitSec := 0
+				if ra != "" {
+					if n, perr := strconv.Atoi(ra); perr == nil {
+						waitSec = n
+					}
+				}
+				// fallback exponential backoff with jitter
+				if waitSec <= 0 {
+					base := 1 << attempt // 1,2,4,8...
+					jitter := rand.Intn(base + 1)
+					waitSec = base + jitter
+					if waitSec > 60 {
+						waitSec = 60
+					}
+				}
+				logger.Warn("API returned 429 for day_offset=%d (attempt %d/%d) - sleeping %ds before retry", dayOffset, attempt+1, maxRetries, waitSec)
+				time.Sleep(time.Duration(waitSec) * time.Second)
+				attempt++
+				if attempt > maxRetries {
+					consecutiveEmpty++
+					break
+				}
+				continue
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				resp.Body.Close()
+				logger.Warn("API call for day_offset=%d returned HTTP %d", dayOffset, resp.StatusCode)
+				time.Sleep(150 * time.Millisecond)
+				consecutiveEmpty++
+				if consecutiveEmpty >= 3 {
+					break
+				}
+				break
+			}
+
+			// success
+			break
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			fmt.Printf("ERROR: Error reading response for day_offset=%d: %v\n", dayOffset, err)
+			time.Sleep(150 * time.Millisecond)
+			consecutiveEmpty++
+			if consecutiveEmpty >= 3 {
+				break
+			}
+			continue
+		}
+
+		var apiResp HistoricalResponse
+		if err := json.Unmarshal(body, &apiResp); err != nil {
+			fmt.Printf("ERROR: Error parsing JSON for day_offset=%d: %v\n", dayOffset, err)
+			time.Sleep(150 * time.Millisecond)
+			consecutiveEmpty++
+			if consecutiveEmpty >= 3 {
+				break
+			}
+			continue
+		}
+
+		observations := parseDeviceObservations(apiResp.Obs)
+		if len(observations) == 0 {
+			// No data for this day; increment consecutive empty counter and possibly stop
+			consecutiveEmpty++
+			if consecutiveEmpty >= 3 {
+				if logLevel == "debug" {
+					fmt.Printf("DEBUG: %d consecutive empty days encountered, stopping\n", consecutiveEmpty)
+				}
+				break
+			}
+		} else {
+			allObservations = append(allObservations, observations...)
+			consecutiveEmpty = 0
+		}
+
+		// Respectful pause between requests
+		time.Sleep(150 * time.Millisecond)
+	}
+
+	// Sort newest first
+	sort.Slice(allObservations, func(i, j int) bool {
+		return allObservations[i].Timestamp > allObservations[j].Timestamp
+	})
+
+	// Deduplicate by timestamp
+	uniqueObs := make([]*Observation, 0, len(allObservations))
+	seen := make(map[int64]bool)
+	for _, obs := range allObservations {
+		if !seen[obs.Timestamp] {
+			seen[obs.Timestamp] = true
+			uniqueObs = append(uniqueObs, obs)
+		}
+	}
+
+	// Limit to maxPoints if requested
+	if maxPoints > 0 && len(uniqueObs) > maxPoints {
+		uniqueObs = uniqueObs[:maxPoints]
+	}
+
+	// Reduction pipeline
+	if strings.ToLower(reduceMethod) == "timebin" {
+		// Keep recent high-resolution points covering the last keepRecentHours
+		var recent []*Observation
+		var older []*Observation
+
+		if keepRecentHours > 0 && len(uniqueObs) > 0 {
+			newestTs := uniqueObs[0].Timestamp
+			cutoff := newestTs - int64(keepRecentHours*3600)
+			for _, o := range uniqueObs {
+				if o.Timestamp >= cutoff {
+					recent = append(recent, o)
+				} else {
+					older = append(older, o)
+				}
+			}
+		} else {
+			older = uniqueObs
+		}
+
+		// Bin older observations into bins of binMinutes
+		binSec := int64(binMinutes * 60)
+		if binSec <= 0 {
+			binSec = 600 // default 10 minutes
+		}
+
+		// Map from bucket -> slice of observations (bucket key = floor(timestamp/binSec))
+		buckets := make(map[int64][]*Observation)
+		var bucketKeys []int64
+
+		// older is newest-first; for consistent bin assignment, iterate oldest-first
+		for i := len(older) - 1; i >= 0; i-- {
+			o := older[i]
+			key := o.Timestamp / binSec
+			if _, ok := buckets[key]; !ok {
+				bucketKeys = append(bucketKeys, key)
+			}
+			buckets[key] = append(buckets[key], o)
+		}
+
+		// Aggregate each bucket
+		var binned []*Observation
+		for _, key := range bucketKeys {
+			group := buckets[key]
+			if len(group) == 0 {
+				continue
+			}
+			// aggregate per-field
+			var tsSum int64 = 0
+			var windLullSum float64 = 0
+			var windAvgSum float64 = 0
+			var windGustMax float64 = 0
+			var windDirSum float64 = 0
+			var pressureSum float64 = 0
+			var tempSum float64 = 0
+			var rhSum float64 = 0
+			var illumSum float64 = 0
+			var solarSum float64 = 0
+			var rainAccumSum float64 = 0
+			var rainDailySum float64 = 0
+			var lightningAvgSum float64 = 0
+			var batterySum float64 = 0
+			var uvSum int = 0
+			var precipType int = 0
+			var lightningCountSum int = 0
+			var reportIntervalSum int = 0
+			count := len(group)
+			for _, g := range group {
+				tsSum += g.Timestamp
+				windLullSum += g.WindLull
+				windAvgSum += g.WindAvg
+				if g.WindGust > windGustMax {
+					windGustMax = g.WindGust
+				}
+				windDirSum += g.WindDirection
+				pressureSum += g.StationPressure
+				tempSum += g.AirTemperature
+				rhSum += g.RelativeHumidity
+				illumSum += g.Illuminance
+				solarSum += g.SolarRadiation
+				rainAccumSum += g.RainAccumulated
+				rainDailySum += g.RainDailyTotal
+				lightningAvgSum += g.LightningStrikeAvg
+				batterySum += g.Battery
+				uvSum += g.UV
+				precipType = g.PrecipitationType // use last observed precip type in bucket
+				lightningCountSum += g.LightningStrikeCount
+				reportIntervalSum += g.ReportInterval
+			}
+			// Use bucket start timestamp for the aggregated point
+			aggTs := key * binSec
+			avg := &Observation{
+				Timestamp:            aggTs,
+				WindLull:             windLullSum / float64(count),
+				WindAvg:              windAvgSum / float64(count),
+				WindGust:             windGustMax,
+				WindDirection:        windDirSum / float64(count),
+				StationPressure:      pressureSum / float64(count),
+				AirTemperature:       tempSum / float64(count),
+				RelativeHumidity:     rhSum / float64(count),
+				Illuminance:          illumSum / float64(count),
+				UV:                   uvSum / int(count),
+				SolarRadiation:       solarSum / float64(count),
+				RainAccumulated:      rainAccumSum,
+				RainDailyTotal:       rainDailySum / float64(count),
+				PrecipitationType:    precipType,
+				LightningStrikeAvg:   lightningAvgSum / float64(count),
+				LightningStrikeCount: lightningCountSum,
+				Battery:              batterySum / float64(count),
+				ReportInterval:       reportIntervalSum / int(count),
+			}
+			binned = append(binned, avg)
+		}
+
+		// binned is oldest-first; reverse to newest-first
+		for i, j := 0, len(binned)-1; i < j; i, j = i+1, j-1 {
+			binned[i], binned[j] = binned[j], binned[i]
+		}
+
+		// Combine recent (newest-first) + binned (newest-first)
+		combined := append(recent, binned...)
+		logger.Info("Historical points fetched: %d, after timebin reduction: %d (keepRecent=%dh, bin=%dm)", len(uniqueObs), len(combined), keepRecentHours, binMinutes)
+		uniqueObs = combined
+	} else if strings.ToLower(reduceMethod) == "factor" {
+		// Existing fixed-group averaging behavior
+		if reduceFactor > 1 && len(uniqueObs) > 0 {
+			reduced := make([]*Observation, 0, (len(uniqueObs)+reduceFactor-1)/reduceFactor)
+			for i := 0; i < len(uniqueObs); i += reduceFactor {
+				end := i + reduceFactor
+				if end > len(uniqueObs) {
+					end = len(uniqueObs)
+				}
+				group := uniqueObs[i:end]
+				var tsSum int64 = 0
+				var windLullSum float64 = 0
+				var windAvgSum float64 = 0
+				var windGustSum float64 = 0
+				var windDirSum float64 = 0
+				var pressureSum float64 = 0
+				var tempSum float64 = 0
+				var rhSum float64 = 0
+				var illumSum float64 = 0
+				var solarSum float64 = 0
+				var rainAccumSum float64 = 0
+				var rainDailySum float64 = 0
+				var lightningAvgSum float64 = 0
+				var batterySum float64 = 0
+				var uvSum int = 0
+				var precipSum int = 0
+				var lightningCountSum int = 0
+				var reportIntervalSum int = 0
+				count := len(group)
+				for _, g := range group {
+					tsSum += g.Timestamp
+					windLullSum += g.WindLull
+					windAvgSum += g.WindAvg
+					windGustSum += g.WindGust
+					windDirSum += g.WindDirection
+					pressureSum += g.StationPressure
+					tempSum += g.AirTemperature
+					rhSum += g.RelativeHumidity
+					illumSum += g.Illuminance
+					solarSum += g.SolarRadiation
+					rainAccumSum += g.RainAccumulated
+					rainDailySum += g.RainDailyTotal
+					lightningAvgSum += g.LightningStrikeAvg
+					batterySum += g.Battery
+					uvSum += g.UV
+					precipSum += g.PrecipitationType
+					lightningCountSum += g.LightningStrikeCount
+					reportIntervalSum += g.ReportInterval
+				}
+				avg := &Observation{
+					Timestamp:            tsSum / int64(count),
+					WindLull:             windLullSum / float64(count),
+					WindAvg:              windAvgSum / float64(count),
+					WindGust:             windGustSum / float64(count),
+					WindDirection:        windDirSum / float64(count),
+					StationPressure:      pressureSum / float64(count),
+					AirTemperature:       tempSum / float64(count),
+					RelativeHumidity:     rhSum / float64(count),
+					Illuminance:          illumSum / float64(count),
+					UV:                   uvSum / int(count),
+					SolarRadiation:       solarSum / float64(count),
+					RainAccumulated:      rainAccumSum / float64(count),
+					RainDailyTotal:       rainDailySum / float64(count),
+					PrecipitationType:    precipSum / int(count),
+					LightningStrikeAvg:   lightningAvgSum / float64(count),
+					LightningStrikeCount: lightningCountSum / int(count),
+					Battery:              batterySum / float64(count),
+					ReportInterval:       reportIntervalSum / int(count),
+				}
+				reduced = append(reduced, avg)
+			}
+			logger.Info("Historical points fetched: %d, reduced (factor=%d): %d", len(uniqueObs), reduceFactor, len(reduced))
+			uniqueObs = reduced
+		}
+	} else {
+		// Unknown method: no reduction
+		fmt.Printf("INFO: Unknown history reduce method '%s' - skipping reduction\n", reduceMethod)
+	}
+
+	return uniqueObs, nil
 }
 
 // StationStatus represents the status information from the TempestWX station status page

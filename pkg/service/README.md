@@ -54,7 +54,7 @@ type ServiceManager struct {
 3. **Database Management**: Handle `--cleardb` flag if specified
 4. **Weather Client**: Initialize WeatherFlow API client with token
 5. **Station Discovery**: Find Tempest station by name
-6. **Historical Data**: Load historical observations if `--read-history` flag set (number of observations loaded is controlled by `HISTORY_POINTS`)
+6. **Historical Data**: Load historical observations if `--history-read` flag set (number of observations loaded is controlled by `HISTORY_POINTS`)
 7. **HomeKit Setup**: Initialize HomeKit bridge and accessories
 8. **Web Server**: Start HTTP server for dashboard and API
 9. **Polling Loop**: Begin 60-second weather data updates

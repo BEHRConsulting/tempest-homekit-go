@@ -35,7 +35,7 @@
 
 [x] web console, Add a trend line for the pressure graph based on all saved data for preasure.
 
-[x] add the command line parameter --read-history to use the tempest API to preload 200 point, at 5 minute intervals, to keep API rate limiting happy (preloads up to HISTORY_POINTS observations).
+[x] add the command line parameter --history-read to use the tempest API to preload 200 point, at 5 minute intervals, to keep API rate limiting happy (preloads up to HISTORY_POINTS observations).
 
 [x] if reading historical data, update card tempest station status to "Reading Historical Observations" and Historical line to <n>/200 when <n> is the sample being read.
 

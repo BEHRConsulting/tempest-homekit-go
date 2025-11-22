@@ -101,8 +101,20 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 	// Create pipe for capturing output
 	r, w, _ := os.Pipe()
 
-	// Redirect log output to pipe (but NOT stdout/stderr for tview)
-	log.SetOutput(w)
+	// Also open a debug log file so we can capture logs outside the TUI
+	debugFile, err := os.OpenFile("/tmp/status_console_debug.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		// If we cannot open the debug file, continue without it
+		log.Printf("warning: could not open debug log file: %v", err)
+		debugFile = nil
+	}
+
+	// Redirect log output to pipe (and debug file) so tview doesn't consume stdout
+	if debugFile != nil {
+		log.SetOutput(io.MultiWriter(w, debugFile))
+	} else {
+		log.SetOutput(w)
+	}
 
 	// Start goroutine to read from pipe into buffer
 	go func() {
@@ -117,6 +129,9 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 			}
 		}
 	}()
+
+	// Resize events are handled by tcell; additional OS signal logging requires
+	// careful integration and is skipped here to avoid interference.
 
 	// Create context for goroutine coordination
 	ctx, cancel := context.WithCancel(context.Background())
@@ -135,6 +150,9 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 	// Restore log output when done
 	defer func() {
 		w.Close()
+		if debugFile != nil {
+			debugFile.Close()
+		}
 		log.SetOutput(os.Stderr)
 	}()
 
@@ -162,7 +180,13 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 		SetDynamicColors(true).
 		SetScrollable(true).
 		SetChangedFunc(func() {
-			app.Draw()
+			app.QueueUpdateDraw(func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("panic in tvConsole QueueUpdateDraw: %v", r)
+					}
+				}()
+			})
 		})
 	tvConsole.SetBorder(true).SetTitle(" Console Logs ").SetBorderColor(theme.BorderColor)
 	leftFlex.AddItem(tvConsole, 0, 3, false) // 3/6 of left column
@@ -267,10 +291,13 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 		default:
 		}
 
-		// Use Draw() instead of QueueUpdateDraw when called from goroutine
-		app.Draw()
-		// Now update UI in the draw handler (we're in sync with event loop)
-		func() {
+		// Schedule UI update on the application's event loop (with recover)
+		app.QueueUpdateDraw(func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("panic in updateStatus QueueUpdateDraw: %v", r)
+				}
+			}()
 			currentTheme := GetTheme(currentThemeName)
 			labelTag := colorToTviewTag(currentTheme.LabelColor)
 			valueTag := colorToTviewTag(currentTheme.ValueColor)
@@ -452,7 +479,7 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 				fmt.Fprintf(tvSystem, "[%s]Timeout:[-] [%s]Never[-]\n", labelTag, valueTag)
 			}
 			fmt.Fprintf(tvSystem, "[%s]Theme:[-] [%s]%s[-]\n", labelTag, valueTag, currentThemeName)
-		}()
+		})
 	}
 
 	// Shared state for refresh countdown
@@ -498,9 +525,15 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 				currentNext := nextRefreshSeconds
 				refreshMutex.Unlock()
 
-				// Use Draw() instead of QueueUpdateDraw to avoid blocking from goroutine
-				app.Draw()
-				updateFooter(currentNext)
+				// Schedule footer update on the application's event loop
+				app.QueueUpdateDraw(func() {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("panic in footer QueueUpdateDraw: %v", r)
+						}
+					}()
+					updateFooter(currentNext)
+				})
 
 				// Check for timeout
 				if cfg.StatusTimeout > 0 && time.Since(startTime).Seconds() >= float64(cfg.StatusTimeout) {
@@ -523,11 +556,14 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 				app.Stop()
 				return nil
 			case 'r', 'R':
-				// Manual refresh - trigger via channel/signal, not goroutine
+				// Manual refresh - reset countdown and trigger immediate update
+				log.Printf("input: 'r' pressed - enqueueing refresh")
 				refreshMutex.Lock()
 				nextRefreshSeconds = cfg.StatusRefresh
 				refreshMutex.Unlock()
-				// Just trigger a refresh on next ticker cycle instead of blocking
+				// Force an immediate UI repaint and run update in background
+				app.QueueUpdateDraw(func() {})
+				go updateStatus()
 				return nil
 			case 't', 'T':
 				// Cycle to next theme - do it synchronously in the event handler
@@ -546,6 +582,14 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 			// Stop everything immediately
 			cancel()
 			app.Stop()
+			return nil
+		case tcell.KeyCtrlL:
+			// Treat Ctrl-L (clear screen) like a manual refresh: force redraw
+			refreshMutex.Lock()
+			nextRefreshSeconds = cfg.StatusRefresh
+			refreshMutex.Unlock()
+			app.QueueUpdateDraw(func() {})
+			go updateStatus()
 			return nil
 		}
 		return event

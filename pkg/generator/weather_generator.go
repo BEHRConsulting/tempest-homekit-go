@@ -543,12 +543,18 @@ func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*types.Observati
 	observations := make([]*types.Observation, count)
 
 	// Save the current state to restore later (historical generation should not affect current day)
-	originalDailyTotal := wg.dailyRainTotal
 	originalCumulativeRain := wg.cumulativeRain
+	originalDailyRain := wg.dailyRainTotal
 	originalTime := wg.CurrentTime
 
-	// Start from 24 hours ago and work forward
-	startTime := time.Now().Add(-24 * time.Hour)
+	// Start from 24 hours ago and work forward. If `wg.CurrentTime` is set (test-provided),
+	// base the historical window on that to allow deterministic generation in tests.
+	var startTime time.Time
+	if !wg.CurrentTime.IsZero() {
+		startTime = wg.CurrentTime.Add(-24 * time.Hour)
+	} else {
+		startTime = time.Now().Add(-24 * time.Hour)
+	}
 	interval := 24 * time.Hour / time.Duration(count)
 
 	// Adjust test pattern start times to historical start
@@ -581,9 +587,18 @@ func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*types.Observati
 	// Set a flag to prevent rain generation from affecting daily totals during historical generation
 	wg.isGeneratingHistorical = true
 
-	// Calculate midnight of today for daily rain total calculation
-	now := time.Now()
-	midnightToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	// Calculate midnight of today for daily rain total calculation. Use the original
+	// current time if provided (for deterministic/historical runs), otherwise use now.
+	var referenceNow time.Time
+	if !originalTime.IsZero() {
+		referenceNow = originalTime
+	} else {
+		referenceNow = time.Now()
+	}
+	midnightToday := time.Date(referenceNow.Year(), referenceNow.Month(), referenceNow.Day(), 0, 0, 0, 0, referenceNow.Location())
+
+	// Track daily total for historical generation
+	var historicalDailyTotal float64
 
 	for i := 0; i < count; i++ {
 		// Set the current time for this observation
@@ -593,20 +608,24 @@ func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*types.Observati
 		obs := wg.GenerateObservation()
 		obs.Timestamp = wg.CurrentTime.Unix()
 
-		// For test patterns, calculate daily total (rain since midnight today)
+		// Calculate daily total (rain since midnight today)
 		// Daily total should only include observations from today (after midnight)
-		if wg.testPatternRain != nil && !wg.CurrentTime.Before(midnightToday) {
+		if !wg.CurrentTime.Before(midnightToday) {
 			// This observation is from today - include in daily total
 			if i > 0 {
 				prevObs := observations[i-1]
 				// Calculate incremental rain between this obs and previous
 				incrementalRain := obs.RainAccumulated - prevObs.RainAccumulated
-				wg.dailyRainTotal += incrementalRain
+				historicalDailyTotal += incrementalRain
 			} else if wg.CurrentTime.Equal(midnightToday) || wg.CurrentTime.After(midnightToday) {
 				// First observation of today - its accumulated value is the incremental
-				wg.dailyRainTotal += obs.RainAccumulated
+				historicalDailyTotal += obs.RainAccumulated
 			}
-			obs.RainDailyTotal = wg.dailyRainTotal
+			obs.RainDailyTotal = historicalDailyTotal
+		} else {
+			// This observation is from yesterday or earlier - daily total should be 0
+			// (we're not tracking previous days' totals)
+			obs.RainDailyTotal = 0.0
 		}
 
 		observations[i] = obs
@@ -626,9 +645,10 @@ func (wg *WeatherGenerator) GenerateHistoricalData(count int) []*types.Observati
 	wg.isGeneratingHistorical = false
 
 	// Restore the original state (historical generation should not corrupt current day)
-	// NOTE: Don't restore rain totals if test patterns are active - let them continue from historical end
+	// Restore the current day's daily total to what it was before generating history
+	wg.dailyRainTotal = originalDailyRain
+	// NOTE: Don't restore cumulative rain if test patterns are active - let them continue from historical end
 	if wg.testPatternRain == nil {
-		wg.dailyRainTotal = originalDailyTotal
 		wg.cumulativeRain = originalCumulativeRain
 	}
 	wg.CurrentTime = originalTime

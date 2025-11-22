@@ -308,13 +308,18 @@ function initCharts() {
             const urlPath = window.location.pathname;
             const chartType = urlPath.split('/').pop(); // Gets 'temperature', 'humidity', etc.
             
-            // Map chart types to colors and labels
+            // Prefer units passed in the popout config (from the dashboard) so the
+            // popout follows the same display units as the main console. Fall back
+            // to the locally-determined `units` if no config units are provided.
+            const popUnits = (popoutConfig && popoutConfig.units) ? popoutConfig.units : units;
+
+            // Map chart types to colors and labels, using `popUnits` for unit labels
             const chartConfigs = {
-                'temperature': { color: '#ff6384', label: 'Temperature', unit: units.temperature === 'celsius' ? '°C' : '°F' },
+                'temperature': { color: '#ff6384', label: 'Temperature', unit: popUnits.temperature === 'celsius' ? '°C' : '°F' },
                 'humidity': { color: '#36a2eb', label: 'Humidity', unit: '%' },
-                'wind': { color: '#ffce56', label: 'Wind Speed', unit: units.wind === 'mph' ? 'mph' : 'kph' },
-                'rain': { color: '#4bc0c0', label: 'Rain', unit: units.rain === 'inches' ? 'in' : 'mm' },
-                'pressure': { color: '#9966ff', label: 'Pressure', unit: units.pressure === 'mb' ? 'mb' : 'inHg' },
+                'wind': { color: '#ffce56', label: 'Wind Speed', unit: popUnits.wind === 'mph' ? 'mph' : 'kph' },
+                'rain': { color: '#4bc0c0', label: 'Rain', unit: popUnits.rain === 'inches' ? 'in' : 'mm' },
+                'pressure': { color: '#9966ff', label: 'Pressure', unit: popUnits.pressure === 'mb' ? 'mb' : 'inHg' },
                 'light': { color: '#ff9f40', label: 'Light', unit: 'lux' },
                 'uv': { color: '#ff6384', label: 'UV Index', unit: 'UVI' }
             };
@@ -459,9 +464,9 @@ function initCharts() {
                                         formattedValue = value.toFixed(3);
                                         // Determine unit based on dataset
                                         if (label === 'Rain Intensity') {
-                                            unit = units.rain === 'inches' ? 'in/hr' : 'mm/hr';
+                                            unit = popUnits.rain === 'inches' ? 'in/hr' : 'mm/hr';
                                         } else if (label === 'Accumulation' || label === 'Today Total') {
-                                            unit = units.rain === 'inches' ? 'in' : 'mm';
+                                            unit = popUnits.rain === 'inches' ? 'in' : 'mm';
                                         } else {
                                             unit = config.unit;
                                         }
@@ -521,9 +526,9 @@ function initCharts() {
                                     return value.toFixed(1); 
                                 } 
                             },
-                            title: { 
+                                title: { 
                                 display: true, 
-                                text: chartType === 'rain' ? (units.rain === 'inches' ? 'Rain Intensity (in/hr)' : 'Rain Intensity (mm/hr)') : config.unit, 
+                                text: chartType === 'rain' ? (popUnits.rain === 'inches' ? 'Rain Intensity (in/hr)' : 'Rain Intensity (mm/hr)') : config.unit, 
                                 color: chartType === 'rain' ? '#3b82f6' : '#333', 
                                 font: { size: 16, weight: 'bold' },
                                 padding: { top: 10, bottom: 10 }
@@ -547,7 +552,7 @@ function initCharts() {
                             },
                             title: {
                                 display: true,
-                                text: units.rain === 'inches' ? 'Accumulation (in)' : 'Accumulation (mm)',
+                                text: popUnits.rain === 'inches' ? 'Accumulation (in)' : 'Accumulation (mm)',
                                 color: '#8b5cf6',
                                 font: { size: 16, weight: 'bold' },
                                 padding: { top: 10, bottom: 10 }
@@ -1925,10 +1930,11 @@ function update24HourAccumulationLine(chart, rainDailyTotal, units) {
         return;
     }
 
-    // Convert daily total based on current units
+    // Convert daily total based on current units. API provides mm; convert to
+    // inches only when the UI is set to inches.
     let convertedDailyTotal = rainDailyTotal;
-    if (units && units.rain === 'mm') {
-        convertedDailyTotal = inchesToMm(rainDailyTotal);
+    if (units && units.rain === 'inches') {
+        convertedDailyTotal = mmToInches(rainDailyTotal);
     }
 
     // Create a horizontal line at the daily total level across the current time range
@@ -2223,28 +2229,7 @@ function getPressureDescription(pressure) {
     return description;
 }
 
-function toggleLuxTooltip() {
-    const tooltip = document.getElementById('lux-tooltip');
-    tooltip.classList.toggle('show');
-}
-
-function closeLuxTooltip() {
-    const tooltip = document.getElementById('lux-tooltip');
-    tooltip.classList.remove('show');
-}
-
-function handleLuxTooltipClickOutside(event) {
-    const tooltip = document.getElementById('lux-tooltip');
-    const context = document.getElementById('lux-context');
-    const infoIcon = document.getElementById('lux-info-icon');
-
-    // If tooltip is visible and click is outside the tooltip and info icon
-    if (tooltip.classList.contains('show') &&
-        !tooltip.contains(event.target) &&
-        !infoIcon.contains(event.target)) {
-        closeLuxTooltip();
-    }
-}
+// Lux tooltip helpers are implemented later; earlier duplicates removed to avoid redeclaration.
 
 function togglePressureTooltip(event) {
     // Stop the click from bubbling up to the parent pressure-unit element
@@ -2761,6 +2746,9 @@ function updateCharts() {
         if (charts.rain.data.datasets[0].data.length > maxDataPoints) charts.rain.data.datasets[0].data.shift();
         
         // Dataset 1: Rain Accumulation (show cumulative rain over time)
+        // Compute raw accumulation from the available data (in display units),
+        // then, if the API provides a daily total, offset the series so the
+        // final value matches the API's `rainDailyTotal` (converted to display units).
         let cumulativeRain = 0;
         const accumulationData = [];
         for (let i = 0; i < charts.rain.data.datasets[0].data.length; i++) {
@@ -2771,9 +2759,22 @@ function updateCharts() {
                 // point.y is already in user's preferred units (mm/hr or in/hr)
                 cumulativeRain += point.y * timeDiffHours; // rate * time = accumulation
             }
-            // cumulativeRain is already in user's preferred units
             accumulationData.push({ x: point.x, y: cumulativeRain });
         }
+
+        // If API provides a rainDailyTotal (mm), convert to display units and
+        // offset the accumulation series so the last point equals that total.
+        if (weatherData && typeof weatherData.rainDailyTotal === 'number' && accumulationData.length > 0) {
+            const apiDaily = (units.rain === 'inches') ? mmToInches(weatherData.rainDailyTotal) : weatherData.rainDailyTotal;
+            const rawFinal = accumulationData[accumulationData.length - 1].y || 0;
+            const offset = apiDaily - rawFinal;
+            if (Math.abs(offset) > 1e-9) {
+                for (let i = 0; i < accumulationData.length; i++) {
+                    accumulationData[i].y = accumulationData[i].y + offset;
+                }
+            }
+        }
+
         charts.rain.data.datasets[1].data = accumulationData;
         
         try { charts.rain.update(); } catch (e) { debugLog(logLevels.ERROR, 'Rain chart update failed', { error: e.message }); }
@@ -2900,34 +2901,93 @@ function updateCharts() {
             // Update accumulation and today total lines for rain (datasets 1 and 2)
             // Rain intensity is dataset 0, accumulation is dataset 1, today total is dataset 2
             if (chartType === 'rain') {
-                // Calculate accumulation from intensity (rate * time)
-                if (charts.popout.data.datasets[1]) {
-                    let cumulativeRain = 0;
+                // Calculate accumulation from intensity (rate * time) and a midnight-aware
+                // per-point "today total" (step) so previous days are shown as a flat
+                // total and the current day increases from midnight to now.
+                if (mainData.length > 0) {
+                    // Helper: local date key (YYYY-MM-DD) for grouping by day
+                    const localDateKey = ts => {
+                        const d = new Date(ts);
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return `${y}-${m}-${day}`;
+                    };
+
+                    // Running totals per day and cumulative since midnight per point
+                    const runningByDay = {};
+                    const cumulativeSinceMidnight = new Array(mainData.length).fill(0);
+                    // Accumulation across entire window (fallback dataset)
+                    let cumulativeWindow = 0;
                     const accumulationData = [];
+
                     for (let i = 0; i < mainData.length; i++) {
-                        if (i > 0 && mainData[i] && mainData[i - 1]) {
-                            const timeDiffMs = mainData[i].x - mainData[i - 1].x;
-                            const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
-                            const rainIntensity = mainData[i].y || 0; // mm/hr
-                            cumulativeRain += rainIntensity * timeDiffHours; // mm
+                        if (i === 0) {
+                            // initialize
+                            cumulativeSinceMidnight[i] = 0;
+                            accumulationData.push({ x: mainData[i].x, y: units.rain === 'inches' ? mmToInches(0) : 0 });
+                            continue;
                         }
-                        // Convert to inches if user prefers inches
-                        const displayValue = units.rain === 'inches' ? mmToInches(cumulativeRain) : cumulativeRain;
-                        accumulationData.push({ x: mainData[i].x, y: displayValue });
+
+                        const t0 = mainData[i - 1].x;
+                        const t1 = mainData[i].x;
+                        const intensity = mainData[i].y || 0; // may be mm/hr or inches/hr depending on units
+                        const intensityMm = (units.rain === 'inches') ? inchesToMm(intensity) : intensity;
+
+                        // Walk the interval and split across midnights
+                        let segStart = t0;
+                        while (segStart < t1) {
+                            const segStartDate = new Date(segStart);
+                            const nextMidnight = new Date(segStartDate);
+                            nextMidnight.setHours(24, 0, 0, 0);
+                            const segEnd = Math.min(t1, nextMidnight.getTime());
+                            const segHours = (segEnd - segStart) / (1000 * 60 * 60);
+                            const delta = intensityMm * segHours; // mm
+                            const dayKey = localDateKey(segStart);
+                            runningByDay[dayKey] = (runningByDay[dayKey] || 0) + delta;
+                            // advance
+                            segStart = segEnd;
+                        }
+
+                        // cumulative since midnight for this point is the running total for the point's day
+                        const thisDayKey = localDateKey(mainData[i].x);
+                        cumulativeSinceMidnight[i] = runningByDay[thisDayKey] || 0;
+
+                        // window cumulative (no resets) in mm
+                        cumulativeWindow += intensityMm * ((t1 - t0) / (1000 * 60 * 60));
+                        const displayAccum = (units.rain === 'inches') ? mmToInches(cumulativeWindow) : cumulativeWindow;
+                        accumulationData.push({ x: mainData[i].x, y: displayAccum });
                     }
-                    charts.popout.data.datasets[1].data = accumulationData;
-                }
-                
-                // Update today total line (dataset 2)
-                if (charts.popout.data.datasets[2] && weatherData && weatherData.rainDailyTotal !== undefined) {
-                    let dailyTotal = weatherData.rainDailyTotal;
-                    if (units.rain === 'mm') {
-                        dailyTotal = inchesToMm(dailyTotal);
+
+                    // Set accumulation dataset (find the dataset labeled 'Accumulation')
+                    const accumDs = charts.popout.data.datasets.find(ds => ds.label && ds.label.toLowerCase().includes('accumul'));
+                    if (accumDs) {
+                        accumDs.data = accumulationData;
                     }
-                    charts.popout.data.datasets[2].data = [
-                        { x: firstX, y: dailyTotal },
-                        { x: lastX, y: dailyTotal }
-                    ];
+
+                    // Build today-total (step) dataset: for points on previous days use that day's final total,
+                    // for points on the current day use cumulative since midnight at that timestamp.
+                    const todayKey = localDateKey(Date.now());
+                    const todayTotalDs = charts.popout.data.datasets.find(ds => ds.label && ds.label.toLowerCase().includes('today'));
+                    if (todayTotalDs) {
+                        const todayData = [];
+                        for (let i = 0; i < mainData.length; i++) {
+                            const pk = localDateKey(mainData[i].x);
+                            let yVal = 0;
+                            if (pk === todayKey) {
+                                // current day - use running cumulative
+                                yVal = cumulativeSinceMidnight[i] || 0;
+                            } else {
+                                // previous day - show the day's total (may be available in runningByDay)
+                                yVal = runningByDay[pk] || 0;
+                            }
+                            if (units.rain === 'inches') yVal = mmToInches(yVal);
+                            todayData.push({ x: mainData[i].x, y: yVal });
+                        }
+                        todayTotalDs.data = todayData;
+                        // Render today-total as a stepped line for clarity
+                        todayTotalDs.stepped = true;
+                    }
                 }
             }
         }
@@ -3296,59 +3356,80 @@ async function loadHistoricalDataForPopout() {
             
             // Calculate accumulated line for rain (dataset[1]) and today total (dataset[2])
             if (chartType === 'rain') {
-                // Calculate accumulated line (cumulative sum of rain based on rate * time)
-                // popout dataset order: main(0), average(1), window total(2), today total(3)
-                if (charts.popout.data.datasets[2]) {
-                    let cumulativeRain = 0;
-                    const accumulatedData = [];
-                    for (let i = 0; i < mainData.length; i++) {
-                        if (i > 0 && mainData[i] && mainData[i - 1]) {
-                            const timeDiffMs = mainData[i].x - mainData[i - 1].x;
-                            const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
-                            const rainIntensity = mainData[i].y || 0; // mm/hr
-                            cumulativeRain += rainIntensity * timeDiffHours; // mm
-                        }
-                        // Convert to inches if user prefers inches
-                        const displayValue = units.rain === 'inches' ? mmToInches(cumulativeRain) : cumulativeRain;
-                        accumulatedData.push({ x: mainData[i].x, y: displayValue });
-                    }
-                    charts.popout.data.datasets[2].data = accumulatedData;
-                    debugLog(logLevels.INFO, 'Rain accumulated line calculated for popout', {
-                        dataPoints: accumulatedData.length,
-                        mainDataPoints: mainData.length,
-                        finalTotal: (units.rain === 'inches' ? mmToInches(cumulativeRain) : cumulativeRain).toFixed(3),
-                        unit: units.rain,
-                        firstPoint: mainData[0] ? mainData[0].y : 'none',
-                        lastPoint: mainData[mainData.length - 1] ? mainData[mainData.length - 1].y : 'none',
-                        samplePoints: mainData.slice(0, 5).map(p => p.y)
-                    });
-                }
+                // Build midnight-aware accumulated line and per-point today-total step.
+                if (mainData.length > 0) {
+                    const localDateKey = ts => {
+                        const d = new Date(ts);
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return `${y}-${m}-${day}`;
+                    };
 
-                // Fetch current weather data to get today's rain total for dataset[3]
-                if (charts.popout.data.datasets[3]) {
-                    try {
-                        const weatherResponse = await fetch('/api/weather');
-                        if (weatherResponse.ok) {
-                            const weatherData = await weatherResponse.json();
-                            if (weatherData && weatherData.rainDailyTotal !== undefined) {
-                                let dailyTotal = weatherData.rainDailyTotal;
-                                if (units.rain === 'mm') {
-                                    dailyTotal = inchesToMm(dailyTotal);
-                                }
-                                const firstX = mainData[0].x;
-                                const lastX = mainData[mainData.length - 1].x;
-                                charts.popout.data.datasets[3].data = [
-                                    { x: firstX, y: dailyTotal },
-                                    { x: lastX, y: dailyTotal }
-                                ];
-                                debugLog(logLevels.INFO, 'Today Total line set for popout rain chart', {
-                                    dailyTotal: dailyTotal,
-                                    unit: units.rain
-                                });
-                            }
+                    const runningByDay = {};
+                    const cumulativeSinceMidnight = new Array(mainData.length).fill(0);
+                    let cumulativeWindow = 0;
+                    const accumulatedData = [];
+
+                    for (let i = 0; i < mainData.length; i++) {
+                        if (i === 0) {
+                            cumulativeSinceMidnight[i] = 0;
+                            accumulatedData.push({ x: mainData[i].x, y: units.rain === 'inches' ? mmToInches(0) : 0 });
+                            continue;
                         }
-                    } catch (e) {
-                        debugLog(logLevels.ERROR, 'Failed to fetch weather data for Today Total line', e);
+
+                        const t0 = mainData[i - 1].x;
+                        const t1 = mainData[i].x;
+                        const intensity = mainData[i].y || 0; // may be mm/hr or inches/hr depending on units
+                        const intensityMm = (units.rain === 'inches') ? inchesToMm(intensity) : intensity;
+                        let segStart = t0;
+                        while (segStart < t1) {
+                            const segStartDate = new Date(segStart);
+                            const nextMidnight = new Date(segStartDate);
+                            nextMidnight.setHours(24, 0, 0, 0);
+                            const segEnd = Math.min(t1, nextMidnight.getTime());
+                            const segHours = (segEnd - segStart) / (1000 * 60 * 60);
+                            const delta = intensity * segHours;
+                            const dayKey = localDateKey(segStart);
+                            runningByDay[dayKey] = (runningByDay[dayKey] || 0) + delta;
+                            segStart = segEnd;
+                        }
+
+                        const thisDayKey = localDateKey(mainData[i].x);
+                        cumulativeSinceMidnight[i] = runningByDay[thisDayKey] || 0;
+                        cumulativeWindow += intensityMm * ((t1 - t0) / (1000 * 60 * 60));
+                        const dispAccum = (units.rain === 'inches') ? mmToInches(cumulativeWindow) : cumulativeWindow;
+                        accumulatedData.push({ x: mainData[i].x, y: dispAccum });
+                    }
+
+                    // Assign to accumulation dataset (find by label)
+                    const accumDs = charts.popout.data.datasets.find(ds => ds.label && ds.label.toLowerCase().includes('accumul'));
+                    if (accumDs) accumDs.data = accumulatedData;
+
+                    // Build today-total data (step) and assign
+                    const todayKey = localDateKey(Date.now());
+                    const todayDs = charts.popout.data.datasets.find(ds => ds.label && ds.label.toLowerCase().includes('today'));
+                    if (todayDs) {
+                        const todayData = [];
+                        for (let i = 0; i < mainData.length; i++) {
+                            const pk = localDateKey(mainData[i].x);
+                            let yVal = 0;
+                            if (pk === todayKey) {
+                                yVal = cumulativeSinceMidnight[i] || 0;
+                            } else {
+                                yVal = runningByDay[pk] || 0;
+                            }
+                            if (units.rain === 'inches') yVal = mmToInches(yVal);
+                            todayData.push({ x: mainData[i].x, y: yVal });
+                        }
+                        todayDs.data = todayData;
+                        todayDs.stepped = true;
+                        debugLog(logLevels.INFO, 'Rain accumulated line calculated for popout', {
+                            dataPoints: accumulatedData.length,
+                            mainDataPoints: mainData.length,
+                            finalTotal: (units.rain === 'inches' ? mmToInches(cumulativeWindow) : cumulativeWindow).toFixed(3),
+                            unit: units.rain
+                        });
                     }
                 }
             }
@@ -5617,6 +5698,7 @@ function updateAlarmStatus(data, opts) {
     const doc = optDoc || ((win && win.document) ? win.document : ((typeof global !== 'undefined' && global.document) ? global.document : (typeof document !== 'undefined' ? document : null)));
     if (!doc) return; // cannot operate without a document
 
+    // debug: win presence logged during development
     const storage = win && win.localStorage ? win.localStorage : null;
 
     // Update status indicator
@@ -5776,9 +5858,18 @@ function updateAlarmStatus(data, opts) {
             
             const alarmItem = doc.createElement('div');
             alarmItem.className = 'alarm-item';
+            // Respect compact mode preference stored in localStorage
+            const globalStorageValue = (typeof localStorage !== 'undefined' && localStorage) ? localStorage.getItem('alarm-compact-mode') : null;
+            // localStorage debug removed
+            const isAlarmCompactLocal = (storage && (storage.getItem('alarm-compact-mode') === 'true')) || (globalStorageValue === 'true');
+            if (isAlarmCompactLocal) {
+                alarmItem.classList.add('compact');
+                // compact mode applied
+            }
             
             // Check for expanded state (disclosure triangles control visibility)
-            const expandedSet = storage ? storage.getItem('alarm-expanded-set') : null;
+            const realStorage = storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+            const expandedSet = realStorage ? realStorage.getItem('alarm-expanded-set') : null;
             let expandedKeys = [];
             if (expandedSet) {
                 try {
@@ -5802,7 +5893,7 @@ function updateAlarmStatus(data, opts) {
                 alarmItem.classList.toggle('expanded');
                 this.textContent = alarmItem.classList.contains('expanded') ? '▼' : '▶';
                 // Update localStorage
-                const expandedSet = storage ? storage.getItem('alarm-expanded-set') : null;
+                const expandedSet = realStorage ? realStorage.getItem('alarm-expanded-set') : null;
                 let expandedKeys = [];
                 if (expandedSet) {
                     try {
@@ -5818,7 +5909,7 @@ function updateAlarmStatus(data, opts) {
                     expandedKeys = expandedKeys.filter(k => k !== name);
                 }
                 try {
-                    if (storage) storage.setItem('alarm-expanded-set', JSON.stringify(expandedKeys));
+                    if (realStorage) realStorage.setItem('alarm-expanded-set', JSON.stringify(expandedKeys));
                 } catch(e) {}
             });
             

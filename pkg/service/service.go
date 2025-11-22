@@ -363,7 +363,7 @@ func StartService(cfg *config.Config, version string) error {
 	}
 
 	// Preload historical data if requested
-	if cfg.ReadHistory {
+	if cfg.HistoryRead {
 		var dataSourceDesc string
 		if cfg.UseGeneratedWeather {
 			dataSourceDesc = "from generated weather"
@@ -372,7 +372,7 @@ func StartService(cfg *config.Config, version string) error {
 		}
 
 		if cfg.LogLevel == "info" || cfg.LogLevel == "debug" {
-			logger.Info("--read-history flag detected, preloading historical observations (up to HISTORY_POINTS points) %s...", dataSourceDesc)
+			logger.Info("--history-read flag detected, preloading historical observations (up to HISTORY_POINTS points) %s...", dataSourceDesc)
 		}
 
 		// Create a progress callback function

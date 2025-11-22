@@ -385,7 +385,7 @@ func TestValidateConfigDisableInternetWithUseWebStatus(t *testing.T) {
 	}
 }
 
-// TestValidateConfigDisableInternetWithReadHistory tests that --disable-internet rejects --read-history
+// TestValidateConfigDisableInternetWithReadHistory tests that --disable-internet rejects --history-read
 func TestValidateConfigDisableInternetWithReadHistory(t *testing.T) {
 	cfg := &Config{
 		Token:           "valid-token",
@@ -396,15 +396,15 @@ func TestValidateConfigDisableInternetWithReadHistory(t *testing.T) {
 		Sensors:         "temp",
 		DisableInternet: true,
 		UDPStream:       true,
-		ReadHistory:     true,
+		HistoryRead:     true,
 	}
 
 	err := validateConfig(cfg)
 	if err == nil {
-		t.Error("Expected --disable-internet with --read-history to fail validation")
+		t.Error("Expected --disable-internet with --history-read to fail validation")
 	}
-	if !strings.Contains(err.Error(), "--read-history cannot be used with --disable-internet") {
-		t.Errorf("Expected read history conflict error, got: %v", err)
+	if !strings.Contains(err.Error(), "--history-read cannot be used with --disable-internet") {
+		t.Errorf("Expected history-read conflict error, got: %v", err)
 	}
 }
 

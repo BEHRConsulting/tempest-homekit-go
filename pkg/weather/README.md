@@ -154,7 +154,7 @@ fmt.Printf("Wind: %.1f mph from %d°\n", obs.WindAvg, int(obs.WindDirection))
 
 ### Historical Data Loading
 ```go
-// Load 200 historical observations (for --read-history flag). The number of points loaded is controlled by HISTORY_POINTS.
+// Load 200 historical observations (for --history-read flag). The number of points loaded is controlled by HISTORY_POINTS.
 historical, err := client.GetHistoricalObservations(station.StationID, 200)
 if err != nil {
  log.Fatal("Failed to load historical data:", err)
