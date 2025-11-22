@@ -663,7 +663,7 @@ go build
 STATION_URL=http://localhost:8080/api/generate-weather ./tempest-homekit-go
 
 # With historical data preloading (preloads up to HISTORY_POINTS observations)
-./tempest-homekit-go --use-generated-weather --read-history # preloads up to HISTORY_POINTS observations
+./tempest-homekit-go --use-generated-weather --history-read # preloads up to HISTORY_POINTS observations
 ```
 
 ### Cross-Platform Build (All Platforms)
@@ -768,7 +768,7 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `--disable-internet`: **Offline Mode** - Disables all internet connectivity for complete offline operation
  - **Alias**: `--no-internet` (backward compatibility)
  - **Requires**: `--udp-stream` or `--use-generated-weather` (must have a local data source)
- - **Incompatible with**: `--use-web-status`, `--read-history` (both require internet access)
+ - **Incompatible with**: `--use-web-status`, `--history-read` (both require internet access)
  - **Use Case**: Internet outages, air-gapped systems, privacy-focused deployments, testing without network
  - **Limitations**: No forecast data, no historical preloading, no web scraping
 - `--disable-webconsole`: **HomeKit Only Mode** - Disables the web dashboard server
@@ -849,8 +849,8 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 # ERROR: --use-web-status cannot be used with --disable-internet (requires internet access)
 
 # Invalid: Can't preload history in offline mode
-./tempest-homekit-go --token "your-token" --station "Your Station Name" --udp-stream --disable-internet --read-history
-# ERROR: --read-history cannot be used with --disable-internet (requires WeatherFlow API access)
+./tempest-homekit-go --token "your-token" --station "Your Station Name" --udp-stream --disable-internet --history-read
+# ERROR: --history-read cannot be used with --disable-internet (requires WeatherFlow API access)
 ```
 
 ### HomeKit Only Mode Examples
@@ -972,7 +972,7 @@ When your internet connection goes down, the WeatherFlow API becomes unavailable
 ./tempest-homekit-go --udp-stream --token "your-token" --station "Your Station Name"
 
 # Add historical data preloading from API
-./tempest-homekit-go --udp-stream --read-history --token "your-token" --station "Your Station Name" # preloads up to HISTORY_POINTS observations
+./tempest-homekit-go --udp-stream --history-read --token "your-token" --station "Your Station Name" # preloads up to HISTORY_POINTS observations
 
 # Enable UDP status updates in web console (battery, RSSI, uptime, firmware)
 ./tempest-homekit-go --udp-stream --token "your-token" --station "Your Station Name"
@@ -994,7 +994,7 @@ When your internet connection goes down, the WeatherFlow API becomes unavailable
 - Real-time UDP observations only
 - Device/hub status from UDP broadcasts (battery, signal, uptime, firmware)
 - No forecast data
-- No historical data preloading (`--read-history` not allowed)
+ - No historical data preloading (`--history-read` not allowed)
 - No web scraping (`--use-web-status` not allowed - but UDP status still works)
 - Zero internet dependency - works during complete outages
 - Info: API token (`--token`) still required but not used for network calls
@@ -1022,15 +1022,15 @@ The `--disable-internet` flag enforces strict validation to prevent conflicting 
 | `--disable-internet --udp-stream` | **Valid** | Pure offline mode with real station |
 | `--disable-internet --use-generated-weather` | **Valid** | Pure offline mode with simulated data |
 | `--disable-internet --use-web-status` | **ERROR** | Web scraping requires internet access |
-| `--disable-internet --read-history` | **ERROR** | Historical data requires WeatherFlow API |
-| `--disable-internet --udp-stream --read-history` | **ERROR** | History requires API calls |
+| `--disable-internet --history-read` | **ERROR** | Historical data requires WeatherFlow API |
+| `--disable-internet --udp-stream --history-read` | **ERROR** | History requires API calls |
 | `--disable-homekit --disable-webconsole` | **ERROR** | At least one service must be enabled |
 
 **Error Messages:**
 ```
 ERROR: --disable-internet mode requires --udp-stream or --use-generated-weather (need a local data source)
 ERROR: --use-web-status cannot be used with --disable-internet (requires internet access)
-ERROR: --read-history cannot be used with --disable-internet (requires WeatherFlow API access)
+ERROR: --history-read cannot be used with --disable-internet (requires WeatherFlow API access)
 ```
 
 #### Network Requirements
@@ -1161,6 +1161,17 @@ Tests webhook notification delivery:
 ./tempest-homekit-go --test-console --alarms @alarms.json
 ```
 Tests console/stdout notification delivery.
+
+**Test Historical Coverage** (`--test-history`)
+```bash
+./tempest-homekit-go --test-history --token "your-token" --station "Your Station"
+```
+Fetches as much historical observation data as the WeatherFlow API will return and prints a short report:
+- Lists the starting timestamp for each 500-point block (newest-first)
+- Shows total points fetched and the time range covered
+- Useful to validate historical coverage and detect gaps in the API data
+
+Note: `--test-history` requires a valid `--token` and `--station` name and will exit after printing the report.
 
 **Test Syslog Notifications** (`--test-syslog`)
 ```bash
@@ -1485,6 +1496,10 @@ The application supports configuration via environment variables, which can be s
 | `LOG_LEVEL` | `error` | Logging level (error/warn/warning/info/debug) |
 | `LOG_FILTER` | *(empty)* | Filter log messages |
 | `ENV_FILE` | `.env` | Custom environment file to load |
+| `HISTORY_REDUCE` | `1` | Reduce historical points when loading (1 = no reduction) |
+| `HISTORY_REDUCE_METHOD` | `timebin` | Reduction method: timebin, factor, lttb |
+| `HISTORY_BIN_MINUTES` | `10` | Timebin size in minutes for timebin reduction |
+| `HISTORY_KEEP_RECENT_HOURS` | `24` | Keep recent N hours at full resolution when reducing |
 
 **Data Source Options:**
 

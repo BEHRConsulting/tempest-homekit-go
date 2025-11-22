@@ -13,55 +13,61 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 	"time"
 )
 
 // Config holds all configuration parameters for the Tempest HomeKit service.
 type Config struct {
-	Token               string
-	StationName         string
-	Pin                 string
-	LogLevel            string
-	LogFilter           string // Filter log messages to only show those containing this string
-	WebPort             string
-	ClearDB             bool
-	DisableHomeKit      bool // Disable HomeKit services and run web console only
-	DisableWebConsole   bool // Disable web server (HomeKit only mode)
-	DisableAlarms       bool // Disable alarm initialization and processing
-	Sensors             string
-	ReadHistory         bool
-	TestAPI             bool
-	TestAPILocal        bool    // Test local web API endpoints and exit
-	TestEmail           string  // Send test email to this address and exit
-	TestSMS             string  // Send test SMS to this phone number and exit
-	TestWebhook         string  // Send test webhook to this URL and exit
-	TestConsole         bool    // Send test console notification and exit
-	TestSyslog          bool    // Send test syslog notification and exit
-	TestOSLog           bool    // Send test oslog notification and exit
-	TestEventLog        bool    // Send test eventlog notification and exit
-	TestUDP             int     // Listen for UDP broadcasts for N seconds and display received data (default: 120)
-	TestHomeKit         bool    // Test HomeKit bridge setup and pairing without starting service
-	TestWebStatus       bool    // Test web status scraping and exit
-	TestAlarm           string  // Trigger a specific alarm by name for testing
-	UseWebStatus        bool    // Enable headless browser scraping of TempestWX status
-	UseGeneratedWeather bool    // Use generated weather data for testing instead of Tempest API
-	TestSensorRain      bool    // Test rain sensor with cycling pattern (requires --use-generated-weather)
-	TestSensorWind      bool    // Test wind sensor with cycling pattern (requires --use-generated-weather)
-	TestSensorTemp      bool    // Test temperature sensor with cycling pattern (requires --use-generated-weather)
-	TestSensorHumidity  bool    // Test humidity sensor with cycling pattern (requires --use-generated-weather)
-	TestSensorPressure  bool    // Test pressure sensor with cycling pattern (requires --use-generated-weather)
-	TestSensorLux       bool    // Test lux sensor with cycling pattern (requires --use-generated-weather)
-	TestSensorUV        bool    // Test UV sensor with cycling pattern (requires --use-generated-weather)
-	TestSensorLightning bool    // Test lightning sensor with cycling pattern (requires --use-generated-weather)
-	UDPStream           bool    // Listen for UDP broadcasts from local Tempest station
-	DisableInternet     bool    // Disable all internet access (no API, no status scraping)
-	StationURL          string  // Custom station URL for weather data (overrides Tempest API)
-	Elevation           float64 // elevation in meters
-	Units               string  // Units system: imperial, metric, or sae
-	UnitsPressure       string  // Pressure units: inHg or mb
-	HistoryPoints       int     // Number of data points to store in history (default: 1000, min: 10)
-	ChartHistoryHours   int     // Number of hours of history to display in charts (default: 24, 0 = all)
-	Version             bool    // Show version and exit
+	Token                  string
+	StationName            string
+	Pin                    string
+	LogLevel               string
+	LogFilter              string // Filter log messages to only show those containing this string
+	WebPort                string
+	ClearDB                bool
+	DisableHomeKit         bool // Disable HomeKit services and run web console only
+	DisableWebConsole      bool // Disable web server (HomeKit only mode)
+	DisableAlarms          bool // Disable alarm initialization and processing
+	Sensors                string
+	HistoryRead            bool
+	TestAPI                bool
+	TestAPILocal           bool    // Test local web API endpoints and exit
+	TestHistory            bool    // Fetch as much historical data as possible and exit
+	TestEmail              string  // Send test email to this address and exit
+	TestSMS                string  // Send test SMS to this phone number and exit
+	TestWebhook            string  // Send test webhook to this URL and exit
+	TestConsole            bool    // Send test console notification and exit
+	TestSyslog             bool    // Send test syslog notification and exit
+	TestOSLog              bool    // Send test oslog notification and exit
+	TestEventLog           bool    // Send test eventlog notification and exit
+	TestUDP                int     // Listen for UDP broadcasts for N seconds and display received data (default: 120)
+	TestHomeKit            bool    // Test HomeKit bridge setup and pairing without starting service
+	TestWebStatus          bool    // Test web status scraping and exit
+	TestAlarm              string  // Trigger a specific alarm by name for testing
+	UseWebStatus           bool    // Enable headless browser scraping of TempestWX status
+	UseGeneratedWeather    bool    // Use generated weather data for testing instead of Tempest API
+	TestSensorRain         bool    // Test rain sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorWind         bool    // Test wind sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorTemp         bool    // Test temperature sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorHumidity     bool    // Test humidity sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorPressure     bool    // Test pressure sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorLux          bool    // Test lux sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorUV           bool    // Test UV sensor with cycling pattern (requires --use-generated-weather)
+	TestSensorLightning    bool    // Test lightning sensor with cycling pattern (requires --use-generated-weather)
+	UDPStream              bool    // Listen for UDP broadcasts from local Tempest station
+	DisableInternet        bool    // Disable all internet access (no API, no status scraping)
+	StationURL             string  // Custom station URL for weather data (overrides Tempest API)
+	Elevation              float64 // elevation in meters
+	Units                  string  // Units system: imperial, metric, or sae
+	UnitsPressure          string  // Pressure units: inHg or mb
+	HistoryPoints          int     // Number of data points to store in history (default: 1000, min: 10)
+	ChartHistoryHours      int     // Number of hours of history to display in charts (default: 24, 0 = all)
+	HistoryReduce          int     // Reduction factor for historical data (average N points into 1)
+	HistoryReduceMethod    string  // Reduction method for historical data: timebin, factor, lttb
+	HistoryBinMinutes      int     // Bin size in minutes for timebin reduction
+	HistoryKeepRecentHours int     // Keep recent N hours at full resolution when reducing history
+	Version                bool    // Show version and exit
 	// GeneratedWeatherPath is the URL path portion used for the built-in generated
 	// weather endpoint. Default: "/api/generate-weather". This can be overridden
 	// via the GENERATE_WEATHER_PATH environment variable or the --generate-path flag.
@@ -91,206 +97,149 @@ type Config struct {
 
 // customUsage prints a well-formatted help message with grouped flags and examples
 func customUsage() {
-	fmt.Fprintf(os.Stderr, `Tempest HomeKit Bridge - HomeKit integration for WeatherFlow Tempest weather stations
+	// Use tabwriter to create clean aligned columns for flags and env vars
+	fmt.Fprintln(os.Stderr, "Tempest HomeKit Bridge - HomeKit integration for WeatherFlow Tempest weather stations")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "USAGE:")
+	fmt.Fprintln(os.Stderr, "  tempest-homekit-go [OPTIONS]")
 
-USAGE:
-  tempest-homekit-go [OPTIONS]
+	w := tabwriter.NewWriter(os.Stderr, 0, 8, 2, ' ', 0)
 
-DATA SOURCE OPTIONS:
-  --token <string>              WeatherFlow API token (required for API mode)
-                                Env: TEMPEST_TOKEN
-  --station <string>            Tempest station name (required for API mode)
-                                Env: TEMPEST_STATION_NAME
-  --udp-stream                  Listen for UDP broadcasts from local station (port 50222)
-                                Enables offline operation during internet outages
-                                Env: UDP_STREAM=true
-  --use-generated-weather       Use simulated weather data for testing
-                                Automatically sets --station-url to local generator
-  --test-sensor-rain            Test rain sensor with 2-min cycle: 0→0.5→2→10 mm/hr
-  --test-sensor-wind            Test wind sensor with 2-min cycle: 1→4→12→22 m/s
-  --test-sensor-temp            Test temperature sensor with 2-min cycle: 0→15→25→38 °C
-  --test-sensor-humidity        Test humidity sensor with 2-min cycle: 30→50→70→95 %%
-  --test-sensor-pressure        Test pressure sensor with 2-min cycle: 980→1000→1020→1040 mb
-  --test-sensor-lux             Test lux sensor with 2-min cycle: 0→100→10000→50000 lux
-  --test-sensor-uv              Test UV sensor with 2-min cycle: 0→2→7→11 index
-  --test-sensor-lightning       Test lightning sensor with 2-min cycle: 0→1@20km→5@5km→10@1km
-  --station-url <url>           Custom station URL (e.g., http://localhost:8080/api/generate-weather)
-                                Overrides Tempest API, enables custom data sources
-                                Env: STATION_URL
-	--read-history                Preload historical observations from Tempest API up to HISTORY_POINTS
-  --disable-internet            Disable all internet access (offline mode)
-                                Requires: --udp-stream or --use-generated-weather
-                                Incompatible with: --use-web-status, --read-history
-                                Env: DISABLE_INTERNET=true
+	// Data source options
+	fmt.Fprintln(w, "DATA SOURCE OPTIONS:")
+	fmt.Fprintln(w, "  --token <string>\tWeatherFlow API token (required for API mode)\tEnv: TEMPEST_TOKEN")
+	fmt.Fprintln(w, "  --station <string>\tTempest station name (required for API mode)\tEnv: TEMPEST_STATION_NAME")
+	fmt.Fprintln(w, "  --station-url <url>\tCustom station URL (overrides Tempest API)\tEnv: STATION_URL")
+	fmt.Fprintln(w, "  --use-generated-weather\tUse simulated weather data for testing (sets generate-path internally)\t")
+	fmt.Fprintln(w, "  --udp-stream\tListen for UDP broadcasts from local station (port 50222)\tEnv: UDP_STREAM=true")
+	fmt.Fprintln(w, "  --disable-internet\tDisable all internet access (offline mode)\tEnv: DISABLE_INTERNET=true")
+	fmt.Fprintln(w, "  --env <file>\tCustom environment file to load (default: .env)\t")
+	fmt.Fprintln(w, "  --elevation <value>\tStation elevation (e.g., 903ft, 275m) - auto-detected if omitted\t")
+	fmt.Fprintln(w)
 
-HOMEKIT OPTIONS:
-  --pin <string>                HomeKit PIN for device pairing (default: "00102003")
-                                Env: HOMEKIT_PIN
-  --sensors <list>              Sensors to enable (default: "temp,lux,humidity,uv")
-                                Options: all, min, or custom list
-                                Available: temp/temperature, humidity, lux/light, wind,
-                                          rain, pressure, uv/uvi, lightning
-                                Env: SENSORS
-  --disable-homekit             Run web console only (no HomeKit services)
-  --cleardb                     Clear HomeKit database and reset device pairing
+	// HomeKit options
+	fmt.Fprintln(w, "HOMEKIT OPTIONS:")
+	fmt.Fprintln(w, "  --pin <string>\tHomeKit PIN for device pairing (default: \"00102003\")\tEnv: HOMEKIT_PIN")
+	fmt.Fprintln(w, "  --sensors <list>\tSensors to enable (default: \"temp,lux,humidity,uv\")\tEnv: SENSORS")
+	fmt.Fprintln(w, "  --disable-homekit\tRun web console only (no HomeKit services)\t")
+	fmt.Fprintln(w, "  --disable-alarms\tDisable alarm initialization and processing\t")
+	fmt.Fprintln(w, "  --cleardb\tClear HomeKit database and reset device pairing\t")
+	fmt.Fprintln(w)
 
-WEB CONSOLE OPTIONS:
-  --web-port <port>             Web dashboard port (default: "8080")
-                                Env: WEB_PORT
-  --disable-webconsole          Disable web server (HomeKit only mode)
-  --use-web-status              Enable Chrome-based scraping of TempestWX status page
-                                Updates every 15 minutes, incompatible with --disable-internet
+	// HISTORY section (dedicated)
+	fmt.Fprintln(w, "HISTORY OPTIONS:")
+	fmt.Fprintln(w, "  --history <points>\tNumber of data points to store in history (default: 1000, min: 10)\tEnv: HISTORY_POINTS")
+	fmt.Fprintln(w, "  --history-read\tPreload historical observations from Tempest API up to HISTORY_POINTS\tEnv: READ_HISTORY")
+	fmt.Fprintln(w, "  --history-reduce <factor>\tReduce historical data by averaging N points into 1 (default: 1 = no reduction)\tEnv: HISTORY_REDUCE")
+	fmt.Fprintln(w, "  --history-reduce-method <str>\tMethod to reduce historical data: timebin (default), factor, lttb\tEnv: HISTORY_REDUCE_METHOD")
+	fmt.Fprintln(w, "  --history-bin-size <minutes>\tBin size in minutes for timebin reduction (default: 10)\tEnv: HISTORY_BIN_MINUTES")
+	fmt.Fprintln(w, "  --history-keep-recent-hours <hours>\tKeep recent N hours of data at full resolution (default: 24)\tEnv: HISTORY_KEEP_RECENT_HOURS")
+	fmt.Fprintln(w, "  --chart-history <hours>\tNumber of hours of data to show in charts (default: 24, 0=all)\tEnv: CHART_HISTORY_HOURS")
+	fmt.Fprintln(w, "  --generate-path <path>\tPath for generated weather endpoint (default: /api/generate-weather)\tEnv: GENERATE_WEATHER_PATH")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w)
 
-CONFIGURATION OPTIONS:
-  --env <filename>              Custom environment file to load (default: ".env")
-                                Overrides default .env file location
-                                Env: ENV_FILE
-  --elevation <value>           Station elevation (e.g., 903ft, 275m)
-                                Auto-detected from station coordinates if not provided
-  --units <system>              Units system: imperial (default), metric, or sae
-                                Env: UNITS
-  --units-pressure <unit>       Pressure units: inHg (default) or mb
-                                Env: UNITS_PRESSURE
-  --history <points>            Number of data points to store in history (default: 1000, min: 10)
-                                Env: HISTORY_POINTS
-  --chart-history <hours>       Hours of data to display in charts (default: 24, 0=all)
-                                Env: CHART_HISTORY_HOURS
+	// Web console and others (shortened for readability)
+	fmt.Fprintln(w, "WEB CONSOLE OPTIONS:")
+	fmt.Fprintln(w, "  --web-port <port>\tWeb dashboard port (default: \"8080\")\tEnv: WEB_PORT")
+	fmt.Fprintln(w, "  --disable-webconsole\tDisable web server (HomeKit only mode)\t")
+	fmt.Fprintln(w, "  --use-web-status\tEnable Chrome-based scraping of TempestWX status page\t")
+	fmt.Fprintln(w)
 
-STATUS CONSOLE OPTIONS:
-  --status                      Enable curses-based status console (TUI mode)
-                                Displays real-time console logs, station status,
-                                alarm status, and HomeKit sensors
-                                Env: STATUS=true
-  --status-refresh <seconds>    Status refresh interval in seconds (default: 5)
-                                How often to refresh station/alarm/HomeKit data
-                                Env: STATUS_REFRESH
-  --status-timeout <seconds>    Auto-exit after N seconds (0 = never, default: 0)
-                                Useful for automated testing or temporary monitoring
-                                Env: STATUS_TIMEOUT
-  --status-theme <name>         Color theme for status console (default: "dark-ocean")
-                                Use --status-theme-list to see available themes
-                                Env: STATUS_THEME
-  --status-theme-list           List all available color themes and exit
-                                Shows theme names and descriptions for both
-                                light and dark background terminals
+	fmt.Fprintln(w, "ALARM & WEBHOOK OPTIONS:")
+	fmt.Fprintln(w, "  --alarms <file|json>\tAlarm configuration: @filename.json or inline JSON string\tEnv: ALARMS")
+	fmt.Fprintln(w, "  --alarms-edit <file>\tRun alarm editor for specified config file: @filename.json\tEnv: ALARMS_EDIT")
+	fmt.Fprintln(w, "  --alarms-edit-port <port>\tPort for alarm editor web UI (default: 8081)\tEnv: ALARMS_EDIT_PORT")
+	fmt.Fprintln(w, "  --webhook-listener\tStart webhook listener server (default port: 8082)\tEnv: WEBHOOK_LISTENER")
+	fmt.Fprintln(w, "  --webhook-listener-port <port>\tPort for webhook listener server (default: 8082)\tEnv: WEBHOOK_LISTEN_PORT")
+	fmt.Fprintln(w)
 
-ALARM OPTIONS:
-  --alarms <config>             Enable alarm system with configuration
-                                Format: @filename.json or inline JSON string
-                                Env: ALARMS
-  --disable-alarms              Disable alarm initialization and processing
-                                Useful for testing or reducing resource usage
-  --alarms-edit <file>          Run alarm editor for config file (standalone mode)
-                                Format: @filename.json
-                                Opens web UI at http://localhost:<port>
-                                Env: ALARMS_EDIT
-  --alarms-edit-port <port>     Port for alarm editor web UI (default: 8081)
-                                Env: ALARMS_EDIT_PORT
-  --webhook-listener            Start webhook listener server (standalone mode)
-                                Uses default port 8082
-                                Env: WEBHOOK_LISTENER=true
-  --webhook-listener-port <port> Port for webhook listener server (default: 8082)
-                                Env: WEBHOOK_LISTEN_PORT
+	fmt.Fprintln(w, "STATUS OPTIONS:")
+	fmt.Fprintln(w, "  --status\tEnable curses-based status console (TUI mode)\tEnv: STATUS")
+	fmt.Fprintln(w, "  --status-refresh <sec>\tStatus refresh interval in seconds (default: 5)\tEnv: STATUS_REFRESH")
+	fmt.Fprintln(w, "  --status-timeout <sec>\tAuto-exit after N seconds (0 = never)\tEnv: STATUS_TIMEOUT")
+	fmt.Fprintln(w, "  --status-theme <name>\tColor theme for status console (default: dark-ocean)\tEnv: STATUS_THEME")
+	fmt.Fprintln(w, "  --status-theme-list\tList all available color themes and exit\t")
+	fmt.Fprintln(w)
 
-LOGGING & DEBUG OPTIONS:
-  --loglevel <level>            Log level: error (default), warn/warning, info, debug
-                                Env: LOG_LEVEL
-  --logfilter <string>          Filter log messages (case-insensitive substring match)
-                                Env: LOG_FILTER
+	fmt.Fprintln(w, "LOGGING & DEBUG OPTIONS:")
+	fmt.Fprintln(w, "  --loglevel <level>\tLog level: error (default), warn/warning, info, debug\tEnv: LOG_LEVEL")
+	fmt.Fprintln(w, "  --logfilter <string>\tFilter log messages (case-insensitive substring match)\tEnv: LOG_FILTER")
+	fmt.Fprintln(w)
 
-TESTING OPTIONS:
-  --test-api                    Test WeatherFlow API endpoints and exit
-  --test-api-local              Test local web server API endpoints and exit
-                                Uses port 8084 by default (override with --web-port)
-  --test-email <email>          Send test email to specified address and exit
-  --test-sms <phone>            Send test SMS to specified phone number and exit
-  --test-webhook <url>          Send test webhook to specified URL and exit
-  --test-console                Send test console notification and exit
-  --test-syslog                 Send test syslog notification and exit
-  --test-oslog                  Send test oslog notification and exit (macOS only)
-  --test-eventlog               Send test eventlog notification and exit (Windows only)
-  --test-udp [seconds]          Listen for UDP broadcasts for N seconds (default: 120) and exit
-  --test-homekit                Test HomeKit bridge setup and pairing info, then exit
-  --test-web-status             Test web status scraping from TempestWX and exit
-  --test-alarm <name>           Trigger a specific alarm by name for testing and exit
+	fmt.Fprintln(w, "TESTING OPTIONS:")
+	fmt.Fprintln(w, "  --test-history\tFetch as much historical data as possible and print block start times, then exit\t")
+	fmt.Fprintln(w, "  --test-api\tTest WeatherFlow API endpoints and exit\t")
+	fmt.Fprintln(w, "  --test-api-local\tTest local web server API endpoints and exit\t")
+	fmt.Fprintln(w, "  --test-email <email>\tSend test email to specified address and exit\t")
+	fmt.Fprintln(w, "  --test-sms <phone>\tSend test SMS to specified phone number and exit\t")
+	fmt.Fprintln(w, "  --test-webhook <url>\tSend test webhook to specified URL and exit\t")
+	fmt.Fprintln(w, "  --test-console\tSend test console notification and exit\t")
+	fmt.Fprintln(w, "  --test-syslog\tSend test syslog notification and exit\t")
+	fmt.Fprintln(w, "  --test-oslog\tSend test oslog notification and exit (macOS only)\t")
+	fmt.Fprintln(w, "  --test-eventlog\tSend test eventlog notification and exit (Windows only)\t")
+	fmt.Fprintln(w, "  --test-udp [seconds]\tListen for UDP broadcasts for N seconds (default: 120) and exit\t")
+	fmt.Fprintln(w, "  --test-homekit\tTest HomeKit bridge setup and pairing info, then exit\t")
+	fmt.Fprintln(w, "  --test-web-status\tTest web status scraping from TempestWX and exit\t")
+	fmt.Fprintln(w, "  --test-alarm <name>\tTrigger a specific alarm by name for testing and exit\t")
+	fmt.Fprintln(w, "  --test-sensor-rain\tRun rain sensor cycling pattern (requires --use-generated-weather)\t")
+	fmt.Fprintln(w, "  --test-sensor-wind\tRun wind sensor cycling pattern (requires --use-generated-weather)\t")
+	fmt.Fprintln(w, "  --test-sensor-temp\tRun temperature sensor cycling pattern (requires --use-generated-weather)\t")
+	fmt.Fprintln(w, "  --test-sensor-humidity\tRun humidity sensor cycling pattern (requires --use-generated-weather)\t")
+	fmt.Fprintln(w, "  --test-sensor-pressure\tRun pressure sensor cycling pattern (requires --use-generated-weather)\t")
+	fmt.Fprintln(w, "  --test-sensor-lux\tRun lux sensor cycling pattern (requires --use-generated-weather)\t")
+	fmt.Fprintln(w, "  --test-sensor-uv\tRun UV sensor cycling pattern (requires --use-generated-weather)\t")
+	fmt.Fprintln(w, "  --test-sensor-lightning\tRun lightning sensor cycling pattern (requires --use-generated-weather)\t")
+	fmt.Fprintln(w)
 
-OTHER OPTIONS:
-  --version                     Show version information and exit
-  --help                        Show this help message
+	fmt.Fprintln(w, "OTHER OPTIONS:")
+	fmt.Fprintln(w, "  --version\tShow version information and exit\t")
+	fmt.Fprintln(w, "  --help\tShow this help message\t")
 
-EXAMPLES:
-  # Basic HomeKit bridge with API
-  tempest-homekit-go --token "your-token" --station "My Station"
-
-  # Offline mode with UDP stream (survives internet outages)
-  tempest-homekit-go --token "your-token" --station "My Station" --udp-stream --disable-internet
-
-  # Testing with simulated weather data
-  tempest-homekit-go --use-generated-weather --station "Generated"
-
-  # Hybrid mode: UDP for real-time + API for forecast
-  tempest-homekit-go --token "your-token" --station "My Station" --udp-stream --read-history
-
-  # Web console only (no HomeKit)
-  tempest-homekit-go --token "your-token" --station "My Station" --disable-homekit
-
-  # HomeKit only (no web console)
-  tempest-homekit-go --token "your-token" --station "My Station" --disable-webconsole
-
-  # Custom sensors with debug logging
-  tempest-homekit-go --token "your-token" --station "My Station" --sensors "temp,humidity,pressure" --loglevel debug
-
-  # Filter logs for UDP messages only
-  tempest-homekit-go --token "your-token" --station "My Station" --udp-stream --loglevel debug --logfilter "UDP"
-
-  # Run with alarm notifications
-  tempest-homekit-go --token "your-token" --station "My Station" --alarms @alarms.json
-
-  # Edit alarm configuration (standalone)
-  tempest-homekit-go --alarms-edit @alarms.json --alarms-edit-port 8081
-
-  # Start webhook listener (standalone)
-  tempest-homekit-go --webhook-listener
-
-ENVIRONMENT VARIABLES:
-  All flags can also be set via environment variables (see individual flag descriptions above).
-  Command-line flags take precedence over environment variables.
-
-For more information, visit: https://github.com/BEHRConsulting/tempest-homekit-go
-`)
+	// Examples header printed directly to stderr for clarity
+	w.Flush()
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "EXAMPLES:")
+	fmt.Fprintln(os.Stderr, "  # Basic HomeKit bridge with API")
+	fmt.Fprintln(os.Stderr, "  tempest-homekit-go --token \"your-token\" --station \"My Station\"")
+	fmt.Fprintln(os.Stderr, "For full details, see: https://github.com/BEHRConsulting/tempest-homekit-go")
 }
 
 // LoadConfig initializes and returns a new Config struct with values from
 // environment variables, command-line flags, and sensible defaults.
 func LoadConfig() *Config {
 	cfg := &Config{
-		Token:                getEnvOrDefault("TEMPEST_TOKEN", ""),
-		StationName:          getEnvOrDefault("TEMPEST_STATION_NAME", ""),
-		Pin:                  getEnvOrDefault("HOMEKIT_PIN", "00102003"),
-		LogLevel:             getEnvOrDefault("LOG_LEVEL", "error"),
-		LogFilter:            getEnvOrDefault("LOG_FILTER", ""),
-		WebPort:              getEnvOrDefault("WEB_PORT", "8080"),
-		Sensors:              getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
-		ReadHistory:          getEnvOrDefault("READ_HISTORY", "") == "true",
-		StationURL:           getEnvOrDefault("STATION_URL", ""),
-		UDPStream:            getEnvOrDefault("UDP_STREAM", "") == "true",
-		DisableInternet:      getEnvOrDefault("DISABLE_INTERNET", "") == "true",
-		Elevation:            275.2, // 903ft default elevation in meters
-		Units:                getEnvOrDefault("UNITS", "imperial"),
-		UnitsPressure:        getEnvOrDefault("UNITS_PRESSURE", "inHg"),
-		HistoryPoints:        parseIntEnv("HISTORY_POINTS", 1000),
-		ChartHistoryHours:    parseIntEnv("CHART_HISTORY_HOURS", 24),
-		GeneratedWeatherPath: getEnvOrDefault("GENERATE_WEATHER_PATH", "/api/generate-weather"),
-		Alarms:               getEnvOrDefault("ALARMS", ""),
-		AlarmsEdit:           getEnvOrDefault("ALARMS_EDIT", ""),
-		AlarmsEditPort:       getEnvOrDefault("ALARMS_EDIT_PORT", "8081"),
-		WebhookListener:      getEnvOrDefault("WEBHOOK_LISTENER", "") == "true",
-		WebhookListenPort:    getEnvOrDefault("WEBHOOK_LISTEN_PORT", "8082"),
-		EnvFile:              getEnvOrDefault("ENV_FILE", ".env"),
-		Status:               getEnvOrDefault("STATUS", "") == "true",
-		StatusRefresh:        parseIntEnv("STATUS_REFRESH", 5),
-		StatusTimeout:        parseIntEnv("STATUS_TIMEOUT", 0),
-		StatusTheme:          getEnvOrDefault("STATUS_THEME", "dark-ocean"),
+		Token:                  getEnvOrDefault("TEMPEST_TOKEN", ""),
+		StationName:            getEnvOrDefault("TEMPEST_STATION_NAME", ""),
+		Pin:                    getEnvOrDefault("HOMEKIT_PIN", "00102003"),
+		LogLevel:               getEnvOrDefault("LOG_LEVEL", "error"),
+		LogFilter:              getEnvOrDefault("LOG_FILTER", ""),
+		WebPort:                getEnvOrDefault("WEB_PORT", "8080"),
+		Sensors:                getEnvOrDefault("SENSORS", "temp,lux,humidity,uv"),
+		HistoryRead:            getEnvOrDefault("READ_HISTORY", "") == "true",
+		StationURL:             getEnvOrDefault("STATION_URL", ""),
+		UDPStream:              getEnvOrDefault("UDP_STREAM", "") == "true",
+		DisableInternet:        getEnvOrDefault("DISABLE_INTERNET", "") == "true",
+		Elevation:              275.2, // 903ft default elevation in meters
+		Units:                  getEnvOrDefault("UNITS", "imperial"),
+		UnitsPressure:          getEnvOrDefault("UNITS_PRESSURE", "inHg"),
+		HistoryPoints:          parseIntEnv("HISTORY_POINTS", 1000),
+		ChartHistoryHours:      parseIntEnv("CHART_HISTORY_HOURS", 24),
+		HistoryReduce:          parseIntEnv("HISTORY_REDUCE", 1),
+		HistoryReduceMethod:    getEnvOrDefault("HISTORY_REDUCE_METHOD", "timebin"),
+		HistoryBinMinutes:      parseIntEnv("HISTORY_BIN_MINUTES", 10),
+		HistoryKeepRecentHours: parseIntEnv("HISTORY_KEEP_RECENT_HOURS", 24),
+		GeneratedWeatherPath:   getEnvOrDefault("GENERATE_WEATHER_PATH", "/api/generate-weather"),
+		Alarms:                 getEnvOrDefault("ALARMS", ""),
+		AlarmsEdit:             getEnvOrDefault("ALARMS_EDIT", ""),
+		AlarmsEditPort:         getEnvOrDefault("ALARMS_EDIT_PORT", "8081"),
+		WebhookListener:        getEnvOrDefault("WEBHOOK_LISTENER", "") == "true",
+		WebhookListenPort:      getEnvOrDefault("WEBHOOK_LISTEN_PORT", "8082"),
+		EnvFile:                getEnvOrDefault("ENV_FILE", ".env"),
+		Status:                 getEnvOrDefault("STATUS", "") == "true",
+		StatusRefresh:          parseIntEnv("STATUS_REFRESH", 5),
+		StatusTimeout:          parseIntEnv("STATUS_TIMEOUT", 0),
+		StatusTheme:            getEnvOrDefault("STATUS_THEME", "dark-ocean"),
 	}
 
 	// Set custom usage function
@@ -309,9 +258,10 @@ func LoadConfig() *Config {
 	flag.BoolVar(&cfg.ClearDB, "cleardb", false, "Clear HomeKit database and reset device pairing")
 	flag.BoolVar(&cfg.DisableHomeKit, "disable-homekit", false, "Disable HomeKit services and run web console only")
 	flag.BoolVar(&cfg.DisableAlarms, "disable-alarms", false, "Disable alarm initialization and processing")
-	flag.BoolVar(&cfg.ReadHistory, "read-history", cfg.ReadHistory, "Preload historical observations from Tempest API up to HISTORY_POINTS")
+	flag.BoolVar(&cfg.HistoryRead, "history-read", cfg.HistoryRead, "Preload historical observations from Tempest API up to HISTORY_POINTS")
 	flag.BoolVar(&cfg.TestAPI, "test-api", false, "Test WeatherFlow API endpoints and data points")
 	flag.BoolVar(&cfg.TestAPILocal, "test-api-local", false, "Test local web server API endpoints and exit")
+	flag.BoolVar(&cfg.TestHistory, "test-history", false, "Fetch as much historical data as possible and print block start times, then exit")
 	flag.StringVar(&cfg.TestEmail, "test-email", "", "Send a test email to the specified address and exit")
 	flag.StringVar(&cfg.TestSMS, "test-sms", "", "Send a test SMS to the specified phone number (E.164 format) and exit")
 	flag.StringVar(&cfg.TestWebhook, "test-webhook", "", "Send a test webhook to the specified URL and exit")
@@ -332,6 +282,10 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.Units, "units", cfg.Units, "Units system: imperial (default), metric, or sae. Can also be set via UNITS environment variable")
 	flag.StringVar(&cfg.UnitsPressure, "units-pressure", cfg.UnitsPressure, "Pressure units: inHg (default) or mb. Can also be set via UNITS_PRESSURE environment variable")
 	flag.IntVar(&cfg.HistoryPoints, "history", cfg.HistoryPoints, "Number of data points to store in history (default: 1000, min: 10). Can also be set via HISTORY_POINTS environment variable")
+	flag.IntVar(&cfg.HistoryReduce, "history-reduce", cfg.HistoryReduce, "Reduce historical data by averaging N points into 1 (default: 1 = no reduction)")
+	flag.StringVar(&cfg.HistoryReduceMethod, "history-reduce-method", cfg.HistoryReduceMethod, "Method to reduce historical data: timebin (default), factor, lttb")
+	flag.IntVar(&cfg.HistoryBinMinutes, "history-bin-size", cfg.HistoryBinMinutes, "Bin size in minutes for timebin reduction (default: 10)")
+	flag.IntVar(&cfg.HistoryKeepRecentHours, "history-keep-recent-hours", cfg.HistoryKeepRecentHours, "Keep recent N hours at full resolution when reducing history (default: 24)")
 	flag.IntVar(&cfg.ChartHistoryHours, "chart-history", cfg.ChartHistoryHours, "Number of hours of data to display in charts (default: 24, 0=all). Can also be set via CHART_HISTORY_HOURS environment variable")
 	flag.StringVar(&cfg.GeneratedWeatherPath, "generate-path", cfg.GeneratedWeatherPath, "Path for generated weather endpoint (default: /api/generate-weather). Can also be set via GENERATE_WEATHER_PATH environment variable")
 	flag.StringVar(&cfg.Alarms, "alarms", cfg.Alarms, "Alarm configuration: @filename.json or inline JSON string")
@@ -526,8 +480,8 @@ func validateConfig(cfg *Config) error {
 		if cfg.UseWebStatus {
 			return fmt.Errorf("--use-web-status cannot be used with --disable-internet (requires internet access)")
 		}
-		if cfg.ReadHistory {
-			return fmt.Errorf("--read-history cannot be used with --disable-internet (requires WeatherFlow API access)")
+		if cfg.HistoryRead {
+			return fmt.Errorf("--history-read cannot be used with --disable-internet (requires WeatherFlow API access)")
 		}
 	}
 
