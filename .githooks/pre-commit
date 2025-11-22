@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pre-commit hook:
+# - Format staged Go files with gofmt (and restage them)
+# - If JS files are staged, run `npm test` (silent) and fail commit if tests fail
+
+echo "Running pre-commit checks..."
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if echo "$STAGED_FILES" | grep -E '\.go$' >/dev/null; then
+  echo "Formatting Go files..."
+  echo "$STAGED_FILES" | grep -E '\.go$' | while read -r file; do
+    if [ -f "$file" ]; then
+      gofmt -s -w "$file"
+      git add "$file"
+    fi
+  done
+fi
+
+if echo "$STAGED_FILES" | grep -E '\.(js|jsx|ts|tsx)$' >/dev/null; then
+  if command -v npm >/dev/null; then
+    echo "Running JS tests for staged changes..."
+    npm test --silent
+  else
+    echo "npm not found; skipping JS tests"
+  fi
+fi
+
+echo "Pre-commit checks passed."
+
+exit 0
