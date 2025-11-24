@@ -7,6 +7,16 @@ The format is based on "Keep a Changelog" and this project adheres to Semantic V
 ## [Unreleased]
 - Ongoing test and coverage improvements
 
+## [1.11.0] - 2025-11-24
+### Added
+- **Status Console**: New interactive curses-based TUI for real-time monitoring of logs, sensors, station status, HomeKit state, and system info. Includes manual refresh, auto-refresh, theme cycling, and responsive layout.
+- **Advanced Rules Engine**: Enhanced alarm capabilities with boolean logic (`AND`/`OR`), time windows, and notification throttling/rate limiting for complex condition combinations.
+- **Additional Alarm Delivery Methods**: Local CSV and JSON file logging of alarm events with configurable retention and fallback handling.
+- **Per-Alarm Scheduling System**: Per-alarm activation windows (daily/hourly ranges), sunrise/sunset triggers, and day-of-week restrictions to reduce false positives.
+### Changed
+- Documentation updated to reflect completed features and CLI/env additions; small stability and linter fixes.
+
+
 ## [1.8.0] - 2025-10-15
 ### Added
 - **AWS SNS SMS Notifications**: Complete implementation of AWS SNS for SMS alarm delivery
