@@ -76,9 +76,8 @@ func main() {
 
 		// Validate alarm file path
 		alarmsFile := cfg.AlarmsEdit
-		if strings.HasPrefix(alarmsFile, "@") {
-			alarmsFile = alarmsFile[1:]
-		}
+		// Trim leading '@' if present
+		alarmsFile = strings.TrimPrefix(alarmsFile, "@")
 
 		// Check if file exists and is readable
 		if _, err := os.Stat(alarmsFile); os.IsNotExist(err) {
@@ -271,7 +270,7 @@ func runEmailTest(cfg *config.Config) {
 	}
 
 	// Set recipient via environment variable for test function
-	os.Setenv("TEST_EMAIL_RECIPIENT", cfg.TestEmail)
+	_ = os.Setenv("TEST_EMAIL_RECIPIENT", cfg.TestEmail)
 
 	// Use alarm package's email test function
 	alarm.RunEmailTest(cfg.Alarms, cfg.StationName)
@@ -287,7 +286,7 @@ func runSMSTest(cfg *config.Config) {
 	}
 
 	// Set recipient via environment variable for test function
-	os.Setenv("TEST_SMS_RECIPIENT", cfg.TestSMS)
+	_ = os.Setenv("TEST_SMS_RECIPIENT", cfg.TestSMS)
 
 	// Use alarm package's SMS test function
 	alarm.RunSMSTest(cfg.Alarms, cfg.StationName)
@@ -303,7 +302,7 @@ func runWebhookTest(cfg *config.Config) {
 	}
 
 	// Set recipient via environment variable for test function
-	os.Setenv("TEST_WEBHOOK_URL", cfg.TestWebhook)
+	_ = os.Setenv("TEST_WEBHOOK_URL", cfg.TestWebhook)
 
 	// Use alarm package's webhook test function
 	alarm.RunWebhookTest(cfg.Alarms, cfg.StationName)
@@ -376,7 +375,11 @@ func runUDPTest(_ *config.Config, seconds int) {
 	if err := udpListener.Start(); err != nil {
 		log.Fatalf("Failed to start UDP listener: %v", err)
 	}
-	defer udpListener.Stop()
+	defer func() {
+		if err := udpListener.Stop(); err != nil {
+			log.Printf("udp listener stop error: %v", err)
+		}
+	}()
 
 	fmt.Println("UDP listener started successfully")
 	fmt.Printf("⏱️  Listening for %d seconds...\n\n", seconds)
@@ -680,7 +683,7 @@ func runWebhookListener(port string) {
 		// Send success response
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok","message":"Webhook received successfully"}`))
+		_, _ = w.Write([]byte(`{"status":"ok","message":"Webhook received successfully"}`))
 	})
 
 	// Health check endpoint
@@ -688,7 +691,7 @@ func runWebhookListener(port string) {
 		logger.Debug("Health check request from %s", r.RemoteAddr)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok","service":"webhook-listener"}`))
+		_, _ = w.Write([]byte(`{"status":"ok","service":"webhook-listener"}`))
 	})
 
 	// Root endpoint with instructions
@@ -708,7 +711,7 @@ Send webhooks to: http://localhost:%s/webhook
 
 Server started at: %s
 `, port, time.Now().Format("2006-01-02 15:04:05"))
-		w.Write([]byte(response))
+		_, _ = w.Write([]byte(response))
 	})
 
 	// Start the server
@@ -1373,7 +1376,7 @@ func testEndpoint(client *http.Client, url, name string, debug bool) {
 		fmt.Printf("❌ Failed to fetch %s: %v\n", name, err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf("❌ %s returned status %d\n", name, resp.StatusCode)
@@ -1396,8 +1399,11 @@ func testEndpoint(client *http.Client, url, name string, debug bool) {
 	if debug {
 		fmt.Printf("\n--- RAW %s DATA ---\n", strings.ToUpper(name))
 		var formatted bytes.Buffer
-		json.Indent(&formatted, body, "", "  ")
-		fmt.Println(formatted.String())
+		if err := json.Indent(&formatted, body, "", "  "); err != nil {
+			log.Printf("failed to indent JSON for debug output: %v", err)
+		} else {
+			fmt.Println(formatted.String())
+		}
 		fmt.Printf("--- END RAW DATA ---\n\n")
 	}
 
@@ -1408,7 +1414,9 @@ func testEndpoint(client *http.Client, url, name string, debug bool) {
 		switch name {
 		case "Weather":
 			var weather map[string]interface{}
-			json.Unmarshal(body, &weather)
+			if err := json.Unmarshal(body, &weather); err != nil {
+				log.Printf("failed to unmarshal weather summary: %v", err)
+			}
 			if temp, ok := weather["temperature"].(float64); ok {
 				fmt.Printf("   - Temperature: %.1f°C\n", temp)
 			}
@@ -1418,7 +1426,9 @@ func testEndpoint(client *http.Client, url, name string, debug bool) {
 
 		case "Status":
 			var status map[string]interface{}
-			json.Unmarshal(body, &status)
+			if err := json.Unmarshal(body, &status); err != nil {
+				log.Printf("failed to unmarshal status summary: %v", err)
+			}
 			if connected, ok := status["connected"].(bool); ok {
 				fmt.Printf("   - Connected: %v\n", connected)
 			}
@@ -1428,7 +1438,9 @@ func testEndpoint(client *http.Client, url, name string, debug bool) {
 
 		case "Alarm Status":
 			var alarmStatus map[string]interface{}
-			json.Unmarshal(body, &alarmStatus)
+			if err := json.Unmarshal(body, &alarmStatus); err != nil {
+				log.Printf("failed to unmarshal alarm status summary: %v", err)
+			}
 			if enabled, ok := alarmStatus["enabled"].(bool); ok {
 				fmt.Printf("   - Alarms enabled: %v\n", enabled)
 			}
@@ -1438,12 +1450,16 @@ func testEndpoint(client *http.Client, url, name string, debug bool) {
 
 		case "History":
 			var history []interface{}
-			json.Unmarshal(body, &history)
+			if err := json.Unmarshal(body, &history); err != nil {
+				log.Printf("failed to unmarshal history summary: %v", err)
+			}
 			fmt.Printf("   - Historical observations: %d\n", len(history))
 
 		case "Units":
 			var units map[string]interface{}
-			json.Unmarshal(body, &units)
+			if err := json.Unmarshal(body, &units); err != nil {
+				log.Printf("failed to unmarshal units summary: %v", err)
+			}
 			if u, ok := units["units"].(string); ok {
 				fmt.Printf("   - Units: %s\n", u)
 			}
@@ -1453,7 +1469,9 @@ func testEndpoint(client *http.Client, url, name string, debug bool) {
 
 		case "Generate Weather":
 			var data map[string]interface{}
-			json.Unmarshal(body, &data)
+			if err := json.Unmarshal(body, &data); err != nil {
+				log.Printf("failed to unmarshal generate weather: %v", err)
+			}
 			if obs, ok := data["obs"].([]interface{}); ok && len(obs) > 0 {
 				if latest, ok := obs[0].(map[string]interface{}); ok {
 					fmt.Printf("   - Observations: %d\n", len(obs))

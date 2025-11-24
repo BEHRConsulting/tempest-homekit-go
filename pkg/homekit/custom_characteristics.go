@@ -91,7 +91,7 @@ func NewLightningCountCharacteristic() *LightningCountCharacteristic {
 	c.SetMinValue(0)
 	c.SetMaxValue(10000)
 	c.SetStepValue(1)
-	c.SetValue(0)
+	_ = c.SetValue(0)
 
 	return &LightningCountCharacteristic{c}
 }
@@ -127,7 +127,7 @@ func NewPrecipitationTypeCharacteristic() *PrecipitationTypeCharacteristic {
 	c.SetMinValue(0)
 	c.SetMaxValue(10)
 	c.SetStepValue(1)
-	c.SetValue(0)
+	_ = c.SetValue(0)
 
 	return &PrecipitationTypeCharacteristic{c}
 }

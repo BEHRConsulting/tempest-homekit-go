@@ -10,8 +10,10 @@ func TestGetEnvOrDefault(t *testing.T) {
 	testEnvVar := "TEST_ENV_VAR_12345"
 
 	// Test with set environment variable
-	os.Setenv(testEnvVar, "test-value")
-	defer os.Unsetenv(testEnvVar)
+	if err := os.Setenv(testEnvVar, "test-value"); err != nil {
+		t.Fatalf("failed to set env: %v", err)
+	}
+	defer func() { _ = os.Unsetenv(testEnvVar) }()
 
 	result := getEnvOrDefault(testEnvVar, "default-value")
 	if result != "test-value" {
@@ -19,14 +21,16 @@ func TestGetEnvOrDefault(t *testing.T) {
 	}
 
 	// Test with unset environment variable (should return default)
-	os.Unsetenv(testEnvVar)
+	_ = os.Unsetenv(testEnvVar)
 	result = getEnvOrDefault(testEnvVar, "default-value")
 	if result != "default-value" {
 		t.Errorf("Expected 'default-value', got '%s'", result)
 	}
 
 	// Test with empty environment variable (should return default, not empty)
-	os.Setenv(testEnvVar, "")
+	if err := os.Setenv(testEnvVar, ""); err != nil {
+		t.Fatalf("failed to set env: %v", err)
+	}
 	result = getEnvOrDefault(testEnvVar, "default-value")
 	if result != "default-value" {
 		t.Errorf("Expected 'default-value' for empty env var, got '%s'", result)
@@ -221,44 +225,44 @@ func TestLoadConfigEdgeCases(t *testing.T) {
 	defer func() {
 		// Restore original env vars
 		if originalToken != "" {
-			os.Setenv("TEMPEST_TOKEN", originalToken)
+			_ = os.Setenv("TEMPEST_TOKEN", originalToken)
 		} else {
-			os.Unsetenv("TEMPEST_TOKEN")
+			_ = os.Unsetenv("TEMPEST_TOKEN")
 		}
 		if originalStation != "" {
-			os.Setenv("TEMPEST_STATION_NAME", originalStation)
+			_ = os.Setenv("TEMPEST_STATION_NAME", originalStation)
 		} else {
-			os.Unsetenv("TEMPEST_STATION_NAME")
+			_ = os.Unsetenv("TEMPEST_STATION_NAME")
 		}
 		if originalPin != "" {
-			os.Setenv("HOMEKIT_PIN", originalPin)
+			_ = os.Setenv("HOMEKIT_PIN", originalPin)
 		} else {
-			os.Unsetenv("HOMEKIT_PIN")
+			_ = os.Unsetenv("HOMEKIT_PIN")
 		}
 		if originalLogLevel != "" {
-			os.Setenv("LOG_LEVEL", originalLogLevel)
+			_ = os.Setenv("LOG_LEVEL", originalLogLevel)
 		} else {
-			os.Unsetenv("LOG_LEVEL")
+			_ = os.Unsetenv("LOG_LEVEL")
 		}
 		if originalWebPort != "" {
-			os.Setenv("WEB_PORT", originalWebPort)
+			_ = os.Setenv("WEB_PORT", originalWebPort)
 		} else {
-			os.Unsetenv("WEB_PORT")
+			_ = os.Unsetenv("WEB_PORT")
 		}
 		if originalSensors != "" {
-			os.Setenv("SENSORS", originalSensors)
+			_ = os.Setenv("SENSORS", originalSensors)
 		} else {
-			os.Unsetenv("SENSORS")
+			_ = os.Unsetenv("SENSORS")
 		}
 	}()
 
 	// Clear all env vars for clean test
-	os.Unsetenv("TEMPEST_TOKEN")
-	os.Unsetenv("TEMPEST_STATION_NAME")
-	os.Unsetenv("HOMEKIT_PIN")
-	os.Unsetenv("LOG_LEVEL")
-	os.Unsetenv("WEB_PORT")
-	os.Unsetenv("SENSORS")
+	_ = os.Unsetenv("TEMPEST_TOKEN")
+	_ = os.Unsetenv("TEMPEST_STATION_NAME")
+	_ = os.Unsetenv("HOMEKIT_PIN")
+	_ = os.Unsetenv("LOG_LEVEL")
+	_ = os.Unsetenv("WEB_PORT")
+	_ = os.Unsetenv("SENSORS")
 
 	// Test with all defaults (no env vars or flags)
 	// Note: This test focuses on the config struct creation,

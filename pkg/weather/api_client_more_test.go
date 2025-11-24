@@ -18,7 +18,7 @@ func TestGetForecast(t *testing.T) {
 		}
 		b, _ := json.Marshal(fr)
 		w.WriteHeader(http.StatusOK)
-		w.Write(b)
+		_, _ = w.Write(b)
 	}))
 	defer srv.Close()
 

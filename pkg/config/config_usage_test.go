@@ -23,7 +23,9 @@ func TestCustomUsageIncludesAllFlags(t *testing.T) {
 	customUsage()
 
 	// Restore stderr and read buffer
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Fatalf("failed to close pipe writer: %v", err)
+	}
 	os.Stderr = oldStderr
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, r); err != nil {

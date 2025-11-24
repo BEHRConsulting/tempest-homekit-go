@@ -37,7 +37,7 @@ func TestGetStationDetails_Success(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -74,9 +74,9 @@ func TestGetHistoricalObservationsWithProgress_Success(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case len(p) >= len("/stations/222") && p[len(p)-len("/stations/222"):] == "/stations/222":
-			json.NewEncoder(w).Encode(stationResp)
+			_ = json.NewEncoder(w).Encode(stationResp)
 		case len(p) >= len("/observations/device/999") && p[len(p)-len("/observations/device/999"):] == "/observations/device/999":
-			json.NewEncoder(w).Encode(historical)
+			_ = json.NewEncoder(w).Encode(historical)
 		default:
 			http.NotFound(w, r)
 		}

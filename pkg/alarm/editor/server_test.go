@@ -16,7 +16,7 @@ func TestNewServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() { _ = os.Remove(tmpfile.Name()) }()
 
 	// Write a minimal config
 	config := alarm.AlarmConfig{
@@ -29,8 +29,12 @@ func TestNewServer(t *testing.T) {
 		},
 	}
 	data, _ := json.Marshal(config)
-	tmpfile.Write(data)
-	tmpfile.Close()
+	if _, err := tmpfile.Write(data); err != nil {
+		t.Fatalf("failed to write test config: %v", err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatalf("failed to close temp file: %v", err)
+	}
 
 	// Create server
 	server, err := NewServer("@"+tmpfile.Name(), "8081", "test", ".env")
@@ -122,7 +126,9 @@ func TestHandleListAlarms(t *testing.T) {
 	server.handleListAlarms(w, req)
 
 	var result []alarm.Alarm
-	json.NewDecoder(w.Body).Decode(&result)
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 	if len(result) != 2 {
 		t.Errorf("Expected 2 alarms, got %d", len(result))
 	}
@@ -132,7 +138,9 @@ func TestHandleListAlarms(t *testing.T) {
 	w = httptest.NewRecorder()
 	server.handleListAlarms(w, req)
 
-	json.NewDecoder(w.Body).Decode(&result)
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 	if len(result) != 1 {
 		t.Errorf("Expected 1 alarm with name filter, got %d", len(result))
 	}
@@ -145,7 +153,9 @@ func TestHandleListAlarms(t *testing.T) {
 	w = httptest.NewRecorder()
 	server.handleListAlarms(w, req)
 
-	json.NewDecoder(w.Body).Decode(&result)
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 	if len(result) != 1 {
 		t.Errorf("Expected 1 alarm with tag filter, got %d", len(result))
 	}
@@ -183,7 +193,9 @@ func TestHandleGetTags(t *testing.T) {
 	server.handleGetTags(w, req)
 
 	var tags []string
-	json.NewDecoder(w.Body).Decode(&tags)
+	if err := json.NewDecoder(w.Body).Decode(&tags); err != nil {
+		t.Fatalf("failed to decode tags response: %v", err)
+	}
 
 	// Check that we get unique tags sorted alphabetically
 	expectedTags := map[string]bool{
@@ -219,9 +231,9 @@ func TestHandleGetTags(t *testing.T) {
 func TestHandleGetTags_WithPredefinedTags(t *testing.T) {
 	// Set up environment with predefined tags
 	originalTagList := os.Getenv("TAG_LIST")
-	defer os.Setenv("TAG_LIST", originalTagList)
 
-	os.Setenv("TAG_LIST", `["weather", "alert", "storm", "temperature"]`)
+	_ = os.Setenv("TAG_LIST", `["weather", "alert", "storm", "temperature"]`)
+	defer func() { _ = os.Setenv("TAG_LIST", originalTagList) }()
 
 	config := &alarm.AlarmConfig{
 		Alarms: []alarm.Alarm{
@@ -247,7 +259,9 @@ func TestHandleGetTags_WithPredefinedTags(t *testing.T) {
 	server.handleGetTags(w, req)
 
 	var tags []string
-	json.NewDecoder(w.Body).Decode(&tags)
+	if err := json.NewDecoder(w.Body).Decode(&tags); err != nil {
+		t.Fatalf("failed to decode tags response: %v", err)
+	}
 
 	// Check that we get both alarm tags and predefined tags
 	expectedTags := map[string]bool{
@@ -310,7 +324,9 @@ func TestHandleValidate(t *testing.T) {
 			server.handleValidate(w, req)
 
 			var result map[string]interface{}
-			json.NewDecoder(w.Body).Decode(&result)
+			if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+				t.Fatalf("failed to decode validate response: %v", err)
+			}
 
 			valid, ok := result["valid"].(bool)
 			if !ok {
@@ -351,7 +367,9 @@ func TestHandleGetFields(t *testing.T) {
 	server.handleGetFields(w, req)
 
 	var fields []string
-	json.NewDecoder(w.Body).Decode(&fields)
+	if err := json.NewDecoder(w.Body).Decode(&fields); err != nil {
+		t.Fatalf("failed to decode fields: %v", err)
+	}
 
 	// Check for some expected fields
 	expectedFields := []string{"temperature", "humidity", "pressure", "wind_speed", "lux"}
@@ -372,13 +390,13 @@ func TestHandleGetFields(t *testing.T) {
 func TestLoadContacts_ValidJSON(t *testing.T) {
 	// Set up environment with valid contact list
 	originalContactList := os.Getenv("CONTACT_LIST")
-	defer os.Setenv("CONTACT_LIST", originalContactList)
 
 	validContacts := `[
 		{"name": "John Doe", "email": "john@example.com", "sms": "+1234567890"},
 		{"name": "Jane Smith", "email": "jane@example.com", "sms": "+0987654321"}
 	]`
-	os.Setenv("CONTACT_LIST", validContacts)
+	_ = os.Setenv("CONTACT_LIST", validContacts)
+	defer func() { _ = os.Setenv("CONTACT_LIST", originalContactList) }()
 
 	server := &Server{}
 	err := server.loadContacts()
@@ -398,10 +416,10 @@ func TestLoadContacts_ValidJSON(t *testing.T) {
 func TestLoadContacts_InvalidJSON(t *testing.T) {
 	// Set up environment with invalid JSON
 	originalContactList := os.Getenv("CONTACT_LIST")
-	defer os.Setenv("CONTACT_LIST", originalContactList)
 
 	invalidJSON := `[{"name": "John", "email": "john@example.com", "sms": "+1234567890"` // Missing closing bracket
-	os.Setenv("CONTACT_LIST", invalidJSON)
+	_ = os.Setenv("CONTACT_LIST", invalidJSON)
+	defer func() { _ = os.Setenv("CONTACT_LIST", originalContactList) }()
 
 	server := &Server{}
 	err := server.loadContacts()
@@ -417,7 +435,6 @@ func TestLoadContacts_InvalidJSON(t *testing.T) {
 func TestLoadContacts_ValidationWarnings(t *testing.T) {
 	// Set up environment with contacts that should generate warnings
 	originalContactList := os.Getenv("CONTACT_LIST")
-	defer os.Setenv("CONTACT_LIST", originalContactList)
 
 	contactsWithWarnings := `[
 		{"name": "", "email": "john@example.com", "sms": "+1234567890"},
@@ -425,7 +442,8 @@ func TestLoadContacts_ValidationWarnings(t *testing.T) {
 		{"name": "Bob", "email": "invalid-email", "sms": "+1234567890"},
 		{"name": "Alice", "email": "alice@example.com", "sms": "1234567890"}
 	]`
-	os.Setenv("CONTACT_LIST", contactsWithWarnings)
+	_ = os.Setenv("CONTACT_LIST", contactsWithWarnings)
+	defer func() { _ = os.Setenv("CONTACT_LIST", originalContactList) }()
 
 	server := &Server{}
 	err := server.loadContacts()
@@ -448,10 +466,10 @@ func TestLoadContacts_ValidationWarnings(t *testing.T) {
 func TestHandleGetTags_InvalidJSON(t *testing.T) {
 	// Set up environment with invalid TAG_LIST JSON
 	originalTagList := os.Getenv("TAG_LIST")
-	defer os.Setenv("TAG_LIST", originalTagList)
 
 	invalidJSON := `["temperature", "heat", "storm"` // Missing closing bracket
-	os.Setenv("TAG_LIST", invalidJSON)
+	_ = os.Setenv("TAG_LIST", invalidJSON)
+	defer func() { _ = os.Setenv("TAG_LIST", originalTagList) }()
 
 	config := &alarm.AlarmConfig{
 		Alarms: []alarm.Alarm{
@@ -474,7 +492,9 @@ func TestHandleGetTags_InvalidJSON(t *testing.T) {
 
 	// Should still return tags from alarms even if TAG_LIST is invalid
 	var tags []string
-	json.NewDecoder(w.Body).Decode(&tags)
+	if err := json.NewDecoder(w.Body).Decode(&tags); err != nil {
+		t.Fatalf("failed to decode tags: %v", err)
+	}
 
 	if len(tags) != 1 || tags[0] != "temperature" {
 		t.Errorf("Expected ['temperature'] when TAG_LIST is invalid, got %v", tags)
@@ -484,10 +504,10 @@ func TestHandleGetTags_InvalidJSON(t *testing.T) {
 func TestHandleGetTags_ValidationWarnings(t *testing.T) {
 	// Set up environment with TAG_LIST that should generate warnings
 	originalTagList := os.Getenv("TAG_LIST")
-	defer os.Setenv("TAG_LIST", originalTagList)
 
 	tagsWithWarnings := `["temperature", "", "tag with spaces", "verylongtagnameexceedingfiftycharacterslimitforatag", "normal-tag"]`
-	os.Setenv("TAG_LIST", tagsWithWarnings)
+	_ = os.Setenv("TAG_LIST", tagsWithWarnings)
+	defer func() { _ = os.Setenv("TAG_LIST", originalTagList) }()
 
 	config := &alarm.AlarmConfig{
 		Alarms: []alarm.Alarm{
@@ -509,7 +529,9 @@ func TestHandleGetTags_ValidationWarnings(t *testing.T) {
 	server.handleGetTags(w, req)
 
 	var tags []string
-	json.NewDecoder(w.Body).Decode(&tags)
+	if err := json.NewDecoder(w.Body).Decode(&tags); err != nil {
+		t.Fatalf("failed to decode tags: %v", err)
+	}
 
 	// Should include valid tags (excluding empty one) and be sorted alphabetically
 	expectedTags := map[string]bool{
@@ -552,10 +574,10 @@ func TestHandleGetTags_ValidationWarnings(t *testing.T) {
 func TestHandleGetTags_ValidJSON(t *testing.T) {
 	// Set up environment with valid TAG_LIST JSON
 	originalTagList := os.Getenv("TAG_LIST")
-	defer os.Setenv("TAG_LIST", originalTagList)
 
 	validTags := `["temperature", "heat", "storm", "lightning"]`
-	os.Setenv("TAG_LIST", validTags)
+	_ = os.Setenv("TAG_LIST", validTags)
+	defer func() { _ = os.Setenv("TAG_LIST", originalTagList) }()
 
 	config := &alarm.AlarmConfig{
 		Alarms: []alarm.Alarm{
@@ -577,7 +599,9 @@ func TestHandleGetTags_ValidJSON(t *testing.T) {
 	server.handleGetTags(w, req)
 
 	var tags []string
-	json.NewDecoder(w.Body).Decode(&tags)
+	if err := json.NewDecoder(w.Body).Decode(&tags); err != nil {
+		t.Fatalf("failed to decode tags: %v", err)
+	}
 
 	// Should include both alarm tags and predefined tags
 	expectedTags := map[string]bool{
@@ -628,7 +652,9 @@ func TestHandleGetContacts_SortedAlphabetically(t *testing.T) {
 	server.handleGetContacts(w, req)
 
 	var contacts []Contact
-	json.NewDecoder(w.Body).Decode(&contacts)
+	if err := json.NewDecoder(w.Body).Decode(&contacts); err != nil {
+		t.Fatalf("failed to decode contacts: %v", err)
+	}
 
 	// Check that contacts are sorted alphabetically by name
 	if len(contacts) != 3 {

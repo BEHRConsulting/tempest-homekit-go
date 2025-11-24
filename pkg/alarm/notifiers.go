@@ -120,7 +120,7 @@ func (n *SyslogNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Obser
 	if err != nil {
 		return fmt.Errorf("failed to connect to syslog: %w", err)
 	}
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 
 	return writer.Warning(message)
 }
@@ -142,7 +142,7 @@ func (n *EventLogNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Obs
 	if err != nil {
 		return fmt.Errorf("failed to connect to syslog: %w", err)
 	}
-	defer writer.Close()
+	defer func() { _ = writer.Close() }()
 
 	return writer.Warning(message)
 }
@@ -242,13 +242,13 @@ func (n *EmailNotifier) sendSMTP(to []string, msg []byte) error {
 			if err != nil {
 				return fmt.Errorf("failed to dial TLS: %w", err)
 			}
-			defer conn.Close()
+			defer func() { _ = conn.Close() }()
 
 			client, err := smtp.NewClient(conn, n.config.SMTPHost)
 			if err != nil {
 				return fmt.Errorf("failed to create SMTP client: %w", err)
 			}
-			defer client.Close()
+			defer func() { _ = client.Close() }()
 
 			if err = client.Auth(auth); err != nil {
 				return fmt.Errorf("SMTP auth failed: %w", err)
@@ -286,7 +286,7 @@ func (n *EmailNotifier) sendSMTP(to []string, msg []byte) error {
 			if err != nil {
 				return fmt.Errorf("failed to dial SMTP: %w", err)
 			}
-			defer client.Close()
+			defer func() { _ = client.Close() }()
 
 			// Send STARTTLS command
 			if err = client.StartTLS(tlsConfig); err != nil {
@@ -338,7 +338,7 @@ func (n *EmailNotifier) sendMicrosoft365(emailConfig *EmailConfig, subject, body
 	fromAddress := os.ExpandEnv(n.config.FromAddress)
 
 	if clientID == "" || clientSecret == "" || tenantID == "" {
-		return fmt.Errorf("Microsoft 365 OAuth2 credentials missing (CLIENT_ID, CLIENT_SECRET, TENANT_ID required)")
+		return fmt.Errorf("microsoft 365 OAuth2 credentials missing (CLIENT_ID, CLIENT_SECRET, TENANT_ID required)")
 	}
 
 	if fromAddress == "" {
@@ -559,7 +559,7 @@ func (n *SMSNotifier) sendTwilio(smsConfig *SMSConfig, message string) error {
 	fromNumber := os.ExpandEnv(n.config.FromNumber)
 
 	if accountSID == "" || authToken == "" || fromNumber == "" {
-		return fmt.Errorf("Twilio credentials missing (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER required)")
+		return fmt.Errorf("twilio credentials missing (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER required)")
 	}
 
 	logger.Debug("Sending SMS via Twilio")
@@ -601,7 +601,7 @@ func (n *SMSNotifier) sendTwilio(smsConfig *SMSConfig, message string) error {
 			logger.Error("Failed to send SMS to %s via Twilio: %v", phoneNumber, err)
 			continue
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		// Check response
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
@@ -609,7 +609,7 @@ func (n *SMSNotifier) sendTwilio(smsConfig *SMSConfig, message string) error {
 			logger.Info("SMS sent successfully via Twilio to [%s]", phoneNumber)
 		} else {
 			body, _ := io.ReadAll(resp.Body)
-			lastErr = fmt.Errorf("Twilio API error (status %d): %s", resp.StatusCode, string(body))
+			lastErr = fmt.Errorf("twilio api error (status %d): %s", resp.StatusCode, string(body))
 			logger.Error("Failed to send SMS to %s via Twilio: %v", phoneNumber, lastErr)
 		}
 	}
@@ -656,7 +656,7 @@ func (n *WebhookNotifier) Send(alarm *Alarm, channel *Channel, obs *weather.Obse
 	if err != nil {
 		return fmt.Errorf("failed to send webhook request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check response status
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -717,7 +717,7 @@ func (n *CSVNotifier) appendToCSVFile(filePath string, message string, maxDays i
 		}
 		filePath = tempPath
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Check if file is empty to write headers
 	fileInfo, err := file.Stat()
@@ -797,7 +797,7 @@ func (n *JSONNotifier) appendToJSONFile(filePath string, message string, maxDays
 		}
 		// File doesn't exist, existingContent remains empty
 	} else {
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 		existingContent, err = io.ReadAll(file)
 		if err != nil {
 			return fmt.Errorf("failed to read JSON file: %w", err)

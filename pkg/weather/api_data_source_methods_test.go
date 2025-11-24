@@ -24,7 +24,7 @@ func TestAPIDataSource_FetchObservation_CustomURL(t *testing.T) {
 	obsJSON := `{"obs":[{"timestamp": 1696761600, "wind_avg": 2.5, "brightness": 100, "uv": 3, "precip": 0.0, "precipitation_type": 0, "battery": 3.8, "report_interval": 60}]}`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(obsJSON))
+		_, _ = w.Write([]byte(obsJSON))
 	}))
 	defer srv.Close()
 
@@ -53,7 +53,7 @@ func TestAPIDataSource_FetchForecast_WithTransportOverride(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(b)
+		_, _ = w.Write(b)
 	}))
 	defer srv.Close()
 

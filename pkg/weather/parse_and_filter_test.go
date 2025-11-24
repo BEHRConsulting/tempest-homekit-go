@@ -60,17 +60,17 @@ func TestGetObservationFromURL_Errors(t *testing.T) {
 
 	mux.HandleFunc("/err", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
-		w.Write([]byte("internal error"))
+		_, _ = w.Write([]byte("internal error"))
 	})
 
 	mux.HandleFunc("/badjson", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte("not json"))
+		_, _ = w.Write([]byte("not json"))
 	})
 
 	mux.HandleFunc("/empty", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte(`{"obs": []}`))
+		_, _ = w.Write([]byte(`{"obs": []}`))
 	})
 
 	ts := httptest.NewServer(mux)

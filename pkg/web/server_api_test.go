@@ -43,7 +43,7 @@ func TestWeatherAndStatusEndpoints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to GET /api/weather: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("unexpected status for /api/weather: %d", resp.StatusCode)
 	}
@@ -66,7 +66,7 @@ func TestWeatherAndStatusEndpoints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to GET /api/status: %v", err)
 	}
-	defer resp2.Body.Close()
+	defer func() { _ = resp2.Body.Close() }()
 	if resp2.StatusCode != http.StatusOK {
 		t.Fatalf("unexpected status for /api/status: %d", resp2.StatusCode)
 	}

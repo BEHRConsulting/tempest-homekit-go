@@ -44,7 +44,7 @@ func AssertPopoutDatasetOrdering(t *testing.T, browserCtx context.Context, ts *h
 			t.Fatalf("built cfg JSON was empty for %s and /api/status fallback failed", chartType)
 		}
 		// Build a minimal cfg: type, field and title
-		cfg := map[string]interface{}{"type": chartType, "field": chartType, "title": strings.Title(chartType), "datasets": []interface{}{map[string]interface{}{"label": strings.Title(chartType)}}}
+		cfg := map[string]interface{}{"type": chartType, "field": chartType, "title": title, "datasets": []interface{}{map[string]interface{}{"label": title}}}
 		b, _ := json.Marshal(cfg)
 		cfgJSON = string(b)
 	}
@@ -55,7 +55,7 @@ func AssertPopoutDatasetOrdering(t *testing.T, browserCtx context.Context, ts *h
 	var statusJSON string
 	if err == nil {
 		sb, _ := io.ReadAll(statusResp.Body)
-		statusResp.Body.Close()
+		_ = statusResp.Body.Close()
 		statusJSON = string(sb)
 	} else {
 		statusJSON = `{}`

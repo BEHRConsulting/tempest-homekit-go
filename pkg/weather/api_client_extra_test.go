@@ -27,7 +27,7 @@ func TestGetStations(t *testing.T) {
 		resp := StationsResponse{Stations: []Station{{StationID: 1, Name: "Test", StationName: "Test"}}}
 		b, _ := json.Marshal(resp)
 		w.WriteHeader(http.StatusOK)
-		w.Write(b)
+		_, _ = w.Write(b)
 	}))
 	defer srv.Close()
 
@@ -50,7 +50,7 @@ func TestGetStationDetails(t *testing.T) {
 		resp := StationDetailsResponse{Stations: []Station{{StationID: 2, Name: "Detail", StationName: "Detail"}}}
 		b, _ := json.Marshal(resp)
 		w.WriteHeader(http.StatusOK)
-		w.Write(b)
+		_, _ = w.Write(b)
 	}))
 	defer srv.Close()
 
@@ -75,7 +75,7 @@ func TestGetHistoricalObservationsWithProgress_Small(t *testing.T) {
 			resp := StationDetailsResponse{Stations: []Station{{StationID: 3, Name: "Detail", StationName: "Detail", Devices: []Device{{DeviceID: 42, DeviceType: "ST"}}}}}
 			b, _ := json.Marshal(resp)
 			w.WriteHeader(http.StatusOK)
-			w.Write(b)
+			_, _ = w.Write(b)
 			return
 		}
 		if strings.Contains(r.URL.Path, "/observations/device/") {
@@ -88,7 +88,7 @@ func TestGetHistoricalObservationsWithProgress_Small(t *testing.T) {
 			}
 			b, _ := json.Marshal(hr)
 			w.WriteHeader(http.StatusOK)
-			w.Write(b)
+			_, _ = w.Write(b)
 			return
 		}
 		// default

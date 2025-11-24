@@ -445,7 +445,11 @@ func StartService(cfg *config.Config, version string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create data source: %v", err)
 	}
-	defer dataSource.Stop()
+	defer func() {
+		if err := dataSource.Stop(); err != nil {
+			logger.Error("dataSource stop error: %v", err)
+		}
+	}()
 
 	// Wire up status manager for UDP data source if web server is enabled
 	if webServer != nil && cfg.UDPStream {

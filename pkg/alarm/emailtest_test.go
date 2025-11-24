@@ -7,12 +7,12 @@ import (
 
 func TestTestEmailConfiguration_NoMS365Credentials(t *testing.T) {
 	// Clear all email-related env vars
-	os.Unsetenv("MS365_CLIENT_ID")
-	os.Unsetenv("MS365_CLIENT_SECRET")
-	os.Unsetenv("MS365_TENANT_ID")
-	os.Unsetenv("SMTP_HOST")
-	os.Unsetenv("MS365_FROM_ADDRESS")
-	os.Unsetenv("SMTP_FROM_ADDRESS")
+	_ = os.Unsetenv("MS365_CLIENT_ID")
+	_ = os.Unsetenv("MS365_CLIENT_SECRET")
+	_ = os.Unsetenv("MS365_TENANT_ID")
+	_ = os.Unsetenv("SMTP_HOST")
+	_ = os.Unsetenv("MS365_FROM_ADDRESS")
+	_ = os.Unsetenv("SMTP_FROM_ADDRESS")
 
 	err := TestEmailConfiguration("", "TestStation")
 	if err == nil {
@@ -40,15 +40,15 @@ func containsSubstring(s, substr string) bool {
 
 func TestTestEmailConfiguration_MS365MissingFromAddress(t *testing.T) {
 	// Set MS365 credentials but no from address
-	os.Setenv("MS365_CLIENT_ID", "test-client-id")
-	os.Setenv("MS365_CLIENT_SECRET", "test-secret")
-	os.Setenv("MS365_TENANT_ID", "test-tenant-id")
-	os.Unsetenv("MS365_FROM_ADDRESS")
-	os.Unsetenv("SMTP_FROM_ADDRESS")
+	_ = os.Setenv("MS365_CLIENT_ID", "test-client-id")
+	_ = os.Setenv("MS365_CLIENT_SECRET", "test-secret")
+	_ = os.Setenv("MS365_TENANT_ID", "test-tenant-id")
+	_ = os.Unsetenv("MS365_FROM_ADDRESS")
+	_ = os.Unsetenv("SMTP_FROM_ADDRESS")
 	defer func() {
-		os.Unsetenv("MS365_CLIENT_ID")
-		os.Unsetenv("MS365_CLIENT_SECRET")
-		os.Unsetenv("MS365_TENANT_ID")
+		_ = os.Unsetenv("MS365_CLIENT_ID")
+		_ = os.Unsetenv("MS365_CLIENT_SECRET")
+		_ = os.Unsetenv("MS365_TENANT_ID")
 	}()
 
 	err := TestEmailConfiguration("", "TestStation")
@@ -64,10 +64,10 @@ func TestTestEmailConfiguration_MS365MissingFromAddress(t *testing.T) {
 
 func TestTestEmailConfiguration_SMTPMissingHost(t *testing.T) {
 	// No MS365 credentials, no SMTP host
-	os.Unsetenv("MS365_CLIENT_ID")
-	os.Unsetenv("MS365_CLIENT_SECRET")
-	os.Unsetenv("MS365_TENANT_ID")
-	os.Unsetenv("SMTP_HOST")
+	_ = os.Unsetenv("MS365_CLIENT_ID")
+	_ = os.Unsetenv("MS365_CLIENT_SECRET")
+	_ = os.Unsetenv("MS365_TENANT_ID")
+	_ = os.Unsetenv("SMTP_HOST")
 
 	err := TestEmailConfiguration("", "TestStation")
 	if err == nil {
@@ -82,11 +82,11 @@ func TestTestEmailConfiguration_SMTPMissingHost(t *testing.T) {
 
 func TestTestEmailConfiguration_SMTPMissingFromAddress(t *testing.T) {
 	// Set SMTP host but no from address
-	os.Setenv("SMTP_HOST", "smtp.example.com")
-	os.Unsetenv("SMTP_FROM_ADDRESS")
-	os.Unsetenv("SMTP_USERNAME")
-	os.Unsetenv("MS365_CLIENT_ID")
-	defer os.Unsetenv("SMTP_HOST")
+	_ = os.Setenv("SMTP_HOST", "smtp.example.com")
+	_ = os.Unsetenv("SMTP_FROM_ADDRESS")
+	_ = os.Unsetenv("SMTP_USERNAME")
+	_ = os.Unsetenv("MS365_CLIENT_ID")
+	defer func() { _ = os.Unsetenv("SMTP_HOST") }()
 
 	err := TestEmailConfiguration("", "TestStation")
 	if err == nil {
@@ -101,16 +101,16 @@ func TestTestEmailConfiguration_SMTPMissingFromAddress(t *testing.T) {
 
 func TestTestEmailConfiguration_ProviderDetectionPriority(t *testing.T) {
 	// Set both MS365 and SMTP - MS365 should take priority
-	os.Setenv("MS365_CLIENT_ID", "test-client-id")
-	os.Setenv("MS365_CLIENT_SECRET", "test-secret")
-	os.Setenv("MS365_TENANT_ID", "test-tenant-id")
-	os.Setenv("SMTP_HOST", "smtp.example.com")
-	os.Unsetenv("MS365_FROM_ADDRESS")
+	_ = os.Setenv("MS365_CLIENT_ID", "test-client-id")
+	_ = os.Setenv("MS365_CLIENT_SECRET", "test-secret")
+	_ = os.Setenv("MS365_TENANT_ID", "test-tenant-id")
+	_ = os.Setenv("SMTP_HOST", "smtp.example.com")
+	_ = os.Unsetenv("MS365_FROM_ADDRESS")
 	defer func() {
-		os.Unsetenv("MS365_CLIENT_ID")
-		os.Unsetenv("MS365_CLIENT_SECRET")
-		os.Unsetenv("MS365_TENANT_ID")
-		os.Unsetenv("SMTP_HOST")
+		_ = os.Unsetenv("MS365_CLIENT_ID")
+		_ = os.Unsetenv("MS365_CLIENT_SECRET")
+		_ = os.Unsetenv("MS365_TENANT_ID")
+		_ = os.Unsetenv("SMTP_HOST")
 	}()
 
 	err := TestEmailConfiguration("", "TestStation")

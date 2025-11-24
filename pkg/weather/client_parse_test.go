@@ -12,7 +12,7 @@ func TestGetObservationFromURL_Success(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(jsonBody))
+		_, _ = w.Write([]byte(jsonBody))
 	}))
 	defer srv.Close()
 
@@ -37,7 +37,7 @@ func TestGetObservationFromURL_Success(t *testing.T) {
 func TestGetObservationFromURL_Non200_Local(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("oops"))
+		_, _ = w.Write([]byte("oops"))
 	}))
 	defer srv.Close()
 

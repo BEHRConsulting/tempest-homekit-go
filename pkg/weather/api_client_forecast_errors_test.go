@@ -25,7 +25,7 @@ func TestGetForecast_Non200(t *testing.T) {
 func TestGetForecast_MalformedJSON(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("{invalid-json"))
+		_, _ = w.Write([]byte("{invalid-json"))
 	}))
 	defer srv.Close()
 
@@ -41,7 +41,7 @@ func TestGetForecast_MalformedJSON(t *testing.T) {
 func TestGetObservationFromURL_MalformedJSON_Error(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("not-a-json"))
+		_, _ = w.Write([]byte("not-a-json"))
 	}))
 	defer srv.Close()
 

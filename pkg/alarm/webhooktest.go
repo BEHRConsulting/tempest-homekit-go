@@ -3,6 +3,7 @@ package alarm
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -117,9 +118,8 @@ func TestWebhookConfigurationWithServer(alarmsJSON, stationName string) error {
 		fmt.Println()
 
 		// Read the body
-		body := make([]byte, r.ContentLength)
-		if r.ContentLength > 0 {
-			r.Body.Read(body)
+		body, _ := io.ReadAll(r.Body)
+		if len(body) > 0 {
 			fmt.Println("  Body:")
 			fmt.Println("  ─────────────────────────────────────────────────────────────")
 			fmt.Println("  " + string(body))
@@ -141,7 +141,9 @@ func TestWebhookConfigurationWithServer(alarmsJSON, stationName string) error {
 		// Send success response
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok","message":"Webhook received successfully"}`))
+		if _, err := w.Write([]byte(`{"status":"ok","message":"Webhook received successfully"}`)); err != nil {
+			log.Printf("failed to write webhook test response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -149,7 +151,7 @@ func TestWebhookConfigurationWithServer(alarmsJSON, stationName string) error {
 	fmt.Println()
 
 	// Set the test URL environment variable
-	os.Setenv("TEST_WEBHOOK_URL", server.URL)
+	_ = os.Setenv("TEST_WEBHOOK_URL", server.URL)
 
 	// Run the webhook test
 	if err := TestWebhookConfiguration(alarmsJSON, stationName); err != nil {

@@ -209,7 +209,9 @@ func (m *Manager) setupFileWatcher() error {
 	// Watch the config file directory (not the file directly, for better compatibility)
 	configDir := filepath.Dir(m.configPath)
 	if err := watcher.Add(configDir); err != nil {
-		watcher.Close()
+		if cerr := watcher.Close(); cerr != nil {
+			logger.Debug("failed to close watcher after Add error: %v", cerr)
+		}
 		return fmt.Errorf("failed to watch config directory: %w", err)
 	}
 
@@ -411,7 +413,9 @@ func (m *Manager) sendNotifications(alarm *Alarm, obs *weather.Observation) {
 func (m *Manager) Stop() {
 	close(m.stopChan)
 	if m.watcher != nil {
-		m.watcher.Close()
+		if err := m.watcher.Close(); err != nil {
+			logger.Debug("failed to close watcher: %v", err)
+		}
 	}
 	logger.Info("Alarm manager stopped")
 }

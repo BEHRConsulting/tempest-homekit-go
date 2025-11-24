@@ -109,7 +109,9 @@ func TestEvaluator_IncreaseDetection(t *testing.T) {
 	obs1 := &weather.Observation{
 		AirTemperature: 20.0,
 	}
-	e.EvaluateWithAlarm(">temperature", obs1, alarm)
+	if _, err := e.EvaluateWithAlarm(">temperature", obs1, alarm); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
 	// Temperature increases
 	obs2 := &weather.Observation{
@@ -147,7 +149,9 @@ func TestEvaluator_DecreaseDetection(t *testing.T) {
 	obs1 := &weather.Observation{
 		AirTemperature: 25.0,
 	}
-	e.EvaluateWithAlarm("<temperature", obs1, alarm)
+	if _, err := e.EvaluateWithAlarm("<temperature", obs1, alarm); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
 	// Temperature decreases
 	obs2 := &weather.Observation{

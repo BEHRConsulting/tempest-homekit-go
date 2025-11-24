@@ -24,14 +24,14 @@ func TestSMSNotifier(t *testing.T) {
 			name:     "aws sns with valid config",
 			provider: "aws",
 			setupEnv: func() {
-				os.Setenv("AWS_ACCESS_KEY_ID", "test-key-id")
-				os.Setenv("AWS_SECRET_ACCESS_KEY", "test-secret-key")
-				os.Setenv("AWS_REGION", "us-west-2")
+				_ = os.Setenv("AWS_ACCESS_KEY_ID", "test-key-id")
+				_ = os.Setenv("AWS_SECRET_ACCESS_KEY", "test-secret-key")
+				_ = os.Setenv("AWS_REGION", "us-west-2")
 			},
 			cleanupEnv: func() {
-				os.Unsetenv("AWS_ACCESS_KEY_ID")
-				os.Unsetenv("AWS_SECRET_ACCESS_KEY")
-				os.Unsetenv("AWS_REGION")
+				_ = os.Unsetenv("AWS_ACCESS_KEY_ID")
+				_ = os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+				_ = os.Unsetenv("AWS_REGION")
 			},
 			expectError:   true, // Will fail on actual AWS call but validates config
 			errorContains: "",   // Various AWS errors possible
@@ -40,9 +40,9 @@ func TestSMSNotifier(t *testing.T) {
 			name:     "aws sns missing credentials",
 			provider: "aws",
 			setupEnv: func() {
-				os.Unsetenv("AWS_ACCESS_KEY_ID")
-				os.Unsetenv("AWS_SECRET_ACCESS_KEY")
-				os.Unsetenv("AWS_REGION")
+				_ = os.Unsetenv("AWS_ACCESS_KEY_ID")
+				_ = os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+				_ = os.Unsetenv("AWS_REGION")
 			},
 			cleanupEnv:    func() {},
 			expectError:   true,
@@ -52,13 +52,13 @@ func TestSMSNotifier(t *testing.T) {
 			name:     "twilio missing credentials",
 			provider: "twilio",
 			setupEnv: func() {
-				os.Unsetenv("TWILIO_ACCOUNT_SID")
-				os.Unsetenv("TWILIO_AUTH_TOKEN")
-				os.Unsetenv("TWILIO_FROM_NUMBER")
+				_ = os.Unsetenv("TWILIO_ACCOUNT_SID")
+				_ = os.Unsetenv("TWILIO_AUTH_TOKEN")
+				_ = os.Unsetenv("TWILIO_FROM_NUMBER")
 			},
 			cleanupEnv:    func() {},
 			expectError:   true,
-			errorContains: "Twilio credentials missing",
+			errorContains: "twilio credentials missing",
 		},
 		{
 			name:          "unsupported provider",
@@ -166,15 +166,15 @@ func TestSMSNotifierTemplateExpansion(t *testing.T) {
 
 func TestSMSNotifierWithTopicARN(t *testing.T) {
 	// Test SNS topic ARN configuration
-	os.Setenv("AWS_ACCESS_KEY_ID", "test-key")
-	os.Setenv("AWS_SECRET_ACCESS_KEY", "test-secret")
-	os.Setenv("AWS_REGION", "us-west-2")
-	os.Setenv("AWS_SNS_TOPIC_ARN", "arn:aws:sns:us-west-2:123456789012:TestTopic")
+	_ = os.Setenv("AWS_ACCESS_KEY_ID", "test-key")
+	_ = os.Setenv("AWS_SECRET_ACCESS_KEY", "test-secret")
+	_ = os.Setenv("AWS_REGION", "us-west-2")
+	_ = os.Setenv("AWS_SNS_TOPIC_ARN", "arn:aws:sns:us-west-2:123456789012:TestTopic")
 	defer func() {
-		os.Unsetenv("AWS_ACCESS_KEY_ID")
-		os.Unsetenv("AWS_SECRET_ACCESS_KEY")
-		os.Unsetenv("AWS_REGION")
-		os.Unsetenv("AWS_SNS_TOPIC_ARN")
+		_ = os.Unsetenv("AWS_ACCESS_KEY_ID")
+		_ = os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+		_ = os.Unsetenv("AWS_REGION")
+		_ = os.Unsetenv("AWS_SNS_TOPIC_ARN")
 	}()
 
 	config := &AlarmConfig{
@@ -220,15 +220,16 @@ func TestSMSNotifierWithTopicARN(t *testing.T) {
 
 func TestSMSNotifierMultipleRecipients(t *testing.T) {
 	// Test sending to multiple phone numbers
-	os.Setenv("AWS_ACCESS_KEY_ID", "test-key")
-	os.Setenv("AWS_SECRET_ACCESS_KEY", "test-secret")
-	os.Setenv("AWS_REGION", "us-east-1")
+	_ = os.Setenv("AWS_ACCESS_KEY_ID", "test-key")
+	_ = os.Setenv("AWS_SECRET_ACCESS_KEY", "test-secret")
+	_ = os.Setenv("AWS_REGION", "us-west-2")
+	_ = os.Setenv("AWS_SNS_TOPIC_ARN", "arn:aws:sns:us-west-2:123456789012:TestTopic")
 	defer func() {
-		os.Unsetenv("AWS_ACCESS_KEY_ID")
-		os.Unsetenv("AWS_SECRET_ACCESS_KEY")
-		os.Unsetenv("AWS_REGION")
+		_ = os.Unsetenv("AWS_ACCESS_KEY_ID")
+		_ = os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+		_ = os.Unsetenv("AWS_REGION")
+		_ = os.Unsetenv("AWS_SNS_TOPIC_ARN")
 	}()
-
 	config := &AlarmConfig{
 		SMS: &SMSGlobalConfig{
 			Provider:     "aws",

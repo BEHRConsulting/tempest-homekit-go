@@ -48,7 +48,7 @@ func TestGetObservationFromURL_HTTPServer(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(jsonBody))
+		_, _ = w.Write([]byte(jsonBody))
 	}))
 	defer srv.Close()
 

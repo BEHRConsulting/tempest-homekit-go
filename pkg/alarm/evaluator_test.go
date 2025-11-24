@@ -118,7 +118,7 @@ func TestParaphraseAndAvailableFields(t *testing.T) {
 		t.Fatalf("expected paraphrase text")
 	}
 	// should include Fahrenheit symbol through formatValue
-	if !(len(p) > 0 && (containsRune(p, 'F') || containsRune(p, '°'))) {
+	if len(p) == 0 || (!containsRune(p, 'F') && !containsRune(p, '°')) {
 		t.Fatalf("expected paraphrase to include unit, got: %s", p)
 	}
 

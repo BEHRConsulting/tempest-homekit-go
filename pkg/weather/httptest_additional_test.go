@@ -45,7 +45,7 @@ func TestGetHistoricalObservationsAndForecast_WithTestServer(t *testing.T) {
 		}
 		b, _ := json.Marshal(resp)
 		w.WriteHeader(200)
-		w.Write(b)
+		_, _ = w.Write(b)
 	})
 
 	// Observations endpoint: /swd/rest/observations/device/{deviceID}
@@ -61,7 +61,7 @@ func TestGetHistoricalObservationsAndForecast_WithTestServer(t *testing.T) {
 		}
 		b, _ := json.Marshal(hr)
 		w.WriteHeader(200)
-		w.Write(b)
+		_, _ = w.Write(b)
 	})
 
 	// Forecast endpoint: /swd/rest/better_forecast
@@ -70,7 +70,7 @@ func TestGetHistoricalObservationsAndForecast_WithTestServer(t *testing.T) {
 		fr.Forecast.Daily = []ForecastPeriod{{Time: 1620000000, Icon: "sunny", AirTemperature: 20.0}}
 		b, _ := json.Marshal(fr)
 		w.WriteHeader(200)
-		w.Write(b)
+		_, _ = w.Write(b)
 	})
 
 	ts := httptest.NewServer(mux)

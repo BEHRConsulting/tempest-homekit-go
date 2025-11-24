@@ -28,7 +28,7 @@ func TestAPIDataSource_CustomURLAndStartStop(t *testing.T) {
 	jsonBody := `{"obs":[{"timestamp": 1696761600, "wind_avg": 2.5, "brightness": 200, "uv": 3, "precip": 0.0, "precipitation_type": 0, "battery": 3.8, "report_interval": 60}]}`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(jsonBody))
+		_, _ = w.Write([]byte(jsonBody))
 	}))
 	defer srv.Close()
 
@@ -64,7 +64,7 @@ func TestAPIDataSource_GeneratedDetectionAndFetch(t *testing.T) {
 	jsonBody := `{"obs":[{"timestamp": 1696761600, "wind_avg": 2.5, "brightness": 200, "uv": 3, "precip": 0.0, "precipitation_type": 0, "battery": 3.8, "report_interval": 60}]}`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(jsonBody))
+		_, _ = w.Write([]byte(jsonBody))
 	}))
 	defer srv.Close()
 

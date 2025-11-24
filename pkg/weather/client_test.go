@@ -79,7 +79,7 @@ func TestGetObservationFromURL_Success_Added(t *testing.T) {
 		response := map[string]interface{}{
 			"obs": []map[string]interface{}{{"timestamp": float64(now), "air_temperature": 22.5}},
 		}
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -97,7 +97,7 @@ func TestGetObservationFromURL_NoObs_Added(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{"obs": []interface{}{}}
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 

@@ -261,7 +261,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 // handleGetConfig returns the full alarm configuration
 func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(s.config)
+	_ = json.NewEncoder(w).Encode(s.config)
 }
 
 // handleSaveConfig saves the entire configuration
@@ -290,7 +290,7 @@ func (s *Server) handleSaveConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
 // handleListAlarms returns all alarms with optional filtering
@@ -325,7 +325,7 @@ func (s *Server) handleListAlarms(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(filtered)
+	_ = json.NewEncoder(w).Encode(filtered)
 }
 
 // handleCreateAlarm creates a new alarm
@@ -365,7 +365,7 @@ func (s *Server) handleCreateAlarm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
 // handleUpdateAlarm updates an existing alarm
@@ -426,7 +426,7 @@ func (s *Server) handleUpdateAlarm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
 // handleDeleteAlarm deletes an alarm by name
@@ -466,7 +466,7 @@ func (s *Server) handleDeleteAlarm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
 
 // handleGetTags returns all unique tags from all alarms
@@ -553,7 +553,7 @@ func (s *Server) handleGetTags(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(tags)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tags)
+	_ = json.NewEncoder(w).Encode(tags)
 }
 
 // handleValidate validates an alarm condition
@@ -636,7 +636,7 @@ func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // handleValidateJSON validates a JSON message template
@@ -721,7 +721,7 @@ func (s *Server) handleValidateJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // handleGetFields returns available fields for conditions
@@ -730,7 +730,7 @@ func (s *Server) handleGetFields(w http.ResponseWriter, r *http.Request) {
 	fields := evaluator.GetAvailableFields()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(fields)
+	_ = json.NewEncoder(w).Encode(fields)
 }
 
 // handleGetEnvDefaults returns default values from environment variables
@@ -741,7 +741,7 @@ func (s *Server) handleGetEnvDefaults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(defaults)
+	_ = json.NewEncoder(w).Encode(defaults)
 }
 
 // handleGetContacts returns the contact list for dropdowns
@@ -756,7 +756,7 @@ func (s *Server) handleGetContacts(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(sortedContacts)
+	_ = json.NewEncoder(w).Encode(sortedContacts)
 }
 
 // handleSaveContacts saves the contact list
@@ -880,7 +880,7 @@ func (s *Server) handleSaveContacts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": message})
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": message})
 }
 
 // handleSaveTags saves the tag list
@@ -999,5 +999,5 @@ func (s *Server) handleSaveTags(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": message})
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": message})
 }

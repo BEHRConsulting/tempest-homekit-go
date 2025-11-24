@@ -80,7 +80,7 @@ func TestGetObservationFromURL_HttpServer(t *testing.T) {
 	// Setup a test server that returns minimal valid observation JSON
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte(`{"obs":[{"timestamp":1620000000,"air_temperature":20.5}]}`))
+		_, _ = w.Write([]byte(`{"obs":[{"timestamp":1620000000,"air_temperature":20.5}]}`))
 	}))
 	defer ts.Close()
 

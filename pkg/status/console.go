@@ -101,20 +101,8 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 	// Create pipe for capturing output
 	r, w, _ := os.Pipe()
 
-	// Also open a debug log file so we can capture logs outside the TUI
-	debugFile, err := os.OpenFile("/tmp/status_console_debug.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		// If we cannot open the debug file, continue without it
-		log.Printf("warning: could not open debug log file: %v", err)
-		debugFile = nil
-	}
-
-	// Redirect log output to pipe (and debug file) so tview doesn't consume stdout
-	if debugFile != nil {
-		log.SetOutput(io.MultiWriter(w, debugFile))
-	} else {
-		log.SetOutput(w)
-	}
+	// Redirect log output to the pipe so tview doesn't consume stdout
+	log.SetOutput(w)
 
 	// Start goroutine to read from pipe into buffer
 	go func() {
@@ -150,9 +138,6 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 	// Restore log output when done
 	defer func() {
 		w.Close()
-		if debugFile != nil {
-			debugFile.Close()
-		}
 		log.SetOutput(os.Stderr)
 	}()
 
@@ -180,13 +165,18 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 		SetDynamicColors(true).
 		SetScrollable(true).
 		SetChangedFunc(func() {
-			app.QueueUpdateDraw(func() {
-				defer func() {
-					if r := recover(); r != nil {
-						log.Printf("panic in tvConsole QueueUpdateDraw: %v", r)
-					}
-				}()
-			})
+			// Queue the UI update asynchronously to avoid re-entrancy deadlocks
+			// when this callback runs on the tview event loop.
+			go func() {
+				app.QueueUpdateDraw(func() {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Printf("panic in tvConsole QueueUpdateDraw: %v", r)
+						}
+					}()
+					// Keep behavior minimal: no heavy work inside the queued callback.
+				})
+			}()
 		})
 	tvConsole.SetBorder(true).SetTitle(" Console Logs ").SetBorderColor(theme.BorderColor)
 	leftFlex.AddItem(tvConsole, 0, 3, false) // 3/6 of left column
@@ -291,194 +281,202 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 		default:
 		}
 
-		// Schedule UI update on the application's event loop (with recover)
+		// Assemble all UI strings off the application's event loop to avoid
+		// doing heavy formatting work inside QueueUpdateDraw (which can
+		// deadlock if re-entered). We still perform the minimal SetText
+		// operations on the event loop.
+		currentTheme := GetTheme(currentThemeName)
+		labelTag := colorToTviewTag(currentTheme.LabelColor)
+		valueTag := colorToTviewTag(currentTheme.ValueColor)
+		successTag := colorToTviewTag(currentTheme.SuccessColor)
+		dangerTag := colorToTviewTag(currentTheme.DangerColor)
+		warningTag := colorToTviewTag(currentTheme.WarningColor)
+		mutedTag := colorToTviewTag(currentTheme.MutedColor)
+
+		// Build console log text
+		var consoleBuilder strings.Builder
+		for _, line := range logBuf.GetLines() {
+			consoleBuilder.WriteString(currentTheme.ColorizeLogLine(line))
+			consoleBuilder.WriteByte('\n')
+		}
+
+		// Build sensors text
+		var sensorsBuilder strings.Builder
+		if weatherErr == nil {
+			if temp, ok := weatherData["temperature"].(float64); ok {
+				fmt.Fprintf(&sensorsBuilder, "[%s]Temperature:[-] [%s]%.1f°C[-]\n", labelTag, valueTag, temp)
+			}
+			if humidity, ok := weatherData["humidity"].(float64); ok {
+				fmt.Fprintf(&sensorsBuilder, "[%s]Humidity:[-] [%s]%.0f%%[-]\n", labelTag, valueTag, humidity)
+			}
+			if pressure, ok := weatherData["pressure"].(float64); ok {
+				fmt.Fprintf(&sensorsBuilder, "[%s]Pressure:[-] [%s]%.1f mb[-]\n", labelTag, valueTag, pressure)
+			}
+			if windSpeed, ok := weatherData["windSpeed"].(float64); ok {
+				fmt.Fprintf(&sensorsBuilder, "[%s]Wind Speed:[-] [%s]%.1f mph[-]\n", labelTag, valueTag, windSpeed)
+			}
+			if windGust, ok := weatherData["windGust"].(float64); ok {
+				fmt.Fprintf(&sensorsBuilder, "[%s]Wind Gust:[-] [%s]%.1f mph[-]\n", labelTag, valueTag, windGust)
+			}
+			if windDir, ok := weatherData["windDirection"].(float64); ok {
+				fmt.Fprintf(&sensorsBuilder, "[%s]Wind Direction:[-] [%s]%.0f°[-]\n", labelTag, valueTag, windDir)
+			}
+			if rain, ok := weatherData["rainAccum"].(float64); ok {
+				fmt.Fprintf(&sensorsBuilder, "[%s]Rain Accum:[-] [%s]%.3f in[-]\n", labelTag, valueTag, rain)
+			}
+			if illuminance, ok := weatherData["illuminance"].(float64); ok {
+				fmt.Fprintf(&sensorsBuilder, "[%s]Illuminance:[-] [%s]%.0f lux[-]\n", labelTag, valueTag, illuminance)
+			}
+			if uv, ok := weatherData["uv"].(float64); ok {
+				fmt.Fprintf(&sensorsBuilder, "[%s]UV Index:[-] [%s]%.0f[-]\n", labelTag, valueTag, uv)
+			}
+			if battery, ok := weatherData["battery"].(float64); ok {
+				fmt.Fprintf(&sensorsBuilder, "[%s]Battery:[-] [%s]%.2fV[-]\n", labelTag, valueTag, battery)
+			}
+		}
+
+		// Build station text
+		var stationBuilder strings.Builder
+		if statusErr == nil {
+			fmt.Fprintf(&stationBuilder, "[%s]Connected:[-] [%s]%v[-]\n", labelTag, valueTag, statusData["connected"])
+			if station, ok := statusData["station"].(string); ok {
+				fmt.Fprintf(&stationBuilder, "[%s]Station:[-] [%s]%s[-]\n", labelTag, valueTag, station)
+			}
+			if dataSource, ok := statusData["dataSource"].(string); ok {
+				fmt.Fprintf(&stationBuilder, "[%s]Data Source:[-] [%s]%s[-]\n", labelTag, valueTag, dataSource)
+			}
+			if lastUpdate, ok := statusData["lastUpdate"].(string); ok {
+				fmt.Fprintf(&stationBuilder, "[%s]Last Update:[-] [%s]%s[-]\n", labelTag, valueTag, lastUpdate)
+			}
+			if history, ok := statusData["dataHistory"].([]interface{}); ok {
+				fmt.Fprintf(&stationBuilder, "[%s]History:[-] [%s]%d pts[-]\n", labelTag, valueTag, len(history))
+			}
+		}
+
+		// Build alarms text
+		var alarmsBuilder strings.Builder
+		if alarmErr == nil {
+			if enabled, ok := alarmData["enabled"].(bool); ok {
+				fmt.Fprintf(&alarmsBuilder, "[%s]Enabled:[-] [%s]%v[-]\n", labelTag, valueTag, enabled)
+			}
+			if total, ok := alarmData["totalAlarms"].(float64); ok {
+				fmt.Fprintf(&alarmsBuilder, "[%s]Total:[-] [%s]%.0f[-]\n", labelTag, valueTag, total)
+			}
+			if enabledCount, ok := alarmData["enabledAlarms"].(float64); ok {
+				fmt.Fprintf(&alarmsBuilder, "[%s]Active:[-] [%s]%.0f[-]\n\n", labelTag, valueTag, enabledCount)
+			}
+
+			if alarms, ok := alarmData["alarms"].([]interface{}); ok {
+				triggered := []string{}
+				cooling := []string{}
+				for _, a := range alarms {
+					if alarmMap, ok := a.(map[string]interface{}); ok {
+						name, _ := alarmMap["name"].(string)
+						lastTriggered, _ := alarmMap["lastTriggered"].(string)
+						inCooldown, _ := alarmMap["inCooldown"].(bool)
+						cooldownRemaining, _ := alarmMap["cooldownRemaining"].(float64)
+
+						if lastTriggered != "" && lastTriggered != "Never" {
+							triggered = append(triggered, fmt.Sprintf("%s (%s)", name, lastTriggered))
+						}
+						if inCooldown && cooldownRemaining > 0 {
+							cooling = append(cooling, fmt.Sprintf("%s (%.0fs)", name, cooldownRemaining))
+						}
+					}
+				}
+
+				if len(triggered) > 0 {
+					fmt.Fprintf(&alarmsBuilder, "[%s]Triggered:[-]\n", dangerTag)
+					for i, t := range triggered {
+						if i >= 3 {
+							break
+						}
+						fmt.Fprintf(&alarmsBuilder, "  [%s]%s[-]\n", valueTag, t)
+					}
+					if len(triggered) > 3 {
+						fmt.Fprintf(&alarmsBuilder, "  [%s]+%d more...[-]\n", valueTag, len(triggered)-3)
+					}
+					fmt.Fprintf(&alarmsBuilder, "\n")
+				}
+
+				if len(cooling) > 0 {
+					fmt.Fprintf(&alarmsBuilder, "[%s]Cooling Down:[-]\n", warningTag)
+					for i, c := range cooling {
+						if i >= 3 {
+							break
+						}
+						fmt.Fprintf(&alarmsBuilder, "  [%s]%s[-]\n", valueTag, c)
+					}
+					if len(cooling) > 3 {
+						fmt.Fprintf(&alarmsBuilder, "  [%s]+%d more...[-]\n", valueTag, len(cooling)-3)
+					}
+				}
+			}
+		}
+
+		// Build HomeKit text
+		var homekitBuilder strings.Builder
+		if statusErr == nil {
+			if homekit, ok := statusData["homekit"].(map[string]interface{}); ok {
+				if bridge, ok := homekit["bridge"].(bool); ok {
+					if bridge {
+						fmt.Fprintf(&homekitBuilder, "[%s]Status:[-] [%s]Active[-]\n", labelTag, successTag)
+					} else {
+						fmt.Fprintf(&homekitBuilder, "[%s]Status:[-] [%s]Disabled[-]\n", labelTag, dangerTag)
+					}
+				}
+
+				if pin, ok := homekit["pin"].(string); ok {
+					fmt.Fprintf(&homekitBuilder, "[%s]PIN:[-] [%s]%s[-]\n", labelTag, valueTag, pin)
+				}
+
+				if accessories, ok := homekit["accessories"].(float64); ok {
+					fmt.Fprintf(&homekitBuilder, "[%s]Accessories:[-] [%s]%.0f[-]\n\n", labelTag, valueTag, accessories)
+				}
+
+				if accessoryNames, ok := homekit["accessoryNames"].([]interface{}); ok && len(accessoryNames) > 0 {
+					fmt.Fprintf(&homekitBuilder, "[%s]Published Sensors:[-]\n", labelTag)
+					for _, acc := range accessoryNames {
+						if name, ok := acc.(string); ok {
+							fmt.Fprintf(&homekitBuilder, "  [%s]• %s[-]\n", successTag, name)
+						}
+					}
+				} else {
+					fmt.Fprintf(&homekitBuilder, "[%s]No sensors published[-]\n", mutedTag)
+				}
+			}
+		}
+
+		// Build system info
+		var systemBuilder strings.Builder
+		fmt.Fprintf(&systemBuilder, "[%s]Web Port:[-] [%s]%s[-]\n", labelTag, valueTag, cfg.WebPort)
+		fmt.Fprintf(&systemBuilder, "[%s]Log Level:[-] [%s]%s[-]\n", labelTag, valueTag, cfg.LogLevel)
+		fmt.Fprintf(&systemBuilder, "[%s]Refresh Interval:[-] [%s]%ds[-]\n", labelTag, valueTag, cfg.StatusRefresh)
+		if cfg.StatusTimeout > 0 {
+			remaining := cfg.StatusTimeout - int(time.Since(startTime).Seconds())
+			if remaining < 0 {
+				remaining = 0
+			}
+			fmt.Fprintf(&systemBuilder, "[%s]Timeout:[-] [%s]%ds (remaining: %ds)[-]\n", labelTag, valueTag, cfg.StatusTimeout, remaining)
+		} else {
+			fmt.Fprintf(&systemBuilder, "[%s]Timeout:[-] [%s]Never[-]\n", labelTag, valueTag)
+		}
+		fmt.Fprintf(&systemBuilder, "[%s]Theme:[-] [%s]%s[-]\n", labelTag, valueTag, currentThemeName)
+
+		// Now perform a minimal queued UI update
 		app.QueueUpdateDraw(func() {
 			defer func() {
 				if r := recover(); r != nil {
 					log.Printf("panic in updateStatus QueueUpdateDraw: %v", r)
 				}
 			}()
-			currentTheme := GetTheme(currentThemeName)
-			labelTag := colorToTviewTag(currentTheme.LabelColor)
-			valueTag := colorToTviewTag(currentTheme.ValueColor)
-			successTag := colorToTviewTag(currentTheme.SuccessColor)
-			dangerTag := colorToTviewTag(currentTheme.DangerColor)
-			warningTag := colorToTviewTag(currentTheme.WarningColor)
-			mutedTag := colorToTviewTag(currentTheme.MutedColor)
-
-			// Update console logs
-			logLines := logBuf.GetLines()
-			tvConsole.Clear()
-			for _, line := range logLines {
-				coloredLine := currentTheme.ColorizeLogLine(line)
-				fmt.Fprintln(tvConsole, coloredLine)
-			}
+			tvConsole.SetText(consoleBuilder.String())
 			tvConsole.ScrollToEnd()
-
-			// Update Tempest sensor values
-			tvSensors.Clear()
-			if weatherErr == nil {
-				if temp, ok := weatherData["temperature"].(float64); ok {
-					fmt.Fprintf(tvSensors, "[%s]Temperature:[-] [%s]%.1f°C[-]\n", labelTag, valueTag, temp)
-				}
-				if humidity, ok := weatherData["humidity"].(float64); ok {
-					fmt.Fprintf(tvSensors, "[%s]Humidity:[-] [%s]%.0f%%[-]\n", labelTag, valueTag, humidity)
-				}
-				if pressure, ok := weatherData["pressure"].(float64); ok {
-					fmt.Fprintf(tvSensors, "[%s]Pressure:[-] [%s]%.1f mb[-]\n", labelTag, valueTag, pressure)
-				}
-				if windSpeed, ok := weatherData["windSpeed"].(float64); ok {
-					fmt.Fprintf(tvSensors, "[%s]Wind Speed:[-] [%s]%.1f mph[-]\n", labelTag, valueTag, windSpeed)
-				}
-				if windGust, ok := weatherData["windGust"].(float64); ok {
-					fmt.Fprintf(tvSensors, "[%s]Wind Gust:[-] [%s]%.1f mph[-]\n", labelTag, valueTag, windGust)
-				}
-				if windDir, ok := weatherData["windDirection"].(float64); ok {
-					fmt.Fprintf(tvSensors, "[%s]Wind Direction:[-] [%s]%.0f°[-]\n", labelTag, valueTag, windDir)
-				}
-				if rain, ok := weatherData["rainAccum"].(float64); ok {
-					fmt.Fprintf(tvSensors, "[%s]Rain Accum:[-] [%s]%.3f in[-]\n", labelTag, valueTag, rain)
-				}
-				if illuminance, ok := weatherData["illuminance"].(float64); ok {
-					fmt.Fprintf(tvSensors, "[%s]Illuminance:[-] [%s]%.0f lux[-]\n", labelTag, valueTag, illuminance)
-				}
-				if uv, ok := weatherData["uv"].(float64); ok {
-					fmt.Fprintf(tvSensors, "[%s]UV Index:[-] [%s]%.0f[-]\n", labelTag, valueTag, uv)
-				}
-				if battery, ok := weatherData["battery"].(float64); ok {
-					fmt.Fprintf(tvSensors, "[%s]Battery:[-] [%s]%.2fV[-]\n", labelTag, valueTag, battery)
-				}
-			}
-
-			// Update station status
-			tvStation.Clear()
-			if statusErr == nil {
-				fmt.Fprintf(tvStation, "[%s]Connected:[-] [%s]%v[-]\n", labelTag, valueTag, statusData["connected"])
-				if station, ok := statusData["station"].(string); ok {
-					fmt.Fprintf(tvStation, "[%s]Station:[-] [%s]%s[-]\n", labelTag, valueTag, station)
-				}
-				if dataSource, ok := statusData["dataSource"].(string); ok {
-					fmt.Fprintf(tvStation, "[%s]Data Source:[-] [%s]%s[-]\n", labelTag, valueTag, dataSource)
-				}
-				if lastUpdate, ok := statusData["lastUpdate"].(string); ok {
-					fmt.Fprintf(tvStation, "[%s]Last Update:[-] [%s]%s[-]\n", labelTag, valueTag, lastUpdate)
-				}
-				if history, ok := statusData["dataHistory"].([]interface{}); ok {
-					fmt.Fprintf(tvStation, "[%s]History:[-] [%s]%d pts[-]\n", labelTag, valueTag, len(history))
-				}
-			}
-
-			// Update alarm status
-			tvAlarms.Clear()
-			if alarmErr == nil {
-				if enabled, ok := alarmData["enabled"].(bool); ok {
-					fmt.Fprintf(tvAlarms, "[%s]Enabled:[-] [%s]%v[-]\n", labelTag, valueTag, enabled)
-				}
-				if total, ok := alarmData["totalAlarms"].(float64); ok {
-					fmt.Fprintf(tvAlarms, "[%s]Total:[-] [%s]%.0f[-]\n", labelTag, valueTag, total)
-				}
-				if enabledCount, ok := alarmData["enabledAlarms"].(float64); ok {
-					fmt.Fprintf(tvAlarms, "[%s]Active:[-] [%s]%.0f[-]\n\n", labelTag, valueTag, enabledCount)
-				}
-
-				// Show triggered and cooling down alarms
-				if alarms, ok := alarmData["alarms"].([]interface{}); ok {
-					triggered := []string{}
-					cooling := []string{}
-					for _, a := range alarms {
-						if alarmMap, ok := a.(map[string]interface{}); ok {
-							name, _ := alarmMap["name"].(string)
-							lastTriggered, _ := alarmMap["lastTriggered"].(string)
-							inCooldown, _ := alarmMap["inCooldown"].(bool)
-							cooldownRemaining, _ := alarmMap["cooldownRemaining"].(float64)
-
-							if lastTriggered != "" && lastTriggered != "Never" {
-								triggered = append(triggered, fmt.Sprintf("%s (%s)", name, lastTriggered))
-							}
-							if inCooldown && cooldownRemaining > 0 {
-								cooling = append(cooling, fmt.Sprintf("%s (%.0fs)", name, cooldownRemaining))
-							}
-						}
-					}
-
-					if len(triggered) > 0 {
-						fmt.Fprintf(tvAlarms, "[%s]Triggered:[-]\n", dangerTag)
-						for i, t := range triggered {
-							if i >= 3 {
-								break
-							}
-							fmt.Fprintf(tvAlarms, "  [%s]%s[-]\n", valueTag, t)
-						}
-						if len(triggered) > 3 {
-							fmt.Fprintf(tvAlarms, "  [%s]+%d more...[-]\n", valueTag, len(triggered)-3)
-						}
-						fmt.Fprintf(tvAlarms, "\n")
-					}
-
-					if len(cooling) > 0 {
-						fmt.Fprintf(tvAlarms, "[%s]Cooling Down:[-]\n", warningTag)
-						for i, c := range cooling {
-							if i >= 3 {
-								break
-							}
-							fmt.Fprintf(tvAlarms, "  [%s]%s[-]\n", valueTag, c)
-						}
-						if len(cooling) > 3 {
-							fmt.Fprintf(tvAlarms, "  [%s]+%d more...[-]\n", valueTag, len(cooling)-3)
-						}
-					}
-				}
-			}
-
-			// Update HomeKit status
-			tvHomeKit.Clear()
-			if statusErr == nil {
-				if homekit, ok := statusData["homekit"].(map[string]interface{}); ok {
-					if bridge, ok := homekit["bridge"].(bool); ok {
-						if bridge {
-							fmt.Fprintf(tvHomeKit, "[%s]Status:[-] [%s]Active[-]\n", labelTag, successTag)
-						} else {
-							fmt.Fprintf(tvHomeKit, "[%s]Status:[-] [%s]Disabled[-]\n", labelTag, dangerTag)
-						}
-					}
-
-					if pin, ok := homekit["pin"].(string); ok {
-						fmt.Fprintf(tvHomeKit, "[%s]PIN:[-] [%s]%s[-]\n", labelTag, valueTag, pin)
-					}
-
-					if accessories, ok := homekit["accessories"].(float64); ok {
-						fmt.Fprintf(tvHomeKit, "[%s]Accessories:[-] [%s]%.0f[-]\n\n", labelTag, valueTag, accessories)
-					}
-
-					// Show published sensors
-					if accessoryNames, ok := homekit["accessoryNames"].([]interface{}); ok && len(accessoryNames) > 0 {
-						fmt.Fprintf(tvHomeKit, "[%s]Published Sensors:[-]\n", labelTag)
-						for _, acc := range accessoryNames {
-							if name, ok := acc.(string); ok {
-								fmt.Fprintf(tvHomeKit, "  [%s]• %s[-]\n", successTag, name)
-							}
-						}
-					} else {
-						fmt.Fprintf(tvHomeKit, "[%s]No sensors published[-]\n", mutedTag)
-					}
-				}
-			}
-
-			// Update system info
-			tvSystem.Clear()
-			fmt.Fprintf(tvSystem, "[%s]Web Port:[-] [%s]%s[-]\n", labelTag, valueTag, cfg.WebPort)
-			fmt.Fprintf(tvSystem, "[%s]Log Level:[-] [%s]%s[-]\n", labelTag, valueTag, cfg.LogLevel)
-			fmt.Fprintf(tvSystem, "[%s]Refresh Interval:[-] [%s]%ds[-]\n", labelTag, valueTag, cfg.StatusRefresh)
-			if cfg.StatusTimeout > 0 {
-				remaining := cfg.StatusTimeout - int(time.Since(startTime).Seconds())
-				if remaining < 0 {
-					remaining = 0
-				}
-				fmt.Fprintf(tvSystem, "[%s]Timeout:[-] [%s]%ds (remaining: %ds)[-]\n", labelTag, valueTag, cfg.StatusTimeout, remaining)
-			} else {
-				fmt.Fprintf(tvSystem, "[%s]Timeout:[-] [%s]Never[-]\n", labelTag, valueTag)
-			}
-			fmt.Fprintf(tvSystem, "[%s]Theme:[-] [%s]%s[-]\n", labelTag, valueTag, currentThemeName)
+			tvSensors.SetText(sensorsBuilder.String())
+			tvStation.SetText(stationBuilder.String())
+			tvAlarms.SetText(alarmsBuilder.String())
+			tvHomeKit.SetText(homekitBuilder.String())
+			tvSystem.SetText(systemBuilder.String())
 		})
 	}
 
@@ -491,6 +489,8 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 		time.Sleep(100 * time.Millisecond) // Give app time to start
 		updateStatus()
 	}()
+
+	// (no temporary auto-refresh hooks)
 
 	// Auto-refresh goroutine
 	refreshTicker := time.NewTicker(time.Duration(cfg.StatusRefresh) * time.Second)
@@ -562,7 +562,7 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 				nextRefreshSeconds = cfg.StatusRefresh
 				refreshMutex.Unlock()
 				// Force an immediate UI repaint and run update in background
-				app.QueueUpdateDraw(func() {})
+				go func() { app.QueueUpdateDraw(func() {}) }()
 				go updateStatus()
 				return nil
 			case 't', 'T':
@@ -588,7 +588,7 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 			refreshMutex.Lock()
 			nextRefreshSeconds = cfg.StatusRefresh
 			refreshMutex.Unlock()
-			app.QueueUpdateDraw(func() {})
+			go func() { app.QueueUpdateDraw(func() {}) }()
 			go updateStatus()
 			return nil
 		}

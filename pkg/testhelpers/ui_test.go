@@ -9,13 +9,6 @@ import (
 	"tempest-homekit-go/pkg/weather"
 )
 
-func approxEqual(a, b, tol float64) bool {
-	if a > b {
-		return a-b <= tol
-	}
-	return b-a <= tol
-}
-
 func TestSeedObservations_CountsAndTimestamps(t *testing.T) {
 	chartTypes := []string{"temperature", "humidity", "rain"}
 	base := time.Now().Truncate(time.Second)

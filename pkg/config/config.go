@@ -97,112 +97,120 @@ type Config struct {
 
 // customUsage prints a well-formatted help message with grouped flags and examples
 func customUsage() {
+	// helper to print and handle any write errors (satisfies errcheck)
+	safeFprintln := func(w io.Writer, a ...interface{}) {
+		if _, err := fmt.Fprintln(w, a...); err != nil {
+			log.Printf("usage print error: %v", err)
+		}
+	}
 	// Use tabwriter to create clean aligned columns for flags and env vars
-	fmt.Fprintln(os.Stderr, "Tempest HomeKit Bridge - HomeKit integration for WeatherFlow Tempest weather stations")
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "USAGE:")
-	fmt.Fprintln(os.Stderr, "  tempest-homekit-go [OPTIONS]")
+	safeFprintln(os.Stderr, "Tempest HomeKit Bridge - HomeKit integration for WeatherFlow Tempest weather stations")
+	safeFprintln(os.Stderr, "")
+	safeFprintln(os.Stderr, "USAGE:")
+	safeFprintln(os.Stderr, "  tempest-homekit-go [OPTIONS]")
 
 	w := tabwriter.NewWriter(os.Stderr, 0, 8, 2, ' ', 0)
 
 	// Data source options
-	fmt.Fprintln(w, "DATA SOURCE OPTIONS:")
-	fmt.Fprintln(w, "  --token <string>\tWeatherFlow API token (required for API mode)\tEnv: TEMPEST_TOKEN")
-	fmt.Fprintln(w, "  --station <string>\tTempest station name (required for API mode)\tEnv: TEMPEST_STATION_NAME")
-	fmt.Fprintln(w, "  --station-url <url>\tCustom station URL (overrides Tempest API)\tEnv: STATION_URL")
-	fmt.Fprintln(w, "  --use-generated-weather\tUse simulated weather data for testing (sets generate-path internally)\t")
-	fmt.Fprintln(w, "  --udp-stream\tListen for UDP broadcasts from local station (port 50222)\tEnv: UDP_STREAM=true")
-	fmt.Fprintln(w, "  --disable-internet\tDisable all internet access (offline mode)\tEnv: DISABLE_INTERNET=true")
-	fmt.Fprintln(w, "  --env <file>\tCustom environment file to load (default: .env)\t")
-	fmt.Fprintln(w, "  --elevation <value>\tStation elevation (e.g., 903ft, 275m) - auto-detected if omitted\t")
-	fmt.Fprintln(w)
+	safeFprintln(w, "DATA SOURCE OPTIONS:")
+	safeFprintln(w, "  --token <string>\tWeatherFlow API token (required for API mode)\tEnv: TEMPEST_TOKEN")
+	safeFprintln(w, "  --station <string>\tTempest station name (required for API mode)\tEnv: TEMPEST_STATION_NAME")
+	safeFprintln(w, "  --station-url <url>\tCustom station URL (overrides Tempest API)\tEnv: STATION_URL")
+	safeFprintln(w, "  --use-generated-weather\tUse simulated weather data for testing (sets generate-path internally)\t")
+	safeFprintln(w, "  --udp-stream\tListen for UDP broadcasts from local station (port 50222)\tEnv: UDP_STREAM=true")
+	safeFprintln(w, "  --disable-internet\tDisable all internet access (offline mode)\tEnv: DISABLE_INTERNET=true")
+	safeFprintln(w, "  --env <file>\tCustom environment file to load (default: .env)\t")
+	safeFprintln(w, "  --elevation <value>\tStation elevation (e.g., 903ft, 275m) - auto-detected if omitted\t")
+	safeFprintln(w)
 
 	// HomeKit options
-	fmt.Fprintln(w, "HOMEKIT OPTIONS:")
-	fmt.Fprintln(w, "  --pin <string>\tHomeKit PIN for device pairing (default: \"00102003\")\tEnv: HOMEKIT_PIN")
-	fmt.Fprintln(w, "  --sensors <list>\tSensors to enable (default: \"temp,lux,humidity,uv\")\tEnv: SENSORS")
-	fmt.Fprintln(w, "  --disable-homekit\tRun web console only (no HomeKit services)\t")
-	fmt.Fprintln(w, "  --disable-alarms\tDisable alarm initialization and processing\t")
-	fmt.Fprintln(w, "  --cleardb\tClear HomeKit database and reset device pairing\t")
-	fmt.Fprintln(w)
+	safeFprintln(w, "HOMEKIT OPTIONS:")
+	safeFprintln(w, "  --pin <string>\tHomeKit PIN for device pairing (default: \"00102003\")\tEnv: HOMEKIT_PIN")
+	safeFprintln(w, "  --sensors <list>\tSensors to enable (default: \"temp,lux,humidity,uv\")\tEnv: SENSORS")
+	safeFprintln(w, "  --disable-homekit\tRun web console only (no HomeKit services)\t")
+	safeFprintln(w, "  --disable-alarms\tDisable alarm initialization and processing\t")
+	safeFprintln(w, "  --cleardb\tClear HomeKit database and reset device pairing\t")
+	safeFprintln(w)
 
 	// HISTORY section (dedicated)
-	fmt.Fprintln(w, "HISTORY OPTIONS:")
-	fmt.Fprintln(w, "  --history <points>\tNumber of data points to store in history (default: 1000, min: 10)\tEnv: HISTORY_POINTS")
-	fmt.Fprintln(w, "  --history-read\tPreload historical observations from Tempest API up to HISTORY_POINTS\tEnv: READ_HISTORY")
-	fmt.Fprintln(w, "  --history-reduce <factor>\tReduce historical data by averaging N points into 1 (default: 1 = no reduction)\tEnv: HISTORY_REDUCE")
-	fmt.Fprintln(w, "  --history-reduce-method <str>\tMethod to reduce historical data: timebin (default), factor, lttb\tEnv: HISTORY_REDUCE_METHOD")
-	fmt.Fprintln(w, "  --history-bin-size <minutes>\tBin size in minutes for timebin reduction (default: 10)\tEnv: HISTORY_BIN_MINUTES")
-	fmt.Fprintln(w, "  --history-keep-recent-hours <hours>\tKeep recent N hours of data at full resolution (default: 24)\tEnv: HISTORY_KEEP_RECENT_HOURS")
-	fmt.Fprintln(w, "  --chart-history <hours>\tNumber of hours of data to show in charts (default: 24, 0=all)\tEnv: CHART_HISTORY_HOURS")
-	fmt.Fprintln(w, "  --generate-path <path>\tPath for generated weather endpoint (default: /api/generate-weather)\tEnv: GENERATE_WEATHER_PATH")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w)
+	safeFprintln(w, "HISTORY OPTIONS:")
+	safeFprintln(w, "  --history <points>\tNumber of data points to store in history (default: 1000, min: 10)\tEnv: HISTORY_POINTS")
+	safeFprintln(w, "  --history-read\tPreload historical observations from Tempest API up to HISTORY_POINTS\tEnv: READ_HISTORY")
+	safeFprintln(w, "  --history-reduce <factor>\tReduce historical data by averaging N points into 1 (default: 1 = no reduction)\tEnv: HISTORY_REDUCE")
+	safeFprintln(w, "  --history-reduce-method <str>\tMethod to reduce historical data: timebin (default), factor, lttb\tEnv: HISTORY_REDUCE_METHOD")
+	safeFprintln(w, "  --history-bin-size <minutes>\tBin size in minutes for timebin reduction (default: 10)\tEnv: HISTORY_BIN_MINUTES")
+	safeFprintln(w, "  --history-keep-recent-hours <hours>\tKeep recent N hours of data at full resolution (default: 24)\tEnv: HISTORY_KEEP_RECENT_HOURS")
+	safeFprintln(w, "  --chart-history <hours>\tNumber of hours of data to show in charts (default: 24, 0=all)\tEnv: CHART_HISTORY_HOURS")
+	safeFprintln(w, "  --generate-path <path>\tPath for generated weather endpoint (default: /api/generate-weather)\tEnv: GENERATE_WEATHER_PATH")
+	safeFprintln(w)
+	safeFprintln(w)
 
 	// Web console and others (shortened for readability)
-	fmt.Fprintln(w, "WEB CONSOLE OPTIONS:")
-	fmt.Fprintln(w, "  --web-port <port>\tWeb dashboard port (default: \"8080\")\tEnv: WEB_PORT")
-	fmt.Fprintln(w, "  --disable-webconsole\tDisable web server (HomeKit only mode)\t")
-	fmt.Fprintln(w, "  --use-web-status\tEnable Chrome-based scraping of TempestWX status page\t")
-	fmt.Fprintln(w)
+	safeFprintln(w, "WEB CONSOLE OPTIONS:")
+	safeFprintln(w, "  --web-port <port>\tWeb dashboard port (default: \"8080\")\tEnv: WEB_PORT")
+	safeFprintln(w, "  --disable-webconsole\tDisable web server (HomeKit only mode)\t")
+	safeFprintln(w, "  --use-web-status\tEnable Chrome-based scraping of TempestWX status page\t")
+	safeFprintln(w)
 
-	fmt.Fprintln(w, "ALARM & WEBHOOK OPTIONS:")
-	fmt.Fprintln(w, "  --alarms <file|json>\tAlarm configuration: @filename.json or inline JSON string\tEnv: ALARMS")
-	fmt.Fprintln(w, "  --alarms-edit <file>\tRun alarm editor for specified config file: @filename.json\tEnv: ALARMS_EDIT")
-	fmt.Fprintln(w, "  --alarms-edit-port <port>\tPort for alarm editor web UI (default: 8081)\tEnv: ALARMS_EDIT_PORT")
-	fmt.Fprintln(w, "  --webhook-listener\tStart webhook listener server (default port: 8082)\tEnv: WEBHOOK_LISTENER")
-	fmt.Fprintln(w, "  --webhook-listener-port <port>\tPort for webhook listener server (default: 8082)\tEnv: WEBHOOK_LISTEN_PORT")
-	fmt.Fprintln(w)
+	safeFprintln(w, "ALARM & WEBHOOK OPTIONS:")
+	safeFprintln(w, "  --alarms <file|json>\tAlarm configuration: @filename.json or inline JSON string\tEnv: ALARMS")
+	safeFprintln(w, "  --alarms-edit <file>\tRun alarm editor for specified config file: @filename.json\tEnv: ALARMS_EDIT")
+	safeFprintln(w, "  --alarms-edit-port <port>\tPort for alarm editor web UI (default: 8081)\tEnv: ALARMS_EDIT_PORT")
+	safeFprintln(w, "  --webhook-listener\tStart webhook listener server (default port: 8082)\tEnv: WEBHOOK_LISTENER")
+	safeFprintln(w, "  --webhook-listener-port <port>\tPort for webhook listener server (default: 8082)\tEnv: WEBHOOK_LISTEN_PORT")
+	safeFprintln(w)
 
-	fmt.Fprintln(w, "STATUS OPTIONS:")
-	fmt.Fprintln(w, "  --status\tEnable curses-based status console (TUI mode)\tEnv: STATUS")
-	fmt.Fprintln(w, "  --status-refresh <sec>\tStatus refresh interval in seconds (default: 5)\tEnv: STATUS_REFRESH")
-	fmt.Fprintln(w, "  --status-timeout <sec>\tAuto-exit after N seconds (0 = never)\tEnv: STATUS_TIMEOUT")
-	fmt.Fprintln(w, "  --status-theme <name>\tColor theme for status console (default: dark-ocean)\tEnv: STATUS_THEME")
-	fmt.Fprintln(w, "  --status-theme-list\tList all available color themes and exit\t")
-	fmt.Fprintln(w)
+	safeFprintln(w, "STATUS OPTIONS:")
+	safeFprintln(w, "  --status\tEnable curses-based status console (TUI mode)\tEnv: STATUS")
+	safeFprintln(w, "  --status-refresh <sec>\tStatus refresh interval in seconds (default: 5)\tEnv: STATUS_REFRESH")
+	safeFprintln(w, "  --status-timeout <sec>\tAuto-exit after N seconds (0 = never)\tEnv: STATUS_TIMEOUT")
+	safeFprintln(w, "  --status-theme <name>\tColor theme for status console (default: dark-ocean)\tEnv: STATUS_THEME")
+	safeFprintln(w, "  --status-theme-list\tList all available color themes and exit\t")
+	safeFprintln(w)
 
-	fmt.Fprintln(w, "LOGGING & DEBUG OPTIONS:")
-	fmt.Fprintln(w, "  --loglevel <level>\tLog level: error (default), warn/warning, info, debug\tEnv: LOG_LEVEL")
-	fmt.Fprintln(w, "  --logfilter <string>\tFilter log messages (case-insensitive substring match)\tEnv: LOG_FILTER")
-	fmt.Fprintln(w)
+	safeFprintln(w, "LOGGING & DEBUG OPTIONS:")
+	safeFprintln(w, "  --loglevel <level>\tLog level: error (default), warn/warning, info, debug\tEnv: LOG_LEVEL")
+	safeFprintln(w, "  --logfilter <string>\tFilter log messages (case-insensitive substring match)\tEnv: LOG_FILTER")
+	safeFprintln(w)
 
-	fmt.Fprintln(w, "TESTING OPTIONS:")
-	fmt.Fprintln(w, "  --test-history\tFetch as much historical data as possible and print block start times, then exit\t")
-	fmt.Fprintln(w, "  --test-api\tTest WeatherFlow API endpoints and exit\t")
-	fmt.Fprintln(w, "  --test-api-local\tTest local web server API endpoints and exit\t")
-	fmt.Fprintln(w, "  --test-email <email>\tSend test email to specified address and exit\t")
-	fmt.Fprintln(w, "  --test-sms <phone>\tSend test SMS to specified phone number and exit\t")
-	fmt.Fprintln(w, "  --test-webhook <url>\tSend test webhook to specified URL and exit\t")
-	fmt.Fprintln(w, "  --test-console\tSend test console notification and exit\t")
-	fmt.Fprintln(w, "  --test-syslog\tSend test syslog notification and exit\t")
-	fmt.Fprintln(w, "  --test-oslog\tSend test oslog notification and exit (macOS only)\t")
-	fmt.Fprintln(w, "  --test-eventlog\tSend test eventlog notification and exit (Windows only)\t")
-	fmt.Fprintln(w, "  --test-udp [seconds]\tListen for UDP broadcasts for N seconds (default: 120) and exit\t")
-	fmt.Fprintln(w, "  --test-homekit\tTest HomeKit bridge setup and pairing info, then exit\t")
-	fmt.Fprintln(w, "  --test-web-status\tTest web status scraping from TempestWX and exit\t")
-	fmt.Fprintln(w, "  --test-alarm <name>\tTrigger a specific alarm by name for testing and exit\t")
-	fmt.Fprintln(w, "  --test-sensor-rain\tRun rain sensor cycling pattern (requires --use-generated-weather)\t")
-	fmt.Fprintln(w, "  --test-sensor-wind\tRun wind sensor cycling pattern (requires --use-generated-weather)\t")
-	fmt.Fprintln(w, "  --test-sensor-temp\tRun temperature sensor cycling pattern (requires --use-generated-weather)\t")
-	fmt.Fprintln(w, "  --test-sensor-humidity\tRun humidity sensor cycling pattern (requires --use-generated-weather)\t")
-	fmt.Fprintln(w, "  --test-sensor-pressure\tRun pressure sensor cycling pattern (requires --use-generated-weather)\t")
-	fmt.Fprintln(w, "  --test-sensor-lux\tRun lux sensor cycling pattern (requires --use-generated-weather)\t")
-	fmt.Fprintln(w, "  --test-sensor-uv\tRun UV sensor cycling pattern (requires --use-generated-weather)\t")
-	fmt.Fprintln(w, "  --test-sensor-lightning\tRun lightning sensor cycling pattern (requires --use-generated-weather)\t")
-	fmt.Fprintln(w)
+	safeFprintln(w, "TESTING OPTIONS:")
+	safeFprintln(w, "  --test-history\tFetch as much historical data as possible and print block start times, then exit\t")
+	safeFprintln(w, "  --test-api\tTest WeatherFlow API endpoints and exit\t")
+	safeFprintln(w, "  --test-api-local\tTest local web server API endpoints and exit\t")
+	safeFprintln(w, "  --test-email <email>\tSend test email to specified address and exit\t")
+	safeFprintln(w, "  --test-sms <phone>\tSend test SMS to specified phone number and exit\t")
+	safeFprintln(w, "  --test-webhook <url>\tSend test webhook to specified URL and exit\t")
+	safeFprintln(w, "  --test-console\tSend test console notification and exit\t")
+	safeFprintln(w, "  --test-syslog\tSend test syslog notification and exit\t")
+	safeFprintln(w, "  --test-oslog\tSend test oslog notification and exit (macOS only)\t")
+	safeFprintln(w, "  --test-eventlog\tSend test eventlog notification and exit (Windows only)\t")
+	safeFprintln(w, "  --test-udp [seconds]\tListen for UDP broadcasts for N seconds (default: 120) and exit\t")
+	safeFprintln(w, "  --test-homekit\tTest HomeKit bridge setup and pairing info, then exit\t")
+	safeFprintln(w, "  --test-web-status\tTest web status scraping from TempestWX and exit\t")
+	safeFprintln(w, "  --test-alarm <name>\tTrigger a specific alarm by name for testing and exit\t")
+	safeFprintln(w, "  --test-sensor-rain\tRun rain sensor cycling pattern (requires --use-generated-weather)\t")
+	safeFprintln(w, "  --test-sensor-wind\tRun wind sensor cycling pattern (requires --use-generated-weather)\t")
+	safeFprintln(w, "  --test-sensor-temp\tRun temperature sensor cycling pattern (requires --use-generated-weather)\t")
+	safeFprintln(w, "  --test-sensor-humidity\tRun humidity sensor cycling pattern (requires --use-generated-weather)\t")
+	safeFprintln(w, "  --test-sensor-pressure\tRun pressure sensor cycling pattern (requires --use-generated-weather)\t")
+	safeFprintln(w, "  --test-sensor-lux\tRun lux sensor cycling pattern (requires --use-generated-weather)\t")
+	safeFprintln(w, "  --test-sensor-uv\tRun UV sensor cycling pattern (requires --use-generated-weather)\t")
+	safeFprintln(w, "  --test-sensor-lightning\tRun lightning sensor cycling pattern (requires --use-generated-weather)\t")
+	safeFprintln(w)
 
-	fmt.Fprintln(w, "OTHER OPTIONS:")
-	fmt.Fprintln(w, "  --version\tShow version information and exit\t")
-	fmt.Fprintln(w, "  --help\tShow this help message\t")
+	safeFprintln(w, "OTHER OPTIONS:")
+	safeFprintln(w, "  --version\tShow version information and exit\t")
+	safeFprintln(w, "  --help\tShow this help message\t")
 
 	// Examples header printed directly to stderr for clarity
-	w.Flush()
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "EXAMPLES:")
-	fmt.Fprintln(os.Stderr, "  # Basic HomeKit bridge with API")
-	fmt.Fprintln(os.Stderr, "  tempest-homekit-go --token \"your-token\" --station \"My Station\"")
-	fmt.Fprintln(os.Stderr, "For full details, see: https://github.com/BEHRConsulting/tempest-homekit-go")
+	if err := w.Flush(); err != nil {
+		log.Printf("usage flush error: %v", err)
+	}
+	safeFprintln(os.Stderr, "")
+	safeFprintln(os.Stderr, "EXAMPLES:")
+	safeFprintln(os.Stderr, "  # Basic HomeKit bridge with API")
+	safeFprintln(os.Stderr, "  tempest-homekit-go --token \"your-token\" --station \"My Station\"")
+	safeFprintln(os.Stderr, "For full details, see: https://github.com/BEHRConsulting/tempest-homekit-go")
 }
 
 // LoadConfig initializes and returns a new Config struct with values from
@@ -312,12 +320,10 @@ func LoadConfig() *Config {
 	// Parse flags but check if elevation was actually provided
 	flag.Parse()
 
-	// Handle station URL configuration
-	if cfg.StationURL != "" && !cfg.UseGeneratedWeather {
-		// If station URL is provided (but not for generated weather), keep it
-		// Note: Don't set StationURL for --use-generated-weather to ensure we use
-		// the direct generated data source instead of going through HTTP API
-	}
+	// Handle station URL configuration. If a StationURL is provided and
+	// generated weather is not requested, we leave it as-is. Do not set
+	// StationURL when using --use-generated-weather so the generated data
+	// source is used instead of an HTTP API.
 
 	// Validate command line arguments
 	if err := validateConfig(cfg); err != nil {
@@ -712,7 +718,7 @@ func fetchWeatherFlowStationCoords(_token, _stationName string) (coords [2]float
 		if err != nil {
 			return coords, err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		var stationDetails StationDetailsResponse
 		if err := json.NewDecoder(resp.Body).Decode(&stationDetails); err != nil {
@@ -740,7 +746,7 @@ func getElevationFromCoordinates(lat, lon float64) (float64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("elevation API request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("elevation API returned status %d", resp.StatusCode)

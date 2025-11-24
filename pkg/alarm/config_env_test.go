@@ -27,9 +27,9 @@ func TestLoadConfigFromEnv(t *testing.T) {
 		// Restore original env vars
 		for k, v := range origVars {
 			if v == "" {
-				os.Unsetenv(k)
+				_ = os.Unsetenv(k)
 			} else {
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 		}
 	}()
@@ -37,17 +37,31 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Run("SMTP configuration", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		// Set SMTP env vars
-		os.Setenv("SMTP_HOST", "smtp.example.com")
-		os.Setenv("SMTP_PORT", "587")
-		os.Setenv("SMTP_USERNAME", "user@example.com")
-		os.Setenv("SMTP_PASSWORD", "password123")
-		os.Setenv("SMTP_FROM_ADDRESS", "alerts@example.com")
-		os.Setenv("SMTP_FROM_NAME", "Test Alerts")
-		os.Setenv("SMTP_USE_TLS", "true")
+		if err := os.Setenv("SMTP_HOST", "smtp.example.com"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_PORT", "587"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_USERNAME", "user@example.com"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_PASSWORD", "password123"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_FROM_ADDRESS", "alerts@example.com"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_FROM_NAME", "Test Alerts"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_USE_TLS", "true"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
 
 		config, err := LoadConfigFromEnv()
 		if err != nil {
@@ -81,14 +95,22 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Run("Microsoft 365 configuration", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		// Set MS365 env vars
-		os.Setenv("MS365_CLIENT_ID", "client-id-123")
-		os.Setenv("MS365_CLIENT_SECRET", "client-secret-456")
-		os.Setenv("MS365_TENANT_ID", "tenant-id-789")
-		os.Setenv("MS365_FROM_ADDRESS", "alerts@company.com")
+		if err := os.Setenv("MS365_CLIENT_ID", "client-id-123"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("MS365_CLIENT_SECRET", "client-secret-456"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("MS365_TENANT_ID", "tenant-id-789"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("MS365_FROM_ADDRESS", "alerts@company.com"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
 
 		config, err := LoadConfigFromEnv()
 		if err != nil {
@@ -116,13 +138,19 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Run("Twilio SMS configuration", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		// Set Twilio env vars
-		os.Setenv("TWILIO_ACCOUNT_SID", "AC1234567890")
-		os.Setenv("TWILIO_AUTH_TOKEN", "auth-token-abc")
-		os.Setenv("TWILIO_FROM_NUMBER", "+15555551234")
+		if err := os.Setenv("TWILIO_ACCOUNT_SID", "AC1234567890"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("TWILIO_AUTH_TOKEN", "auth-token-abc"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("TWILIO_FROM_NUMBER", "+15555551234"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
 
 		config, err := LoadConfigFromEnv()
 		if err != nil {
@@ -147,7 +175,7 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Run("No environment configuration", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		config, err := LoadConfigFromEnv()
@@ -166,16 +194,28 @@ func TestLoadConfigFromEnv(t *testing.T) {
 	t.Run("Environment overrides JSON config", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		// Set env vars
-		os.Setenv("SMTP_HOST", "smtp.override.com")
-		os.Setenv("SMTP_PORT", "465")
-		os.Setenv("SMTP_USERNAME", "override@example.com")
-		os.Setenv("SMTP_PASSWORD", "override-pass")
-		os.Setenv("SMTP_FROM_ADDRESS", "override@example.com")
-		os.Setenv("SMTP_USE_TLS", "false")
+		if err := os.Setenv("SMTP_HOST", "smtp.override.com"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_PORT", "465"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_USERNAME", "override@example.com"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_PASSWORD", "override-pass"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_FROM_ADDRESS", "override@example.com"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
+		if err := os.Setenv("SMTP_USE_TLS", "false"); err != nil {
+			t.Fatalf("failed to set env: %v", err)
+		}
 
 		// Load alarm config with JSON that has email config (should be overridden)
 		jsonConfig := `{

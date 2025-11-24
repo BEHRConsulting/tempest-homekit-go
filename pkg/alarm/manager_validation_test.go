@@ -39,9 +39,9 @@ func TestValidateConfigProviders(t *testing.T) {
 	defer func() {
 		for k, v := range origVars {
 			if v == "" {
-				os.Unsetenv(k)
+				_ = os.Unsetenv(k)
 			} else {
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 		}
 	}()
@@ -72,7 +72,7 @@ func TestValidateConfigProviders(t *testing.T) {
 	t.Run("email used but no provider configured", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		config := &AlarmConfig{
@@ -113,11 +113,11 @@ func TestValidateConfigProviders(t *testing.T) {
 	t.Run("SMTP email configured but missing variables", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		// Set only SMTP_HOST
-		os.Setenv("SMTP_HOST", "smtp.example.com")
+		_ = os.Setenv("SMTP_HOST", "smtp.example.com")
 
 		config, _ := LoadAlarmConfig(`{
 			"alarms": [{
@@ -156,7 +156,7 @@ func TestValidateConfigProviders(t *testing.T) {
 	t.Run("SMS used but no provider configured", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		config := &AlarmConfig{
@@ -196,11 +196,11 @@ func TestValidateConfigProviders(t *testing.T) {
 	t.Run("Twilio SMS configured but missing variables", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		// Set only TWILIO_ACCOUNT_SID
-		os.Setenv("TWILIO_ACCOUNT_SID", "AC123456")
+		_ = os.Setenv("TWILIO_ACCOUNT_SID", "AC123456")
 
 		config, _ := LoadAlarmConfig(`{
 			"alarms": [{
@@ -235,7 +235,7 @@ func TestValidateConfigProviders(t *testing.T) {
 	t.Run("disabled alarms are ignored", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		config := &AlarmConfig{
@@ -270,14 +270,14 @@ func TestValidateConfigProviders(t *testing.T) {
 	t.Run("fully configured SMTP email - no warnings", func(t *testing.T) {
 		// Clear all env vars
 		for k := range origVars {
-			os.Unsetenv(k)
+			_ = os.Unsetenv(k)
 		}
 
 		// Set all SMTP vars
-		os.Setenv("SMTP_HOST", "smtp.example.com")
-		os.Setenv("SMTP_USERNAME", "user@example.com")
-		os.Setenv("SMTP_PASSWORD", "password")
-		os.Setenv("SMTP_FROM_ADDRESS", "alerts@example.com")
+		_ = os.Setenv("SMTP_HOST", "smtp.example.com")
+		_ = os.Setenv("SMTP_USERNAME", "user@example.com")
+		_ = os.Setenv("SMTP_PASSWORD", "password")
+		_ = os.Setenv("SMTP_FROM_ADDRESS", "alerts@example.com")
 
 		config, _ := LoadAlarmConfig(`{
 			"alarms": [{

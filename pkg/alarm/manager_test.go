@@ -42,7 +42,7 @@ func TestNewManagerWithFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() { _ = os.Remove(tmpfile.Name()) }()
 
 	config := AlarmConfig{
 		Alarms: []Alarm{
@@ -55,9 +55,16 @@ func TestNewManagerWithFile(t *testing.T) {
 		},
 	}
 
-	data, _ := json.Marshal(config)
-	tmpfile.Write(data)
-	tmpfile.Close()
+	data, err := json.Marshal(config)
+	if err != nil {
+		t.Fatalf("failed to marshal config: %v", err)
+	}
+	if _, err := tmpfile.Write(data); err != nil {
+		t.Fatalf("failed to write temp file: %v", err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatalf("failed to close temp file: %v", err)
+	}
 
 	manager, err := NewManager("@"+tmpfile.Name(), "Test Station")
 	if err != nil {
@@ -295,7 +302,7 @@ func TestConfigReload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() { _ = os.Remove(tmpfile.Name()) }()
 
 	initialConfig := AlarmConfig{
 		Alarms: []Alarm{
@@ -308,9 +315,16 @@ func TestConfigReload(t *testing.T) {
 		},
 	}
 
-	data, _ := json.Marshal(initialConfig)
-	tmpfile.Write(data)
-	tmpfile.Close()
+	data, err := json.Marshal(initialConfig)
+	if err != nil {
+		t.Fatalf("failed to marshal initial config: %v", err)
+	}
+	if _, err := tmpfile.Write(data); err != nil {
+		t.Fatalf("failed to write initial config to temp file: %v", err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatalf("failed to close temp file: %v", err)
+	}
 
 	manager, err := NewManager("@"+tmpfile.Name(), "Test Station")
 	if err != nil {

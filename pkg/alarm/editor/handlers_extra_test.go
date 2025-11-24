@@ -16,7 +16,7 @@ func TestCreateUpdateDeleteAlarm_Workflow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() { _ = os.Remove(tmpfile.Name()) }()
 
 	// Start with empty config
 	server := &Server{
@@ -108,7 +108,7 @@ func TestHandleSaveConfig_InvalidConfig_ReturnsBadRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() { _ = os.Remove(tmpfile.Name()) }()
 
 	server := &Server{
 		configPath: tmpfile.Name(),
@@ -128,10 +128,10 @@ func TestHandleSaveConfig_InvalidConfig_ReturnsBadRequest(t *testing.T) {
 }
 
 func TestHandleGetEnvDefaults_ReturnsEnvValues(t *testing.T) {
-	os.Setenv("MS365_TO_ADDRESS", "foo@example.com")
-	os.Setenv("SMS_TO_NUMBER", "+15551234567")
-	defer os.Unsetenv("MS365_TO_ADDRESS")
-	defer os.Unsetenv("SMS_TO_NUMBER")
+	_ = os.Setenv("MS365_TO_ADDRESS", "foo@example.com")
+	_ = os.Setenv("SMS_TO_NUMBER", "+15551234567")
+	defer func() { _ = os.Unsetenv("MS365_TO_ADDRESS") }()
+	defer func() { _ = os.Unsetenv("SMS_TO_NUMBER") }()
 
 	server := &Server{}
 
@@ -162,8 +162,8 @@ func TestHandleGetContacts_ReturnsContactList(t *testing.T) {
 		{"name": "John Doe", "email": "john@example.com", "sms": "+15551234567"},
 		{"name": "Jane Smith", "email": "jane@example.com", "sms": "+15559876543"}
 	]`
-	os.Setenv("CONTACT_LIST", contactListJSON)
-	defer os.Unsetenv("CONTACT_LIST")
+	_ = os.Setenv("CONTACT_LIST", contactListJSON)
+	defer func() { _ = os.Unsetenv("CONTACT_LIST") }()
 
 	server := &Server{}
 	// Load contacts

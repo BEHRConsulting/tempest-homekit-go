@@ -19,7 +19,7 @@ func TestCSVNotifier_appendToCSVFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	notifier := &CSVNotifier{}
 
@@ -66,7 +66,7 @@ func TestCSVNotifier_appendToCSVFile(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to open CSV file: %v", err)
 			}
-			defer file.Close()
+			defer func() { _ = file.Close() }()
 
 			reader := csv.NewReader(file)
 			records, err := reader.ReadAll()
@@ -103,7 +103,9 @@ func TestCSVNotifier_appendToCSVFile(t *testing.T) {
 			}
 
 			// Re-read file
-			file.Seek(0, 0)
+			if _, err := file.Seek(0, 0); err != nil {
+				t.Fatalf("failed to seek file: %v", err)
+			}
 			reader = csv.NewReader(file)
 			records, err = reader.ReadAll()
 			if err != nil {
@@ -125,7 +127,7 @@ func TestCSVNotifier_appendToCSVFile_Rotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	notifier := &CSVNotifier{}
 	filePath := filepath.Join(tempDir, "test.csv")
@@ -172,7 +174,7 @@ func TestJSONNotifier_appendToJSONFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	notifier := &JSONNotifier{}
 
@@ -260,7 +262,7 @@ func TestJSONNotifier_appendToJSONFile_Rotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	notifier := &JSONNotifier{}
 	filePath := filepath.Join(tempDir, "test.json")
@@ -323,7 +325,7 @@ func TestCSVNotifier_Send(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	notifier := &CSVNotifier{}
 
@@ -371,7 +373,7 @@ func TestCSVNotifier_Send(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to open CSV file: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	reader := csv.NewReader(file)
 	records, err := reader.ReadAll()
@@ -424,7 +426,7 @@ func TestJSONNotifier_Send(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	notifier := &JSONNotifier{}
 

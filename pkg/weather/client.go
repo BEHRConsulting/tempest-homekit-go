@@ -103,7 +103,7 @@ func GetStations(token string) ([]Station, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API request failed with status %d", resp.StatusCode)
@@ -135,7 +135,7 @@ func GetObservationFromURL(url string) (*Observation, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API request failed with status %d", resp.StatusCode)
@@ -208,7 +208,7 @@ func GetStationDetails(stationID int, token string) (*Station, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API request failed with status %d", resp.StatusCode)
@@ -319,7 +319,7 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, logLevel
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			errorCount++
 			fmt.Printf("ERROR: API call for %s returned HTTP %d\n", dayName, resp.StatusCode)
 			time.Sleep(100 * time.Millisecond)
@@ -327,7 +327,7 @@ func GetHistoricalObservationsWithProgress(stationID int, token string, logLevel
 		}
 
 		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			errorCount++
 			fmt.Printf("ERROR: Error reading response for %s: %v\n", dayName, err)
@@ -523,7 +523,7 @@ func GetForecast(stationID int, token string) (*ForecastResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch forecast data: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("forecast API request failed with status %d", resp.StatusCode)
@@ -597,7 +597,7 @@ func GetAllHistoricalObservations(stationID int, token string, logLevel string, 
 			if resp.StatusCode == http.StatusTooManyRequests {
 				// Read Retry-After header if present
 				ra := resp.Header.Get("Retry-After")
-				resp.Body.Close()
+				_ = resp.Body.Close()
 				waitSec := 0
 				if ra != "" {
 					if n, perr := strconv.Atoi(ra); perr == nil {
@@ -624,7 +624,7 @@ func GetAllHistoricalObservations(stationID int, token string, logLevel string, 
 			}
 
 			if resp.StatusCode != http.StatusOK {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 				logger.Warn("API call for day_offset=%d returned HTTP %d", dayOffset, resp.StatusCode)
 				time.Sleep(150 * time.Millisecond)
 				consecutiveEmpty++
@@ -639,7 +639,7 @@ func GetAllHistoricalObservations(stationID int, token string, logLevel string, 
 		}
 
 		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			fmt.Printf("ERROR: Error reading response for day_offset=%d: %v\n", dayOffset, err)
 			time.Sleep(150 * time.Millisecond)
@@ -762,10 +762,10 @@ func GetAllHistoricalObservations(stationID int, token string, logLevel string, 
 			var rainDailySum float64 = 0
 			var lightningAvgSum float64 = 0
 			var batterySum float64 = 0
-			var uvSum int = 0
-			var precipType int = 0
-			var lightningCountSum int = 0
-			var reportIntervalSum int = 0
+			var uvSum = 0
+			var precipType = 0
+			var lightningCountSum = 0
+			var reportIntervalSum = 0
 			count := len(group)
 			for _, g := range group {
 				tsSum += g.Timestamp
@@ -847,10 +847,10 @@ func GetAllHistoricalObservations(stationID int, token string, logLevel string, 
 				var rainDailySum float64 = 0
 				var lightningAvgSum float64 = 0
 				var batterySum float64 = 0
-				var uvSum int = 0
-				var precipSum int = 0
-				var lightningCountSum int = 0
-				var reportIntervalSum int = 0
+				var uvSum = 0
+				var precipSum = 0
+				var lightningCountSum = 0
+				var reportIntervalSum = 0
 				count := len(group)
 				for _, g := range group {
 					tsSum += g.Timestamp
@@ -943,7 +943,7 @@ func GetStationStatus(stationID int, logLevel string) (*StationStatus, error) {
 		}
 		return nil, fmt.Errorf("failed to fetch station status: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		if logLevel == "debug" {

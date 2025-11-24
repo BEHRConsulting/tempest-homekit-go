@@ -12,14 +12,14 @@ func TestEnvFileLoading(t *testing.T) {
 	originalEnvFile := os.Getenv("ENV_FILE")
 	defer func() {
 		if originalEnvFile != "" {
-			os.Setenv("ENV_FILE", originalEnvFile)
+			_ = os.Setenv("ENV_FILE", originalEnvFile)
 		} else {
-			os.Unsetenv("ENV_FILE")
+			_ = os.Unsetenv("ENV_FILE")
 		}
 	}()
 
 	t.Run("default env file", func(t *testing.T) {
-		os.Unsetenv("ENV_FILE")
+		_ = os.Unsetenv("ENV_FILE")
 		envFile := getEnvOrDefault("ENV_FILE", ".env")
 		if envFile != ".env" {
 			t.Errorf("Expected default EnvFile to be '.env', got '%s'", envFile)
@@ -27,7 +27,9 @@ func TestEnvFileLoading(t *testing.T) {
 	})
 
 	t.Run("env file from environment variable", func(t *testing.T) {
-		os.Setenv("ENV_FILE", "custom.env")
+		if err := os.Setenv("ENV_FILE", "custom.env"); err != nil {
+			t.Fatalf("failed to set ENV_FILE: %v", err)
+		}
 		envFile := getEnvOrDefault("ENV_FILE", ".env")
 		if envFile != "custom.env" {
 			t.Errorf("Expected EnvFile to be 'custom.env' from ENV_FILE, got '%s'", envFile)
@@ -164,17 +166,17 @@ func TestEnvFileFlagPrecedence(t *testing.T) {
 			original := os.Getenv("ENV_FILE")
 			defer func() {
 				if original != "" {
-					os.Setenv("ENV_FILE", original)
+					_ = os.Setenv("ENV_FILE", original)
 				} else {
-					os.Unsetenv("ENV_FILE")
+					_ = os.Unsetenv("ENV_FILE")
 				}
 			}()
 
 			// Set test value
 			if tt.envVar != "" {
-				os.Setenv("ENV_FILE", tt.envVar)
+				_ = os.Setenv("ENV_FILE", tt.envVar)
 			} else {
-				os.Unsetenv("ENV_FILE")
+				_ = os.Unsetenv("ENV_FILE")
 			}
 
 			envFile := getEnvOrDefault("ENV_FILE", ".env")

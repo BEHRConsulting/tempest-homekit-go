@@ -10,6 +10,9 @@ import (
 // simpleFakeDS implements weather.DataSource for testing
 type simpleFakeDS struct{}
 
+// Mark simpleFakeDS as referenced to avoid unused warnings from staticcheck.
+var _ = simpleFakeDS{}
+
 func (s *simpleFakeDS) Start() (<-chan weather.Observation, error) {
 	return make(chan weather.Observation), nil
 }
@@ -24,7 +27,7 @@ func TestCreateDataSource_GeneratedAndUDP(t *testing.T) {
 	cfg := &config.Config{}
 	_, err := CreateDataSource(cfg, nil, nil, nil)
 	if err == nil {
-		// expected error because station is required for default API datasource when not using generated or UDP
+		t.Fatalf("expected error because station is required for default API datasource when not using generated or UDP")
 	}
 
 	// Generated case: set UseGeneratedWeather so factory returns generated API data source

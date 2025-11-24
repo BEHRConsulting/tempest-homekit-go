@@ -217,7 +217,7 @@ func (l *UDPListener) listen() {
 			return
 		default:
 			// Set read deadline to allow checking stopChan periodically
-			l.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			_ = l.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 
 			n, remoteAddr, err := l.conn.ReadFromUDP(buffer)
 			if err != nil {

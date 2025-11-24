@@ -646,7 +646,7 @@ func (ws *WebServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html")
 	tmpl := ws.getDashboardHTML()
-	w.Write([]byte(tmpl))
+	_, _ = w.Write([]byte(tmpl))
 }
 
 func (ws *WebServer) handleWeatherAPI(w http.ResponseWriter, r *http.Request) {
@@ -957,7 +957,7 @@ func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request
 
 	// If no alarm manager, return basic status
 	if alarmMgr == nil {
-		json.NewEncoder(w).Encode(AlarmStatusResponse{
+		_ = json.NewEncoder(w).Encode(AlarmStatusResponse{
 			Enabled:       enabled,
 			Disabled:      disableAlarms,
 			ConfigPath:    alarmConfig,
@@ -1036,7 +1036,7 @@ func (ws *WebServer) handleAlarmStatusAPI(w http.ResponseWriter, r *http.Request
 		Alarms:        alarmStatuses,
 	}
 
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // handleChartPage serves a dedicated chart page for a given weather type.
@@ -1091,7 +1091,7 @@ func (ws *WebServer) handleRegenerateWeatherAPI(w http.ResponseWriter, r *http.R
 		"climateZone": ws.generatedWeather.ClimateZone,
 	}
 
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // handleUnitsAPI returns the current units configuration
@@ -1106,7 +1106,7 @@ func (ws *WebServer) handleUnitsAPI(w http.ResponseWriter, r *http.Request) {
 		"unitsPressure": ws.unitsPressure,
 	}
 
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // HistoryResponse represents a single historical observation with calculated incremental rain
@@ -1199,7 +1199,7 @@ func (ws *WebServer) handleHistoryAPI(w http.ResponseWriter, r *http.Request) {
 	ws.logDebug("Returning %d historical observations with calculated incremental rain and rates", len(response))
 
 	// Return the historical data with incremental rain
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func (ws *WebServer) getDashboardHTML() string {
@@ -1969,7 +1969,7 @@ func (ws *WebServer) handleGenerateWeatherAPI(w http.ResponseWriter, r *http.Req
 		obs.AirTemperature, obs.RainAccumulated, obs.Battery)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func (ws *WebServer) Stop() error {

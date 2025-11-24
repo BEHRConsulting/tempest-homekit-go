@@ -13,6 +13,9 @@ type fakeUDPListener struct{}
 
 func (f fakeUDPListener) GetLatestObservation() *weather.Observation { return nil }
 
+// Mark fakeUDPListener as referenced to avoid unused warnings in some tooling.
+var _ = fakeUDPListener{}
+
 func TestCreateDataSource_UDPRequiresListener(t *testing.T) {
 	cfg := &config.Config{UDPStream: true}
 	_, err := CreateDataSource(cfg, nil, nil, nil)

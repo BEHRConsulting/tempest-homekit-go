@@ -213,17 +213,17 @@ func TestTestFlagsInConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set environment variables
 			for key, val := range tt.envVars {
-				os.Setenv(key, val)
-				defer os.Unsetenv(key)
+				_ = os.Setenv(key, val)
+				defer func(k string) { _ = os.Unsetenv(k) }(key)
 			}
 
 			// Set required environment variables to prevent validation errors
-			os.Setenv("TEMPEST_TOKEN", "test-token")
-			os.Setenv("TEMPEST_STATION_NAME", "TestStation")
-			os.Setenv("HOMEKIT_PIN", "12345678")
-			defer os.Unsetenv("TEMPEST_TOKEN")
-			defer os.Unsetenv("TEMPEST_STATION_NAME")
-			defer os.Unsetenv("HOMEKIT_PIN")
+			_ = os.Setenv("TEMPEST_TOKEN", "test-token")
+			_ = os.Setenv("TEMPEST_STATION_NAME", "TestStation")
+			_ = os.Setenv("HOMEKIT_PIN", "12345678")
+			defer func() { _ = os.Unsetenv("TEMPEST_TOKEN") }()
+			defer func() { _ = os.Unsetenv("TEMPEST_STATION_NAME") }()
+			defer func() { _ = os.Unsetenv("HOMEKIT_PIN") }()
 
 			// Set command line args
 			os.Args = tt.args
@@ -262,16 +262,16 @@ func TestTestFlagsPrecedence(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set environment variables
-	os.Setenv("TEST_EMAIL", "env@example.com")
-	os.Setenv("TEST_SMS", "+10000000000")
-	os.Setenv("TEMPEST_TOKEN", "test-token")
-	os.Setenv("TEMPEST_STATION_NAME", "TestStation")
-	os.Setenv("HOMEKIT_PIN", "12345678")
-	defer os.Unsetenv("TEST_EMAIL")
-	defer os.Unsetenv("TEST_SMS")
-	defer os.Unsetenv("TEMPEST_TOKEN")
-	defer os.Unsetenv("TEMPEST_STATION_NAME")
-	defer os.Unsetenv("HOMEKIT_PIN")
+	_ = os.Setenv("TEST_EMAIL", "env@example.com")
+	_ = os.Setenv("TEST_SMS", "+10000000000")
+	_ = os.Setenv("TEMPEST_TOKEN", "test-token")
+	_ = os.Setenv("TEMPEST_STATION_NAME", "TestStation")
+	_ = os.Setenv("HOMEKIT_PIN", "12345678")
+	defer func() { _ = os.Unsetenv("TEST_EMAIL") }()
+	defer func() { _ = os.Unsetenv("TEST_SMS") }()
+	defer func() { _ = os.Unsetenv("TEMPEST_TOKEN") }()
+	defer func() { _ = os.Unsetenv("TEMPEST_STATION_NAME") }()
+	defer func() { _ = os.Unsetenv("HOMEKIT_PIN") }()
 
 	// Set command-line args that should override env vars
 	os.Args = []string{
@@ -299,12 +299,12 @@ func TestMultipleTestFlags(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Setenv("TEMPEST_TOKEN", "test-token")
-	os.Setenv("TEMPEST_STATION_NAME", "TestStation")
-	os.Setenv("HOMEKIT_PIN", "12345678")
-	defer os.Unsetenv("TEMPEST_TOKEN")
-	defer os.Unsetenv("TEMPEST_STATION_NAME")
-	defer os.Unsetenv("HOMEKIT_PIN")
+	_ = os.Setenv("TEMPEST_TOKEN", "test-token")
+	_ = os.Setenv("TEMPEST_STATION_NAME", "TestStation")
+	_ = os.Setenv("HOMEKIT_PIN", "12345678")
+	defer func() { _ = os.Unsetenv("TEMPEST_TOKEN") }()
+	defer func() { _ = os.Unsetenv("TEMPEST_STATION_NAME") }()
+	defer func() { _ = os.Unsetenv("HOMEKIT_PIN") }()
 
 	// Set multiple test flags at once
 	os.Args = []string{
@@ -493,12 +493,12 @@ func TestNewTestFlagsInConfig(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Setenv("TEMPEST_TOKEN", "test-token")
-	os.Setenv("TEMPEST_STATION_NAME", "TestStation")
-	os.Setenv("HOMEKIT_PIN", "12345678")
-	defer os.Unsetenv("TEMPEST_TOKEN")
-	defer os.Unsetenv("TEMPEST_STATION_NAME")
-	defer os.Unsetenv("HOMEKIT_PIN")
+	_ = os.Setenv("TEMPEST_TOKEN", "test-token")
+	_ = os.Setenv("TEMPEST_STATION_NAME", "TestStation")
+	_ = os.Setenv("HOMEKIT_PIN", "12345678")
+	defer func() { _ = os.Unsetenv("TEMPEST_TOKEN") }()
+	defer func() { _ = os.Unsetenv("TEMPEST_STATION_NAME") }()
+	defer func() { _ = os.Unsetenv("HOMEKIT_PIN") }()
 
 	tests := []struct {
 		name              string

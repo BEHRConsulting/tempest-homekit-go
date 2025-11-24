@@ -94,7 +94,7 @@ func (u *UDPDataSource) Stop() error {
 	u.running = false
 
 	if u.listener != nil {
-		u.listener.Stop()
+		_ = u.listener.Stop()
 	}
 
 	close(u.observationChan)

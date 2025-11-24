@@ -905,7 +905,7 @@ func GetObservation(stationID int, token string) (*Observation, error) {
  if err != nil {
  return nil, err
  }
- defer resp.Body.Close()
+ defer func() { _ = resp.Body.Close() }()
   var response struct {
  Status struct {
  StatusCode int `json:"status_code"`

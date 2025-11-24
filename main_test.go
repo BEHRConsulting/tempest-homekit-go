@@ -214,8 +214,8 @@ func TestTestSMSParameterValidation(t *testing.T) {
 func TestTestFunctionEnvironmentSetup(t *testing.T) {
 	t.Run("email test sets env var", func(t *testing.T) {
 		testEmail := "test@example.com"
-		os.Setenv("TEST_EMAIL_RECIPIENT", testEmail)
-		defer os.Unsetenv("TEST_EMAIL_RECIPIENT")
+		_ = os.Setenv("TEST_EMAIL_RECIPIENT", testEmail)
+		defer func() { _ = os.Unsetenv("TEST_EMAIL_RECIPIENT") }()
 
 		result := os.Getenv("TEST_EMAIL_RECIPIENT")
 		if result != testEmail {
@@ -225,8 +225,8 @@ func TestTestFunctionEnvironmentSetup(t *testing.T) {
 
 	t.Run("sms test sets env var", func(t *testing.T) {
 		testSMS := "+15555551234"
-		os.Setenv("TEST_SMS_RECIPIENT", testSMS)
-		defer os.Unsetenv("TEST_SMS_RECIPIENT")
+		_ = os.Setenv("TEST_SMS_RECIPIENT", testSMS)
+		defer func() { _ = os.Unsetenv("TEST_SMS_RECIPIENT") }()
 
 		result := os.Getenv("TEST_SMS_RECIPIENT")
 		if result != testSMS {

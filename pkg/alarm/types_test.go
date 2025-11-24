@@ -441,7 +441,10 @@ func TestLoadAlarmConfig(t *testing.T) {
 			name:  "file reference",
 			input: "@test.json",
 			setup: func() (string, func()) {
-				tmpfile, _ := os.CreateTemp("", "test*.json")
+				tmpfile, err := os.CreateTemp("", "test*.json")
+				if err != nil {
+					t.Fatalf("failed to create temp file: %v", err)
+				}
 				config := AlarmConfig{
 					Alarms: []Alarm{
 						{
@@ -451,10 +454,19 @@ func TestLoadAlarmConfig(t *testing.T) {
 						},
 					},
 				}
-				data, _ := json.Marshal(config)
-				tmpfile.Write(data)
-				tmpfile.Close()
-				return "@" + tmpfile.Name(), func() { os.Remove(tmpfile.Name()) }
+				data, err := json.Marshal(config)
+				if err != nil {
+					_ = tmpfile.Close()
+					t.Fatalf("failed to marshal config: %v", err)
+				}
+				if _, err := tmpfile.Write(data); err != nil {
+					_ = tmpfile.Close()
+					t.Fatalf("failed to write temp file: %v", err)
+				}
+				if err := tmpfile.Close(); err != nil {
+					t.Fatalf("failed to close temp file: %v", err)
+				}
+				return "@" + tmpfile.Name(), func() { _ = os.Remove(tmpfile.Name()) }
 			},
 			wantError: false,
 			wantCount: 1,

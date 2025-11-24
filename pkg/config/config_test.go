@@ -36,14 +36,22 @@ func TestValidateConfigDefaults(t *testing.T) {
 
 func TestLoadConfig(t *testing.T) {
 	// Set env vars
-	os.Setenv("TEMPEST_TOKEN", "testtoken")
-	os.Setenv("TEMPEST_STATION_NAME", "teststation")
-	os.Setenv("HOMEKIT_PIN", "12345678")
-	os.Setenv("LOG_LEVEL", "debug")
-	defer os.Unsetenv("TEMPEST_TOKEN")
-	defer os.Unsetenv("TEMPEST_STATION_NAME")
-	defer os.Unsetenv("HOMEKIT_PIN")
-	defer os.Unsetenv("LOG_LEVEL")
+	if err := os.Setenv("TEMPEST_TOKEN", "testtoken"); err != nil {
+		t.Fatalf("failed to set env: %v", err)
+	}
+	if err := os.Setenv("TEMPEST_STATION_NAME", "teststation"); err != nil {
+		t.Fatalf("failed to set env: %v", err)
+	}
+	if err := os.Setenv("HOMEKIT_PIN", "12345678"); err != nil {
+		t.Fatalf("failed to set env: %v", err)
+	}
+	if err := os.Setenv("LOG_LEVEL", "debug"); err != nil {
+		t.Fatalf("failed to set env: %v", err)
+	}
+	defer func() { _ = os.Unsetenv("TEMPEST_TOKEN") }()
+	defer func() { _ = os.Unsetenv("TEMPEST_STATION_NAME") }()
+	defer func() { _ = os.Unsetenv("HOMEKIT_PIN") }()
+	defer func() { _ = os.Unsetenv("LOG_LEVEL") }()
 
 	cfg := LoadConfig()
 	if cfg.Token != "testtoken" {
@@ -219,10 +227,12 @@ func TestParseElevationInvalid(t *testing.T) {
 func TestClearDatabase(t *testing.T) {
 	// Create a temporary directory for testing
 	tempDir := filepath.Join(os.TempDir(), "homekit_test_db")
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	// Create the directory and some test files
-	os.MkdirAll(tempDir, 0755)
+	if err := os.MkdirAll(tempDir, 0755); err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
 	testFiles := []string{"keypair", "uuid", "version", "schema"}
 	for _, file := range testFiles {
 		testFile := filepath.Join(tempDir, file)
@@ -230,7 +240,9 @@ func TestClearDatabase(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create test file %s: %v", file, err)
 		}
-		f.Close()
+		if err := f.Close(); err != nil {
+			t.Fatalf("Failed to close test file %s: %v", file, err)
+		}
 	}
 
 	// Verify files exist before clearing

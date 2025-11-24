@@ -68,7 +68,7 @@ func TestHeadlessDashboard(t *testing.T) {
 		b, _ := json.Marshal(map[string]interface{}{"unitHints": uh})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
-		w.Write(b)
+		_, _ = w.Write(b)
 	})
 	// serve the pkg/web/static/ directory so chart.html and vendored assets are available
 	_, thisFileStatic, _, _ := gruntime.Caller(0)
@@ -199,7 +199,7 @@ func TestHeadlessDashboard(t *testing.T) {
 		if err != nil {
 			return "", err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != 200 {
 			return "", fmt.Errorf("status %d", resp.StatusCode)
 		}
@@ -235,7 +235,7 @@ func TestHeadlessDashboard(t *testing.T) {
 			lit := fmt.Sprintf("%q", string(b))
 			inj := fmt.Sprintf(`(function(){ var s=document.createElement('script'); s.type='text/javascript'; s.text = %s; document.head.appendChild(s); })()`, lit)
 			if err := chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(inj, nil)); err == nil {
-				injectedChart = true
+				// injection succeeded
 				time.Sleep(100 * time.Millisecond)
 			} else {
 				t.Logf("warning: failed to inject vendored Chart.js into page: %v", err)
@@ -582,7 +582,7 @@ func TestChartPopoutOpensAndRenders(t *testing.T) {
 		if err != nil {
 			return "", err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != 200 {
 			return "", fmt.Errorf("status %d", resp.StatusCode)
 		}
@@ -765,7 +765,7 @@ func TestChartPopoutOpensAndRenders(t *testing.T) {
 			continue
 		}
 		b, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			lastStatusFetchErr = err
 			time.Sleep(100 * time.Millisecond)
@@ -800,7 +800,7 @@ func TestChartPopoutOpensAndRenders(t *testing.T) {
 		t.Logf("warning: failed to fetch test unitHints endpoint: %v", err)
 	} else {
 		tb, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if resp.StatusCode != 200 {
 			t.Logf("warning: /api/test/unitHints returned status %d; body=%s", resp.StatusCode, string(tb))
 		} else {
@@ -1292,7 +1292,7 @@ func TestPopoutDatasetOrdering(t *testing.T) {
 		if err != nil {
 			return "", err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != 200 {
 			return "", fmt.Errorf("status %d", resp.StatusCode)
 		}
@@ -1389,7 +1389,7 @@ func TestPopoutDatasetOrdering(t *testing.T) {
 			resp, err := http.Get(ts.URL + "/api/status")
 			if err == nil {
 				b, _ := io.ReadAll(resp.Body)
-				resp.Body.Close()
+				_ = resp.Body.Close()
 				var statusObj map[string]interface{}
 				if err := json.Unmarshal(b, &statusObj); err == nil {
 					if dh, ok := statusObj["dataHistory"].([]interface{}); ok {
