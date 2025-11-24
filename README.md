@@ -745,19 +745,28 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `--disable-homekit`: Disable HomeKit services and run web console only
 - `--elevation`: Station elevation in meters (default: auto-detect, valid range: -430m to 8848m)
 - `--env`: Custom environment file to load (default: ".env"). Env: ENV_FILE
- - Overrides the default `.env` file location
- - Useful for multiple configurations or deployment environments
- - Example: `./tempest-homekit-go --env /etc/tempest/production.env`
+    - Overrides the default `.env` file location
+    - Useful for multiple configurations or deployment environments
+    - Example: `./tempest-homekit-go --env /etc/tempest/production.env`
 - `--loglevel`: Logging level - debug, info, warn/warning, error (default: "error")
 - `--logfilter`: Filter log messages to only show those containing this string (case-insensitive) - useful for targeted debugging
-- `--pin`: HomeKit pairing PIN (default: "00102003") - `--sensors`: Sensors to enable - 'all', 'min' (temp,lux,humidity), or comma-delimited list with aliases supported:
- - **Temperature**: `temp` or `temperature`
- - **Light**: `lux` or `light`
- - **UV**: `uv` or `uvi`
- - **Other sensors**: `humidity`, `wind`, `rain`, `pressure`, `lightning`
- - (default: "temp,lux,humidity")
+- `--pin`: HomeKit pairing PIN (default: "00102003") 
+- `--sensors`: Sensors to enable - 'all', 'min' (temp,lux,humidity), or comma-delimited list with aliases supported:
+    - **Temperature**: `temp` or `temperature`
+    - **Light**: `lux` or `light`
+    - **UV**: `uv` or `uvi`
+    - **Other sensors**: `humidity`, `wind`, `rain`, `pressure`, `lightning`
+    - (default: "temp,lux,humidity")
 - `--station`: Tempest station name (default: "Chino Hills")
 - `--station-url`: Custom station URL for weather data (e.g., `http://localhost:8080/api/generate-weather`). Overrides Tempest API
+- `--history <points>`: Number of data points to store in history (default: 1000, min: 10). Env: `HISTORY_POINTS`
+- `--history-read`: Preload historical observations from Tempest API up to `HISTORY_POINTS` (bool). Env: `READ_HISTORY`
+- `--history-reduce <factor>`: Reduce historical data by averaging N points into 1 (default: 1 = no reduction). Env: `HISTORY_REDUCE`
+- `--history-reduce-method <method>`: Method to reduce historical data: `timebin` (default), `factor`, `lttb`. Env: `HISTORY_REDUCE_METHOD`
+- `--history-bin-size <minutes>`: Bin size in minutes for timebin reduction (default: 10). Env: `HISTORY_BIN_MINUTES`
+- `--history-keep-recent-hours <hours>`: Keep recent N hours of data at full resolution when reducing history (default: 24). Env: `HISTORY_KEEP_RECENT_HOURS`
+- `--chart-history <hours>`: Number of hours of data to show in charts (default: 24, 0=all). Env: `CHART_HISTORY_HOURS`
+- `--generate-path <path>`: Path for generated weather endpoint (default: `/api/generate-weather`). Env: `GENERATE_WEATHER_PATH`
 - `--status`: Enable terminal-based status console with real-time monitoring
 - `--status-refresh`: Status console refresh interval in seconds (default: 5)
 - `--status-timeout`: Status console auto-exit timeout in seconds, 0=never (default: 0)
@@ -768,14 +777,13 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `--units-pressure`: Pressure units - inHg or mb (default: "inHg")
 - `--udp-stream`: Enable UDP broadcast listener for local station monitoring (port 50222)
 - `--disable-internet`: **Offline Mode** - Disables all internet connectivity for complete offline operation
- - **Alias**: `--no-internet` (backward compatibility)
- - **Requires**: `--udp-stream` or `--use-generated-weather` (must have a local data source)
- - **Incompatible with**: `--use-web-status`, `--history-read` (both require internet access)
- - **Use Case**: Internet outages, air-gapped systems, privacy-focused deployments, testing without network
- - **Limitations**: No forecast data, no historical preloading, no web scraping
+    - **Requires**: `--udp-stream` or `--use-generated-weather` (must have a local data source)
+    - **Incompatible with**: `--use-web-status`, `--history-read` (both require internet access)
+    - **Use Case**: Internet outages, air-gapped systems, privacy-focused deployments, testing without network
+    - **Limitations**: No forecast data, no historical preloading, no web scraping
 - `--disable-webconsole`: **HomeKit Only Mode** - Disables the web dashboard server
- - **Incompatible with**: `--disable-homekit` (cannot disable both HomeKit and web console)
- - **Use Case**: Minimal resource usage, HomeKit-only deployments, reduced attack surface
+    - **Incompatible with**: `--disable-homekit` (cannot disable both HomeKit and web console)
+    - **Use Case**: Minimal resource usage, HomeKit-only deployments, reduced attack surface
 - `--use-generated-weather`: Use simulated weather data for testing (automatically sets station-url)
 - `--use-web-status`: Enable headless browser scraping of TempestWX status page every 15 minutes (requires Chrome, incompatible with `--disable-internet`)
 - `--version`: Show version information and exit
@@ -783,22 +791,7 @@ If you are using the WeatherFlow Tempest API (default behavior), provide your AP
 - `--web-port`: Web dashboard port (default: "8080")
 
 #### Environment Variables
-- `TEMPEST_TOKEN`: WeatherFlow API token
-- `TEMPEST_STATION_NAME`: Station name
-- `STATION_URL`: Custom station URL for weather data (overrides Tempest API)
-- `UDP_STREAM`: Enable UDP broadcast listener (true/false)
-- `DISABLE_INTERNET`: Disable all internet access (true/false, requires UDP_STREAM=true or USE_GENERATED_WEATHER=true)
-- `DISABLE_WEBCONSOLE`: Disable web dashboard server (true/false)
-- `HOMEKIT_PIN`: HomeKit PIN
-- `LOG_LEVEL`: Logging level
-- `SENSORS`: Sensors to enable (default: "temp,lux,humidity")
-- `STATUS`: Enable status console (true/false)
-- `STATUS_REFRESH`: Status console refresh interval in seconds (default: 5)
-- `STATUS_TIMEOUT`: Status console auto-exit timeout in seconds (default: 0)
-- `STATUS_THEME`: Status console color theme name (default: "dark-ocean")
-- `UNITS`: Units system - imperial, metric, or sae (default: "imperial")
-- `UNITS_PRESSURE`: Pressure units - inHg or mb (default: "inHg")
-- `WEB_PORT`: Web dashboard port
+Environment variables are documented in the "Available Environment Variables" table below. Refer to that table for defaults and descriptions, e.g. `HISTORY_POINTS`, `STATUS_REFRESH`, `TEMPEST_TOKEN`, and others.
 
 ### Example with Full Configuration
 ```bash
