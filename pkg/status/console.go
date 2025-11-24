@@ -113,7 +113,9 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 				break
 			}
 			if n > 0 {
-				logBuf.Write(buf[:n])
+				// Ignore write errors to the in-memory log buffer; best effort
+				// (this should not fail under normal circumstances).
+				_, _ = logBuf.Write(buf[:n])
 			}
 		}
 	}()
@@ -137,7 +139,7 @@ func RunStatusConsole(cfg *config.Config, version string) error {
 
 	// Restore log output when done
 	defer func() {
-		w.Close()
+		_ = w.Close()
 		log.SetOutput(os.Stderr)
 	}()
 
@@ -616,7 +618,7 @@ func fetchStatus(url string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

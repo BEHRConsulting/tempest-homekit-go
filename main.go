@@ -58,7 +58,7 @@ func main() {
 
 	// Handle version flag
 	if cfg.Version {
-		fmt.Println("tempest-homekit-go v1.10.0")
+		fmt.Println("tempest-homekit-go v1.11.0")
 		fmt.Println("Built with Go 1.24.2")
 		fmt.Println("HomeKit integration for WeatherFlow Tempest weather stations")
 		os.Exit(0)
@@ -241,14 +241,14 @@ func main() {
 	// Handle status console mode
 	if cfg.Status {
 		// Launch status console first (it will handle output redirection and start service)
-		if err := status.RunStatusConsole(cfg, "1.9.0"); err != nil {
+		if err := status.RunStatusConsole(cfg, "1.11.0"); err != nil {
 			log.Fatalf("Status console failed: %v", err)
 		}
 		return
 	}
 
 	logger.Info("Starting service with config: WebPort=%s, LogLevel=%s", cfg.WebPort, cfg.LogLevel)
-	err := service.StartService(cfg, "1.9.0")
+	err := service.StartService(cfg, "1.11.0")
 	if err != nil {
 		log.Fatalf("Service failed: %v", err)
 	}

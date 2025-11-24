@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // AssertPopoutDatasetOrdering builds a popout for the given chart type and
@@ -20,7 +21,8 @@ import (
 // at datasets[1]. This is exported so other UI tests can reuse it.
 func AssertPopoutDatasetOrdering(t *testing.T, browserCtx context.Context, ts *httptest.Server, chartType string, expectedDashLen int) {
 	// Build cfg JSON in-page from charts.<chartType> metadata
-	buildCfg := fmt.Sprintf(`(function(){ try { var chartObj = charts && charts.%s; var datasetsMeta = []; if (chartObj && chartObj.data && Array.isArray(chartObj.data.datasets)) { chartObj.data.datasets.forEach(function(ds){ var meta = {}; if (ds.label) meta.label = ds.label; if (ds.borderColor) meta.borderColor = ds.borderColor; if (ds.backgroundColor) meta.backgroundColor = ds.backgroundColor; if (ds.borderDash) meta.borderDash = ds.borderDash; if (ds.borderWidth !== undefined) meta.borderWidth = ds.borderWidth; if (ds.fill !== undefined) meta.fill = ds.fill; if (ds.pointRadius !== undefined) meta.pointRadius = ds.pointRadius; if (ds.tension !== undefined) meta.tension = ds.tension; if (String(ds.label).toLowerCase().indexOf('average')>=0) meta.role='average'; if (String(ds.label).toLowerCase().indexOf('trend')>=0) meta.role='trend'; if (String(ds.label).toLowerCase().indexOf('today')>=0 || String(ds.label).toLowerCase().indexOf('total')>=0) meta.role='total'; datasetsMeta.push(meta); }); } var cfg = { type: '%[1]s', field: '%[1]s', title: '%[2]s', color: (chartObj && chartObj.data && chartObj.data.datasets && chartObj.data.datasets[0] && chartObj.data.datasets[0].borderColor) || '#007bff', units: window.units || {}, datasets: datasetsMeta }; return JSON.stringify(cfg); } catch(e) { return ''; } })()`, chartType, strings.Title(chartType))
+	title := cases.Title(language.Und).String(chartType)
+	buildCfg := fmt.Sprintf(`(function(){ try { var chartObj = charts && charts.%s; var datasetsMeta = []; if (chartObj && chartObj.data && Array.isArray(chartObj.data.datasets)) { chartObj.data.datasets.forEach(function(ds){ var meta = {}; if (ds.label) meta.label = ds.label; if (ds.borderColor) meta.borderColor = ds.borderColor; if (ds.backgroundColor) meta.backgroundColor = ds.backgroundColor; if (ds.borderDash) meta.borderDash = ds.borderDash; if (ds.borderWidth !== undefined) meta.borderWidth = ds.borderWidth; if (ds.fill !== undefined) meta.fill = ds.fill; if (ds.pointRadius !== undefined) meta.pointRadius = ds.pointRadius; if (ds.tension !== undefined) meta.tension = ds.tension; if (String(ds.label).toLowerCase().indexOf('average')>=0) meta.role='average'; if (String(ds.label).toLowerCase().indexOf('trend')>=0) meta.role='trend'; if (String(ds.label).toLowerCase().indexOf('today')>=0 || String(ds.label).toLowerCase().indexOf('total')>=0) meta.role='total'; datasetsMeta.push(meta); }); } var cfg = { type: '%[1]s', field: '%[1]s', title: '%[2]s', color: (chartObj && chartObj.data && chartObj.data.datasets && chartObj.data.datasets[0] && chartObj.data.datasets[0].borderColor) || '#007bff', units: window.units || {}, datasets: datasetsMeta }; return JSON.stringify(cfg); } catch(e) { return ''; } })()`, chartType, title)
 
 	var cfgJSON string
 	if err := chromedp.Run(browserCtx, chromedp.EvaluateAsDevTools(buildCfg, &cfgJSON)); err != nil {

@@ -2,7 +2,14 @@
 
 This file tracks released versions and the notable changes implemented in each release. Its purpose is to keep the README concise and centralize the version-by-version changelog.
 
-## v1.9.0 (current)
+## v1.11.0 (current)
+- New curses-based **Status Console**: interactive TUI for real-time monitoring of logs, sensors, station status, HomeKit state, and system info. Supports manual refresh, auto-refresh, theme cycling, and non-blocking UI updates.
+- Hardened status console to avoid UI deadlocks: heavy formatting moved off the event loop and UI updates are performed with minimal queued callbacks.
+- Improved log capture and buffering for the TUI, plus safer network fetches with timeouts and retries.
+- Small staticcheck / errcheck fixes and other housekeeping (linter-fix commits).
+- Documentation updated to reflect the new status screen and current running features.
+
+## v1.9.0
 - Enhanced alarm editor with full schedule editing capability
 - Contact management: add, edit, and delete contacts directly in the editor
 - SMS provider configuration editing in the alarm editor
