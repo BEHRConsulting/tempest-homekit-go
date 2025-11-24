@@ -8,6 +8,9 @@ This file tracks released versions and the notable changes implemented in each r
 - Improved log capture and buffering for the TUI, plus safer network fetches with timeouts and retries.
 - Small staticcheck / errcheck fixes and other housekeeping (linter-fix commits).
 - Documentation updated to reflect the new status screen and current running features.
+ - Advanced Rules Engine: Boolean logic, time windows, and notification throttling for alarms (AND/OR conditions and rate limiting).
+ - Additional Alarm Delivery Methods: Local CSV and JSON file logging for alarm events with configurable retention and fallback handling.
+ - Per-Alarm Scheduling System: Per-alarm active windows including daily/hourly ranges, sunrise/sunset triggers, and day-of-week restrictions.
 
 ## v1.9.0
 - Enhanced alarm editor with full schedule editing capability
