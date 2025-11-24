@@ -139,15 +139,7 @@ Planned enhancements and strategic priorities for upcoming releases. Items are g
 - Features: Authentication, tenant-specific dashboards, admin controls
 - Notes: Requires database layer for user management and session handling
 
-**Additional Alarm Delivery Methods** - CSV and JSON file logging
-- Description: Log alarm events to local CSV or JSON files with configurable retention policies
-- Features: FIFO queue management, configurable file paths and max days retention, fallback to temp files on write failures
-- Notes: Extends notification channels for audit trails and data export
-
-**Per-Alarm Scheduling System** - Time-based alarm activation
-- Description: Schedule alarms to be active only during specific time windows
-- Features: Daily/hourly scheduling, sunrise/sunset triggers, days-of-week restrictions, start/end time ranges
-- Notes: Reduces false positives during maintenance windows or off-hours
+ 
 
 **Database Alarm Delivery** - MariaDB/MySQL integration
 - Description: Store alarm events as JSON records in local or remote MariaDB/MySQL databases
@@ -191,6 +183,16 @@ The alarm system enables rule-based weather alerting with multiple notification 
 - Cross-platform file watching for live configuration reloads
 - Per-alarm tags for easy filtering and organization
 - **Web console alarm status card**: View alarm status, last triggered times, and configuration directly in the dashboard
+
+- **Additional Alarm Delivery Methods** ✓ - CSV and JSON file logging
+  - Description: Log alarm events to local CSV or JSON files with configurable retention policies
+  - Features: FIFO queue management, configurable file paths and max days retention, fallback to temp files on write failures
+  - Notes: Extends notification channels for audit trails and data export
+
+- **Per-Alarm Scheduling System** ✓ - Time-based alarm activation
+  - Description: Schedule alarms to be active only during specific time windows
+  - Features: Daily/hourly scheduling, sunrise/sunset triggers, days-of-week restrictions, start/end time ranges
+  - Notes: Reduces false positives during maintenance windows or off-hours
 
 **Quick Start:**
 ```bash
