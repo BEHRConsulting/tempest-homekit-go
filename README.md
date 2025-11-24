@@ -108,6 +108,11 @@ Planned enhancements and strategic priorities for upcoming releases. Items are g
   - Email: SMTP with TLS + Microsoft 365 OAuth2 (Mail.Send permission)
   - SMS: Twilio (trial/production) + AWS SNS (production-grade)
   - Webhook: HTTP POST with JSON payloads and template expansion
+  
+  - **Advanced Rules Engine** ✓ - Enhanced alarm capabilities
+    - Description: Boolean logic, time windows, rate limiting, complex condition combinations
+    - Features: `AND`/`OR` operators, time-based triggers, notification throttling
+    - Notes: Extends current condition syntax beyond simple threshold comparisons
   - Testing: `--test-email`, `--test-sms`, `--test-webhook` flags for validation
 
 - **Alarm Editor** ✓ - Modern web-based alarm configuration interface
@@ -128,12 +133,7 @@ Planned enhancements and strategic priorities for upcoming releases. Items are g
 - Notes: Include example configurations and CI build steps for image publishing
 
 ### 🔮 Future / Long-term Goals
-
-**Advanced Rules Engine** - Enhanced alarm capabilities
-- Description: Boolean logic, time windows, rate limiting, complex condition combinations
-- Features: `AND`/`OR` operators, time-based triggers, notification throttling
-- Notes: Extends current condition syntax beyond simple threshold comparisons
-
+ 
 **Multi-tenant UI** - Role-based access controls for managed deployments
 - Description: User isolation, per-tenant station configuration, access controls
 - Features: Authentication, tenant-specific dashboards, admin controls
