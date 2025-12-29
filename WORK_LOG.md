@@ -155,3 +155,30 @@ If you'd like, I can now:
 - Expand the `WORK_LOG.md` with more granular timestamps (per-commit breakdown) and link to the exact commit SHAs and diffs.
 
 Tell me how you'd like to proceed (push/PR, or more detail in the work log).
+
+## 2025-12-29 — Release v1.11.0 and Documentation updates
+
+Summary:
+- Created and pushed annotated tag `v1.11.0` and published a GitHub release (release body drafted from `CHANGELOG.md`).
+- Added a user-facing `CHANGELOG.md` entry for `v1.11.0` and a short `RELEASE_NOTES.md` for operators.
+- Updated `VERSIONS.md` with concise release notes covering: Advanced Rules Engine, CSV/JSON alarm delivery, and Per-Alarm Scheduling.
+- Updated `README.md`: moved the following features from "Future" to "Completed": Advanced Rules Engine, Additional Alarm Delivery Methods (CSV/JSON), and Per-Alarm Scheduling System.
+- Consolidated environment variable documentation: removed duplicated inline env list and pointed flags to the authoritative "Available Environment Variables" table; moved that table closer to the flags for discoverability.
+- Removed inline `Env:` annotations from command-line flag descriptions (flags now reference the environment table exclusively).
+- Added a release badge to the `README.md` top header linking to tag `v1.11.0` and created `RELEASE_NOTES.md` for operator guidance.
+
+Files changed and actions:
+- `CHANGELOG.md` — added user-facing v1.11.0 entry. (commit: "chore(changelog): add v1.11.0 user-facing changelog entry")
+- `RELEASE_NOTES.md` — created operator-focused release notes. (commit: "docs: add RELEASE_NOTES.md and release badge for v1.11.0")
+- `README.md` — moved features to Completed, consolidated env var docs, added release badge. (commits: "docs: mark Advanced Rules Engine as completed in README", "docs: mark Additional Alarm Delivery Methods and Per-Alarm Scheduling as completed in README", "docs(readme): consolidate environment variables documentation and point to available variables table")
+- `VERSIONS.md` — appended short release notes for v1.11.0. (commit: "docs: add alarm-related release notes to v1.11.0 in VERSIONS.md")
+- Git tag: `v1.11.0` (annotated) created and pushed.
+- GitHub release: created `v1.11.0` (release body: `CHANGELOG.md`).
+
+Notes and follow-ups:
+- Confirmed `HISTORY_*` environment variables are present in the "Available Environment Variables" table (`HISTORY_POINTS`, `HISTORY_REDUCE`, `HISTORY_REDUCE_METHOD`, `HISTORY_BIN_MINUTES`, `HISTORY_KEEP_RECENT_HOURS`) and the `--history*` flags remain documented in the flags list. If you want, I can move the environment table immediately above the flags list (instead of the current nearby placement) — it's already been moved closer for discoverability.
+- If you prefer to keep `Env:` inline annotations for a few high-traffic flags, tell me which ones and I can re-add them consistently (but the canonical source will remain the environment table).
+
+Estimate: ~30-60 minutes of editorial and release tasks (docs, tagging, release creation).
+
+---
